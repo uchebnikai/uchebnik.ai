@@ -19,6 +19,7 @@
                 900: '#18181b',
                 950: '#09090b', 
               },
+              // Dynamic Primary Color (Indigo by default)
               indigo: {
                 50: 'rgb(var(--primary-50) / <alpha-value>)',
                 100: 'rgb(var(--primary-100) / <alpha-value>)',
@@ -26,13 +27,14 @@
                 300: 'rgb(var(--primary-300) / <alpha-value>)',
                 400: 'rgb(var(--primary-400) / <alpha-value>)',
                 500: 'rgb(var(--primary-500) / <alpha-value>)',
-                550: 'rgb(var(--primary-600) / <alpha-value>)', 
+                550: 'rgb(var(--primary-600) / <alpha-value>)', // Mapping 550 to 600 for consistency
                 600: 'rgb(var(--primary-600) / <alpha-value>)',
                 700: 'rgb(var(--primary-700) / <alpha-value>)',
                 800: 'rgb(var(--primary-800) / <alpha-value>)',
                 900: 'rgb(var(--primary-900) / <alpha-value>)',
                 950: 'rgb(var(--primary-950) / <alpha-value>)',
               },
+              // Dynamic Accent Color (Violet/Purple by default, shifts with primary)
               accent: {
                 50: 'rgb(var(--accent-50) / <alpha-value>)',
                 100: 'rgb(var(--accent-100) / <alpha-value>)',
@@ -107,6 +109,7 @@
         --background: 0 0% 100%;
         --foreground: 240 10% 3.9%;
         
+        /* Default Primary Color (Indigo) */
         --primary-50: 238 242 255;
         --primary-100: 224 231 255;
         --primary-200: 199 210 254;
@@ -119,6 +122,7 @@
         --primary-900: 49 46 129;
         --primary-950: 30 27 75;
 
+        /* Default Accent Color (Violet/Purple) - approx hue shift +30 from indigo */
         --accent-50: 245 243 255;
         --accent-100: 237 233 254;
         --accent-200: 221 214 254;
@@ -154,6 +158,7 @@
       .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(156, 163, 175, 0.3); border-radius: 100px; }
       .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(156, 163, 175, 0.5); }
       
+      /* Glassmorphism Utilities */
       .glass-panel {
         background: rgba(255, 255, 255, 0.6);
         backdrop-filter: blur(20px);
@@ -167,6 +172,7 @@
         border: 1px solid rgba(255, 255, 255, 0.08);
       }
       
+      /* Custom Frame Colors - Updated to use Primary Border */
       .glass-panel, .glass-card, .border-indigo-500\/20, .border-indigo-500\/10 {
          border-color: rgba(var(--primary-500), 0.2) !important;
       }
@@ -174,15 +180,17 @@
          border-color: rgba(var(--primary-500), 0.1) !important;
       }
 
+      /* Custom Background Mode Adjustments */
       body.custom-bg-active .glass-panel {
-        background: rgba(255, 255, 255, 0.1); 
+        background: rgba(255, 255, 255, 0.1); /* More transparent */
         border: 1px solid rgba(var(--primary-500), 0.2);
       }
       body.custom-bg-active.dark .glass-panel {
-        background: rgba(0, 0, 0, 0.3);
+        background: rgba(0, 0, 0, 0.3); /* More transparent */
         border: 1px solid rgba(var(--primary-500), 0.2);
       }
       
+      /* Specific Transparency Overrides for Custom BG */
       body.custom-bg-active .glass-card {
         background: rgba(255, 255, 255, 0.4);
       }
@@ -203,6 +211,7 @@
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2), 0 2px 4px -1px rgba(0, 0, 0, 0.1);
       }
 
+      /* Noise Texture */
       .bg-noise {
         position: fixed;
         top: 0; left: 0; width: 100%; height: 100%;
@@ -211,6 +220,7 @@
         z-index: 0;
       }
       
+      /* Typography & Markdown Safety */
       .markdown-content { 
         word-break: break-word; 
         overflow-wrap: break-word; 
@@ -230,6 +240,7 @@
       .markdown-content a { color: rgb(var(--primary-500)); text-decoration: none; border-bottom: 1px solid transparent; transition: border-color 0.2s; word-break: break-all; }
       .markdown-content a:hover { border-bottom-color: rgb(var(--primary-500)); }
       
+      /* Code Blocks - Scroll horizontally, don't break layout */
       .markdown-content code { background: rgba(128,128,128,0.1); padding: 0.2em 0.4em; rounded: 6px; font-size: 0.85em; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; white-space: pre-wrap; word-break: break-all; }
       .markdown-content pre { background: transparent !important; padding: 0 !important; margin: 0 !important; overflow-x: auto; max-width: 100%; }
       .markdown-content pre code { white-space: pre; word-break: normal; display: block; }
@@ -239,6 +250,7 @@
       .markdown-content th { background: rgba(128,128,128,0.05); font-weight: 600; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.05em; }
       .markdown-content tr:last-child td { border-bottom: none; }
       
+      /* Mobile safe areas */
       .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
       .pt-safe { padding-top: env(safe-area-inset-top); }
     </style>
@@ -249,7 +261,6 @@
     "react": "https://aistudiocdn.com/react@^19.2.0",
     "@google/genai": "https://aistudiocdn.com/@google/genai@^1.30.0",
     "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
-    "react-router-dom": "https://aistudiocdn.com/react-router-dom@^6.22.3",
     "lucide-react": "https://aistudiocdn.com/lucide-react@^0.554.0",
     "react-markdown": "https://aistudiocdn.com/react-markdown@^9.0.1",
     "remark-math": "https://aistudiocdn.com/remark-math@^6.0.0",

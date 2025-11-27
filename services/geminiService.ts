@@ -1,3 +1,4 @@
+
 import { GoogleGenAI, Type } from "@google/genai";
 import { AppMode, SubjectId, Slide, ChartData, GeometryData, Message } from "../types";
 import { SYSTEM_PROMPTS } from "../constants";
