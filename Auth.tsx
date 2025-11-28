@@ -35,7 +35,8 @@ export const Auth = () => {
               last_name: lastName,
               full_name: `${firstName} ${lastName}`.trim(),
               birth_date: birthDate
-            }
+            },
+            emailRedirectTo: window.location.origin,
           }
         });
         if (error) throw error;

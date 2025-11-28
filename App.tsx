@@ -5,7 +5,7 @@ import { generateResponse } from './services/geminiService';
 import { supabase } from './supabaseClient';
 import { Auth } from './Auth';
 import { 
-  Menu, X, Send, Image as ImageIcon, Loader2, ChevronRight, Download, Sparkles, Moon, Sun, Book, Copy, Check, Mic, MicOff, Share2, BellRing, BarChart2, LineChart as LineChartIcon, Ruler, ThumbsUp, ThumbsDown, Trash2, Settings, Type, Cpu, RotateCcw, User, Brain, FileJson, MessageSquare, Volume2, Square, Upload, ArrowRight, LayoutGrid, Folder, ChevronDown, ChevronUp, ArrowLeft, Database, Eye, Code, Projector, History, Plus, Edit2, Clock, Calendar, Phone, PhoneOff, Heart, MoreHorizontal, ArrowUpRight, Lock, Unlock, Shield, Key, LogOut, CheckCircle, XCircle, Palette, Monitor, Reply, Crown, Zap, AlertTriangle, Info, AlertCircle, HelpCircle
+  Menu, X, Send, Image as ImageIcon, Loader2, ChevronRight, Download, Sparkles, Moon, Sun, Book, Copy, Check, Mic, MicOff, Share2, BellRing, BarChart2, LineChart as LineChartIcon, Ruler, ThumbsUp, ThumbsDown, Trash2, Settings, Type, Cpu, RotateCcw, User, Brain, FileJson, MessageSquare, Volume2, Square, Upload, ArrowRight, LayoutGrid, Folder, ChevronDown, ChevronUp, ArrowLeft, Database, Eye, Code, Projector, History, Plus, Edit2, Clock, Calendar, Phone, PhoneOff, Heart, MoreHorizontal, ArrowUpRight, Lock, Unlock, Shield, Key, LogOut, CheckCircle, XCircle, Palette, Monitor, Reply, Crown, Zap, AlertTriangle, Info, AlertCircle, HelpCircle, Camera
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
@@ -317,6 +317,7 @@ export const App = () => {
   const [historyDrawerOpen, setHistoryDrawerOpen] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(true); // Default Dark Mode
   const [showSettings, setShowSettings] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
   const [speakingMessageId, setSpeakingMessageId] = useState<string | null>(null);
   const [homeView, setHomeView] = useState<'landing' | 'subjects_grid'>('landing');
   const [memoryUsage, setMemoryUsage] = useState(0); 
@@ -325,6 +326,10 @@ export const App = () => {
   const [renameValue, setRenameValue] = useState('');
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   
+  // Profile State
+  const [userMeta, setUserMeta] = useState({ firstName: '', lastName: '', avatar: '' });
+  const [editProfile, setEditProfile] = useState({ firstName: '', lastName: '', avatar: '' });
+
   // Reply State
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   
@@ -393,6 +398,7 @@ export const App = () => {
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
   const speakingTimeoutRef = useRef<any>(null);
   const backgroundInputRef = useRef<HTMLInputElement>(null);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -402,29 +408,30 @@ export const App = () => {
 
   // Auth Effect
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setAuthLoading(false);
-      // Sync name if available
-      if (session?.user?.user_metadata?.full_name) {
-          setUserSettings(prev => {
-              if (!prev.userName) return { ...prev, userName: session.user.user_metadata.full_name };
-              return prev;
-          });
-      }
-    });
+    const syncProfile = (session: SupabaseSession | null) => {
+        setSession(session);
+        setAuthLoading(false);
+        if (session?.user?.user_metadata) {
+            const meta = session.user.user_metadata;
+            const firstName = meta.first_name || '';
+            const lastName = meta.last_name || '';
+            const avatar = meta.avatar_url || '';
+            
+            setUserMeta({ firstName, lastName, avatar });
+            setEditProfile({ firstName, lastName, avatar });
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      // Sync name if available
-      if (session?.user?.user_metadata?.full_name) {
-          setUserSettings(prev => {
-              if (!prev.userName) return { ...prev, userName: session.user.user_metadata.full_name };
-              return prev;
-          });
-      }
+            setUserSettings(prev => {
+                const fullName = meta.full_name || `${firstName} ${lastName}`.trim();
+                if (!prev.userName && fullName) return { ...prev, userName: fullName };
+                return prev;
+            });
+        }
+    };
+
+    supabase.auth.getSession().then(({ data: { session } }) => syncProfile(session));
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      syncProfile(session);
     });
 
     return () => subscription.unsubscribe();
@@ -573,6 +580,42 @@ export const App = () => {
 
   const handleLogout = async () => {
       await supabase.auth.signOut();
+  };
+
+  const handleUpdateProfile = async () => {
+      try {
+          const updates = {
+              first_name: editProfile.firstName,
+              last_name: editProfile.lastName,
+              full_name: `${editProfile.firstName} ${editProfile.lastName}`.trim(),
+              avatar_url: editProfile.avatar
+          };
+
+          const { error } = await supabase.auth.updateUser({
+              data: updates
+          });
+
+          if (error) throw error;
+
+          setUserMeta(editProfile);
+          setUserSettings(prev => ({...prev, userName: updates.full_name}));
+          setShowProfileModal(false);
+          addToast('Профилът е обновен успешно!', 'success');
+      } catch (error: any) {
+          addToast(error.message || 'Грешка при обновяване на профила.', 'error');
+      }
+  };
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (file) {
+          try {
+              const resized = await resizeImage(file);
+              setEditProfile(prev => ({ ...prev, avatar: resized }));
+          } catch (err) {
+              addToast('Грешка при качване на снимка', 'error');
+          }
+      }
   };
 
   const handleSubjectChange = (subject: SubjectConfig) => {
@@ -1131,6 +1174,60 @@ export const App = () => {
     );
   };
 
+  const renderProfileModal = () => {
+      if (!showProfileModal) return null;
+      return (
+          <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-300">
+              <div className="bg-white dark:bg-zinc-900 w-full max-w-md p-8 rounded-3xl border border-indigo-500/20 shadow-2xl space-y-6 relative animate-in zoom-in-95">
+                  <button onClick={() => setShowProfileModal(false)} className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors"><X size={20}/></button>
+                  
+                  <div className="flex flex-col items-center text-center gap-4">
+                      <h2 className="text-2xl font-bold">Персонализирай Профила</h2>
+                      <p className="text-sm text-gray-500">Променете снимката и имената си тук.</p>
+                  </div>
+
+                  <div className="flex flex-col items-center gap-4">
+                      <div className="relative group">
+                          <img 
+                              src={editProfile.avatar || "https://cdn-icons-png.freepik.com/256/3276/3276580.png"} 
+                              alt="Profile" 
+                              className="w-24 h-24 rounded-full object-cover border-2 border-indigo-500/30 shadow-lg"
+                          />
+                          <button onClick={() => avatarInputRef.current?.click()} className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                              <Camera className="text-white" size={24}/>
+                          </button>
+                          <input type="file" ref={avatarInputRef} onChange={handleAvatarUpload} className="hidden" accept="image/*" />
+                      </div>
+                      {editProfile.avatar && (
+                          <button onClick={() => setEditProfile(p => ({...p, avatar: ''}))} className="text-xs text-red-500 hover:underline">Премахни снимка</button>
+                      )}
+                  </div>
+
+                  <div className="space-y-4">
+                      <div className="space-y-1">
+                          <label className="text-xs font-bold text-gray-500 uppercase ml-1">Име</label>
+                          <input 
+                              value={editProfile.firstName}
+                              onChange={e => setEditProfile(p => ({...p, firstName: e.target.value}))}
+                              className="w-full p-3 bg-gray-50 dark:bg-black/40 rounded-xl border border-gray-200 dark:border-white/10 focus:border-indigo-500 outline-none transition-all"
+                          />
+                      </div>
+                      <div className="space-y-1">
+                          <label className="text-xs font-bold text-gray-500 uppercase ml-1">Фамилия</label>
+                          <input 
+                              value={editProfile.lastName}
+                              onChange={e => setEditProfile(p => ({...p, lastName: e.target.value}))}
+                              className="w-full p-3 bg-gray-50 dark:bg-black/40 rounded-xl border border-gray-200 dark:border-white/10 focus:border-indigo-500 outline-none transition-all"
+                          />
+                      </div>
+                  </div>
+
+                  <Button onClick={handleUpdateProfile} className="w-full py-3">Запази промените</Button>
+              </div>
+          </div>
+      );
+  };
+
   // --- Renders ---
 
   const renderSidebar = () => {
@@ -1204,8 +1301,8 @@ export const App = () => {
                              <button onClick={() => {setShowSettings(true); setProfileMenuOpen(false)}} className="w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-white/5 text-sm font-medium flex items-center gap-3 transition-colors">
                                 <Settings size={16} className="text-gray-500"/> Настройки
                              </button>
-                             <button onClick={() => {setShowSettings(true); setProfileMenuOpen(false)}} className="w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-white/5 text-sm font-medium flex items-center gap-3 transition-colors">
-                                <Palette size={16} className="text-gray-500"/> Персонализиране
+                             <button onClick={() => {setShowProfileModal(true); setProfileMenuOpen(false)}} className="w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-white/5 text-sm font-medium flex items-center gap-3 transition-colors">
+                                <User size={16} className="text-gray-500"/> Персонализирай Профила
                              </button>
                               <button onClick={() => {addToast('Свържете се с нас в Discord за помощ.', 'info'); setProfileMenuOpen(false)}} className="w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-white/5 text-sm font-medium flex items-center gap-3 transition-colors">
                                 <HelpCircle size={16} className="text-gray-500"/> Помощ
@@ -1220,13 +1317,15 @@ export const App = () => {
                 
                 <button onClick={() => setProfileMenuOpen(!profileMenuOpen)} className="flex items-center gap-3 w-full p-2.5 rounded-2xl hover:bg-white/50 dark:hover:bg-white/5 transition-all duration-200 border border-transparent hover:border-indigo-500/10 group">
                      <img 
-                       src="https://cdn-icons-png.freepik.com/256/3276/3276580.png" 
+                       src={userMeta.avatar || "https://cdn-icons-png.freepik.com/256/3276/3276580.png"} 
                        alt="Profile" 
                        className="w-10 h-10 rounded-full object-cover border border-gray-200 dark:border-white/10"
                      />
                      <div className="flex-1 min-w-0 text-left">
                         <div className="font-bold text-sm truncate text-zinc-900 dark:text-zinc-100">
-                            {userSettings.userName || 'Потребител'}
+                            {userMeta.firstName && userMeta.lastName 
+                                ? `${userMeta.firstName} ${userMeta.lastName}`
+                                : (userSettings.userName || 'Потребител')}
                         </div>
                         <div className={`text-[10px] font-bold uppercase tracking-wider ${isProUnlocked ? 'text-indigo-500' : 'text-gray-500'}`}>
                             {isProUnlocked ? 'Pro Plan' : 'Free Plan'}
@@ -1270,7 +1369,7 @@ export const App = () => {
                 <span>AI Учебен Асистент 2.0</span>
              </div>
             <h1 className="text-4xl md:text-6xl lg:text-8xl font-black text-transparent bg-clip-text bg-gradient-to-br from-zinc-900 to-zinc-500 dark:from-white dark:to-zinc-500 tracking-tighter leading-[1.1] md:leading-[1] font-display">
-              Здравей{userSettings.userName ? `, ${userSettings.userName}` : ''}.
+              Здравей{userMeta.firstName ? `, ${userMeta.firstName}` : ''}.
             </h1>
             <p className="text-lg md:text-2xl text-zinc-500 dark:text-zinc-400 font-medium max-w-2xl mx-auto leading-relaxed px-4">Твоят интелигентен помощник за училище. Какво ще учим днес?</p>
           </div>
@@ -1675,6 +1774,7 @@ export const App = () => {
       
       {renderAdminPanel()}
       {renderUnlockModal()}
+      {renderProfileModal()}
       {renderSidebar()}
       
       <main className="flex-1 flex flex-col h-full relative w-full transition-all duration-500">
