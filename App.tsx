@@ -404,12 +404,26 @@ export const App = () => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setAuthLoading(false);
+      // Sync name if available
+      if (session?.user?.user_metadata?.full_name) {
+          setUserSettings(prev => {
+              if (!prev.userName) return { ...prev, userName: session.user.user_metadata.full_name };
+              return prev;
+          });
+      }
     });
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
+      // Sync name if available
+      if (session?.user?.user_metadata?.full_name) {
+          setUserSettings(prev => {
+              if (!prev.userName) return { ...prev, userName: session.user.user_metadata.full_name };
+              return prev;
+          });
+      }
     });
 
     return () => subscription.unsubscribe();

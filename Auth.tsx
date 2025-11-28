@@ -1,7 +1,6 @@
-
 import React, { useState } from 'react';
 import { supabase } from './supabaseClient';
-import { Loader2, Mail, Lock, User, ArrowRight, Sparkles, CheckCircle, AlertCircle } from 'lucide-react';
+import { Loader2, Mail, Lock, User, ArrowRight, Sparkles, CheckCircle, AlertCircle, Calendar } from 'lucide-react';
 
 type AuthMode = 'login' | 'register' | 'forgot_password' | 'update_password';
 
@@ -9,6 +8,12 @@ export const Auth = () => {
   const [mode, setMode] = useState<AuthMode>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  
+  // Registration Fields
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [birthDate, setBirthDate] = useState('');
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -24,6 +29,14 @@ export const Auth = () => {
         const { error } = await supabase.auth.signUp({
           email,
           password,
+          options: {
+            data: {
+              first_name: firstName,
+              last_name: lastName,
+              full_name: `${firstName} ${lastName}`.trim(),
+              birth_date: birthDate
+            }
+          }
         });
         if (error) throw error;
         setSuccessMsg('Регистрацията е успешна! Проверете имейла си за линк за потвърждение.');
@@ -97,6 +110,56 @@ export const Auth = () => {
         )}
 
         <form onSubmit={handleAuth} className="space-y-4">
+          
+          {mode === 'register' && (
+            <>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                    <label className="text-xs font-bold text-gray-500 uppercase ml-1">Име</label>
+                    <div className="relative">
+                        <User className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                        <input
+                        type="text"
+                        value={firstName}
+                        onChange={(e) => setFirstName(e.target.value)}
+                        required
+                        className="w-full pl-11 pr-3 py-3.5 rounded-xl bg-gray-50/50 dark:bg-black/20 border border-gray-200 dark:border-white/10 focus:border-indigo-500 outline-none transition-all placeholder:text-gray-400"
+                        placeholder="Иван"
+                        />
+                    </div>
+                </div>
+                <div className="space-y-1">
+                    <label className="text-xs font-bold text-gray-500 uppercase ml-1">Фамилия</label>
+                    <div className="relative">
+                        <User className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                        <input
+                        type="text"
+                        value={lastName}
+                        onChange={(e) => setLastName(e.target.value)}
+                        required
+                        className="w-full pl-11 pr-3 py-3.5 rounded-xl bg-gray-50/50 dark:bg-black/20 border border-gray-200 dark:border-white/10 focus:border-indigo-500 outline-none transition-all placeholder:text-gray-400"
+                        placeholder="Иванов"
+                        />
+                    </div>
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                  <label className="text-xs font-bold text-gray-500 uppercase ml-1">Дата на раждане</label>
+                  <div className="relative">
+                      <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                      <input
+                      type="date"
+                      value={birthDate}
+                      onChange={(e) => setBirthDate(e.target.value)}
+                      required
+                      className="w-full pl-11 pr-4 py-3.5 rounded-xl bg-gray-50/50 dark:bg-black/20 border border-gray-200 dark:border-white/10 focus:border-indigo-500 outline-none transition-all placeholder:text-gray-400 text-gray-500"
+                      />
+                  </div>
+              </div>
+            </>
+          )}
+
           {mode !== 'update_password' && (
             <div className="space-y-1">
                 <label className="text-xs font-bold text-gray-500 uppercase ml-1">Имейл</label>

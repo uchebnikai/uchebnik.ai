@@ -1,5 +1,5 @@
 
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenAI, Type, GenerateContentResponse } from "@google/genai";
 import { AppMode, SubjectId, Slide, ChartData, GeometryData, Message } from "../types";
 import { SYSTEM_PROMPTS } from "../constants";
 
@@ -69,7 +69,7 @@ export const generateResponse = async (
       const enhancedPrompt = promptText + " . high quality, realistic, detailed, 8k resolution";
 
       // Apply retry logic for images
-      const response = await withRetry(() => ai.models.generateContent({
+      const response: GenerateContentResponse = await withRetry(() => ai.models.generateContent({
         model: model, 
         contents: enhancedPrompt,
         config: {
@@ -133,7 +133,7 @@ export const generateResponse = async (
   if (subjectId === SubjectId.ART && mode === AppMode.PRESENTATION) {
     try {
       // Apply retry logic for presentation
-      const response = await withRetry(() => ai.models.generateContent({
+      const response: GenerateContentResponse = await withRetry(() => ai.models.generateContent({
         model: 'gemini-2.5-flash',
         contents: promptText,
         config: {
@@ -233,7 +233,7 @@ export const generateResponse = async (
         });
     };
 
-    let response;
+    let response: GenerateContentResponse;
     
     try {
         // Attempt with retry
