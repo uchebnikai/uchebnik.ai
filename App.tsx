@@ -5,7 +5,7 @@ import { generateResponse } from './services/geminiService';
 import { supabase } from './supabaseClient';
 import { Auth } from './Auth';
 import { 
-  Menu, X, Send, Image as ImageIcon, Loader2, ChevronRight, Download, Sparkles, Moon, Sun, Book, Copy, Check, Mic, MicOff, Share2, BellRing, BarChart2, LineChart as LineChartIcon, Ruler, ThumbsUp, ThumbsDown, Trash2, Settings, Type, Cpu, RotateCcw, User, Brain, FileJson, MessageSquare, Volume2, Square, Upload, ArrowRight, LayoutGrid, Folder, ChevronDown, ArrowLeft, Database, Eye, Code, Projector, History, Plus, Edit2, Clock, Calendar, Phone, PhoneOff, Heart, MoreHorizontal, ArrowUpRight, Lock, Unlock, Shield, Key, LogOut, CheckCircle, XCircle, Palette, Monitor, Reply, Crown, Zap, AlertTriangle, Info, AlertCircle
+  Menu, X, Send, Image as ImageIcon, Loader2, ChevronRight, Download, Sparkles, Moon, Sun, Book, Copy, Check, Mic, MicOff, Share2, BellRing, BarChart2, LineChart as LineChartIcon, Ruler, ThumbsUp, ThumbsDown, Trash2, Settings, Type, Cpu, RotateCcw, User, Brain, FileJson, MessageSquare, Volume2, Square, Upload, ArrowRight, LayoutGrid, Folder, ChevronDown, ChevronUp, ArrowLeft, Database, Eye, Code, Projector, History, Plus, Edit2, Clock, Calendar, Phone, PhoneOff, Heart, MoreHorizontal, ArrowUpRight, Lock, Unlock, Shield, Key, LogOut, CheckCircle, XCircle, Palette, Monitor, Reply, Crown, Zap, AlertTriangle, Info, AlertCircle, HelpCircle
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
@@ -323,6 +323,7 @@ export const App = () => {
   const MAX_MEMORY = 50000; 
   const [renameSessionId, setRenameSessionId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   
   // Reply State
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
@@ -1147,9 +1148,6 @@ export const App = () => {
                </div>
                <div className="text-left">
                   <h1 className="font-bold text-xl text-zinc-900 dark:text-white tracking-tight font-display">uchebnik.ai</h1>
-                  <p className={`text-[10px] font-bold tracking-widest uppercase ${isProUnlocked ? 'text-indigo-500 dark:text-indigo-400' : 'text-gray-500 dark:text-gray-500'}`}>
-                    {isProUnlocked ? 'ПРОФЕСИОНАЛЕН ПЛАН' : 'БЕЗПЛАТЕН ПЛАН'}
-                  </p>
                </div>
             </button>
             <div className="space-y-1">
@@ -1197,16 +1195,46 @@ export const App = () => {
                </button>
              )}
 
-             <Button variant="ghost" className="w-full justify-center text-sm font-medium h-11 hover:bg-white/50 dark:hover:bg-white/5 text-zinc-600 dark:text-zinc-400" onClick={() => setShowSettings(true)}>
-                 <Settings size={18} />
-                 <span>Настройки</span>
-             </Button>
-             
-             {/* Logout Button */}
-             <Button variant="ghost" className="w-full justify-center text-sm font-medium h-11 hover:bg-red-500/10 text-red-500 dark:text-red-400" onClick={handleLogout}>
-                 <LogOut size={18} />
-                 <span>Изход</span>
-             </Button>
+             {/* Profile Button with Menu */}
+             <div className="relative mb-1">
+                {profileMenuOpen && (
+                    <>
+                        <div className="fixed inset-0 z-30" onClick={() => setProfileMenuOpen(false)} />
+                        <div className="absolute bottom-full left-0 w-full mb-2 bg-white dark:bg-zinc-900 border border-indigo-500/10 rounded-2xl shadow-xl overflow-hidden animate-in slide-in-from-bottom-2 fade-in z-40">
+                             <button onClick={() => {setShowSettings(true); setProfileMenuOpen(false)}} className="w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-white/5 text-sm font-medium flex items-center gap-3 transition-colors">
+                                <Settings size={16} className="text-gray-500"/> Настройки
+                             </button>
+                             <button onClick={() => {setShowSettings(true); setProfileMenuOpen(false)}} className="w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-white/5 text-sm font-medium flex items-center gap-3 transition-colors">
+                                <Palette size={16} className="text-gray-500"/> Персонализиране
+                             </button>
+                              <button onClick={() => {addToast('Свържете се с нас в Discord за помощ.', 'info'); setProfileMenuOpen(false)}} className="w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-white/5 text-sm font-medium flex items-center gap-3 transition-colors">
+                                <HelpCircle size={16} className="text-gray-500"/> Помощ
+                             </button>
+                             <div className="h-px bg-gray-100 dark:bg-white/5 mx-2" />
+                             <button onClick={handleLogout} className="w-full text-left px-4 py-3 hover:bg-red-50 dark:hover:bg-red-900/10 text-red-500 text-sm font-medium flex items-center gap-3 transition-colors">
+                                <LogOut size={16}/> Изход
+                             </button>
+                        </div>
+                    </>
+                )}
+                
+                <button onClick={() => setProfileMenuOpen(!profileMenuOpen)} className="flex items-center gap-3 w-full p-2.5 rounded-2xl hover:bg-white/50 dark:hover:bg-white/5 transition-all duration-200 border border-transparent hover:border-indigo-500/10 group">
+                     <img 
+                       src="https://cdn-icons-png.freepik.com/256/3276/3276580.png" 
+                       alt="Profile" 
+                       className="w-10 h-10 rounded-full object-cover border border-gray-200 dark:border-white/10"
+                     />
+                     <div className="flex-1 min-w-0 text-left">
+                        <div className="font-bold text-sm truncate text-zinc-900 dark:text-zinc-100">
+                            {userSettings.userName || 'Потребител'}
+                        </div>
+                        <div className={`text-[10px] font-bold uppercase tracking-wider ${isProUnlocked ? 'text-indigo-500' : 'text-gray-500'}`}>
+                            {isProUnlocked ? 'Pro Plan' : 'Free Plan'}
+                        </div>
+                     </div>
+                     <ChevronUp size={16} className={`text-gray-400 transition-transform duration-300 ${profileMenuOpen ? 'rotate-180' : ''}`} />
+                </button>
+             </div>
 
              <a href="https://discord.gg/4SB2NGPq8h" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-3 w-full h-11 rounded-xl text-sm font-bold text-white bg-[#5865F2] hover:bg-[#4752C4] transition-all shadow-lg shadow-[#5865F2]/20 active:scale-95 group">
                 <svg width="20" height="20" viewBox="0 0 127 96" fill="none" xmlns="http://www.w3.org/2000/svg" className="group-hover:scale-110 transition-transform"><path d="M107.7 8.07A105.15 105.15 0 0 0 81.47 0a72.07 72.07 0 0 0-3.36 6.83 97.68 97.68 0 0 0-29.11 0A72.37 72.37 0 0 0 45.64 0a105.15 105.15 0 0 0-26.25 8.09C2.79 32.65-1.71 56.6.54 80.21h0A105.73 105.73 0 0 0 32.71 96a75.2 75.2 0 0 0 6.57-12.8 69.1 69.1 0 0 1-10.46-5.01c.96-.71 1.9-1.44 2.81-2.19 26.25 12.31 54.54 12.31 80.8 0 .91.75 1.85 1.48 2.81 2.19a69.1 69.1 0 0 1-10.47 5.01 75.2 75.2 0 0 0 6.57 12.8A105.73 105.73 0 0 0 126.6 80.22c2.96-23.97-2.1-47.57-18.9-72.15ZM42.45 65.69C36.18 65.69 31 60.08 31 53.23c0-6.85 5.1-12.46 11.45-12.46 6.42 0 11.53 5.61 11.45 12.46 0 6.85-5.03 12.46-11.45 12.46Zm42.2 0C78.38 65.69 73.2 60.08 73.2 53.23c0-6.85 5.1-12.46 11.45-12.46 6.42 0 11.53 5.61 11.45 12.46 0 6.85-5.03 12.46-11.45 12.46Z" fill="currentColor"/></svg>
