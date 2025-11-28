@@ -254,11 +254,12 @@
       .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
       .pt-safe { padding-top: env(safe-area-inset-top); }
     </style>
-  }
-</script>
 </head>
-  <body class="bg-background text-foreground antialiased selection:bg-indigo-500/20 selection:text-indigo-600 dark:selection:text-indigo-300 overflow-hidden">
+<body class="bg-background text-foreground antialiased selection:bg-indigo-500/20 overflow-hidden">
     <div class="bg-noise"></div>
     <div id="root" class="h-[100dvh] w-full overflow-hidden flex flex-col relative z-10"></div>
+
+    <!-- ТУК СЛАГАШ ВАЖНИЯТ SCRIPT -->
+    <script type="module" src="/src/index.tsx"></script>
   </body>
 </html>
