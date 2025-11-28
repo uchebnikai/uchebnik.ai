@@ -4,9 +4,6 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { AppMode, SubjectId, Slide, ChartData, GeometryData, Message } from "../types";
 import { SYSTEM_PROMPTS } from "../constants";
 
-// Initialize Gemini Client
-const getClient = () => new GoogleGenAI({ apiKey: process.env.GOOGLE_API_KEY });
-
 export const generateResponse = async (
   subjectId: SubjectId,
   mode: AppMode,
@@ -15,7 +12,19 @@ export const generateResponse = async (
   history: Message[] = [],
   preferredModel: string = 'auto'
 ): Promise<Message> => { // Explicit return type
-  const ai = getClient();
+  
+  const apiKey = process.env.GOOGLE_API_KEY;
+  if (!apiKey) {
+      return {
+          id: Date.now().toString(),
+          role: 'model',
+          text: "Грешка: Не е намерен API ключ (GOOGLE_API_KEY). Моля, добавете го в настройките на Vercel.",
+          isError: true,
+          timestamp: Date.now()
+      };
+  }
+
+  const ai = new GoogleGenAI({ apiKey });
   
   // 1. IMAGE GENERATION LOGIC (Global Detection)
   // Check if the user explicitly wants an image, regardless of the subject
