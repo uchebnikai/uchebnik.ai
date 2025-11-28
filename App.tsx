@@ -6,7 +6,7 @@ import { generateResponse } from './services/geminiService';
 import { supabase } from './supabaseClient';
 import { Auth } from './Auth';
 import { 
-  Menu, X, Send, Image as ImageIcon, Loader2, ChevronRight, Download, Sparkles, Moon, Sun, Book, Copy, Check, Mic, MicOff, Share2, BellRing, BarChart2, LineChart as LineChartIcon, Ruler, ThumbsUp, ThumbsDown, Trash2, Settings, Type, Cpu, RotateCcw, User, Brain, FileJson, MessageSquare, Volume2, Square, Upload, ArrowRight, LayoutGrid, Folder, ChevronDown, ArrowLeft, Database, Eye, Code, Projector, History, Plus, Edit2, Clock, Calendar, Phone, PhoneOff, Heart, MoreHorizontal, ArrowUpRight, Lock, Unlock, Shield, Key, LogOut, CheckCircle, XCircle, Palette, Monitor
+  Menu, X, Send, Image as ImageIcon, Loader2, ChevronRight, Download, Sparkles, Moon, Sun, Book, Copy, Check, Mic, MicOff, Share2, BellRing, BarChart2, LineChart as LineChartIcon, Ruler, ThumbsUp, ThumbsDown, Trash2, Settings, Type, Cpu, RotateCcw, User, Brain, FileJson, MessageSquare, Volume2, Square, Upload, ArrowRight, LayoutGrid, Folder, ChevronDown, ArrowLeft, Database, Eye, Code, Projector, History, Plus, Edit2, Clock, Calendar, Phone, PhoneOff, Heart, MoreHorizontal, ArrowUpRight, Lock, Unlock, Shield, Key, LogOut, CheckCircle, XCircle, Palette, Monitor, Reply
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
@@ -250,6 +250,47 @@ const GeometryRenderer = ({ data }: { data: GeometryData }) => {
   );
 };
 
+const resizeImage = (file: File): Promise<string> => {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+        const MAX_DIM = 1280; // Balanced size for AI and storage
+
+        if (width > height) {
+          if (width > MAX_DIM) {
+            height = Math.round((height * MAX_DIM) / width);
+            width = MAX_DIM;
+          }
+        } else {
+          if (height > MAX_DIM) {
+            width = Math.round((width * MAX_DIM) / height);
+            height = MAX_DIM;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+           ctx.drawImage(img, 0, 0, width, height);
+           // Compress to JPEG 0.7
+           resolve(canvas.toDataURL('image/jpeg', 0.7));
+        } else {
+           resolve(e.target?.result as string);
+        }
+      };
+      img.onerror = () => resolve(reader.result as string); // Fallback
+      img.src = e.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  });
+};
+
 // --- Main App ---
 
 interface GeneratedKey {
@@ -281,6 +322,9 @@ export const App = () => {
   const MAX_MEMORY = 50000; 
   const [renameSessionId, setRenameSessionId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
+  
+  // Reply State
+  const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   
   // Pro Feature Lock & Admin
   const [isProUnlocked, setIsProUnlocked] = useState(false);
@@ -384,8 +428,8 @@ export const App = () => {
     if (typeof window !== 'undefined' && window.speechSynthesis) { loadVoices(); window.speechSynthesis.onvoiceschanged = loadVoices; }
   }, []);
 
-  useEffect(() => { localStorage.setItem('uchebnik_sessions', JSON.stringify(sessions)); }, [sessions]);
-  useEffect(() => { localStorage.setItem('uchebnik_settings', JSON.stringify(userSettings)); }, [userSettings]);
+  useEffect(() => { try { localStorage.setItem('uchebnik_sessions', JSON.stringify(sessions)); } catch(e) { console.error("Session storage error", e); } }, [sessions]);
+  useEffect(() => { try { localStorage.setItem('uchebnik_settings', JSON.stringify(userSettings)); } catch(e) { console.error("Settings storage error", e); } }, [userSettings]);
   useEffect(() => { document.documentElement.classList.toggle('dark', isDarkMode); }, [isDarkMode]);
 
   // Apply Theme Colors
@@ -500,11 +544,20 @@ export const App = () => {
   const handleSubjectChange = (subject: SubjectConfig) => {
     if (activeSubject?.id === subject.id) { if (window.innerWidth < 1024) setSidebarOpen(false); return; }
     if (unreadSubjects.has(subject.id)) { const newUnread = new Set(unreadSubjects); newUnread.delete(subject.id); setUnreadSubjects(newUnread); }
-    setActiveSubject(subject); setActiveMode(subject.modes[0]); setInputValue(''); setSelectedImages([]); setIsImageProcessing(false);
+    setActiveSubject(subject); setActiveMode(subject.modes[0]); setInputValue(''); setSelectedImages([]); setIsImageProcessing(false); setReplyingTo(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
     const subSessions = sessions.filter(s => s.subjectId === subject.id).sort((a, b) => b.lastModified - a.lastModified);
     if (subSessions.length > 0) setActiveSessionId(subSessions[0].id); else createNewSession(subject.id);
     if (window.innerWidth < 1024) setSidebarOpen(false);
+  };
+
+  const handleReply = (msg: Message) => {
+    setReplyingTo(msg);
+    // Focus the input if possible
+    // Note: React 19 / refs logic. Using a simple timeout to ensure render cycle handles it.
+    setTimeout(() => {
+       // Just ensuring focus
+    }, 100);
   };
 
   const handleSend = async (overrideText?: string, overrideImages?: string[]) => {
@@ -527,7 +580,18 @@ export const App = () => {
     const currentImgs = overrideImages || [...selectedImages];
     const sessId = currentSessionId;
 
-    const newUserMsg: Message = { id: Date.now().toString(), role: 'user', text: textToSend, images: currentImgs, timestamp: Date.now() };
+    // Capture reply context
+    const replyContext = replyingTo;
+    setReplyingTo(null); // Clear reply state
+
+    const newUserMsg: Message = { 
+        id: Date.now().toString(), 
+        role: 'user', 
+        text: textToSend, 
+        images: currentImgs, 
+        timestamp: Date.now(),
+        replyToId: replyContext?.id
+    };
 
     setSessions(prev => prev.map(s => {
         if (s.id === sessId) {
@@ -541,7 +605,16 @@ export const App = () => {
     setInputValue(''); setSelectedImages([]); if(fileInputRef.current) fileInputRef.current.value = '';
     setLoadingSubjects(prev => ({ ...prev, [currentSubId]: true }));
 
+    // Prepare Prompt with Reply Context
     let finalPrompt = textToSend;
+    if (replyContext) {
+        // We prepend the context so the AI knows what is being referred to.
+        // We do NOT modify the history objects themselves, only the current prompt sent to the AI.
+        const snippet = replyContext.text.substring(0, 300) + (replyContext.text.length > 300 ? '...' : '');
+        const roleName = replyContext.role === 'user' ? 'User' : 'Assistant';
+        finalPrompt = `[Replying to ${roleName}'s message: "${snippet}"]\n\n${textToSend}`;
+    }
+
     if (userSettings.responseLength === 'concise') finalPrompt += " (Short answer)"; else finalPrompt += " (Detailed answer)";
     if (userSettings.creativity === 'strict') finalPrompt += " (Strict)"; else if (userSettings.creativity === 'creative') finalPrompt += " (Creative)";
     
@@ -588,29 +661,37 @@ export const App = () => {
   };
 
   // Image Upload
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files.length > 0) {
       setIsImageProcessing(true);
-      Promise.all(Array.from(files).map(f => new Promise<string>(r => { const rd = new FileReader(); rd.onloadend = () => r(rd.result as string); rd.readAsDataURL(f); })))
-      .then(imgs => { setSelectedImages(prev => [...prev, ...imgs]); setIsImageProcessing(false); });
+      try {
+        const processedImages = await Promise.all(
+          Array.from(files).map(file => resizeImage(file as File))
+        );
+        setSelectedImages(prev => [...prev, ...processedImages]);
+      } catch (err) {
+        console.error("Image processing error", err);
+        alert("Грешка при обработката на изображението.");
+      } finally {
+        setIsImageProcessing(false);
+      }
       e.target.value = '';
     }
   };
 
   // Background Image Upload
-  const handleBackgroundUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleBackgroundUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 4 * 1024 * 1024) {
-        alert("Изображението е твърде голямо. Моля, изберете файл под 4MB.");
-        return;
+      try {
+        // Resize to prevent massive base64 strings
+        const resized = await resizeImage(file);
+        setUserSettings(prev => ({ ...prev, customBackground: resized }));
+      } catch (err) {
+        console.error("Background processing error", err);
+        alert("Грешка при обработката на фона.");
       }
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setUserSettings(prev => ({ ...prev, customBackground: reader.result as string }));
-      };
-      reader.readAsDataURL(file);
     }
     e.target.value = '';
   };
@@ -831,7 +912,7 @@ export const App = () => {
   
   const handleExportData = () => {
     const dataStr = JSON.stringify({ sessions, userSettings }, null, 2);
-    const blob = new window.Blob([dataStr], { type: "application/json" });
+    const blob = new Blob([dataStr], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a'); a.href = url; a.download = `uchebnik-backup-${new Date().toISOString().split('T')[0]}.json`; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
   };
@@ -1255,8 +1336,20 @@ export const App = () => {
       <div className={`flex-1 overflow-y-auto px-2 lg:px-8 py-4 lg:py-8 custom-scrollbar scroll-smooth ${userSettings.textSize === 'large' ? 'text-lg' : userSettings.textSize === 'small' ? 'text-sm' : 'text-base'}`}>
          <div className="max-w-4xl mx-auto space-y-8 lg:space-y-12 pb-40 pt-2 lg:pt-4">
             {currentMessages.map((msg) => (
-               <div key={msg.id} className={`flex flex-col gap-2 animate-in slide-in-from-bottom-4 duration-700 ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
+               <div key={msg.id} id={msg.id} className={`flex flex-col gap-2 animate-in slide-in-from-bottom-4 duration-700 ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
                   <div className={`relative px-5 py-4 lg:px-8 lg:py-6 max-w-[90%] md:max-w-[85%] lg:max-w-[75%] backdrop-blur-md shadow-sm break-words overflow-hidden min-w-0 ${msg.role === 'user' ? 'bg-gradient-to-br from-indigo-600 to-accent-600 text-white rounded-[24px] lg:rounded-[32px] rounded-br-none shadow-xl shadow-indigo-500/20' : 'glass-panel text-zinc-800 dark:text-zinc-200 rounded-[24px] lg:rounded-[32px] rounded-bl-none border-indigo-500/20'}`}>
+                     
+                     {/* Quote Block for Replies */}
+                     {msg.replyToId && (() => {
+                        const rMsg = currentMessages.find(m => m.id === msg.replyToId);
+                        if (rMsg) return (
+                           <div className="mb-3 pl-3 border-l-2 border-current/30 text-xs opacity-70 cursor-pointer hover:opacity-100 transition-opacity" onClick={() => document.getElementById(rMsg.id)?.scrollIntoView({behavior:'smooth', block:'center'})}>
+                              <div className="font-bold mb-0.5">{rMsg.role === 'user' ? 'Ти' : 'uchebnik.ai'}</div>
+                              <div className="truncate italic">{rMsg.text ? rMsg.text.substring(0, 100) : (rMsg.images?.length ? '[Изображение]' : '')}</div>
+                           </div>
+                        )
+                     })()}
+
                      {Array.isArray(msg.images) && msg.images.length > 0 && (
                         <div className="flex gap-3 mb-5 overflow-x-auto pb-2 snap-x">
                             {msg.images.map((img, i) => ( img && typeof img === 'string' ? ( <img key={i} src={img} onClick={() => setZoomedImage(img)} className="h-40 lg:h-56 rounded-2xl object-cover border border-white/20 snap-center shadow-lg cursor-pointer hover:scale-[1.02] transition-transform"/> ) : null ))}
@@ -1281,16 +1374,20 @@ export const App = () => {
                   </div>
 
                   <div className={`flex gap-1 px-4 transition-all duration-300 ${msg.role === 'user' ? 'opacity-0 group-hover:opacity-100' : 'opacity-100'}`}>
-                     {msg.role === 'model' && (
-                        <div className="flex bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border border-indigo-500/20 rounded-full p-1.5 shadow-sm mt-1">
-                           <button onClick={() => handleRate(msg.id, 'up')} className={`p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 transition-colors ${msg.rating === 'up' ? 'text-green-500' : 'text-gray-400'}`}><ThumbsUp size={14} className="lg:w-4 lg:h-4"/></button>
-                           <button onClick={() => handleRate(msg.id, 'down')} className={`p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 transition-colors ${msg.rating === 'down' ? 'text-red-500' : 'text-gray-400'}`}><ThumbsDown size={14} className="lg:w-4 lg:h-4"/></button>
-                           <div className="w-px h-4 bg-gray-200 dark:bg-white/10 mx-1 self-center"/>
-                           <button onClick={() => handleSpeak(msg.text, msg.id)} className={`p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 transition-colors ${speakingMessageId === msg.id ? 'text-indigo-500 animate-pulse' : 'text-gray-400'}`}>{speakingMessageId === msg.id ? <Square size={14} fill="currentColor"/> : <Volume2 size={14} className="lg:w-4 lg:h-4"/>}</button>
-                           <button onClick={() => handleCopy(msg.text, msg.id)} className="p-2 text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">{copiedId === msg.id ? <Check size={14} className="text-green-500"/> : <Copy size={14} className="lg:w-4 lg:h-4"/>}</button>
-                           <button onClick={() => handleShare(msg.text)} className="p-2 text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"><Share2 size={14} className="lg:w-4 lg:h-4"/></button>
-                        </div>
-                     )}
+                     {/* Action Buttons */}
+                     <div className="flex bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border border-indigo-500/20 rounded-full p-1.5 shadow-sm mt-1">
+                        {msg.role === 'model' && (
+                           <>
+                             <button onClick={() => handleRate(msg.id, 'up')} className={`p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 transition-colors ${msg.rating === 'up' ? 'text-green-500' : 'text-gray-400'}`}><ThumbsUp size={14} className="lg:w-4 lg:h-4"/></button>
+                             <button onClick={() => handleRate(msg.id, 'down')} className={`p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 transition-colors ${msg.rating === 'down' ? 'text-red-500' : 'text-gray-400'}`}><ThumbsDown size={14} className="lg:w-4 lg:h-4"/></button>
+                             <div className="w-px h-4 bg-gray-200 dark:bg-white/10 mx-1 self-center"/>
+                           </>
+                        )}
+                        <button onClick={() => handleReply(msg)} className="p-2 text-gray-400 hover:text-indigo-500 dark:hover:text-indigo-400 transition-colors" title="Отговор"><Reply size={14} className="lg:w-4 lg:h-4"/></button>
+                        <button onClick={() => handleSpeak(msg.text, msg.id)} className={`p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 transition-colors ${speakingMessageId === msg.id ? 'text-indigo-500 animate-pulse' : 'text-gray-400'}`}>{speakingMessageId === msg.id ? <Square size={14} fill="currentColor"/> : <Volume2 size={14} className="lg:w-4 lg:h-4"/>}</button>
+                        <button onClick={() => handleCopy(msg.text, msg.id)} className="p-2 text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">{copiedId === msg.id ? <Check size={14} className="text-green-500"/> : <Copy size={14} className="lg:w-4 lg:h-4"/>}</button>
+                        <button onClick={() => handleShare(msg.text)} className="p-2 text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"><Share2 size={14} className="lg:w-4 lg:h-4"/></button>
+                     </div>
                   </div>
                </div>
             ))}
@@ -1311,6 +1408,25 @@ export const App = () => {
 
       <div className="absolute bottom-0 left-0 right-0 px-2 lg:px-4 pointer-events-none z-40 flex justify-center pb-safe">
          <div className="w-full max-w-3xl pointer-events-auto mb-4 lg:mb-6">
+            
+            {/* Reply Banner */}
+            {replyingTo && (
+               <div className="mb-2 mx-4 bg-white/90 dark:bg-zinc-800/90 backdrop-blur-md border border-indigo-500/20 p-3 rounded-2xl flex items-center justify-between shadow-lg animate-in slide-in-from-bottom-2 fade-in">
+                  <div className="flex items-center gap-3 overflow-hidden">
+                     <div className="p-2 bg-indigo-100 dark:bg-indigo-500/20 rounded-full text-indigo-600 dark:text-indigo-400 shrink-0">
+                        <Reply size={16}/>
+                     </div>
+                     <div className="flex flex-col overflow-hidden">
+                        <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Отговор на {replyingTo.role === 'user' ? 'теб' : 'uchebnik.ai'}</span>
+                        <span className="text-sm font-medium truncate text-zinc-800 dark:text-zinc-200">{replyingTo.text || "Изображение"}</span>
+                     </div>
+                  </div>
+                  <button onClick={() => setReplyingTo(null)} className="p-2 hover:bg-gray-200 dark:hover:bg-white/10 rounded-full text-gray-500 transition-colors">
+                     <X size={16}/>
+                  </button>
+               </div>
+            )}
+
             <div className={`relative 
                ${userSettings.customBackground ? 'bg-white/50 dark:bg-black/50 border-white/20' : 'bg-white/80 dark:bg-zinc-900/80 border-white/10'}
                backdrop-blur-xl border shadow-2xl rounded-[28px] transition-all duration-300 focus-within:ring-2 focus-within:ring-indigo-500/30 focus-within:bg-white dark:focus-within:bg-black p-2 flex items-end gap-2 ${activeSubject && loadingSubjects[activeSubject.id] ? 'opacity-70 pointer-events-none' : ''}`}>
@@ -1336,7 +1452,7 @@ export const App = () => {
                           e.target.style.height = Math.min(e.target.scrollHeight, 128) + 'px';
                       }}
                       onKeyDown={e => {if(e.key === 'Enter' && !e.shiftKey && !(activeSubject && loadingSubjects[activeSubject.id])){e.preventDefault(); handleSend();}}} 
-                      placeholder="Напиши съобщение..."
+                      placeholder={replyingTo ? "Напиши отговор..." : "Напиши съобщение..."}
                       disabled={activeSubject ? loadingSubjects[activeSubject.id] : false}
                       className="w-full bg-transparent border-none focus:ring-0 p-0 text-base text-zinc-900 dark:text-zinc-100 placeholder-gray-400 resize-none max-h-32 min-h-[24px] leading-6"
                       rows={1}

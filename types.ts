@@ -58,6 +58,7 @@ export interface Message {
   chartData?: ChartData; // For Math/Physics data visualization
   geometryData?: GeometryData; // For Math/Physics geometric drawings
   rating?: 'up' | 'down'; // User feedback
+  replyToId?: string; // ID of the message being replied to
 }
 
 export interface Session {
