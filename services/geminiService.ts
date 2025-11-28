@@ -5,7 +5,7 @@ import { AppMode, SubjectId, Slide, ChartData, GeometryData, Message } from "../
 import { SYSTEM_PROMPTS } from "../constants";
 
 // Initialize Gemini Client
-const getClient = () => new GoogleGenAI({ apiKey: process.env.API_KEY });
+const getClient = () => new GoogleGenAI({ apiKey: process.env.GOOGLE_API_KEY });
 
 export const generateResponse = async (
   subjectId: SubjectId,
