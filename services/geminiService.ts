@@ -3,6 +3,26 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { AppMode, SubjectId, Slide, ChartData, GeometryData, Message } from "../types";
 import { SYSTEM_PROMPTS } from "../constants";
 
+// Helper for delay
+const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+// Helper for retry logic with exponential backoff
+async function withRetry<T>(fn: () => Promise<T>, retries = 3, delay = 2000): Promise<T> {
+  try {
+    return await fn();
+  } catch (error: any) {
+    const msg = error.toString().toLowerCase();
+    // 429: Too Many Requests, 503: Service Unavailable
+    // Also catch "resource exhausted" which is the text representation of 429
+    if ((msg.includes('429') || msg.includes('503') || msg.includes('resource exhausted')) && retries > 0) {
+      console.warn(`Gemini API Busy (429/503). Retrying... Attempts left: ${retries}. Waiting ${delay}ms.`);
+      await wait(delay);
+      return withRetry(fn, retries - 1, delay * 2); // Exponential backoff: 2s, 4s, 8s
+    }
+    throw error;
+  }
+}
+
 export const generateResponse = async (
   subjectId: SubjectId,
   mode: AppMode,
@@ -14,7 +34,8 @@ export const generateResponse = async (
   
   let apiKey = "";
   try {
-    apiKey = process.env.GOOGLE_API_KEY || "";
+    // Try both naming conventions to be safe
+    apiKey = process.env.GOOGLE_API_KEY || process.env.API_KEY || "";
   } catch (e) {
     console.error("Environment variable access error:", e);
   }
@@ -47,7 +68,8 @@ export const generateResponse = async (
 
       const enhancedPrompt = promptText + " . high quality, realistic, detailed, 8k resolution";
 
-      const response = await ai.models.generateContent({
+      // Apply retry logic for images
+      const response = await withRetry(() => ai.models.generateContent({
         model: model, 
         contents: enhancedPrompt,
         config: {
@@ -55,7 +77,7 @@ export const generateResponse = async (
              aspectRatio: aspectRatio
            }
         }
-      });
+      }));
       
       let generatedImageBase64: string | undefined;
 
@@ -100,7 +122,7 @@ export const generateResponse = async (
       return { 
         id: Date.now().toString(),
         role: 'model',
-        text: "Възникна грешка при генерирането на изображение.", 
+        text: "Възникна грешка при генерирането на изображение. Моля, опитайте отново по-късно.", 
         isError: true,
         timestamp: Date.now()
       };
@@ -110,7 +132,8 @@ export const generateResponse = async (
   // 2. PRESENTATION LOGIC
   if (subjectId === SubjectId.ART && mode === AppMode.PRESENTATION) {
     try {
-      const response = await ai.models.generateContent({
+      // Apply retry logic for presentation
+      const response = await withRetry(() => ai.models.generateContent({
         model: 'gemini-2.5-flash',
         contents: promptText,
         config: {
@@ -129,7 +152,7 @@ export const generateResponse = async (
             }
           }
         }
-      });
+      }));
 
       const jsonStr = response.text;
       const slides: Slide[] = JSON.parse(jsonStr || "[]");
@@ -200,13 +223,33 @@ export const generateResponse = async (
     
     contents.push({ role: 'user', parts: currentParts });
 
-    const response = await ai.models.generateContent({
-      model: modelName,
-      contents: contents,
-      config: {
-        systemInstruction: systemInstruction,
-      }
-    });
+    const performGenerate = async (mName: string) => {
+        return await ai.models.generateContent({
+            model: mName,
+            contents: contents,
+            config: {
+              systemInstruction: systemInstruction,
+            }
+        });
+    };
+
+    let response;
+    
+    try {
+        // Attempt with retry
+        response = await withRetry(() => performGenerate(modelName));
+    } catch (err: any) {
+        const errStr = err.toString().toLowerCase();
+        // Fallback Logic: If Pro model fails with Rate Limit or Service Unavailable, try Flash
+        // This is crucial for avoiding 429s on the heavier model
+        if (modelName !== 'gemini-2.5-flash' && (errStr.includes('429') || errStr.includes('503') || errStr.includes('resource exhausted'))) {
+            console.warn(`Model ${modelName} failed with rate limit. Falling back to gemini-2.5-flash.`);
+            response = await withRetry(() => performGenerate('gemini-2.5-flash'));
+            // Optionally append a note to the text (handled below if we wanted)
+        } else {
+            throw err; // Re-throw if it's already Flash or a different error
+        }
+    }
 
     let text = "Няма отговор.";
     try {
@@ -252,13 +295,12 @@ export const generateResponse = async (
     if (rawError.includes("403")) {
         errorMsg = "Грешка 403: Достъпът е отказан. Вероятно API ключът е невалиден или има ограничения за домейна (Vercel).";
     } else if (rawError.includes("404")) {
-        errorMsg = `Грешка 404: Моделът (${modelName}) не е намерен или нямате достъп до него.`;
-    } else if (rawError.includes("429")) {
-        errorMsg = "Грешка 429: Твърде много заявки. Моля, изчакайте малко.";
+        errorMsg = `Грешка 404: Моделът не е намерен или нямате достъп до него.`;
+    } else if (rawError.includes("429") || rawError.includes("resource exhausted")) {
+        errorMsg = "Грешка 429: Твърде много заявки (Rate Limit). Системата опита да повтори заявката, но сървърът е претоварен. Моля, изчакайте малко и опитайте отново.";
     } else if (rawError.includes("fetch failed") || rawError.includes("NetworkError")) {
         errorMsg = "Мрежова грешка. Проверете интернет връзката си.";
     } else {
-        // Show a bit of the technical error to help diagnosis
         errorMsg += ` (Детайли: ${rawError.substring(0, 100)}...)`;
     }
 
