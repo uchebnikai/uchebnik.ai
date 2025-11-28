@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { SubjectConfig, SubjectId, AppMode, Message, Slide, ChartData, GeometryData, UserSettings, Session } from './types';
 import { SUBJECTS, AI_MODELS } from './constants';
@@ -6,7 +5,7 @@ import { generateResponse } from './services/geminiService';
 import { supabase } from './supabaseClient';
 import { Auth } from './Auth';
 import { 
-  Menu, X, Send, Image as ImageIcon, Loader2, ChevronRight, Download, Sparkles, Moon, Sun, Book, Copy, Check, Mic, MicOff, Share2, BellRing, BarChart2, LineChart as LineChartIcon, Ruler, ThumbsUp, ThumbsDown, Trash2, Settings, Type, Cpu, RotateCcw, User, Brain, FileJson, MessageSquare, Volume2, Square, Upload, ArrowRight, LayoutGrid, Folder, ChevronDown, ArrowLeft, Database, Eye, Code, Projector, History, Plus, Edit2, Clock, Calendar, Phone, PhoneOff, Heart, MoreHorizontal, ArrowUpRight, Lock, Unlock, Shield, Key, LogOut, CheckCircle, XCircle, Palette, Monitor, Reply, Crown, Zap
+  Menu, X, Send, Image as ImageIcon, Loader2, ChevronRight, Download, Sparkles, Moon, Sun, Book, Copy, Check, Mic, MicOff, Share2, BellRing, BarChart2, LineChart as LineChartIcon, Ruler, ThumbsUp, ThumbsDown, Trash2, Settings, Type, Cpu, RotateCcw, User, Brain, FileJson, MessageSquare, Volume2, Square, Upload, ArrowRight, LayoutGrid, Folder, ChevronDown, ArrowLeft, Database, Eye, Code, Projector, History, Plus, Edit2, Clock, Calendar, Phone, PhoneOff, Heart, MoreHorizontal, ArrowUpRight, Lock, Unlock, Shield, Key, LogOut, CheckCircle, XCircle, Palette, Monitor, Reply, Crown, Zap, AlertTriangle, Info, AlertCircle
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
@@ -363,6 +362,16 @@ export const App = () => {
   const [isListening, setIsListening] = useState(false);
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
 
+  // --- Toast & Confirm State ---
+  const [toasts, setToasts] = useState<{id: string, message: string, type: 'success'|'error'|'info'}[]>([]);
+  const [confirmModal, setConfirmModal] = useState<{isOpen: boolean, title: string, message: string, onConfirm: () => void} | null>(null);
+
+  const addToast = (message: string, type: 'success'|'error'|'info' = 'info') => {
+    const id = Date.now().toString();
+    setToasts(prev => [...prev, {id, message, type}]);
+    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 4000);
+  };
+
   // --- Refs ---
   const recognitionRef = useRef<any>(null);
   const voiceCallRecognitionRef = useRef<any>(null);
@@ -646,7 +655,10 @@ export const App = () => {
 
       if (activeSubjectRef.current?.id !== currentSubId) {
          setUnreadSubjects(prev => new Set(prev).add(currentSubId));
-         if (userSettings.notifications) { setNotification({ message: `Нов отговор: ${SUBJECTS.find(s => s.id === currentSubId)?.name}`, subjectId: currentSubId }); setTimeout(() => setNotification(null), 4000); }
+         if (userSettings.notifications) { 
+             setNotification({ message: `Нов отговор: ${SUBJECTS.find(s => s.id === currentSubId)?.name}`, subjectId: currentSubId }); 
+             setTimeout(() => setNotification(null), 4000); 
+         }
       } else if (userSettings.notifications && userSettings.sound) {
          new Audio('https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3').play().catch(()=>{});
       }
@@ -672,7 +684,7 @@ export const App = () => {
         setSelectedImages(prev => [...prev, ...processedImages]);
       } catch (err) {
         console.error("Image processing error", err);
-        alert("Грешка при обработката на изображението.");
+        addToast("Грешка при обработката на изображението.", "error");
       } finally {
         setIsImageProcessing(false);
       }
@@ -690,7 +702,7 @@ export const App = () => {
         setUserSettings(prev => ({ ...prev, customBackground: resized }));
       } catch (err) {
         console.error("Background processing error", err);
-        alert("Грешка при обработката на фона.");
+        addToast("Грешка при обработката на фона.", "error");
       }
     }
     e.target.value = '';
@@ -708,38 +720,52 @@ export const App = () => {
         }
     } else {
         handleCopy(text, 'share-fallback'); // Fallback to copy
-        alert('Текстът е копиран!');
+        addToast('Текстът е копиран!', 'success');
     }
   };
 
   const deleteSession = (sId: string) => { 
-    if(confirm('Сигурни ли сте, че искате да изтриете този чат?')) { 
-      const nextSessions = sessions.filter(s => s.id !== sId);
-      setSessions(nextSessions); 
-      if(sId === activeSessionId) {
-        const nextInSubject = nextSessions.find(s => s.subjectId === activeSubject?.id);
-        if(nextInSubject) setActiveSessionId(nextInSubject.id);
-        else if (activeSubject) createNewSession(activeSubject.id);
-        else setActiveSessionId(null);
+    setConfirmModal({
+      isOpen: true,
+      title: 'Изтриване на чат',
+      message: 'Сигурни ли сте, че искате да изтриете този чат? Това действие е необратимо.',
+      onConfirm: () => {
+        const nextSessions = sessionsRef.current.filter(s => s.id !== sId);
+        setSessions(nextSessions); 
+        if(sId === activeSessionIdRef.current) {
+          const nextInSubject = nextSessions.find(s => s.subjectId === activeSubjectRef.current?.id);
+          if(nextInSubject) setActiveSessionId(nextInSubject.id);
+          else if (activeSubjectRef.current) createNewSession(activeSubjectRef.current.id);
+          else setActiveSessionId(null);
+        }
+        setConfirmModal(null);
+        addToast('Чатът е изтрит', 'success');
       }
-    } 
+    });
   };
 
   const renameSession = (sId: string, title: string) => { setSessions(prev => prev.map(s => s.id === sId ? { ...s, title } : s)); setRenameSessionId(null); };
   
   const handleClearMemory = () => {
-    if (confirm('Сигурни ли сте? Това ще нулира паметта за ТЕКУЩИЯ чат.')) {
-      if (activeSessionId && activeSubject) {
-        setSessions(prev => prev.map(s => {
-           if (s.id === activeSessionId) {
-             const greetingName = userSettings.userName ? `, ${userSettings.userName}` : '';
-             const welcomeText = s.subjectId === SubjectId.GENERAL ? `Здравей${greetingName}! Аз съм uchebnik.ai. Попитай ме каквото и да е!` : `Здравей${greetingName}! Аз съм твоят помощник по **${SUBJECTS.find(sub=>sub.id === s.subjectId)?.name}**.`
-             return { ...s, messages: [{ id: 'reset-'+Date.now(), role: 'model', text: welcomeText, timestamp: Date.now() }] };
-           }
-           return s;
-        }));
-      }
-    }
+    setConfirmModal({
+        isOpen: true,
+        title: 'Изчистване на паметта',
+        message: 'Сигурни ли сте? Това ще изтрие историята на текущия чат.',
+        onConfirm: () => {
+             if (activeSessionIdRef.current && activeSubjectRef.current) {
+                setSessions(prev => prev.map(s => {
+                   if (s.id === activeSessionIdRef.current) {
+                     const greetingName = userSettings.userName ? `, ${userSettings.userName}` : '';
+                     const welcomeText = s.subjectId === SubjectId.GENERAL ? `Здравей${greetingName}! Аз съм uchebnik.ai. Попитай ме каквото и да е!` : `Здравей${greetingName}! Аз съм твоят помощник по **${SUBJECTS.find(sub=>sub.id === s.subjectId)?.name}**.`
+                     return { ...s, messages: [{ id: 'reset-'+Date.now(), role: 'model', text: welcomeText, timestamp: Date.now() }] };
+                   }
+                   return s;
+                }));
+                addToast('Паметта е изчистена', 'success');
+              }
+             setConfirmModal(null);
+        }
+    });
   };
 
   // Voice & TTS
@@ -808,7 +834,7 @@ export const App = () => {
      }
 
      const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-     if(!SR) { alert('Гласовото разпознаване не се поддържа.'); endVoiceCall(); return; }
+     if(!SR) { addToast('Гласовото разпознаване не се поддържа.', 'error'); endVoiceCall(); return; }
      
      try { voiceCallRecognitionRef.current?.stop(); } catch(e) {}
 
@@ -866,7 +892,7 @@ export const App = () => {
   const toggleListening = () => {
     if(isListening) { recognitionRef.current?.stop(); setIsListening(false); return; }
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if(!SR) { alert('Няма поддръжка.'); return; }
+    if(!SR) { addToast('Няма поддръжка.', 'error'); return; }
     const rec = new SR();
     rec.lang = activeSubject?.id === SubjectId.ENGLISH ? 'en-US' : activeSubject?.id === SubjectId.FRENCH ? 'fr-FR' : 'bg-BG';
     rec.interimResults = true; rec.continuous = true;
@@ -877,7 +903,7 @@ export const App = () => {
         setInputValue((startingTextRef.current + ' ' + f + inter).trim());
     };
     rec.onstart = () => setIsListening(true); rec.onend = () => setIsListening(false);
-    rec.onerror = (e: any) => { if(e.error === 'service-not-allowed') alert('Гласовата услуга е недостъпна.'); setIsListening(false); };
+    rec.onerror = (e: any) => { if(e.error === 'service-not-allowed') addToast('Гласовата услуга е недостъпна.', 'error'); setIsListening(false); };
     recognitionRef.current = rec; rec.start();
   };
 
@@ -921,7 +947,7 @@ export const App = () => {
     const file = e.target.files?.[0]; if (!file) return;
     const reader = new FileReader();
     reader.onload = (event) => {
-      try { const data = JSON.parse(event.target?.result as string); if (data.sessions) setSessions(data.sessions); if (data.userSettings) setUserSettings(data.userSettings); alert('Данните са възстановени успешно!'); } catch (err) { alert('Грешка при зареждане на файл.'); }
+      try { const data = JSON.parse(event.target?.result as string); if (data.sessions) setSessions(data.sessions); if (data.userSettings) setUserSettings(data.userSettings); addToast('Данните са възстановени успешно!', 'success'); } catch (err) { addToast('Грешка при зареждане на файл.', 'error'); }
     };
     reader.readAsText(file); if(importInputRef.current) importInputRef.current.value = '';
   };
@@ -935,12 +961,12 @@ export const App = () => {
        setUserSettings(prev => ({ ...prev, preferredModel: 'gemini-3-pro-preview' }));
        setShowUnlockModal(false);
        setUnlockKeyInput('');
-       alert("Успешно отключихте Pro Плана! Всички функции са достъпни.");
+       addToast("Успешно отключихте Pro Плана! Всички функции са достъпни.", 'success');
        
        // Note: We don't mark as "used" in localStorage here because
        // this key might be from another device. We trust the algorithm.
     } else {
-       alert("Невалиден ключ.");
+       addToast("Невалиден ключ.", 'error');
     }
   };
 
@@ -949,8 +975,9 @@ export const App = () => {
       setShowAdminAuth(false);
       setShowAdminPanel(true);
       setAdminPasswordInput('');
+      addToast("Успешен вход в админ панела", 'success');
     } else {
-      alert("Грешна парола!");
+      addToast("Грешна парола!", 'error');
     }
   };
 
@@ -1029,7 +1056,7 @@ export const App = () => {
                             <CheckCircle size={10}/> Генериран
                          </span>
                        </div>
-                       <button onClick={() => { navigator.clipboard.writeText(keyObj.code); alert('Копирано!'); }} className="p-2 hover:bg-gray-100 dark:hover:bg-white/10 rounded-md text-gray-400 hover:text-white"><Copy size={16}/></button>
+                       <button onClick={() => { navigator.clipboard.writeText(keyObj.code); addToast('Копирано!', 'success'); }} className="p-2 hover:bg-gray-100 dark:hover:bg-white/10 rounded-md text-gray-400 hover:text-white"><Copy size={16}/></button>
                     </div>
                   ))
                 )}
@@ -1530,6 +1557,41 @@ export const App = () => {
       )}
 
       {notification && <div className="fixed top-6 right-6 z-[100] glass-card p-4 rounded-2xl flex gap-4 animate-in slide-in-from-right duration-500 cursor-pointer hover:scale-105 transition-transform border border-indigo-500/20 shadow-2xl" onClick={() => { const s = SUBJECTS.find(sub => sub.id === notification.subjectId); if(s) handleSubjectChange(s); setNotification(null); }}><div className="bg-indigo-500 text-white p-3 rounded-full shadow-lg shadow-indigo-500/40"><BellRing size={20}/></div><div><p className="font-bold text-sm">Ново съобщение</p><p className="text-xs text-gray-500 dark:text-gray-400">{notification.message}</p></div></div>}
+      
+      {/* Toast Container */}
+      <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[110] flex flex-col gap-2 w-full max-w-md px-4 pointer-events-none">
+        {toasts.map(toast => (
+          <div key={toast.id} className={`pointer-events-auto flex items-center gap-3 p-4 rounded-2xl shadow-2xl border backdrop-blur-md animate-in slide-in-from-top-5 fade-in duration-300 ${
+            toast.type === 'success' ? 'bg-emerald-500/90 text-white border-emerald-400/50' :
+            toast.type === 'error' ? 'bg-red-500/90 text-white border-red-400/50' :
+            'bg-zinc-800/90 text-white border-white/10'
+          }`}>
+             {toast.type === 'success' ? <CheckCircle size={20}/> : toast.type === 'error' ? <AlertCircle size={20}/> : <Info size={20}/>}
+             <p className="font-medium text-sm">{toast.message}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Confirm Modal */}
+      {confirmModal && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+           <div className="bg-white dark:bg-zinc-900 w-full max-w-sm p-6 rounded-3xl border border-indigo-500/20 shadow-2xl animate-in zoom-in-95 duration-200">
+              <div className="flex flex-col items-center text-center gap-4 mb-6">
+                 <div className="w-12 h-12 rounded-full bg-amber-100 dark:bg-amber-500/20 text-amber-500 flex items-center justify-center">
+                    <AlertTriangle size={24}/>
+                 </div>
+                 <div>
+                    <h3 className="text-xl font-bold text-zinc-900 dark:text-white mb-2">{confirmModal.title}</h3>
+                    <p className="text-gray-500 dark:text-gray-400 text-sm leading-relaxed">{confirmModal.message}</p>
+                 </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                 <button onClick={() => setConfirmModal(null)} className="py-3 rounded-xl font-bold text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5 transition-colors">Отказ</button>
+                 <button onClick={confirmModal.onConfirm} className="py-3 rounded-xl font-bold bg-indigo-600 hover:bg-indigo-500 text-white shadow-lg shadow-indigo-500/20 transition-all active:scale-95">Потвърди</button>
+              </div>
+           </div>
+        </div>
+      )}
       
       {renderAdminPanel()}
       {renderUnlockModal()}
