@@ -308,6 +308,8 @@ export const App = () => {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [inputValue, setInputValue] = useState('');
+  const [homeInputValue, setHomeInputValue] = useState('');
+  const [pendingHomeMessage, setPendingHomeMessage] = useState<string | null>(null);
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
   const [isImageProcessing, setIsImageProcessing] = useState(false);
   const [loadingSubjects, setLoadingSubjects] = useState<Record<string, boolean>>({});
@@ -502,6 +504,14 @@ export const App = () => {
   useEffect(() => { isVoiceCallActiveRef.current = isVoiceCallActive; }, [isVoiceCallActive]);
   useEffect(() => { voiceCallStatusRef.current = voiceCallStatus; }, [voiceCallStatus]);
   useEffect(() => { loadingSubjectsRef.current = loadingSubjects; }, [loadingSubjects]);
+
+  // Handle auto-send from home input
+  useEffect(() => {
+    if (pendingHomeMessage && activeSubject?.id === SubjectId.GENERAL && activeSessionId) {
+       handleSend(pendingHomeMessage);
+       setPendingHomeMessage(null);
+    }
+  }, [activeSubject, activeSessionId, pendingHomeMessage]);
 
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [sessions, activeSessionId, isImageProcessing]);
 
@@ -706,6 +716,14 @@ export const App = () => {
       }
     }
     e.target.value = '';
+  };
+
+  const onHomeSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!homeInputValue.trim()) return;
+    setPendingHomeMessage(homeInputValue);
+    setHomeInputValue('');
+    handleSubjectChange(SUBJECTS.find(s => s.id === SubjectId.GENERAL)!);
   };
 
   const handleCopy = (text: string, id: string) => { navigator.clipboard.writeText(text).then(() => { setCopiedId(id); setTimeout(() => setCopiedId(null), 2000); }); };
@@ -1234,6 +1252,26 @@ export const App = () => {
                </div>
             </button>
           </div>
+
+          <div className="w-full max-w-4xl px-4 md:px-12 mt-8 animate-in slide-in-from-bottom-10 fade-in duration-700 delay-100 z-20">
+             <form onSubmit={onHomeSubmit} className="relative group w-full">
+                <div className="absolute -inset-0.5 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-2xl blur opacity-20 group-hover:opacity-40 transition duration-500"></div>
+                <div className="relative flex items-center bg-white dark:bg-zinc-900 border border-indigo-500/10 rounded-2xl p-2 shadow-xl backdrop-blur-xl">
+                    <div className="pl-4 text-indigo-500"><MessageSquare size={24} /></div>
+                    <input 
+                        type="text" 
+                        value={homeInputValue}
+                        onChange={(e) => setHomeInputValue(e.target.value)}
+                        placeholder="Попитай uchebnik.ai нещо..."
+                        className="w-full bg-transparent border-none outline-none text-lg px-4 py-3 text-zinc-900 dark:text-white placeholder-gray-400 font-medium"
+                    />
+                    <button type="submit" disabled={!homeInputValue.trim()} className="p-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl transition-all active:scale-95 disabled:opacity-50 disabled:active:scale-100 shadow-lg shadow-indigo-500/20">
+                        <ArrowRight size={20} />
+                    </button>
+                </div>
+             </form>
+          </div>
+
         </div>
       ) : (
         <div className="max-w-7xl w-full py-8 md:py-12 px-4 animate-in slide-in-from-bottom-10 fade-in duration-500 relative z-10">
