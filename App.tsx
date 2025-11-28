@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { SubjectConfig, SubjectId, AppMode, Message, Slide, ChartData, GeometryData, UserSettings, Session } from './types';
 import { SUBJECTS, AI_MODELS } from './constants';
@@ -5,7 +6,7 @@ import { generateResponse } from './services/geminiService';
 import { supabase } from './supabaseClient';
 import { Auth } from './Auth';
 import { 
-  Menu, X, Send, Image as ImageIcon, Loader2, ChevronRight, Download, Sparkles, Moon, Sun, Book, Copy, Check, Mic, MicOff, Share2, BellRing, BarChart2, LineChart as LineChartIcon, Ruler, ThumbsUp, ThumbsDown, Trash2, Settings, Type, Cpu, RotateCcw, User, Brain, FileJson, MessageSquare, Volume2, Square, Upload, ArrowRight, LayoutGrid, Folder, ChevronDown, ChevronUp, ArrowLeft, Database, Eye, Code, Projector, History, Plus, Edit2, Clock, Calendar, Phone, PhoneOff, Heart, MoreHorizontal, ArrowUpRight, Lock, Unlock, Shield, Key, LogOut, CheckCircle, XCircle, Palette, Monitor, Reply, Crown, Zap, AlertTriangle, Info, AlertCircle, HelpCircle, Camera
+  Menu, X, Send, Image as ImageIcon, Loader2, ChevronRight, Download, Sparkles, Moon, Sun, Book, Copy, Check, Mic, MicOff, Share2, BellRing, BarChart2, LineChart as LineChartIcon, Ruler, ThumbsUp, ThumbsDown, Trash2, Settings, Type, Cpu, RotateCcw, User, Brain, FileJson, MessageSquare, Volume2, Square, Upload, ArrowRight, LayoutGrid, Folder, ChevronDown, ChevronUp, ArrowLeft, Database, Eye, Code, Projector, History, Plus, Edit2, Clock, Calendar, Phone, PhoneOff, Heart, MoreHorizontal, ArrowUpRight, Lock, Unlock, Shield, Key, LogOut, CheckCircle, XCircle, Palette, Monitor, Reply, Crown, Zap, AlertTriangle, Info, AlertCircle, HelpCircle, Camera, Mail
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
@@ -317,7 +318,6 @@ export const App = () => {
   const [historyDrawerOpen, setHistoryDrawerOpen] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(true); // Default Dark Mode
   const [showSettings, setShowSettings] = useState(false);
-  const [showProfileModal, setShowProfileModal] = useState(false);
   const [speakingMessageId, setSpeakingMessageId] = useState<string | null>(null);
   const [homeView, setHomeView] = useState<'landing' | 'subjects_grid'>('landing');
   const [memoryUsage, setMemoryUsage] = useState(0); 
@@ -328,7 +328,8 @@ export const App = () => {
   
   // Profile State
   const [userMeta, setUserMeta] = useState({ firstName: '', lastName: '', avatar: '' });
-  const [editProfile, setEditProfile] = useState({ firstName: '', lastName: '', avatar: '' });
+  // Unified edit profile state including account details
+  const [editProfile, setEditProfile] = useState({ firstName: '', lastName: '', avatar: '', email: '', password: '', currentPassword: '' });
 
   // Reply State
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
@@ -416,9 +417,10 @@ export const App = () => {
             const firstName = meta.first_name || '';
             const lastName = meta.last_name || '';
             const avatar = meta.avatar_url || '';
+            const email = session.user.email || '';
             
             setUserMeta({ firstName, lastName, avatar });
-            setEditProfile({ firstName, lastName, avatar });
+            setEditProfile({ firstName, lastName, avatar, email, password: '', currentPassword: '' });
 
             setUserSettings(prev => {
                 const fullName = meta.full_name || `${firstName} ${lastName}`.trim();
@@ -582,25 +584,67 @@ export const App = () => {
       await supabase.auth.signOut();
   };
 
-  const handleUpdateProfile = async () => {
+  const handleUpdateAccount = async () => {
       try {
-          const updates = {
-              first_name: editProfile.firstName,
-              last_name: editProfile.lastName,
-              full_name: `${editProfile.firstName} ${editProfile.lastName}`.trim(),
-              avatar_url: editProfile.avatar
+          const updates: any = {
+              data: {
+                  first_name: editProfile.firstName,
+                  last_name: editProfile.lastName,
+                  full_name: `${editProfile.firstName} ${editProfile.lastName}`.trim(),
+                  avatar_url: editProfile.avatar
+              }
           };
 
-          const { error } = await supabase.auth.updateUser({
-              data: updates
-          });
+          const isEmailChange = editProfile.email !== session?.user?.email;
+          const isPasswordChange = !!editProfile.password;
+
+          // Require current password for sensitive changes
+          if (isEmailChange || isPasswordChange) {
+              if (!editProfile.currentPassword) {
+                  addToast('Моля, въведете текущата си парола, за да запазите промените по акаунта.', 'error');
+                  return;
+              }
+
+              // Verify current password via re-authentication
+              const { error: signInError } = await supabase.auth.signInWithPassword({
+                  email: session?.user?.email || '',
+                  password: editProfile.currentPassword
+              });
+
+              if (signInError) {
+                  addToast('Грешна текуща парола.', 'error');
+                  return;
+              }
+          }
+
+          if (isEmailChange) {
+              updates.email = editProfile.email;
+          }
+          if (isPasswordChange) {
+              updates.password = editProfile.password;
+          }
+
+          // Call updateUser
+          const { error } = await supabase.auth.updateUser(updates, { emailRedirectTo: window.location.origin });
 
           if (error) throw error;
 
-          setUserMeta(editProfile);
-          setUserSettings(prev => ({...prev, userName: updates.full_name}));
-          setShowProfileModal(false);
-          addToast('Профилът е обновен успешно!', 'success');
+          setUserMeta({ 
+              firstName: editProfile.firstName, 
+              lastName: editProfile.lastName, 
+              avatar: editProfile.avatar 
+          });
+          setUserSettings(prev => ({...prev, userName: updates.data.full_name}));
+          
+          let successMessage = 'Профилът е обновен успешно!';
+          if (isEmailChange) {
+             successMessage += ' Моля, проверете имейла си за потвърждение на промяната.';
+          }
+          
+          // Clear sensitive fields
+          setEditProfile(prev => ({ ...prev, password: '', currentPassword: '' }));
+          addToast(successMessage, 'success');
+
       } catch (error: any) {
           addToast(error.message || 'Грешка при обновяване на профила.', 'error');
       }
@@ -1174,60 +1218,6 @@ export const App = () => {
     );
   };
 
-  const renderProfileModal = () => {
-      if (!showProfileModal) return null;
-      return (
-          <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-300">
-              <div className="bg-white dark:bg-zinc-900 w-full max-w-md p-8 rounded-3xl border border-indigo-500/20 shadow-2xl space-y-6 relative animate-in zoom-in-95">
-                  <button onClick={() => setShowProfileModal(false)} className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors"><X size={20}/></button>
-                  
-                  <div className="flex flex-col items-center text-center gap-4">
-                      <h2 className="text-2xl font-bold">Персонализирай Профила</h2>
-                      <p className="text-sm text-gray-500">Променете снимката и имената си тук.</p>
-                  </div>
-
-                  <div className="flex flex-col items-center gap-4">
-                      <div className="relative group">
-                          <img 
-                              src={editProfile.avatar || "https://cdn-icons-png.freepik.com/256/3276/3276580.png"} 
-                              alt="Profile" 
-                              className="w-24 h-24 rounded-full object-cover border-2 border-indigo-500/30 shadow-lg"
-                          />
-                          <button onClick={() => avatarInputRef.current?.click()} className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                              <Camera className="text-white" size={24}/>
-                          </button>
-                          <input type="file" ref={avatarInputRef} onChange={handleAvatarUpload} className="hidden" accept="image/*" />
-                      </div>
-                      {editProfile.avatar && (
-                          <button onClick={() => setEditProfile(p => ({...p, avatar: ''}))} className="text-xs text-red-500 hover:underline">Премахни снимка</button>
-                      )}
-                  </div>
-
-                  <div className="space-y-4">
-                      <div className="space-y-1">
-                          <label className="text-xs font-bold text-gray-500 uppercase ml-1">Име</label>
-                          <input 
-                              value={editProfile.firstName}
-                              onChange={e => setEditProfile(p => ({...p, firstName: e.target.value}))}
-                              className="w-full p-3 bg-gray-50 dark:bg-black/40 rounded-xl border border-gray-200 dark:border-white/10 focus:border-indigo-500 outline-none transition-all"
-                          />
-                      </div>
-                      <div className="space-y-1">
-                          <label className="text-xs font-bold text-gray-500 uppercase ml-1">Фамилия</label>
-                          <input 
-                              value={editProfile.lastName}
-                              onChange={e => setEditProfile(p => ({...p, lastName: e.target.value}))}
-                              className="w-full p-3 bg-gray-50 dark:bg-black/40 rounded-xl border border-gray-200 dark:border-white/10 focus:border-indigo-500 outline-none transition-all"
-                          />
-                      </div>
-                  </div>
-
-                  <Button onClick={handleUpdateProfile} className="w-full py-3">Запази промените</Button>
-              </div>
-          </div>
-      );
-  };
-
   // --- Renders ---
 
   const renderSidebar = () => {
@@ -1300,9 +1290,6 @@ export const App = () => {
                         <div className="absolute bottom-full left-0 w-full mb-2 bg-white dark:bg-zinc-900 border border-indigo-500/10 rounded-2xl shadow-xl overflow-hidden animate-in slide-in-from-bottom-2 fade-in z-40">
                              <button onClick={() => {setShowSettings(true); setProfileMenuOpen(false)}} className="w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-white/5 text-sm font-medium flex items-center gap-3 transition-colors">
                                 <Settings size={16} className="text-gray-500"/> Настройки
-                             </button>
-                             <button onClick={() => {setShowProfileModal(true); setProfileMenuOpen(false)}} className="w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-white/5 text-sm font-medium flex items-center gap-3 transition-colors">
-                                <User size={16} className="text-gray-500"/> Персонализирай Профила
                              </button>
                               <button onClick={() => {addToast('Свържете се с нас в Discord за помощ.', 'info'); setProfileMenuOpen(false)}} className="w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-white/5 text-sm font-medium flex items-center gap-3 transition-colors">
                                 <HelpCircle size={16} className="text-gray-500"/> Помощ
@@ -1774,7 +1761,6 @@ export const App = () => {
       
       {renderAdminPanel()}
       {renderUnlockModal()}
-      {renderProfileModal()}
       {renderSidebar()}
       
       <main className="flex-1 flex flex-col h-full relative w-full transition-all duration-500">
@@ -1793,6 +1779,96 @@ export const App = () => {
               </div>
               <div className="p-10 overflow-y-auto custom-scrollbar space-y-12">
                  
+                 {/* Account Section - New */}
+                 <section>
+                    <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-6 flex items-center gap-2"><User size={16}/> Акаунт</h3>
+                    <div className="bg-white dark:bg-white/5 p-6 rounded-3xl border border-indigo-500/20 space-y-6">
+                        {/* Profile Pic & Names */}
+                        <div className="flex flex-col md:flex-row gap-6 items-center">
+                            <div className="relative group shrink-0">
+                                <img 
+                                    src={editProfile.avatar || "https://cdn-icons-png.freepik.com/256/3276/3276580.png"} 
+                                    alt="Profile" 
+                                    className="w-24 h-24 rounded-full object-cover border-2 border-indigo-500/30 shadow-lg"
+                                />
+                                <button onClick={() => avatarInputRef.current?.click()} className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <Camera className="text-white" size={24}/>
+                                </button>
+                                <input type="file" ref={avatarInputRef} onChange={handleAvatarUpload} className="hidden" accept="image/*" />
+                            </div>
+                            <div className="space-y-4 w-full">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-bold text-gray-500 uppercase ml-1">Име</label>
+                                        <input 
+                                            value={editProfile.firstName}
+                                            onChange={e => setEditProfile(p => ({...p, firstName: e.target.value}))}
+                                            className="w-full p-3 bg-gray-50 dark:bg-black/40 rounded-xl border border-gray-200 dark:border-white/10 focus:border-indigo-500 outline-none transition-all"
+                                            placeholder="Иван"
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-bold text-gray-500 uppercase ml-1">Фамилия</label>
+                                        <input 
+                                            value={editProfile.lastName}
+                                            onChange={e => setEditProfile(p => ({...p, lastName: e.target.value}))}
+                                            className="w-full p-3 bg-gray-50 dark:bg-black/40 rounded-xl border border-gray-200 dark:border-white/10 focus:border-indigo-500 outline-none transition-all"
+                                            placeholder="Иванов"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        {/* Email & Password */}
+                        <div className="space-y-4 pt-4 border-t border-gray-100 dark:border-white/5">
+                            <div className="space-y-1">
+                                <label className="text-xs font-bold text-gray-500 uppercase ml-1">Имейл</label>
+                                <div className="relative">
+                                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                                    <input
+                                        type="email"
+                                        value={editProfile.email}
+                                        onChange={(e) => setEditProfile(p => ({...p, email: e.target.value}))}
+                                        className="w-full pl-11 pr-3 py-3.5 rounded-xl bg-gray-50/50 dark:bg-black/20 border border-gray-200 dark:border-white/10 focus:border-indigo-500 outline-none transition-all"
+                                    />
+                                </div>
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-xs font-bold text-gray-500 uppercase ml-1">Нова Парола</label>
+                                <div className="relative">
+                                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                                    <input
+                                        type="password"
+                                        value={editProfile.password}
+                                        onChange={(e) => setEditProfile(p => ({...p, password: e.target.value}))}
+                                        className="w-full pl-11 pr-3 py-3.5 rounded-xl bg-gray-50/50 dark:bg-black/20 border border-gray-200 dark:border-white/10 focus:border-indigo-500 outline-none transition-all"
+                                        placeholder="Оставете празно, ако не желаете промяна"
+                                    />
+                                </div>
+                            </div>
+                            {/* Current Password - Required for changes */}
+                            <div className="space-y-1">
+                                <label className="text-xs font-bold text-gray-500 uppercase ml-1">Текуща Парола <span className="text-red-500">*</span></label>
+                                <div className="relative">
+                                    <Key className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                                    <input
+                                        type="password"
+                                        value={editProfile.currentPassword}
+                                        onChange={(e) => setEditProfile(p => ({...p, currentPassword: e.target.value}))}
+                                        className="w-full pl-11 pr-3 py-3.5 rounded-xl bg-gray-50/50 dark:bg-black/20 border border-gray-200 dark:border-white/10 focus:border-indigo-500 outline-none transition-all"
+                                        placeholder="Задължително при промяна на имейл/парола"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="flex justify-end pt-2">
+                             <Button onClick={handleUpdateAccount} className="px-6 py-3">Запази Промените</Button>
+                        </div>
+                    </div>
+                 </section>
+
                  {/* Personalization Section */}
                  <section className="relative">
                     <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-6 flex items-center gap-2"><Palette size={16}/> Персонализация</h3>
@@ -1870,9 +1946,7 @@ export const App = () => {
                  <section>
                     <h3 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-6 flex items-center gap-2"><Brain size={16}/> AI Персонализация</h3>
                     <div className="space-y-6">
-                        <div className="p-2 bg-white dark:bg-white/5 rounded-2xl border border-indigo-500/20">
-                           <input type="text" value={userSettings.userName} onChange={e => setUserSettings({...userSettings, userName: e.target.value})} placeholder="Как да те наричам?" className="w-full p-4 bg-transparent outline-none font-bold text-xl text-center placeholder-gray-300 dark:placeholder-gray-600 text-zinc-900 dark:text-white"/>
-                        </div>
+                        {/* REMOVED: Name input field */}
                         <div className="grid grid-cols-3 gap-4">
                            {AI_MODELS.map(m => {
                              const isLocked = m.id === 'gemini-3-pro-preview' && !isProUnlocked;
