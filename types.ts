@@ -85,6 +85,8 @@ export interface ChatSession {
 
 export type GradeLevel = '1-4' | '5-7' | '8-12' | 'university';
 
+export type UserPlan = 'free' | 'plus' | 'pro';
+
 export interface UserSettings {
   userName: string;
   gradeLevel: GradeLevel;
