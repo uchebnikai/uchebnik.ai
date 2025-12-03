@@ -301,6 +301,7 @@ export const App = () => {
   // --- Auth State ---
   const [session, setSession] = useState<SupabaseSession | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [showAuthModal, setShowAuthModal] = useState(false);
 
   // --- State ---
   const [activeSubject, setActiveSubject] = useState<SubjectConfig | null>(null);
@@ -413,6 +414,9 @@ export const App = () => {
     const syncProfile = (session: SupabaseSession | null) => {
         setSession(session);
         setAuthLoading(false);
+        if (session) {
+            setShowAuthModal(false);
+        }
         if (session?.user?.user_metadata) {
             const meta = session.user.user_metadata;
             const firstName = meta.first_name || '';
@@ -722,6 +726,12 @@ export const App = () => {
   };
 
   const handleSend = async (overrideText?: string, overrideImages?: string[]) => {
+    // Check session
+    if (!session) {
+        setShowAuthModal(true);
+        return;
+    }
+
     const currentSubject = activeSubjectRef.current;
     const currentSessionId = activeSessionIdRef.current;
     const currentMode = activeModeRef.current;
@@ -834,6 +844,11 @@ export const App = () => {
 
   // Image Upload
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!session) {
+        setShowAuthModal(true);
+        e.target.value = '';
+        return;
+    }
     const files = e.target.files;
     if (files && files.length > 0) {
       // Check limits before processing
@@ -987,6 +1002,10 @@ export const App = () => {
   const handleSpeak = (txt: string, id: string) => { if(speakingMessageId === id) { window.speechSynthesis.cancel(); if(audioRef.current) audioRef.current.pause(); setSpeakingMessageId(null); return; } setSpeakingMessageId(id); speakText(txt, () => setSpeakingMessageId(null)); };
 
   const startVoiceCall = () => { 
+    if (!session) {
+        setShowAuthModal(true);
+        return;
+    }
     setIsVoiceCallActive(true); 
     // Effect will handle the rest
   };
@@ -1064,6 +1083,10 @@ export const App = () => {
   };
 
   const toggleListening = () => {
+    if (!session) {
+        setShowAuthModal(true);
+        return;
+    }
     if(isListening) { recognitionRef.current?.stop(); setIsListening(false); return; }
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if(!SR) { addToast('Няма поддръжка.', 'error'); return; }
@@ -1433,48 +1456,58 @@ export const App = () => {
                </button>
              )}
 
-             {/* Profile Button with Menu */}
-             <div className="relative mb-1">
-                {profileMenuOpen && (
-                    <>
-                        <div className="fixed inset-0 z-30" onClick={() => setProfileMenuOpen(false)} />
-                        <div className="absolute bottom-full left-0 w-full mb-2 bg-white dark:bg-zinc-900 border border-indigo-500/10 rounded-2xl shadow-xl overflow-hidden animate-in slide-in-from-bottom-2 fade-in z-40">
-                             <button onClick={() => {setShowSettings(true); setProfileMenuOpen(false)}} className="w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-white/5 text-sm font-medium flex items-center gap-3 transition-colors">
-                                <Settings size={16} className="text-gray-500"/> Настройки
-                             </button>
-                             <button onClick={() => {setShowUnlockModal(true); setProfileMenuOpen(false)}} className="w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-white/5 text-sm font-medium flex items-center gap-3 transition-colors">
-                                <CreditCard size={16} className="text-gray-500"/> Управление на плана
-                             </button>
-                              <button onClick={() => {addToast('Свържете се с нас в Discord за помощ.', 'info'); setProfileMenuOpen(false)}} className="w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-white/5 text-sm font-medium flex items-center gap-3 transition-colors">
-                                <HelpCircle size={16} className="text-gray-500"/> Помощ
-                             </button>
-                             <div className="h-px bg-gray-100 dark:bg-white/5 mx-2" />
-                             <button onClick={handleLogout} className="w-full text-left px-4 py-3 hover:bg-red-50 dark:hover:bg-red-900/10 text-red-500 text-sm font-medium flex items-center gap-3 transition-colors">
-                                <LogOut size={16}/> Изход
-                             </button>
-                        </div>
-                    </>
-                )}
-                
-                <button onClick={() => setProfileMenuOpen(!profileMenuOpen)} className="flex items-center gap-3 w-full p-2.5 rounded-2xl hover:bg-white/50 dark:hover:bg-white/5 transition-all duration-200 border border-transparent hover:border-indigo-500/10 group">
-                     <img 
-                       src={userMeta.avatar || "https://cdn-icons-png.freepik.com/256/3276/3276580.png"} 
-                       alt="Profile" 
-                       className="w-10 h-10 rounded-full object-cover border border-gray-200 dark:border-white/10"
-                     />
-                     <div className="flex-1 min-w-0 text-left">
-                        <div className="font-bold text-sm truncate text-zinc-900 dark:text-zinc-100">
-                            {userMeta.firstName && userMeta.lastName 
-                                ? `${userMeta.firstName} ${userMeta.lastName}`
-                                : (userSettings.userName || 'Потребител')}
-                        </div>
-                        <div className={`text-[10px] font-bold uppercase tracking-wider ${userPlan === 'pro' ? 'text-amber-500' : userPlan === 'plus' ? 'text-indigo-500' : 'text-gray-500'}`}>
-                            {userPlan === 'pro' ? 'Pro Plan' : userPlan === 'plus' ? 'Plus Plan' : 'Free Plan'}
-                        </div>
+             {/* Profile Button with Menu - Conditional Render */}
+             {session ? (
+                 <div className="relative mb-1">
+                    {profileMenuOpen && (
+                        <>
+                            <div className="fixed inset-0 z-30" onClick={() => setProfileMenuOpen(false)} />
+                            <div className="absolute bottom-full left-0 w-full mb-2 bg-white dark:bg-zinc-900 border border-indigo-500/10 rounded-2xl shadow-xl overflow-hidden animate-in slide-in-from-bottom-2 fade-in z-40">
+                                 <button onClick={() => {setShowSettings(true); setProfileMenuOpen(false)}} className="w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-white/5 text-sm font-medium flex items-center gap-3 transition-colors">
+                                    <Settings size={16} className="text-gray-500"/> Настройки
+                                 </button>
+                                 <button onClick={() => {setShowUnlockModal(true); setProfileMenuOpen(false)}} className="w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-white/5 text-sm font-medium flex items-center gap-3 transition-colors">
+                                    <CreditCard size={16} className="text-gray-500"/> Управление на плана
+                                 </button>
+                                  <button onClick={() => {addToast('Свържете се с нас в Discord за помощ.', 'info'); setProfileMenuOpen(false)}} className="w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-white/5 text-sm font-medium flex items-center gap-3 transition-colors">
+                                    <HelpCircle size={16} className="text-gray-500"/> Помощ
+                                 </button>
+                                 <div className="h-px bg-gray-100 dark:bg-white/5 mx-2" />
+                                 <button onClick={handleLogout} className="w-full text-left px-4 py-3 hover:bg-red-50 dark:hover:bg-red-900/10 text-red-500 text-sm font-medium flex items-center gap-3 transition-colors">
+                                    <LogOut size={16}/> Изход
+                                 </button>
+                            </div>
+                        </>
+                    )}
+                    
+                    <button onClick={() => setProfileMenuOpen(!profileMenuOpen)} className="flex items-center gap-3 w-full p-2.5 rounded-2xl hover:bg-white/50 dark:hover:bg-white/5 transition-all duration-200 border border-transparent hover:border-indigo-500/10 group">
+                         <img 
+                           src={userMeta.avatar || "https://cdn-icons-png.freepik.com/256/3276/3276580.png"} 
+                           alt="Profile" 
+                           className="w-10 h-10 rounded-full object-cover border border-gray-200 dark:border-white/10"
+                         />
+                         <div className="flex-1 min-w-0 text-left">
+                            <div className="font-bold text-sm truncate text-zinc-900 dark:text-zinc-100">
+                                {userMeta.firstName && userMeta.lastName 
+                                    ? `${userMeta.firstName} ${userMeta.lastName}`
+                                    : (userSettings.userName || 'Потребител')}
+                            </div>
+                            <div className={`text-[10px] font-bold uppercase tracking-wider ${userPlan === 'pro' ? 'text-amber-500' : userPlan === 'plus' ? 'text-indigo-500' : 'text-gray-500'}`}>
+                                {userPlan === 'pro' ? 'Pro Plan' : userPlan === 'plus' ? 'Plus Plan' : 'Free Plan'}
+                            </div>
+                         </div>
+                         <ChevronUp size={16} className={`text-gray-400 transition-transform duration-300 ${profileMenuOpen ? 'rotate-180' : ''}`} />
+                    </button>
+                 </div>
+             ) : (
+                 <button onClick={() => setShowAuthModal(true)} className="w-full mb-1 flex items-center gap-3 p-3 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold transition-all shadow-lg shadow-indigo-500/20 active:scale-95">
+                     <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center border border-white/20"><User size={20}/></div>
+                     <div className="text-left">
+                         <div className="text-sm">Вход</div>
+                         <div className="text-[10px] opacity-80">Запази прогреса си</div>
                      </div>
-                     <ChevronUp size={16} className={`text-gray-400 transition-transform duration-300 ${profileMenuOpen ? 'rotate-180' : ''}`} />
-                </button>
-             </div>
+                 </button>
+             )}
 
              <a href="https://discord.gg/4SB2NGPq8h" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-3 w-full h-11 rounded-xl text-sm font-bold text-white bg-[#5865F2] hover:bg-[#4752C4] transition-all shadow-lg shadow-[#5865F2]/20 active:scale-95 group">
                 <svg width="20" height="20" viewBox="0 0 127 96" fill="none" xmlns="http://www.w3.org/2000/svg" className="group-hover:scale-110 transition-transform"><path d="M107.7 8.07A105.15 105.15 0 0 0 81.47 0a72.07 72.07 0 0 0-3.36 6.83 97.68 97.68 0 0 0-29.11 0A72.37 72.37 0 0 0 45.64 0a105.15 105.15 0 0 0-26.25 8.09C2.79 32.65-1.71 56.6.54 80.21h0A105.73 105.73 0 0 0 32.71 96a75.2 75.2 0 0 0 6.57-12.8 69.1 69.1 0 0 1-10.46-5.01c.96-.71 1.9-1.44 2.81-2.19 26.25 12.31 54.54 12.31 80.8 0 .91.75 1.85 1.48 2.81 2.19a69.1 69.1 0 0 1-10.47 5.01 75.2 75.2 0 0 0 6.57 12.8A105.73 105.73 0 0 0 126.6 80.22c2.96-23.97-2.1-47.57-18.9-72.15ZM42.45 65.69C36.18 65.69 31 60.08 31 53.23c0-6.85 5.1-12.46 11.45-12.46 6.42 0 11.53 5.61 11.45 12.46 0 6.85-5.03 12.46-11.45 12.46Zm42.2 0C78.38 65.69 73.2 60.08 73.2 53.23c0-6.85 5.1-12.46 11.45-12.46 6.42 0 11.53 5.61 11.45 12.46 0 6.85-5.03 12.46-11.45 12.46Z" fill="currentColor"/></svg>
@@ -1857,9 +1890,7 @@ export const App = () => {
     );
   }
 
-  if (!session) {
-    return <Auth />;
-  }
+  // Removed strict auth check: if (!session) return <Auth />;
 
   return (
     <div className="flex h-full w-full relative overflow-hidden text-foreground">
@@ -1869,6 +1900,15 @@ export const App = () => {
            className="fixed inset-0 z-0 bg-cover bg-center pointer-events-none transition-all duration-500"
            style={{ backgroundImage: `url(${userSettings.customBackground})` }}
          />
+      )}
+      
+      {showAuthModal && (
+        <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in" onClick={(e) => { if(e.target === e.currentTarget) setShowAuthModal(false) }}>
+           <div className="relative w-full max-w-md">
+              <button onClick={() => setShowAuthModal(false)} className="absolute top-4 right-4 z-50 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"><X size={20}/></button>
+              <Auth isModal={true} onSuccess={() => setShowAuthModal(false)} />
+           </div>
+        </div>
       )}
 
       {renderSidebar()}

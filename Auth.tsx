@@ -4,7 +4,12 @@ import { Loader2, Mail, Lock, User, ArrowRight, Sparkles, CheckCircle, AlertCirc
 
 type AuthMode = 'login' | 'register' | 'forgot_password' | 'update_password';
 
-export const Auth = () => {
+interface AuthProps {
+  isModal?: boolean;
+  onSuccess?: () => void;
+}
+
+export const Auth = ({ isModal = false, onSuccess }: AuthProps) => {
   const [mode, setMode] = useState<AuthMode>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -47,6 +52,7 @@ export const Auth = () => {
           password,
         });
         if (error) throw error;
+        if (onSuccess) onSuccess();
       } else if (mode === 'forgot_password') {
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
           redirectTo: window.location.origin,
@@ -75,12 +81,16 @@ export const Auth = () => {
   }, []);
 
   return (
-    <div className="flex items-center justify-center min-h-screen w-full bg-background relative overflow-hidden">
-        {/* Background Effects */}
-        <div className="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] bg-indigo-500/20 rounded-full blur-[120px] pointer-events-none" />
-        <div className="absolute bottom-[-10%] left-[-5%] w-[400px] h-[400px] bg-accent-500/20 rounded-full blur-[100px] pointer-events-none" />
+    <div className={`flex items-center justify-center w-full relative ${isModal ? 'bg-transparent p-0' : 'bg-background min-h-screen overflow-hidden'}`}>
+        {!isModal && (
+            <>
+                {/* Background Effects */}
+                <div className="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] bg-indigo-500/20 rounded-full blur-[120px] pointer-events-none" />
+                <div className="absolute bottom-[-10%] left-[-5%] w-[400px] h-[400px] bg-accent-500/20 rounded-full blur-[100px] pointer-events-none" />
+            </>
+        )}
 
-      <div className="w-full max-w-md p-8 glass-panel rounded-[32px] border border-white/20 shadow-2xl animate-in zoom-in-95 duration-500 relative z-10 mx-4">
+      <div className={`w-full max-w-md p-8 glass-panel rounded-[32px] border border-white/20 shadow-2xl animate-in zoom-in-95 duration-500 relative z-10 ${isModal ? '' : 'mx-4'}`}>
         <div className="flex flex-col items-center mb-8">
             <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-indigo-500 via-accent-500 to-accent-600 flex items-center justify-center text-white shadow-lg shadow-indigo-500/30 mb-4">
                 <Sparkles size={32} fill="currentColor" />
