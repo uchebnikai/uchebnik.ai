@@ -1,6 +1,7 @@
 
+
 import { GoogleGenAI, Type, GenerateContentResponse } from "@google/genai";
-import { AppMode, SubjectId, Slide, ChartData, GeometryData, Message } from "../types";
+import { AppMode, SubjectId, Slide, ChartData, GeometryData, Message, TestData } from "../types";
 import { SYSTEM_PROMPTS } from "../constants";
 
 // Helper for delay
@@ -177,7 +178,55 @@ export const generateResponse = async (
     }
   }
 
-  // 3. TEXT & CHAT LOGIC
+  // 3. TEACHER TEST LOGIC
+  if (mode === AppMode.TEACHER_TEST) {
+    try {
+      const response: GenerateContentResponse = await withRetry(() => ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: promptText,
+        config: {
+          systemInstruction: SYSTEM_PROMPTS.TEACHER_TEST,
+          responseMimeType: "application/json"
+          // We don't enforce SchemaType via strict object here to be more flexible, 
+          // relying on the robust system prompt description of the JSON structure.
+        }
+      }));
+      
+      const jsonStr = response.text;
+      let testData: TestData;
+      try {
+        testData = JSON.parse(jsonStr || "{}");
+      } catch (e) {
+        throw new Error("Failed to parse Test JSON");
+      }
+
+      // Check if valid structure
+      if (!testData.questions || !Array.isArray(testData.questions)) {
+          throw new Error("Invalid test structure returned");
+      }
+
+      return {
+        id: Date.now().toString(),
+        role: 'model',
+        text: `Готово! Генерирах тест на тема: ${testData.title || promptText}`,
+        type: 'test_generated',
+        testData: testData,
+        timestamp: Date.now()
+      };
+
+    } catch (e) {
+      console.error("Test gen error", e);
+      return {
+        id: Date.now().toString(),
+        role: 'model',
+        text: "Възникна грешка при генерирането на теста. Моля опитайте отново.",
+        isError: true,
+        timestamp: Date.now()
+      }
+    }
+  }
+
+  // 4. TEXT & CHAT LOGIC
   let modelName = 'gemini-2.5-flash';
   if (preferredModel !== 'auto') {
     modelName = preferredModel;
@@ -192,10 +241,12 @@ export const generateResponse = async (
   let systemInstruction = SYSTEM_PROMPTS.DEFAULT;
   if (mode === AppMode.LEARN) systemInstruction = SYSTEM_PROMPTS.LEARN;
   else if (mode === AppMode.SOLVE) systemInstruction = SYSTEM_PROMPTS.SOLVE;
+  else if (mode === AppMode.TEACHER_PLAN) systemInstruction = SYSTEM_PROMPTS.TEACHER_PLAN;
+  else if (mode === AppMode.TEACHER_RESOURCES) systemInstruction = SYSTEM_PROMPTS.TEACHER_RESOURCES;
 
   try {
     const contents: any[] = history
-      .filter(msg => !msg.isError && msg.text && msg.type !== 'image_generated') 
+      .filter(msg => !msg.isError && msg.text && msg.type !== 'image_generated' && msg.type !== 'test_generated' && msg.type !== 'slides') 
       .map(msg => {
         const parts: any[] = [];
         if (msg.images && msg.images.length > 0) {

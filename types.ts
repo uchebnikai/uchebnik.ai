@@ -1,4 +1,5 @@
 
+
 export enum SubjectId {
   GENERAL = 'general',
   ENGLISH = 'english',
@@ -21,8 +22,15 @@ export enum AppMode {
   LEARN = 'learn', // Научаване на урок
   DRAW = 'draw',   // Рисуване (Art)
   PRESENTATION = 'presentation', // Презентация (Art)
-  CHAT = 'chat'    // Общ чат
+  CHAT = 'chat',    // Общ чат
+  
+  // Teacher Modes
+  TEACHER_TEST = 'teacher_test',
+  TEACHER_PLAN = 'teacher_plan',
+  TEACHER_RESOURCES = 'teacher_resources'
 }
+
+export type UserRole = 'student' | 'teacher';
 
 export interface SubjectConfig {
   id: SubjectId;
@@ -46,6 +54,21 @@ export interface GeometryData {
   svg: string; // Raw SVG string
 }
 
+export interface TestQuestion {
+  id: number;
+  question: string;
+  options?: string[]; // If multiple choice
+  correctAnswer?: string; // For the key
+  type: 'multiple_choice' | 'open_answer';
+}
+
+export interface TestData {
+  title: string;
+  subject: string;
+  grade?: string;
+  questions: TestQuestion[];
+}
+
 export interface Message {
   id: string;
   role: 'user' | 'model';
@@ -53,8 +76,9 @@ export interface Message {
   timestamp: number; // New: For history tracking
   images?: string[]; // base64
   isError?: boolean;
-  type?: 'text' | 'image_generated' | 'slides';
+  type?: 'text' | 'image_generated' | 'slides' | 'test_generated';
   slidesData?: Slide[]; // For presentation mode
+  testData?: TestData; // For teacher test mode
   chartData?: ChartData; // For Math/Physics data visualization
   geometryData?: GeometryData; // For Math/Physics geometric drawings
   rating?: 'up' | 'down'; // User feedback
@@ -69,6 +93,8 @@ export interface Session {
   lastModified: number;
   messages: Message[];
   preview: string; // Short text preview of the last message
+  role?: UserRole; // Track which role created this session
+  mode?: AppMode;  // Track specific mode
 }
 
 export interface Slide {
