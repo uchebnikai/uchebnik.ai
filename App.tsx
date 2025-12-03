@@ -1,7 +1,8 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { SubjectConfig, SubjectId, AppMode, Message, Slide, ChartData, GeometryData, UserSettings, Session, UserPlan } from './types';
 import { SUBJECTS, AI_MODELS } from './constants';
-import { generateResponse } from './services/geminiService';
+import { generateResponse, generateSpeech } from './services/geminiService';
 import { supabase } from './supabaseClient';
 import { Auth } from './Auth';
 import { 
@@ -388,6 +389,12 @@ export const App = () => {
   const voiceCallRecognitionRef = useRef<any>(null);
   const startingTextRef = useRef<string>('');
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const speakingTimeoutRef = useRef<any>(null);
+  
+  // New Refs for Web Audio API (Gemini TTS)
+  const pcmContextRef = useRef<AudioContext | null>(null);
+  const pcmSourceRef = useRef<AudioBufferSourceNode | null>(null);
   
   // Refs for State management to handle stale closures
   const activeSubjectRef = useRef(activeSubject);
@@ -398,8 +405,7 @@ export const App = () => {
   const voiceMutedRef = useRef(voiceMuted);
   const voiceCallStatusRef = useRef(voiceCallStatus);
   const loadingSubjectsRef = useRef(loadingSubjects);
-  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
-  const speakingTimeoutRef = useRef<any>(null);
+  
   const backgroundInputRef = useRef<HTMLInputElement>(null);
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
@@ -1012,11 +1018,29 @@ export const App = () => {
     });
   };
 
-  // Voice & TTS
-  const speakText = (text: string, onEnd?: () => void) => {
-    window.speechSynthesis.cancel(); 
-    if(audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
-    if(speakingTimeoutRef.current) { clearTimeout(speakingTimeoutRef.current); speakingTimeoutRef.current = null; }
+  // Voice & TTS Logic
+  const stopAudio = () => {
+      window.speechSynthesis.cancel();
+      if (audioRef.current) {
+          audioRef.current.pause();
+          audioRef.current = null;
+      }
+      if (pcmSourceRef.current) {
+          try { pcmSourceRef.current.stop(); } catch(e) {}
+          pcmSourceRef.current = null;
+      }
+      if (pcmContextRef.current && pcmContextRef.current.state !== 'closed') {
+          try { pcmContextRef.current.close(); } catch(e) {}
+          pcmContextRef.current = null;
+      }
+      if (speakingTimeoutRef.current) {
+          clearTimeout(speakingTimeoutRef.current);
+          speakingTimeoutRef.current = null;
+      }
+  };
+
+  const speakText = async (text: string, onEnd?: () => void) => {
+    stopAudio();
 
     let hasEnded = false;
     const safeOnEnd = () => {
@@ -1027,13 +1051,57 @@ export const App = () => {
         if(onEnd) onEnd();
     };
 
-    const estimatedDuration = Math.max(3000, (text.length / 10) * 1000 + 2000); 
+    const estimatedDuration = Math.max(3000, (text.length / 10) * 1000 + 3000); 
     speakingTimeoutRef.current = setTimeout(() => {
         console.warn("Speech synthesis timed out, forcing next turn.");
         safeOnEnd();
     }, estimatedDuration);
 
     const clean = text.replace(/[*#`_\[\]]/g, '').replace(/\$\$.*?\$\$/g, 'формула').replace(/http\S+/g, '');
+
+    // 1. Try Gemini High-Quality TTS
+    try {
+        const pcmBase64 = await generateSpeech(clean);
+        if (pcmBase64) {
+            const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+            const ctx = new AudioContext({ sampleRate: 24000 });
+            pcmContextRef.current = ctx;
+
+            // Decode Base64 to ArrayBuffer
+            const binaryString = atob(pcmBase64);
+            const bytes = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+            
+            // Convert 16-bit PCM (little endian) to Float32
+            const int16Array = new Int16Array(bytes.buffer);
+            const float32Array = new Float32Array(int16Array.length);
+            for (let i = 0; i < int16Array.length; i++) {
+                // Normalize to [-1.0, 1.0]
+                float32Array[i] = int16Array[i] / 32768.0;
+            }
+
+            const buffer = ctx.createBuffer(1, float32Array.length, 24000);
+            buffer.getChannelData(0).set(float32Array);
+
+            const source = ctx.createBufferSource();
+            source.buffer = buffer;
+            source.connect(ctx.destination);
+            
+            source.onended = () => {
+                safeOnEnd();
+            };
+            
+            pcmSourceRef.current = source;
+            source.start(0);
+            return;
+        }
+    } catch (e) {
+        console.error("Gemini TTS Failed, falling back", e);
+    }
+
+    // 2. Fallback to Browser/Translate API
     let lang = activeSubjectRef.current?.id === SubjectId.ENGLISH ? 'en-US' : activeSubjectRef.current?.id === SubjectId.FRENCH ? 'fr-FR' : 'bg-BG';
     const voices = window.speechSynthesis.getVoices();
     const v = voices.find(v => v.lang === lang) || voices.find(v => v.lang.startsWith(lang.split('-')[0]));
@@ -1054,7 +1122,16 @@ export const App = () => {
         window.speechSynthesis.speak(u);
     }
   };
-  const handleSpeak = (txt: string, id: string) => { if(speakingMessageId === id) { window.speechSynthesis.cancel(); if(audioRef.current) audioRef.current.pause(); setSpeakingMessageId(null); return; } setSpeakingMessageId(id); speakText(txt, () => setSpeakingMessageId(null)); };
+  
+  const handleSpeak = (txt: string, id: string) => { 
+      if(speakingMessageId === id) { 
+          stopAudio();
+          setSpeakingMessageId(null); 
+          return; 
+      } 
+      setSpeakingMessageId(id); 
+      speakText(txt, () => setSpeakingMessageId(null)); 
+  };
 
   const startVoiceCall = () => { 
     if (!session) {
@@ -1069,9 +1146,7 @@ export const App = () => {
       setIsVoiceCallActive(false); 
       setVoiceCallStatus('idle'); 
       voiceCallRecognitionRef.current?.stop(); 
-      window.speechSynthesis.cancel(); 
-      utteranceRef.current = null;
-      if(speakingTimeoutRef.current) { clearTimeout(speakingTimeoutRef.current); speakingTimeoutRef.current = null; }
+      stopAudio();
   };
 
   const startVoiceRecognition = () => {
