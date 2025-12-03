@@ -1,5 +1,5 @@
 
-import { GoogleGenAI, Type, GenerateContentResponse, Modality } from "@google/genai";
+import { GoogleGenAI, Type, GenerateContentResponse } from "@google/genai";
 import { AppMode, SubjectId, Slide, ChartData, GeometryData, Message } from "../types";
 import { SYSTEM_PROMPTS } from "../constants";
 
@@ -22,44 +22,6 @@ async function withRetry<T>(fn: () => Promise<T>, retries = 3, delay = 2000): Pr
     throw error;
   }
 }
-
-export const generateSpeech = async (text: string): Promise<string | null> => {
-  let apiKey = "";
-  try {
-    apiKey = process.env.GOOGLE_API_KEY || process.env.API_KEY || "";
-  } catch (e) {}
-
-  if (!apiKey) return null;
-
-  const ai = new GoogleGenAI({ apiKey });
-
-  try {
-      // Use retry logic for TTS as well
-      const response = await withRetry(() => ai.models.generateContent({
-          model: "gemini-2.5-flash-preview-tts",
-          contents: {
-              parts: [{ text: text }]
-          },
-          config: {
-              responseModalities: [Modality.AUDIO],
-              speechConfig: {
-                  voiceConfig: {
-                      prebuiltVoiceConfig: { voiceName: 'Kore' } // 'Kore' is a high quality multilingual voice
-                  }
-              }
-          }
-      }));
-      
-      const part = response.candidates?.[0]?.content?.parts?.[0];
-      if (part?.inlineData?.data) {
-          return part.inlineData.data; // Base64 PCM data
-      }
-      return null;
-  } catch (error) {
-      console.error("Gemini TTS Error:", error);
-      return null;
-  }
-};
 
 export const generateResponse = async (
   subjectId: SubjectId,
