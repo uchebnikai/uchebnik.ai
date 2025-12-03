@@ -405,7 +405,6 @@ export const App = () => {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const importInputRef = useRef<HTMLInputElement>(null);
 
   // --- Effects ---
 
@@ -444,28 +443,65 @@ export const App = () => {
     return () => subscription.unsubscribe();
   }, []);
 
+  // Data Loading Effect - User Partitioned
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const savedSessions = localStorage.getItem('uchebnik_sessions');
+      const userId = session?.user?.id;
+      const sessionsKey = userId ? `uchebnik_sessions_${userId}` : 'uchebnik_sessions';
+      const settingsKey = userId ? `uchebnik_settings_${userId}` : 'uchebnik_settings';
+      const planKey = userId ? `uchebnik_plan_${userId}` : 'uchebnik_user_plan';
+
+      const savedSessions = localStorage.getItem(sessionsKey);
       if (savedSessions) setSessions(JSON.parse(savedSessions));
-      const savedSettings = localStorage.getItem('uchebnik_settings');
+      else setSessions([]); // Clear if no data for this user context
+
+      const savedSettings = localStorage.getItem(settingsKey);
       if (savedSettings) setUserSettings(JSON.parse(savedSettings));
+      else {
+          // Reset to defaults if new user and no settings found
+          if (userId) {
+             setUserSettings({
+                userName: session?.user?.user_metadata?.full_name || '', 
+                gradeLevel: '8-12', 
+                textSize: 'normal', 
+                haptics: true, 
+                notifications: true, 
+                sound: true, 
+                reduceMotion: false, 
+                responseLength: 'concise', 
+                creativity: 'balanced', 
+                languageLevel: 'standard',
+                preferredModel: 'auto',
+                themeColor: '#6366f1',
+                customBackground: null
+              });
+          } else {
+             // Fallback for guest if needed, though they usually have localstorage already
+          }
+      }
       
-      const savedPlan = localStorage.getItem('uchebnik_user_plan');
+      const savedPlan = localStorage.getItem(planKey);
       if (savedPlan) setUserPlan(savedPlan as UserPlan);
       else {
-          // Backward compatibility check
-          const oldPro = localStorage.getItem('uchebnik_pro_status');
-          if (oldPro === 'unlocked') {
-              setUserPlan('pro');
-              localStorage.setItem('uchebnik_user_plan', 'pro');
+          // Legacy check for pro status only applies to guest or migration
+          if (!userId) {
+              const oldPro = localStorage.getItem('uchebnik_pro_status');
+              if (oldPro === 'unlocked') {
+                  setUserPlan('pro');
+                  localStorage.setItem('uchebnik_user_plan', 'pro');
+              } else {
+                  setUserPlan('free');
+              }
+          } else {
+              setUserPlan('free'); // Default new user to free
           }
       }
 
+      // Admin keys are global for this device
       const savedAdminKeys = localStorage.getItem('uchebnik_admin_keys');
       if (savedAdminKeys) setGeneratedKeys(JSON.parse(savedAdminKeys));
 
-      // Image limit reset logic
+      // Image limits are device specific for now, or could be user specific
       const today = new Date().toDateString();
       const lastUsageDate = localStorage.getItem('uchebnik_image_date');
       const lastUsageCount = localStorage.getItem('uchebnik_image_count');
@@ -483,14 +519,33 @@ export const App = () => {
          setIsDarkMode(true);
       }
     }
-    if (window.innerWidth >= 1024) setSidebarOpen(true);
     
+    // Voice setup
     const loadVoices = () => { if (typeof window !== 'undefined' && window.speechSynthesis) window.speechSynthesis.getVoices(); };
     if (typeof window !== 'undefined' && window.speechSynthesis) { loadVoices(); window.speechSynthesis.onvoiceschanged = loadVoices; }
-  }, []);
+    
+    if (typeof window !== 'undefined' && window.innerWidth >= 1024) setSidebarOpen(true);
+  }, [session]);
 
-  useEffect(() => { try { localStorage.setItem('uchebnik_sessions', JSON.stringify(sessions)); } catch(e) { console.error("Session storage error", e); } }, [sessions]);
-  useEffect(() => { try { localStorage.setItem('uchebnik_settings', JSON.stringify(userSettings)); } catch(e) { console.error("Settings storage error", e); } }, [userSettings]);
+  // Data Saving Effects - User Partitioned
+  useEffect(() => { 
+      const userId = session?.user?.id;
+      const key = userId ? `uchebnik_sessions_${userId}` : 'uchebnik_sessions';
+      try { localStorage.setItem(key, JSON.stringify(sessions)); } catch(e) { console.error("Session storage error", e); } 
+  }, [sessions, session]);
+
+  useEffect(() => { 
+      const userId = session?.user?.id;
+      const key = userId ? `uchebnik_settings_${userId}` : 'uchebnik_settings';
+      try { localStorage.setItem(key, JSON.stringify(userSettings)); } catch(e) { console.error("Settings storage error", e); } 
+  }, [userSettings, session]);
+
+  useEffect(() => {
+      const userId = session?.user?.id;
+      const key = userId ? `uchebnik_plan_${userId}` : 'uchebnik_user_plan';
+      try { localStorage.setItem(key, userPlan); } catch(e) {}
+  }, [userPlan, session]);
+
   useEffect(() => { document.documentElement.classList.toggle('dark', isDarkMode); }, [isDarkMode]);
 
   // Apply Theme Colors
@@ -1133,22 +1188,6 @@ export const App = () => {
 
   const handleRemoveImage = (index: number) => { setSelectedImages(prev => prev.filter((_, i) => i !== index)); };
   
-  const handleExportData = () => {
-    const dataStr = JSON.stringify({ sessions, userSettings }, null, 2);
-    const blob = new Blob([dataStr], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = `uchebnik-backup-${new Date().toISOString().split('T')[0]}.json`; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
-  };
-
-  const handleImportData = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]; if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      try { const data = JSON.parse(event.target?.result as string); if (data.sessions) setSessions(data.sessions); if (data.userSettings) setUserSettings(data.userSettings); addToast('Данните са възстановени успешно!', 'success'); } catch (err) { addToast('Грешка при зареждане на файл.', 'error'); }
-    };
-    reader.readAsText(file); if(importInputRef.current) importInputRef.current.value = '';
-  };
-
   const handleUnlockSubmit = () => {
     const key = unlockKeyInput.trim();
     
@@ -1156,10 +1195,10 @@ export const App = () => {
     if (isValidKey(key)) {
        const newPlan = targetPlan || 'pro';
        setUserPlan(newPlan);
-       localStorage.setItem('uchebnik_user_plan', newPlan);
+       
+       // Save to partitioned storage in useEffect
        
        if (newPlan !== 'free') {
-            localStorage.setItem('uchebnik_pro_status', 'unlocked');
             setUserSettings(prev => ({ ...prev, preferredModel: 'gemini-3-pro-preview' }));
        }
 
@@ -2136,28 +2175,6 @@ export const App = () => {
              </div>
              
              <div className="bg-gray-50/50 dark:bg-white/5 rounded-2xl border border-gray-200/50 dark:border-white/5 divide-y divide-gray-100 dark:divide-white/5 overflow-hidden">
-                <button onClick={handleExportData} className="w-full flex items-center justify-between p-4 hover:bg-white dark:hover:bg-white/5 transition-colors group text-left">
-                     <div className="flex items-center gap-4">
-                         <div className="p-2.5 bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 rounded-xl"><Download size={18}/></div>
-                         <div>
-                             <div className="text-sm font-bold">Експорт на данни</div>
-                             <div className="text-xs text-gray-500">Запази резервно копие на разговорите</div>
-                         </div>
-                     </div>
-                     <ArrowRight size={18} className="text-gray-300 group-hover:text-indigo-500 transition-colors"/>
-                </button>
-                
-                <button onClick={() => importInputRef.current?.click()} className="w-full flex items-center justify-between p-4 hover:bg-white dark:hover:bg-white/5 transition-colors group text-left">
-                     <div className="flex items-center gap-4">
-                         <div className="p-2.5 bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 rounded-xl"><Upload size={18}/></div>
-                         <div>
-                             <div className="text-sm font-bold">Импорт на данни</div>
-                             <div className="text-xs text-gray-500">Възстанови от резервно копие</div>
-                         </div>
-                     </div>
-                     <ArrowRight size={18} className="text-gray-300 group-hover:text-indigo-500 transition-colors"/>
-                </button>
-
                  <button onClick={handleClearMemory} className="w-full flex items-center justify-between p-4 hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors group text-left">
                      <div className="flex items-center gap-4">
                          <div className="p-2.5 bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400 rounded-xl"><Trash2 size={18}/></div>
