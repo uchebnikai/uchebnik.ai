@@ -21,7 +21,7 @@
     "rehype-katex": "^7.0.0",
     "remark-gfm": "^4.0.0",
     "remark-math": "^6.0.0",
-    "vosk-browser": "^0.0.9"
+    "vosk-browser": "0.0.8"
   },
   "devDependencies": {
     "@types/react": "^18.3.3",
