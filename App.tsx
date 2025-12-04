@@ -326,7 +326,7 @@ const TestRenderer = ({ data }: { data: TestData }) => {
             children: [
                 // Header: Name, Class, Number
                 new docx.Paragraph({
-                    children: [new docx.TextRun({ text: "Име: __________________________________________", size: 24 })],
+                    children: [new docx.TextRun({ text: "Име: __________________________________________", size: 24, italics: false })],
                     spacing: { after: 200 }
                 }),
                 new docx.Paragraph({
@@ -1037,6 +1037,15 @@ export const App = () => {
     }
   }, [isVoiceCallActive]);
 
+  // Cleanup effect for chat voice recognition
+  useEffect(() => {
+      return () => {
+          if (recognitionRef.current) {
+              try { recognitionRef.current.stop(); } catch(e) {}
+          }
+      };
+  }, []);
+
   // --- Logic Helpers ---
   const checkImageLimit = (count = 1): boolean => {
       let limit = 4;
@@ -1237,7 +1246,7 @@ export const App = () => {
     if (fileInputRef.current) fileInputRef.current.value = '';
 
     // If switching to General, we load session immediately. 
-    // If switching to school subject, we wait for dashboard interaction to load/create session.
+    // If switching to school subject, we wait for dashboard choice to load/create session.
     if (subject.id === SubjectId.GENERAL) {
         const subSessions = sessions.filter(s => s.subjectId === subject.id).sort((a, b) => b.lastModified - a.lastModified);
         if (subSessions.length > 0) setActiveSessionId(subSessions[0].id); else createNewSession(subject.id);
@@ -1290,7 +1299,10 @@ export const App = () => {
     
     if (currentLoading[currentSubject.id]) return;
 
-    if (isListening) { recognitionRef.current?.stop(); setIsListening(false); }
+    if (isListening) { 
+        recognitionRef.current?.stop(); 
+        setIsListening(false); 
+    }
 
     const currentSubId = currentSubject.id;
     const currentImgs = overrideImages || [...selectedImages];
@@ -1646,21 +1658,85 @@ export const App = () => {
         setShowAuthModal(true);
         return;
     }
-    if(isListening) { recognitionRef.current?.stop(); setIsListening(false); return; }
-    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if(!SR) { addToast('Няма поддръжка.', 'error'); return; }
-    const rec = new SR();
-    rec.lang = activeSubject?.id === SubjectId.ENGLISH ? 'en-US' : activeSubject?.id === SubjectId.FRENCH ? 'fr-FR' : 'bg-BG';
-    rec.interimResults = true; rec.continuous = true;
-    startingTextRef.current = inputValue;
-    rec.onresult = (e: any) => {
-        let f = '', inter = '';
-        for(let i=e.resultIndex; i<e.results.length; ++i) e.results[i].isFinal ? f+=e.results[i][0].transcript : inter+=e.results[i][0].transcript;
-        setInputValue((startingTextRef.current + ' ' + f + inter).trim());
-    };
-    rec.onstart = () => setIsListening(true); rec.onend = () => setIsListening(false);
-    rec.onerror = (e: any) => { if(e.error === 'service-not-allowed') addToast('Гласовата услуга е недостъпна.', 'error'); setIsListening(false); };
-    recognitionRef.current = rec; rec.start();
+
+    // Stop if currently listening
+    if (isListening) {
+        recognitionRef.current?.stop();
+        setIsListening(false);
+        return;
+    }
+
+    // Browser Support Check
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+        addToast('Вашият браузър не поддържа гласово въвеждане. Моля, използвайте Chrome или Safari.', 'error');
+        return;
+    }
+
+    try {
+        const recognition = new SpeechRecognition();
+        recognition.lang = activeSubject?.id === SubjectId.ENGLISH ? 'en-US' : 
+                           activeSubject?.id === SubjectId.FRENCH ? 'fr-FR' : 'bg-BG';
+        
+        // iOS Safari works best with continuous=false for short commands, 
+        // but for dictation, we try true. If it fails, we handle onend.
+        recognition.continuous = true; 
+        recognition.interimResults = true;
+        recognition.maxAlternatives = 1;
+
+        startingTextRef.current = inputValue; // Store current text so we append to it
+
+        recognition.onstart = () => {
+            setIsListening(true);
+        };
+
+        recognition.onresult = (event: any) => {
+            let finalTranscript = '';
+            let interimTranscript = '';
+
+            for (let i = event.resultIndex; i < event.results.length; ++i) {
+                if (event.results[i].isFinal) {
+                    finalTranscript += event.results[i][0].transcript;
+                } else {
+                    interimTranscript += event.results[i][0].transcript;
+                }
+            }
+
+            // Combine previous text + new final + interim
+            const newText = `${startingTextRef.current} ${finalTranscript} ${interimTranscript}`;
+            setInputValue(newText.replace(/\s+/g, ' ').trim());
+            
+            // If final transcript is updated, update the ref so next chunks append correctly
+            if (finalTranscript) {
+                startingTextRef.current += ' ' + finalTranscript;
+            }
+        };
+
+        recognition.onerror = (event: any) => {
+            console.error("Speech recognition error", event.error);
+            if (event.error === 'not-allowed') {
+                addToast('Достъпът до микрофона е отказан. Моля, разрешете го от настройките на браузъра.', 'error');
+                setIsListening(false);
+            } else if (event.error === 'no-speech') {
+                // Just stop silently
+                setIsListening(false);
+            } else {
+                 setIsListening(false);
+            }
+        };
+
+        recognition.onend = () => {
+            setIsListening(false);
+        };
+
+        recognitionRef.current = recognition;
+        recognition.start();
+
+    } catch (e) {
+        console.error(e);
+        addToast('Грешка при стартиране на микрофона.', 'error');
+        setIsListening(false);
+    }
   };
 
   const handleDownloadPPTX = (slides: Slide[]) => {
