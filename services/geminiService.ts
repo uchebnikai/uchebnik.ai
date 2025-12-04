@@ -1,8 +1,6 @@
-
-
 import { GoogleGenAI, Type, GenerateContentResponse } from "@google/genai";
 import { AppMode, SubjectId, Slide, ChartData, GeometryData, Message, TestData } from "../types";
-import { SYSTEM_PROMPTS } from "../constants";
+import { SYSTEM_PROMPTS, SUBJECTS } from "../constants";
 
 // Helper for delay
 const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -53,6 +51,10 @@ export const generateResponse = async (
 
   const ai = new GoogleGenAI({ apiKey });
   
+  // Resolve Subject Name for Context
+  const subjectConfig = SUBJECTS.find(s => s.id === subjectId);
+  const subjectName = subjectConfig ? subjectConfig.name : "Unknown Subject";
+
   // 1. IMAGE GENERATION LOGIC (Global Detection)
   const imageKeywords = /(draw|paint|generate image|create a picture|make an image|нарисувай|рисувай|генерирай изображение|генерирай снимка|направи снимка|изображение на)/i;
   const isImageRequest = (subjectId === SubjectId.ART && mode === AppMode.DRAW) || imageKeywords.test(promptText);
@@ -181,14 +183,46 @@ export const generateResponse = async (
   // 3. TEACHER TEST LOGIC
   if (mode === AppMode.TEACHER_TEST) {
     try {
+      // CRITICAL UPDATE:
+      // We must inject the previous test data (JSON) back into the conversation text
+      // so the AI can "read" the test it generated previously and modify it.
+      
+      const testContextHistory: any[] = history
+      .filter(msg => !msg.isError)
+      .map(msg => {
+          const parts: any[] = [];
+          if (msg.images && msg.images.length > 0) {
+              msg.images.forEach(img => {
+                const match = img.match(/^data:(.+);base64,(.+)$/);
+                if (match) {
+                  parts.push({ inlineData: { mimeType: match[1], data: match[2] } });
+                }
+              });
+          }
+          
+          let textContent = msg.text;
+          
+          // Inject Test JSON if this message was a generated test
+          if (msg.type === 'test_generated' && msg.testData) {
+              textContent += `\n\n[SYSTEM CONTEXT - PREVIOUS TEST DATA]:\n${JSON.stringify(msg.testData)}`;
+          }
+          
+          parts.push({ text: textContent });
+          return { role: msg.role, parts: parts };
+      });
+      
+      // Inject Current Subject Context strictly into the prompt
+      // This forces the AI to respect the selected subject even if history implies otherwise (though starting fresh prevents that)
+      const contextPrompt = `CURRENT SUBJECT CONTEXT: ${subjectName}. The test MUST be about ${subjectName}.\n\nUser Request: ${promptText}`;
+      
+      testContextHistory.push({ role: 'user', parts: [{ text: contextPrompt }] });
+
       const response: GenerateContentResponse = await withRetry(() => ai.models.generateContent({
         model: 'gemini-2.5-flash',
-        contents: promptText,
+        contents: testContextHistory,
         config: {
           systemInstruction: SYSTEM_PROMPTS.TEACHER_TEST,
           responseMimeType: "application/json"
-          // We don't enforce SchemaType via strict object here to be more flexible, 
-          // relying on the robust system prompt description of the JSON structure.
         }
       }));
       
@@ -208,7 +242,7 @@ export const generateResponse = async (
       return {
         id: Date.now().toString(),
         role: 'model',
-        text: `Готово! Генерирах тест на тема: ${testData.title || promptText}`,
+        text: `Готово! Ето теста на тема: ${testData.title || promptText}`,
         type: 'test_generated',
         testData: testData,
         timestamp: Date.now()
@@ -243,6 +277,9 @@ export const generateResponse = async (
   else if (mode === AppMode.SOLVE) systemInstruction = SYSTEM_PROMPTS.SOLVE;
   else if (mode === AppMode.TEACHER_PLAN) systemInstruction = SYSTEM_PROMPTS.TEACHER_PLAN;
   else if (mode === AppMode.TEACHER_RESOURCES) systemInstruction = SYSTEM_PROMPTS.TEACHER_RESOURCES;
+  
+  // Inject Subject Context into System Prompt for all modes to prevent hallucinations
+  systemInstruction = `CURRENT SUBJECT CONTEXT: ${subjectName}. All responses must relate to ${subjectName}.\n\n${systemInstruction}`;
 
   try {
     const contents: any[] = history

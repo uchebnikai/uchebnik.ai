@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect, useRef } from 'react';
 import { SubjectConfig, SubjectId, AppMode, Message, Slide, ChartData, GeometryData, UserSettings, Session, UserPlan, UserRole, TestData } from './types';
 import { SUBJECTS, AI_MODELS } from './constants';
@@ -89,6 +87,73 @@ const adjustBrightness = (col: {r:number, g:number, b:number}, percent: number) 
     G = Math.round(G < 255 ? G : 255);
     B = Math.round(B < 255 ? B : 255);
     return `${R} ${G} ${B}`;
+};
+
+// --- Math & Text Utilities ---
+
+const cleanMathText = (text: string): string => {
+  if (!text) return "";
+  
+  // 1. Remove Markdown bold/italic wrappers if they break math
+  let clean = text.replace(/\*\*/g, "").replace(/\*/g, "");
+
+  // 2. Remove LaTeX delimiters
+  clean = clean.replace(/\$/g, "");
+
+  // 3. Common LaTeX/Math to Unicode Mappings
+  const replacements: Record<string, string> = {
+    '\\times': '×',
+    '\\cdot': '·',
+    '\\div': '÷',
+    '\\le': '≤',
+    '\\ge': '≥',
+    '\\neq': '≠',
+    '\\approx': '≈',
+    '\\infty': '∞',
+    '\\pm': '±',
+    '\\pi': 'π',
+    '\\alpha': 'α',
+    '\\beta': 'β',
+    '\\gamma': 'γ',
+    '\\Delta': '∆',
+    '\\theta': 'θ',
+    '\\sqrt': '√',
+    'sqrt': '√',
+    '\\circ': '°',
+    '^2': '²',
+    '^3': '³',
+    '^0': '⁰',
+    '^1': '¹',
+    '^4': '⁴',
+    '^5': '⁵',
+    '^6': '⁶',
+    '^7': '⁷',
+    '^8': '⁸',
+    '^9': '⁹',
+    '^o': '°',
+    '<=': '≤',
+    '>=': '≥',
+    '!=': '≠',
+  };
+
+  // Replace superscripts first
+  clean = clean.replace(/\^(\d)/g, (match, p1) => {
+      const map: Record<string, string> = { '0': '⁰', '1': '¹', '2': '²', '3': '³', '4': '⁴', '5': '⁵', '6': '⁶', '7': '⁷', '8': '⁸', '9': '⁹' };
+      return map[p1] || match;
+  });
+
+  // Replace known latex commands
+  Object.keys(replacements).forEach(key => {
+     // Escape special regex chars in key if needed (like ^ or \)
+     const escapedKey = key.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+     const regex = new RegExp(escapedKey, 'g');
+     clean = clean.replace(regex, replacements[key]);
+  });
+
+  // Handle \sqrt{...} specially to just remove braces if simple
+  clean = clean.replace(/√\{([^}]+)\}/g, "√$1");
+  
+  return clean;
 };
 
 // --- Security / Key Logic ---
@@ -252,35 +317,70 @@ const GeometryRenderer = ({ data }: { data: GeometryData }) => {
 
 const TestRenderer = ({ data }: { data: TestData }) => {
   const [visible, setVisible] = useState(true);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
   const handleDownloadWord = async () => {
     const doc = new docx.Document({
         sections: [{
             properties: {},
             children: [
+                // Header: Name, Class, Number
                 new docx.Paragraph({
-                    children: [new docx.TextRun({ text: data.title, bold: true, size: 32 })],
+                    children: [new docx.TextRun({ text: "Име: __________________________________________", size: 24 })],
+                    spacing: { after: 200 }
+                }),
+                new docx.Paragraph({
+                    children: [new docx.TextRun({ text: "Клас: _________      Номер: _________", size: 24 })],
+                    spacing: { after: 400 }
+                }),
+                
+                // Title
+                new docx.Paragraph({
+                    children: [new docx.TextRun({ text: cleanMathText(data.title), bold: true, size: 32 })],
+                    alignment: docx.AlignmentType.CENTER,
                     spacing: { after: 200 }
                 }),
                 new docx.Paragraph({
                     children: [new docx.TextRun({ text: `${data.subject} | ${data.grade || ''}`, size: 24, color: "666666" })],
+                    alignment: docx.AlignmentType.CENTER,
                     spacing: { after: 400 }
                 }),
+                
+                // Questions
                 ...data.questions.flatMap((q, index) => [
                     new docx.Paragraph({
-                        children: [new docx.TextRun({ text: `${index + 1}. ${q.question}`, bold: true, size: 24 })],
+                        children: [new docx.TextRun({ text: `${index + 1}. ${cleanMathText(q.question)}`, bold: true, size: 24 })],
                         spacing: { before: 200, after: 100 }
                     }),
                     ...(q.options ? q.options.map(opt => 
                         new docx.Paragraph({
-                            children: [new docx.TextRun({ text: opt, size: 24 })],
+                            children: [new docx.TextRun({ text: cleanMathText(opt), size: 24 })],
                             spacing: { after: 50 },
                             indent: { left: 720 }
                         })
                     ) : [
-                        new docx.Paragraph({ children: [new docx.TextRun({ text: "_______________________________________" })], spacing: { after: 200 } })
+                        new docx.Paragraph({ children: [new docx.TextRun({ text: "____________________________________________________________________" })], spacing: { after: 100 } }),
+                        new docx.Paragraph({ children: [new docx.TextRun({ text: "____________________________________________________________________" })], spacing: { after: 200 } })
                     ])
                 ]),
+                
+                // Footer: Signatures
+                new docx.Paragraph({
+                    children: [
+                        new docx.TextRun({ text: "Подпис на учител: ___________________        Подпис на ученик: ___________________", size: 24 })
+                    ],
+                    spacing: { before: 800, after: 300 }
+                }),
+
+                // Grade
+                new docx.Paragraph({
+                    children: [
+                         new docx.TextRun({ text: "Оценка: ___________________", bold: true, size: 24 })
+                    ],
+                    spacing: { after: 200 }
+                }),
+
+                // Answer Key (New Page)
                 new docx.Paragraph({
                      children: [new docx.TextRun({ text: "Ключ с отговори", bold: true, size: 28 })],
                      spacing: { before: 600, after: 200 },
@@ -288,7 +388,7 @@ const TestRenderer = ({ data }: { data: TestData }) => {
                 }),
                 ...data.questions.map((q, index) => 
                      new docx.Paragraph({
-                         children: [new docx.TextRun({ text: `${index + 1}. ${q.correctAnswer || '-'}`, size: 24 })]
+                         children: [new docx.TextRun({ text: `${index + 1}. ${cleanMathText(q.correctAnswer || '-')}`, size: 24 })]
                      })
                 )
             ]
@@ -304,93 +404,176 @@ const TestRenderer = ({ data }: { data: TestData }) => {
     window.URL.revokeObjectURL(url);
   };
 
-  const handleDownloadPDF = () => {
-      const doc = new jsPDF();
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(18);
-      doc.text(data.title, 10, 15);
-      
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(12);
-      doc.setTextColor(100);
-      doc.text(`${data.subject} | ${data.grade || ''}`, 10, 22);
-      doc.setTextColor(0);
+  const handleDownloadPDF = async () => {
+      setIsGeneratingPdf(true);
+      try {
+        const doc = new jsPDF();
 
-      let y = 35;
-      data.questions.forEach((q, i) => {
-          if (y > 270) { doc.addPage(); y = 20; }
-          
-          doc.setFont("helvetica", "bold");
-          const questionText = `${i + 1}. ${q.question}`;
-          const splitQ = doc.splitTextToSize(questionText, 190);
-          doc.text(splitQ, 10, y);
-          y += splitQ.length * 6;
+        // Load font that supports Cyrillic and Math Symbols
+        try {
+            const fontUrl = "https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.66/fonts/Roboto/Roboto-Regular.ttf";
+            const fontBytes = await fetch(fontUrl).then(res => res.arrayBuffer());
+            const filename = "Roboto-Regular.ttf";
+            
+            // Convert to base64
+            let binary = '';
+            const bytes = new Uint8Array(fontBytes);
+            const len = bytes.byteLength;
+            for (let i = 0; i < len; i++) {
+                binary += String.fromCharCode(bytes[i]);
+            }
+            const fontBase64 = window.btoa(binary);
 
-          if (q.options) {
-             doc.setFont("helvetica", "normal");
-             q.options.forEach(opt => {
-                if (y > 280) { doc.addPage(); y = 20; }
-                doc.text(opt, 20, y);
-                y += 6;
-             });
-             y += 4;
-          } else {
-             y += 10;
-          }
-      });
-      
-      // Answer Key Page
-      doc.addPage();
-      doc.setFont("helvetica", "bold");
-      doc.text("Ключ с отговори", 10, 20);
-      doc.setFont("helvetica", "normal");
-      
-      let ky = 30;
-      data.questions.forEach((q, i) => {
-           doc.text(`${i + 1}. ${q.correctAnswer || '-'}`, 10, ky);
-           ky += 7;
-      });
+            doc.addFileToVFS(filename, fontBase64);
+            doc.addFont(filename, "Roboto", "normal");
+            doc.setFont("Roboto");
+        } catch (e) {
+            console.error("Failed to load Cyrillic font", e);
+            alert("Warning: Could not load Cyrillic font. Text might look incorrect.");
+        }
 
-      doc.save(`${data.title.replace(/\s+/g, '_')}.pdf`);
+        // --- Header Section ---
+        doc.setFontSize(12);
+        doc.text("Име: __________________________________________", 20, 20);
+        doc.text("Клас: _________", 20, 30);
+        doc.text("Номер: _________", 80, 30);
+
+        // --- Title Section ---
+        doc.setFontSize(18);
+        doc.text(cleanMathText(data.title), 105, 50, { align: 'center' });
+        
+        doc.setFontSize(12);
+        doc.setTextColor(100);
+        doc.text(`${data.subject} | ${data.grade || ''}`, 105, 58, { align: 'center' });
+        doc.setTextColor(0);
+
+        // --- Questions ---
+        let y = 70;
+        data.questions.forEach((q, i) => {
+            if (y > 250) { doc.addPage(); y = 20; }
+            
+            doc.setFontSize(12);
+            // Question Text
+            const questionText = `${i + 1}. ${cleanMathText(q.question)}`;
+            const splitQ = doc.splitTextToSize(questionText, 170);
+            doc.text(splitQ, 20, y);
+            y += splitQ.length * 7;
+
+            // Options or Lines
+            if (q.options) {
+               q.options.forEach(opt => {
+                  if (y > 270) { doc.addPage(); y = 20; }
+                  doc.text(cleanMathText(opt), 25, y);
+                  y += 7;
+               });
+               y += 4;
+            } else {
+               // Lines for open answer
+               doc.line(20, y+5, 190, y+5);
+               doc.line(20, y+15, 190, y+15);
+               y += 25;
+            }
+        });
+        
+        // --- Signatures Footer ---
+        if (y > 230) { doc.addPage(); y = 40; } else { y += 20; }
+        
+        doc.text("Подпис на учител: ___________________", 20, y);
+        doc.text("Подпис на ученик: ___________________", 100, y);
+
+        // --- Grade ---
+        y += 15;
+        doc.setFontSize(14);
+        doc.text("Оценка: ___________________", 20, y);
+
+        // --- Answer Key Page ---
+        doc.addPage();
+        doc.setFontSize(16);
+        doc.text("Ключ с отговори", 20, 20);
+        doc.setFontSize(12);
+        
+        let ky = 35;
+        data.questions.forEach((q, i) => {
+             doc.text(`${i + 1}. ${cleanMathText(q.correctAnswer || '-')}`, 20, ky);
+             ky += 8;
+        });
+
+        doc.save(`${data.title.replace(/\s+/g, '_')}.pdf`);
+      } catch (e) {
+        console.error("PDF Gen Error", e);
+      } finally {
+        setIsGeneratingPdf(false);
+      }
   };
 
   const handlePrint = () => {
-     const printWindow = window.open('', '', 'height=600,width=800');
+     const printWindow = window.open('', '', 'height=800,width=800');
      if (!printWindow) return;
 
      const html = `
         <html>
         <head>
-            <title>${data.title}</title>
+            <title>${cleanMathText(data.title)}</title>
             <style>
-                body { font-family: 'Helvetica', sans-serif; padding: 40px; }
-                h1 { margin-bottom: 5px; }
-                .meta { color: #666; margin-bottom: 30px; font-size: 14px; border-bottom: 1px solid #ddd; padding-bottom: 10px; }
-                .question { margin-bottom: 20px; page-break-inside: avoid; }
-                .q-text { font-weight: bold; margin-bottom: 8px; }
-                .option { margin-left: 20px; margin-bottom: 4px; }
-                .open-line { border-bottom: 1px solid #000; margin-top: 20px; width: 100%; display: block; }
+                @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
+                body { font-family: 'Roboto', sans-serif; padding: 40px; color: #000; }
+                .header-fields { margin-bottom: 40px; font-size: 16px; line-height: 1.8; }
+                .field-row { margin-bottom: 10px; }
+                
+                h1 { text-align: center; margin-bottom: 5px; font-size: 24px; }
+                .meta { text-align: center; color: #666; margin-bottom: 40px; font-size: 14px; }
+                
+                .question { margin-bottom: 25px; page-break-inside: avoid; }
+                .q-text { font-weight: bold; margin-bottom: 10px; font-size: 16px; }
+                .option { margin-left: 20px; margin-bottom: 5px; }
+                .open-lines { margin-top: 15px; border-bottom: 1px solid #000; height: 30px; width: 100%; }
+                
+                .footer-signatures { display: flex; justify-content: space-between; margin-top: 60px; page-break-inside: avoid; }
+                .grade-field { margin-top: 30px; font-weight: bold; font-size: 18px; page-break-inside: avoid; }
+
                 .key { margin-top: 50px; page-break-before: always; }
+                @media print {
+                   @page { margin: 2cm; }
+                }
             </style>
         </head>
         <body>
-            <h1>${data.title}</h1>
+            <div class="header-fields">
+                <div class="field-row">Име: _________________________________________________</div>
+                <div class="field-row">Клас: _________ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Номер: _________</div>
+            </div>
+
+            <h1>${cleanMathText(data.title)}</h1>
             <div class="meta">${data.subject} ${data.grade ? '| ' + data.grade : ''}</div>
             
             ${data.questions.map((q, i) => `
                 <div class="question">
-                    <div class="q-text">${i + 1}. ${q.question}</div>
+                    <div class="q-text">${i + 1}. ${cleanMathText(q.question)}</div>
                     ${q.options 
-                        ? q.options.map(o => `<div class="option">${o}</div>`).join('') 
-                        : '<div class="open-line"></div>'}
+                        ? q.options.map(o => `<div class="option">${cleanMathText(o)}</div>`).join('') 
+                        : `<div class="open-lines"></div><div class="open-lines"></div>`}
                 </div>
             `).join('')}
 
+            <div class="footer-signatures">
+                <div>Подпис на учител: ___________________</div>
+                <div>Подпис на ученик: ___________________</div>
+            </div>
+
+            <div class="grade-field">
+                Оценка: ___________________
+            </div>
+
             <div class="key">
                 <h2>Ключ с отговори</h2>
-                ${data.questions.map((q, i) => `<div>${i + 1}. ${q.correctAnswer || '-'}</div>`).join('')}
+                ${data.questions.map((q, i) => `<div>${i + 1}. ${cleanMathText(q.correctAnswer || '-')}</div>`).join('')}
             </div>
-            <script>window.onload = () => window.print();</script>
+            <script>
+                // Wait for fonts
+                document.fonts.ready.then(() => {
+                    window.print();
+                });
+            </script>
         </body>
         </html>
      `;
@@ -412,7 +595,7 @@ const TestRenderer = ({ data }: { data: TestData }) => {
     <div className="mt-4 p-5 glass-card rounded-3xl animate-in fade-in zoom-in-95 duration-300">
         <div className="flex justify-between items-center mb-6">
             <div className="flex flex-col">
-                <h4 className="font-bold text-lg leading-tight">{data.title}</h4>
+                <h4 className="font-bold text-lg leading-tight">{cleanMathText(data.title)}</h4>
                 <span className="text-xs text-gray-500 uppercase tracking-wide mt-1">{data.questions.length} въпроса • {data.subject}</span>
             </div>
             <button onClick={() => setVisible(false)} className="p-1.5 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-full transition-colors text-gray-400"><X size={16} /></button>
@@ -422,8 +605,8 @@ const TestRenderer = ({ data }: { data: TestData }) => {
             <button onClick={handleDownloadWord} className="flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold text-sm shadow-lg shadow-blue-500/20 transition-all active:scale-95">
                 <FileType size={18}/> Word (.docx)
             </button>
-            <button onClick={handleDownloadPDF} className="flex items-center justify-center gap-2 px-4 py-3 bg-red-500 hover:bg-red-400 text-white rounded-xl font-bold text-sm shadow-lg shadow-red-500/20 transition-all active:scale-95">
-                <Download size={18}/> PDF
+            <button onClick={handleDownloadPDF} disabled={isGeneratingPdf} className="flex items-center justify-center gap-2 px-4 py-3 bg-red-500 hover:bg-red-400 text-white rounded-xl font-bold text-sm shadow-lg shadow-red-500/20 transition-all active:scale-95 disabled:opacity-70 disabled:cursor-wait">
+                {isGeneratingPdf ? <Loader2 size={18} className="animate-spin"/> : <Download size={18}/>} PDF
             </button>
              <button onClick={handlePrint} className="flex items-center justify-center gap-2 px-4 py-3 bg-zinc-700 hover:bg-zinc-600 text-white rounded-xl font-bold text-sm shadow-lg shadow-zinc-500/20 transition-all active:scale-95">
                 <Printer size={18}/> Print
@@ -433,11 +616,11 @@ const TestRenderer = ({ data }: { data: TestData }) => {
         <div className="space-y-4 max-h-80 overflow-y-auto custom-scrollbar p-2 bg-white/50 dark:bg-black/20 rounded-xl border border-indigo-500/5">
             {data.questions.map((q, i) => (
                 <div key={i} className="p-3 bg-white dark:bg-zinc-800 rounded-lg shadow-sm border border-gray-100 dark:border-white/5">
-                    <p className="font-bold text-sm mb-2">{i + 1}. {q.question}</p>
+                    <p className="font-bold text-sm mb-2">{i + 1}. {cleanMathText(q.question)}</p>
                     {q.options && (
                         <div className="space-y-1 ml-2">
                             {q.options.map((opt, idx) => (
-                                <p key={idx} className="text-xs text-gray-600 dark:text-gray-300">{opt}</p>
+                                <p key={idx} className="text-xs text-gray-600 dark:text-gray-300">{cleanMathText(opt)}</p>
                             ))}
                         </div>
                     )}
@@ -875,17 +1058,37 @@ export const App = () => {
 
   const currentMessages = sessions.find(s => s.id === activeSessionId)?.messages || [];
   
-  const createNewSession = (subjectId: SubjectId, role?: UserRole) => {
+  const createNewSession = (subjectId: SubjectId, role?: UserRole, initialMode?: AppMode) => {
     const greetingName = userSettings.userName ? `, ${userSettings.userName}` : '';
     let welcomeText = "";
     const subjectName = SUBJECTS.find(s => s.id === subjectId)?.name;
 
-    // Calculate Naming: [Subject] #[Count + 1]
-    // Filter sessions by this specific subject and role to count how many exist
-    const existingCount = sessions.filter(s => s.subjectId === subjectId && s.role === (role || userRole || undefined)).length;
+    // Smart Naming Logic
+    const getModeName = (m: AppMode) => {
+        switch(m) {
+            case AppMode.SOLVE: return "Решаване";
+            case AppMode.LEARN: return "Учене";
+            case AppMode.TEACHER_TEST: return "Тест";
+            case AppMode.TEACHER_PLAN: return "План";
+            case AppMode.TEACHER_RESOURCES: return "Ресурси";
+            case AppMode.DRAW: return "Рисуване";
+            case AppMode.PRESENTATION: return "Презентация";
+            case AppMode.CHAT: return "Чат";
+            default: return "Чат";
+        }
+    };
+
+    let sessionBaseName = subjectName;
+    if (initialMode) {
+        sessionBaseName = getModeName(initialMode);
+    }
+    
+    // Calculate Naming: [Mode] #[Count + 1]
+    const existingCount = sessions.filter(s => s.subjectId === subjectId && s.role === (role || userRole || undefined) && s.mode === initialMode).length;
+    
     const sessionTitle = subjectId === SubjectId.GENERAL 
         ? `Общ Чат #${existingCount + 1}`
-        : `${subjectName} #${existingCount + 1}`;
+        : `${sessionBaseName} #${existingCount + 1}`;
 
     const newSession: Session = {
       id: crypto.randomUUID(), 
@@ -895,14 +1098,15 @@ export const App = () => {
       lastModified: Date.now(), 
       preview: 'Начало', 
       messages: [], 
-      role: role || userRole || undefined
+      role: role || userRole || undefined,
+      mode: initialMode
     };
 
     if (subjectId === SubjectId.GENERAL) {
         welcomeText = `Здравей${greetingName}! Аз съм uchebnik.ai. Попитай ме каквото и да е!`;
     } else {
         if (role === 'teacher') {
-             welcomeText = `Здравейте, колега! Аз съм Вашият AI асистент по **${subjectName}**. Как мога да Ви съдействам с подготовката на уроци, тестове или ресурси?`;
+             welcomeText = `Здравейте, колега! Аз съм Вашият AI асистент по **${subjectName}**. Как мога да Ви съдействам?`;
         } else {
              welcomeText = `Здравей${greetingName}! Аз съм твоят помощник по **${subjectName}**.`;
         }
@@ -1050,11 +1254,11 @@ export const App = () => {
       setShowSubjectDashboard(false);
       
       // Look for a recent session with this mode or create new
-      const relevantSessions = sessions.filter(s => s.subjectId === activeSubject.id && s.role === userRole).sort((a, b) => b.lastModified - a.lastModified);
+      const relevantSessions = sessions.filter(s => s.subjectId === activeSubject.id && s.role === userRole && s.mode === mode).sort((a, b) => b.lastModified - a.lastModified);
       if (relevantSessions.length > 0) {
           setActiveSessionId(relevantSessions[0].id);
       } else {
-          createNewSession(activeSubject.id, userRole || undefined);
+          createNewSession(activeSubject.id, userRole || undefined, mode);
       }
   };
 
@@ -1536,6 +1740,7 @@ export const App = () => {
   };
 
   const renderAdminPanel = () => {
+    // ... (rest of admin panel logic same as before)
     if (showAdminAuth) {
       return (
         <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in">
@@ -1601,6 +1806,7 @@ export const App = () => {
   };
 
   const renderUpgradeModal = () => {
+    // ... (rest of upgrade modal logic same as before)
     if (!showUnlockModal) return null;
     if (targetPlan) {
         return (
@@ -1704,6 +1910,7 @@ export const App = () => {
   const renderProfileModal = () => null;
 
   const renderSidebar = () => {
+      // ... (rest of sidebar code same as before)
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024;
     return (
       <>
@@ -1802,7 +2009,7 @@ export const App = () => {
                                                             <button onClick={() => deleteSession(sess.id)} className="p-1 text-gray-400 hover:text-red-500 opacity-0 group-hover/session:opacity-100 transition-opacity"><Trash2 size={10}/></button>
                                                         </div>
                                                     ))}
-                                                    <button onClick={() => { createNewSession(s.id, 'student'); if(isMobile) setSidebarOpen(false); setShowSubjectDashboard(false); }} className="w-full text-left px-2 py-1.5 text-[10px] font-bold text-indigo-500 hover:text-indigo-600 flex items-center gap-1">
+                                                    <button onClick={() => { createNewSession(s.id, 'student', activeMode); if(isMobile) setSidebarOpen(false); setShowSubjectDashboard(false); }} className="w-full text-left px-2 py-1.5 text-[10px] font-bold text-indigo-500 hover:text-indigo-600 flex items-center gap-1">
                                                         <Plus size={10}/> Нов чат
                                                     </button>
                                                 </div>
@@ -1849,7 +2056,7 @@ export const App = () => {
                                                             <button onClick={() => deleteSession(sess.id)} className="p-1 text-gray-400 hover:text-red-500 opacity-0 group-hover/session:opacity-100 transition-opacity"><Trash2 size={10}/></button>
                                                         </div>
                                                     ))}
-                                                    <button onClick={() => { createNewSession(s.id, 'teacher'); if(isMobile) setSidebarOpen(false); setShowSubjectDashboard(false); }} className="w-full text-left px-2 py-1.5 text-[10px] font-bold text-indigo-500 hover:text-indigo-600 flex items-center gap-1">
+                                                    <button onClick={() => { createNewSession(s.id, 'teacher', activeMode); if(isMobile) setSidebarOpen(false); setShowSubjectDashboard(false); }} className="w-full text-left px-2 py-1.5 text-[10px] font-bold text-indigo-500 hover:text-indigo-600 flex items-center gap-1">
                                                         <Plus size={10}/> Нов чат
                                                     </button>
                                                 </div>
@@ -1867,7 +2074,7 @@ export const App = () => {
           </div>
 
           <div className={`p-4 border-t ${userSettings.customBackground ? 'border-white/10 bg-black/10' : 'border-gray-100 dark:border-white/5 bg-white/30 dark:bg-black/20'} space-y-3 backdrop-blur-md flex flex-col justify-center`}>
-             {/* Profile Buttons kept same */}
+            {/* ... Rest of sidebar footer (profile) */}
              {userPlan !== 'pro' && (
                <button onClick={() => setShowUnlockModal(true)} className="w-full mb-1 group relative overflow-hidden rounded-2xl p-4 text-left shadow-xl transition-all hover:scale-[1.02] active:scale-[0.98]">
                   <div className="absolute inset-0 bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 animate-gradient-xy" />
@@ -1947,71 +2154,74 @@ export const App = () => {
   };
 
   const renderSubjectDashboard = () => {
-      if (!activeSubject) return null;
+    // ... (rest of dashboard logic)
+    if (!activeSubject) return null;
       
-      const isStudent = userRole === 'student';
-      
-      return (
-        <div className={`flex-1 overflow-y-auto custom-scrollbar p-4 md:p-8 flex flex-col items-center justify-center relative overflow-x-hidden ${userSettings.customBackground ? 'bg-transparent' : 'bg-white dark:bg-zinc-950'}`}>
-           <button onClick={() => { setActiveSubject(null); setHomeView('school_select'); }} className="absolute top-6 left-6 p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-white/10 rounded-full transition-colors z-20"><ArrowLeft size={24}/></button>
+    const isStudent = userRole === 'student';
+    
+    return (
+      <div className={`flex-1 overflow-y-auto custom-scrollbar p-4 md:p-8 flex flex-col items-center justify-center relative overflow-x-hidden ${userSettings.customBackground ? 'bg-transparent' : 'bg-white dark:bg-zinc-950'}`}>
+         <button onClick={() => { setActiveSubject(null); setHomeView('school_select'); }} className="absolute top-6 left-6 p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-white/10 rounded-full transition-colors z-20"><ArrowLeft size={24}/></button>
 
-           <div className="max-w-3xl w-full text-center space-y-6 animate-in fade-in zoom-in-95 duration-500">
-               <div className={`w-24 h-24 mx-auto rounded-[32px] ${activeSubject.color} flex items-center justify-center text-white shadow-2xl shadow-indigo-500/30 rotate-3`}>
-                   <DynamicIcon name={activeSubject.icon} className="w-12 h-12" />
-               </div>
-               <h1 className="text-4xl md:text-5xl font-black text-zinc-900 dark:text-white font-display tracking-tight">{activeSubject.name}</h1>
-               <p className="text-xl text-gray-500 dark:text-gray-400">{isStudent ? 'Какво ще правим днес?' : 'Инструменти за учителя'}</p>
-               
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
-                   {isStudent ? (
-                       <>
-                           <button onClick={() => handleStartMode(AppMode.SOLVE)} className="group p-6 bg-white dark:bg-zinc-900 border border-indigo-500/10 rounded-3xl text-left hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl hover:shadow-2xl hover:border-indigo-500/30">
-                               <div className="p-3 bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 rounded-2xl w-fit mb-4 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
-                                   <Zap size={24}/>
-                               </div>
-                               <h3 className="text-2xl font-bold mb-2">За решаване</h3>
-                               <p className="text-gray-500 font-medium">Помощ със задачи и упражнения.</p>
-                           </button>
-                           <button onClick={() => handleStartMode(AppMode.LEARN)} className="group p-6 bg-white dark:bg-zinc-900 border border-emerald-500/10 rounded-3xl text-left hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl hover:shadow-2xl hover:border-emerald-500/30">
-                               <div className="p-3 bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-2xl w-fit mb-4 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
-                                   <Book size={24}/>
-                               </div>
-                               <h3 className="text-2xl font-bold mb-2">За учене</h3>
-                               <p className="text-gray-500 font-medium">Обяснения на уроци и концепции.</p>
-                           </button>
-                       </>
-                   ) : (
-                       <>
-                           <button onClick={() => handleStartMode(AppMode.TEACHER_TEST)} className="group p-6 bg-white dark:bg-zinc-900 border border-indigo-500/10 rounded-3xl text-left hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl hover:shadow-2xl hover:border-indigo-500/30">
-                               <div className="p-3 bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 rounded-2xl w-fit mb-4 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
-                                   <CheckCircle size={24}/>
-                               </div>
-                               <h3 className="text-2xl font-bold mb-2">Създай Тест</h3>
-                               <p className="text-gray-500 font-medium">Генерирай въпроси и отговори за проверка.</p>
-                           </button>
-                           <button onClick={() => handleStartMode(AppMode.TEACHER_PLAN)} className="group p-6 bg-white dark:bg-zinc-900 border border-amber-500/10 rounded-3xl text-left hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl hover:shadow-2xl hover:border-amber-500/30">
-                               <div className="p-3 bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 rounded-2xl w-fit mb-4 group-hover:bg-amber-600 group-hover:text-white transition-colors">
-                                   <FileJson size={24}/>
-                               </div>
-                               <h3 className="text-2xl font-bold mb-2">План на урок</h3>
-                               <p className="text-gray-500 font-medium">Структурирай урока и целите.</p>
-                           </button>
-                           <button onClick={() => handleStartMode(AppMode.TEACHER_RESOURCES)} className="col-span-full group p-6 bg-white dark:bg-zinc-900 border border-pink-500/10 rounded-3xl text-left hover:scale-[1.01] active:scale-[0.99] transition-all shadow-xl hover:shadow-2xl hover:border-pink-500/30">
-                               <div className="p-3 bg-pink-100 dark:bg-pink-500/20 text-pink-600 dark:text-pink-400 rounded-2xl w-fit mb-4 group-hover:bg-pink-600 group-hover:text-white transition-colors">
-                                   <LightbulbIcon size={24}/>
-                               </div>
-                               <h3 className="text-2xl font-bold mb-2">Идеи и Ресурси</h3>
-                               <p className="text-gray-500 font-medium">Интерактивни задачи и материали.</p>
-                           </button>
-                       </>
-                   )}
-               </div>
-           </div>
-        </div>
-      );
+         <div className="max-w-3xl w-full text-center space-y-6 animate-in fade-in zoom-in-95 duration-500">
+             <div className={`w-24 h-24 mx-auto rounded-[32px] ${activeSubject.color} flex items-center justify-center text-white shadow-2xl shadow-indigo-500/30 rotate-3`}>
+                 <DynamicIcon name={activeSubject.icon} className="w-12 h-12" />
+             </div>
+             <h1 className="text-4xl md:text-5xl font-black text-zinc-900 dark:text-white font-display tracking-tight">{activeSubject.name}</h1>
+             <p className="text-xl text-gray-500 dark:text-gray-400">{isStudent ? 'Какво ще правим днес?' : 'Инструменти за учителя'}</p>
+             
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
+                 {isStudent ? (
+                     <>
+                         <button onClick={() => handleStartMode(AppMode.SOLVE)} className="group p-6 bg-white dark:bg-zinc-900 border border-indigo-500/10 rounded-3xl text-left hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl hover:shadow-2xl hover:border-indigo-500/30">
+                             <div className="p-3 bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 rounded-2xl w-fit mb-4 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                                 <Zap size={24}/>
+                             </div>
+                             <h3 className="text-2xl font-bold mb-2">За решаване</h3>
+                             <p className="text-gray-500 font-medium">Помощ със задачи и упражнения.</p>
+                         </button>
+                         <button onClick={() => handleStartMode(AppMode.LEARN)} className="group p-6 bg-white dark:bg-zinc-900 border border-emerald-500/10 rounded-3xl text-left hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl hover:shadow-2xl hover:border-emerald-500/30">
+                             <div className="p-3 bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-2xl w-fit mb-4 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+                                 <Book size={24}/>
+                             </div>
+                             <h3 className="text-2xl font-bold mb-2">За учене</h3>
+                             <p className="text-gray-500 font-medium">Обяснения на уроци и концепции.</p>
+                         </button>
+                     </>
+                 ) : (
+                     <>
+                         <button onClick={() => handleStartMode(AppMode.TEACHER_TEST)} className="group p-6 bg-white dark:bg-zinc-900 border border-indigo-500/10 rounded-3xl text-left hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl hover:shadow-2xl hover:border-indigo-500/30">
+                             <div className="p-3 bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 rounded-2xl w-fit mb-4 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                                 <CheckCircle size={24}/>
+                             </div>
+                             <h3 className="text-2xl font-bold mb-2">Създай Тест</h3>
+                             <p className="text-gray-500 font-medium">Генерирай въпроси и отговори за проверка.</p>
+                         </button>
+                         <button onClick={() => handleStartMode(AppMode.TEACHER_PLAN)} className="group p-6 bg-white dark:bg-zinc-900 border border-amber-500/10 rounded-3xl text-left hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl hover:shadow-2xl hover:border-amber-500/30">
+                             <div className="p-3 bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 rounded-2xl w-fit mb-4 group-hover:bg-amber-600 group-hover:text-white transition-colors">
+                                 <FileJson size={24}/>
+                             </div>
+                             <h3 className="text-2xl font-bold mb-2">План на урок</h3>
+                             <p className="text-gray-500 font-medium">Структурирай урока и целите.</p>
+                         </button>
+                         <button onClick={() => handleStartMode(AppMode.TEACHER_RESOURCES)} className="col-span-full group p-6 bg-white dark:bg-zinc-900 border border-pink-500/10 rounded-3xl text-left hover:scale-[1.01] active:scale-[0.99] transition-all shadow-xl hover:shadow-2xl hover:border-pink-500/30">
+                             <div className="p-3 bg-pink-100 dark:bg-pink-500/20 text-pink-600 dark:text-pink-400 rounded-2xl w-fit mb-4 group-hover:bg-pink-600 group-hover:text-white transition-colors">
+                                 <LightbulbIcon size={24}/>
+                             </div>
+                             <h3 className="text-2xl font-bold mb-2">Идеи и Ресурси</h3>
+                             <p className="text-gray-500 font-medium">Интерактивни задачи и материали.</p>
+                         </button>
+                     </>
+                 )}
+             </div>
+         </div>
+      </div>
+    );
   };
 
-  // Helper for rendering Lightbulb icon which wasn't imported from lucide directly in main list
+  // ... (rest of render functions same as before)
+  
+  // Helpers for rendering Lightbulb icon which wasn't imported from lucide directly in main list
   const LightbulbIcon = ({size}: {size: number}) => (
       <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-1 1.5-2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg>
   );
@@ -2116,6 +2326,7 @@ export const App = () => {
   );
 
   const renderHistoryDrawer = () => {
+      // ... (rest of history drawer logic)
     if (!historyDrawerOpen) return null;
     return (
       <div className="fixed inset-0 z-[60] flex justify-end">
@@ -2161,6 +2372,7 @@ export const App = () => {
     );
   };
 
+  // ... (rest of voice call overlay)
   const renderVoiceCallOverlay = () => {
     if (!isVoiceCallActive) return null;
     return (
@@ -2239,7 +2451,7 @@ export const App = () => {
          <div className="flex items-center gap-1.5 lg:gap-3 shrink-0 ml-2">
              <Button variant="secondary" onClick={startVoiceCall} className="w-10 h-10 lg:w-12 lg:h-12 p-0 rounded-full border-none bg-indigo-50 text-indigo-600 hover:bg-indigo-100 dark:bg-indigo-500/20 dark:text-indigo-300 dark:hover:bg-indigo-500/30" icon={Phone} />
              <div className="hidden lg:block h-8 w-px bg-gray-200 dark:bg-white/10 mx-1" />
-             <Button variant="primary" onClick={() => activeSubject && createNewSession(activeSubject.id)} className="h-9 lg:h-10 px-3 lg:px-4 text-xs lg:text-sm rounded-xl shadow-none"><Plus size={16} className="lg:w-[18px] lg:h-[18px]"/><span className="hidden sm:inline">Нов</span></Button>
+             <Button variant="primary" onClick={() => activeSubject && createNewSession(activeSubject.id, userRole || undefined, activeMode)} className="h-9 lg:h-10 px-3 lg:px-4 text-xs lg:text-sm rounded-xl shadow-none"><Plus size={16} className="lg:w-[18px] lg:h-[18px]"/><span className="hidden sm:inline">Нов</span></Button>
              <Button variant="ghost" onClick={() => setHistoryDrawerOpen(true)} className="w-9 h-9 lg:w-10 lg:h-10 p-0 rounded-full" icon={History} />
          </div>
       </header>
