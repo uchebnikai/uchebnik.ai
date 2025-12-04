@@ -2,11 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { SubjectConfig, SubjectId, AppMode, Message, Slide, ChartData, GeometryData, UserSettings, Session, UserPlan, UserRole, TestData } from './types';
 import { SUBJECTS, AI_MODELS } from './constants';
 import { generateResponse } from './services/geminiService';
-import { voskService, VoskLanguage } from './services/voskService';
 import { supabase } from './supabaseClient';
 import { Auth } from './Auth';
 import { 
-  Menu, X, Send, Image as ImageIcon, Loader2, ChevronRight, Download, Sparkles, Moon, Sun, Book, Copy, Check, Mic, MicOff, Share2, BellRing, BarChart2, LineChart as LineChartIcon, Ruler, ThumbsUp, ThumbsDown, Trash2, Settings, Type, Cpu, RotateCcw, User, Brain, FileJson, MessageSquare, Volume2, Square, Upload, ArrowRight, LayoutGrid, Folder, ChevronDown, ChevronUp, ArrowLeft, Database, Eye, Code, Projector, History, Plus, Edit2, Clock, Calendar, Phone, PhoneOff, Heart, MoreHorizontal, ArrowUpRight, Lock, Unlock, Shield, Key, LogOut, CheckCircle, XCircle, Palette, Monitor, Reply, Crown, Zap, AlertTriangle, Info, AlertCircle, HelpCircle, Camera, Mail, CreditCard, School, GraduationCap, Briefcase, FileText, Printer, FileType, Lightbulb
+  Menu, X, Send, Image as ImageIcon, Loader2, ChevronRight, Download, Sparkles, Moon, Sun, Book, Copy, Check, Mic, MicOff, Share2, BellRing, BarChart2, LineChart as LineChartIcon, Ruler, ThumbsUp, ThumbsDown, Trash2, Settings, Type, Cpu, RotateCcw, User, Brain, FileJson, MessageSquare, Volume2, Square, Upload, ArrowRight, LayoutGrid, Folder, ChevronDown, ChevronUp, ArrowLeft, Database, Eye, Code, Projector, History, Plus, Edit2, Clock, Calendar, Phone, PhoneOff, Heart, MoreHorizontal, ArrowUpRight, Lock, Unlock, Shield, Key, LogOut, CheckCircle, XCircle, Palette, Monitor, Reply, Crown, Zap, AlertTriangle, Info, AlertCircle, HelpCircle, Camera, Mail, CreditCard, School, GraduationCap, Briefcase, FileText, Printer, FileType
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
@@ -327,7 +326,7 @@ const TestRenderer = ({ data }: { data: TestData }) => {
             children: [
                 // Header: Name, Class, Number
                 new docx.Paragraph({
-                    children: [new docx.TextRun({ text: "Име: __________________________________________", size: 24, italics: false })],
+                    children: [new docx.TextRun({ text: "Име: __________________________________________", size: 24 })],
                     spacing: { after: 200 }
                 }),
                 new docx.Paragraph({
@@ -744,7 +743,6 @@ export const App = () => {
   const [isVoiceCallActive, setIsVoiceCallActive] = useState(false);
   const [voiceCallStatus, setVoiceCallStatus] = useState<'idle' | 'listening' | 'processing' | 'speaking'>('idle');
   const [voiceMuted, setVoiceMuted] = useState(false);
-  const [isModelLoading, setIsModelLoading] = useState(false);
   
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [userSettings, setUserSettings] = useState<UserSettings>({
@@ -779,9 +777,10 @@ export const App = () => {
   };
 
   // --- Refs ---
+  const recognitionRef = useRef<any>(null);
+  const voiceCallRecognitionRef = useRef<any>(null);
   const startingTextRef = useRef<string>('');
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const voiceCallRecognitionRef = useRef<any>(null); // Kept for voice call logic (uses WebSpeech for now as it's separate)
   
   // Refs for State management to handle stale closures
   const activeSubjectRef = useRef(activeSubject);
@@ -864,7 +863,7 @@ export const App = () => {
                 reduceMotion: false, 
                 responseLength: 'concise', 
                 creativity: 'balanced', 
-                languageLevel: 'standard', 
+                languageLevel: 'standard',
                 preferredModel: 'auto',
                 themeColor: '#6366f1',
                 customBackground: null
@@ -1037,15 +1036,6 @@ export const App = () => {
       startVoiceRecognition();
     }
   }, [isVoiceCallActive]);
-
-  // Cleanup effect for chat voice recognition (Vosk)
-  useEffect(() => {
-      return () => {
-          if (voskService.isActive()) {
-              voskService.stop();
-          }
-      };
-  }, []);
 
   // --- Logic Helpers ---
   const checkImageLimit = (count = 1): boolean => {
@@ -1247,7 +1237,7 @@ export const App = () => {
     if (fileInputRef.current) fileInputRef.current.value = '';
 
     // If switching to General, we load session immediately. 
-    // If switching to school subject, we wait for dashboard choice to load/create session.
+    // If switching to school subject, we wait for dashboard interaction to load/create session.
     if (subject.id === SubjectId.GENERAL) {
         const subSessions = sessions.filter(s => s.subjectId === subject.id).sort((a, b) => b.lastModified - a.lastModified);
         if (subSessions.length > 0) setActiveSessionId(subSessions[0].id); else createNewSession(subject.id);
@@ -1300,10 +1290,7 @@ export const App = () => {
     
     if (currentLoading[currentSubject.id]) return;
 
-    if (isListening) { 
-        voskService.stop();
-        setIsListening(false); 
-    }
+    if (isListening) { recognitionRef.current?.stop(); setIsListening(false); }
 
     const currentSubId = currentSubject.id;
     const currentImgs = overrideImages || [...selectedImages];
@@ -1659,51 +1646,21 @@ export const App = () => {
         setShowAuthModal(true);
         return;
     }
-
-    // Stop if currently listening
-    if (isListening) {
-        voskService.stop();
-        setIsListening(false);
-        return;
-    }
-
-    // Determine Language
-    const lang: VoskLanguage = activeSubject?.id === SubjectId.ENGLISH ? 'en' :
-                             activeSubject?.id === SubjectId.FRENCH ? 'fr' : 'bg';
-
-    startingTextRef.current = inputValue; 
-
-    // Start Native STT (Instant)
-    voskService.start(lang, {
-        onModelLoading: () => {
-             // Optional: can show small indicator if needed, but it's usually instant
-             setIsModelLoading(false);
-        },
-        onModelLoaded: () => {
-             setIsModelLoading(false);
-             setIsListening(true);
-             addToast("Говорете сега...", "success");
-        },
-        onPartial: (text) => {
-             if (text) {
-                // Combine stored starting text + partial
-                const combined = `${startingTextRef.current} ${text}`;
-                setInputValue(combined.replace(/\s+/g, ' ').trim());
-             }
-        },
-        onResult: (text) => {
-             if (text) {
-                // Update starting text ref so next sentence appends correctly
-                startingTextRef.current = `${startingTextRef.current} ${text}`;
-                setInputValue(startingTextRef.current.replace(/\s+/g, ' ').trim());
-             }
-        },
-        onError: (err) => {
-             setIsModelLoading(false);
-             setIsListening(false);
-             addToast(err, "error");
-        }
-    });
+    if(isListening) { recognitionRef.current?.stop(); setIsListening(false); return; }
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if(!SR) { addToast('Няма поддръжка.', 'error'); return; }
+    const rec = new SR();
+    rec.lang = activeSubject?.id === SubjectId.ENGLISH ? 'en-US' : activeSubject?.id === SubjectId.FRENCH ? 'fr-FR' : 'bg-BG';
+    rec.interimResults = true; rec.continuous = true;
+    startingTextRef.current = inputValue;
+    rec.onresult = (e: any) => {
+        let f = '', inter = '';
+        for(let i=e.resultIndex; i<e.results.length; ++i) e.results[i].isFinal ? f+=e.results[i][0].transcript : inter+=e.results[i][0].transcript;
+        setInputValue((startingTextRef.current + ' ' + f + inter).trim());
+    };
+    rec.onstart = () => setIsListening(true); rec.onend = () => setIsListening(false);
+    rec.onerror = (e: any) => { if(e.error === 'service-not-allowed') addToast('Гласовата услуга е недостъпна.', 'error'); setIsListening(false); };
+    recognitionRef.current = rec; rec.start();
   };
 
   const handleDownloadPPTX = (slides: Slide[]) => {
@@ -2187,7 +2144,7 @@ export const App = () => {
              )}
 
              <a href="https://discord.gg/4SB2NGPq8h" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-3 w-full h-11 rounded-xl text-sm font-bold text-white bg-[#5865F2] hover:bg-[#4752C4] transition-all shadow-lg shadow-[#5865F2]/20 active:scale-95 group">
-                <svg width="20" height="20" viewBox="0 0 127 96" fill="none" xmlns="http://www.w3.org/2000/svg" className="group-hover:scale-110 transition-transform"><path d="M107.7 8.07A105.15 105.15 0 0 0 81.47 0a72.07 72.07 0 0 0-3.36 6.83 97.68 97.68 0 0 0-29.11 0A72.37 72.37 0 0 0 45.64 0a105.15 105.15 0 0 0-26.25 8.09C2.79 32.65-1.71 56.6.54 80.21h0A105.73 105.73 0 0 0 32.71 96a75.2 75.2 0 0 0 6.57-12.8 69.1 69.1 0 0 1-10.46-5.01c.96-.71 1.9-1.44 2.81-2.19 26.25 12.31 54.54 12.31 80.8 0 .91.75 1.85 1.48 2.81 2.19a69.1 69.1 0 0 1-10.47 5.01 75.2 75.2 0 0 0 6.57 12.8A105.73 105.73 0 0 0 126.6 80.22c2.96-23.97-2.1-47.57-18.9-72.15ZM42.45 65.69C36.18 65.69 31 60.08 31 53.23c0-6.85 5.1-12.46 11.45-12.46 6.42 0 11.53 5.61 11.45 12.46 0 6.85-5.03 12.46-11.45 12.46Zm42.2 0C78.38 65.69 73.2 60.08 73.2 60.08 73.2 53.23c0-6.85 5.1-12.46 11.45-12.46 6.42 0 11.53 5.61 11.45 12.46 0 6.85-5.03 12.46-11.45 12.46Z" fill="currentColor"/></svg>
+                <svg width="20" height="20" viewBox="0 0 127 96" fill="none" xmlns="http://www.w3.org/2000/svg" className="group-hover:scale-110 transition-transform"><path d="M107.7 8.07A105.15 105.15 0 0 0 81.47 0a72.07 72.07 0 0 0-3.36 6.83 97.68 97.68 0 0 0-29.11 0A72.37 72.37 0 0 0 45.64 0a105.15 105.15 0 0 0-26.25 8.09C2.79 32.65-1.71 56.6.54 80.21h0A105.73 105.73 0 0 0 32.71 96a75.2 75.2 0 0 0 6.57-12.8 69.1 69.1 0 0 1-10.46-5.01c.96-.71 1.9-1.44 2.81-2.19 26.25 12.31 54.54 12.31 80.8 0 .91.75 1.85 1.48 2.81 2.19a69.1 69.1 0 0 1-10.47 5.01 75.2 75.2 0 0 0 6.57 12.8A105.73 105.73 0 0 0 126.6 80.22c2.96-23.97-2.1-47.57-18.9-72.15ZM42.45 65.69C36.18 65.69 31 60.08 31 53.23c0-6.85 5.1-12.46 11.45-12.46 6.42 0 11.53 5.61 11.45 12.46 0 6.85-5.03 12.46-11.45 12.46Zm42.2 0C78.38 65.69 73.2 60.08 73.2 53.23c0-6.85 5.1-12.46 11.45-12.46 6.42 0 11.53 5.61 11.45 12.46 0 6.85-5.03 12.46-11.45 12.46Z" fill="currentColor"/></svg>
                 Влез в Discord
              </a>
           </div>
@@ -2611,9 +2568,9 @@ export const App = () => {
                </button>
                <input type="file" ref={fileInputRef} onChange={handleImageUpload} className="hidden" accept="image/*" multiple />
 
-               {/* Voice Button - Updated with Loading State */}
-               <button onClick={toggleListening} disabled={(activeSubject ? loadingSubjects[activeSubject.id] : false) || isModelLoading} className={`flex-none w-10 h-10 rounded-full flex items-center justify-center transition-all active:scale-95 disabled:opacity-50 ${isListening ? 'bg-red-500 text-white shadow-lg shadow-red-500/30 animate-pulse' : 'text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-white/10'}`}>
-                  {isModelLoading ? <Loader2 size={20} className="animate-spin text-indigo-500"/> : isListening ? <MicOff size={20}/> : <Mic size={20} strokeWidth={2}/>}
+               {/* Voice Button - Moved here */}
+               <button onClick={toggleListening} disabled={activeSubject ? loadingSubjects[activeSubject.id] : false} className={`flex-none w-10 h-10 rounded-full flex items-center justify-center transition-all active:scale-95 disabled:opacity-50 ${isListening ? 'bg-red-500 text-white shadow-lg shadow-red-500/30 animate-pulse' : 'text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-white/10'}`}>
+                  {isListening ? <MicOff size={20}/> : <Mic size={20} strokeWidth={2}/>}
                </button>
 
                {/* Textarea */}
@@ -2626,7 +2583,7 @@ export const App = () => {
                           e.target.style.height = Math.min(e.target.scrollHeight, 128) + 'px';
                       }}
                       onKeyDown={e => {if(e.key === 'Enter' && !e.shiftKey && !(activeSubject && loadingSubjects[activeSubject.id])){e.preventDefault(); handleSend();}}} 
-                      placeholder={isListening ? "Слушам..." : replyingTo ? "Напиши отговор..." : "Напиши съобщение..."}
+                      placeholder={replyingTo ? "Напиши отговор..." : "Напиши съобщение..."}
                       disabled={activeSubject ? loadingSubjects[activeSubject.id] : false}
                       className="w-full bg-transparent border-none focus:ring-0 p-0 text-base text-zinc-900 dark:text-zinc-100 placeholder-gray-400 resize-none max-h-32 min-h-[24px] leading-6"
                       rows={1}
@@ -2657,7 +2614,8 @@ export const App = () => {
     </div>
   );
 
-  // ... (rest of returns same as before)
+  // --- Main Return ---
+
   if (authLoading) {
     return (
        <div className="h-screen w-full flex items-center justify-center bg-background text-foreground">
@@ -2666,6 +2624,8 @@ export const App = () => {
     );
   }
 
+  // Removed strict auth check: if (!session) return <Auth />;
+  
   // Helpers for Settings
   const isPremium = userPlan === 'plus' || userPlan === 'pro';
 
