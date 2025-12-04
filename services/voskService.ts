@@ -1,4 +1,3 @@
-
 export type VoskLanguage = 'en' | 'bg' | 'fr';
 
 interface VoskCallbacks {
@@ -31,7 +30,6 @@ class NativeSttService {
         }
 
         this.callbacks = callbacks;
-        this.shouldRestart = true; // Intention to listen continuously
 
         const langMap: Record<VoskLanguage, string> = {
             'en': 'en-US',
@@ -39,6 +37,15 @@ class NativeSttService {
             'fr': 'fr-FR'
         };
         this.lang = langMap[lang] || 'bg-BG';
+
+        // Detect iOS
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+        // iOS Safari Logic: 
+        // 1. Continuous must be false (Safari bugs out with true).
+        // 2. We CANNOT auto-restart on iOS because start() requires a user gesture.
+        // Therefore, on iOS, it's one-shot (stops after silence). User must tap again.
+        this.shouldRestart = !isIOS; 
 
         this.startRecognizer();
     }
@@ -49,10 +56,10 @@ class NativeSttService {
             this.recognizer = new SpeechRecognition();
             this.recognizer.lang = this.lang;
             
-            // CRITICAL FIX FOR iOS: 
-            // 1. continuous = false (Safari fails often with true)
-            // 2. We restart manually in onend to simulate continuous
-            this.recognizer.continuous = false; 
+            // Continuous is true for Desktop/Android to allow long dictation.
+            // False for iOS to prevent errors and ensure stability.
+            this.recognizer.continuous = this.shouldRestart; 
+            
             this.recognizer.interimResults = true;
             this.recognizer.maxAlternatives = 1;
 
@@ -62,9 +69,9 @@ class NativeSttService {
             };
 
             this.recognizer.onerror = (event: any) => {
-                // If we get an error, we generally stop restarting to prevent infinite error loops
-                // EXCEPT for 'no-speech' which just means silence
+                // 'no-speech' is common and harmless
                 if (event.error !== 'no-speech') {
+                    // For any real error, stop the loop to prevent spam
                     this.shouldRestart = false; 
                     this.isListening = false;
                 }
@@ -74,9 +81,10 @@ class NativeSttService {
                 if (event.error === 'not-allowed') {
                     this.callbacks?.onError("Dostaput do mikrofona e otkazan.");
                 } else if (event.error === 'service-not-allowed') {
-                    this.callbacks?.onError("Greshka: service-not-allowed. Proverete dali Diktuvane (Dictation) e aktivirano v nastroykite.");
+                    // This happens if we try to restart too fast or without user gesture on iOS
+                    this.callbacks?.onError("Greshka: service-not-allowed. Opitayte otnovo.");
                 } else if (event.error === 'no-speech') {
-                    // Ignore, let logic restart it
+                    // Ignore
                 } else {
                     this.callbacks?.onError(`Greshka: ${event.error}`);
                 }
@@ -84,16 +92,20 @@ class NativeSttService {
 
             this.recognizer.onend = () => {
                 this.isListening = false;
-                // Manual Continuous Loop
+                
+                // Only restart if we are in continuous mode (Desktop/Android)
+                // AND we haven't encountered a blocking error.
                 if (this.shouldRestart) {
                     try {
-                        // Small delay to prevent CPU thrashing if it fails instantly
                         setTimeout(() => {
                              if (this.shouldRestart) this.startRecognizer();
                         }, 100);
                     } catch(e) {
                         this.shouldRestart = false;
                     }
+                } else {
+                    // On iOS, we just stop. The UI will show the mic is off.
+                    // This is the correct behavior to avoid service-not-allowed.
                 }
             };
 
@@ -149,5 +161,4 @@ class NativeSttService {
     }
 }
 
-// Export as same name to maintain compatibility with App.tsx imports
 export const voskService = new NativeSttService();

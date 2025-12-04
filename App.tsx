@@ -864,7 +864,7 @@ export const App = () => {
                 reduceMotion: false, 
                 responseLength: 'concise', 
                 creativity: 'balanced', 
-                languageLevel: 'standard',
+                languageLevel: 'standard', 
                 preferredModel: 'auto',
                 themeColor: '#6366f1',
                 customBackground: null
@@ -1654,7 +1654,7 @@ export const App = () => {
      try { rec.start(); } catch(e) { console.error(e); }
   };
 
-  const toggleListening = async () => {
+  const toggleListening = () => {
     if (!session) {
         setShowAuthModal(true);
         return;
@@ -1674,7 +1674,7 @@ export const App = () => {
     startingTextRef.current = inputValue; 
 
     // Start Native STT (Instant)
-    await voskService.start(lang, {
+    voskService.start(lang, {
         onModelLoading: () => {
              // Optional: can show small indicator if needed, but it's usually instant
              setIsModelLoading(false);
