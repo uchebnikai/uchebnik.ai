@@ -6,7 +6,7 @@ import { voskService, VoskLanguage } from './services/voskService';
 import { supabase } from './supabaseClient';
 import { Auth } from './Auth';
 import { 
-  Menu, X, Send, Image as ImageIcon, Loader2, ChevronRight, Download, Sparkles, Moon, Sun, Book, Copy, Check, Mic, MicOff, Share2, BellRing, BarChart2, LineChart as LineChartIcon, Ruler, ThumbsUp, ThumbsDown, Trash2, Settings, Type, Cpu, RotateCcw, User, Brain, FileJson, MessageSquare, Volume2, Square, Upload, ArrowRight, LayoutGrid, Folder, ChevronDown, ChevronUp, ArrowLeft, Database, Eye, Code, Projector, History, Plus, Edit2, Clock, Calendar, Phone, PhoneOff, Heart, MoreHorizontal, ArrowUpRight, Lock, Unlock, Shield, Key, LogOut, CheckCircle, XCircle, Palette, Monitor, Reply, Crown, Zap, AlertTriangle, Info, AlertCircle, HelpCircle, Camera, Mail, CreditCard, School, GraduationCap, Briefcase, FileText, Printer, FileType
+  Menu, X, Send, Image as ImageIcon, Loader2, ChevronRight, Download, Sparkles, Moon, Sun, Book, Copy, Check, Mic, MicOff, Share2, BellRing, BarChart2, LineChart as LineChartIcon, Ruler, ThumbsUp, ThumbsDown, Trash2, Settings, Type, Cpu, RotateCcw, User, Brain, FileJson, MessageSquare, Volume2, Square, Upload, ArrowRight, LayoutGrid, Folder, ChevronDown, ChevronUp, ArrowLeft, Database, Eye, Code, Projector, History, Plus, Edit2, Clock, Calendar, Phone, PhoneOff, Heart, MoreHorizontal, ArrowUpRight, Lock, Unlock, Shield, Key, LogOut, CheckCircle, XCircle, Palette, Monitor, Reply, Crown, Zap, AlertTriangle, Info, AlertCircle, HelpCircle, Camera, Mail, CreditCard, School, GraduationCap, Briefcase, FileText, Printer, FileType, Lightbulb
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
@@ -1673,16 +1673,16 @@ export const App = () => {
 
     startingTextRef.current = inputValue; 
 
-    // Start Vosk
+    // Start Native STT (Instant)
     await voskService.start(lang, {
         onModelLoading: () => {
-             setIsModelLoading(true);
-             addToast("Сваляне на гласов модел (~50MB)...", "info");
+             // Optional: can show small indicator if needed, but it's usually instant
+             setIsModelLoading(false);
         },
         onModelLoaded: () => {
              setIsModelLoading(false);
              setIsListening(true);
-             addToast("Готово! Говорете сега.", "success");
+             addToast("Говорете сега...", "success");
         },
         onPartial: (text) => {
              if (text) {
