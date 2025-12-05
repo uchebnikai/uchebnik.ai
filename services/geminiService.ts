@@ -50,8 +50,6 @@ export const generateResponse = async (
   const subjectName = subjectConfig ? subjectConfig.name : "Unknown Subject";
 
   // Select Model based on Plan
-  // Free: deepseek-r1t-chimera
-  // Pro/Plus: deepseek-r1t2-chimera
   const model = (userPlan === 'plus' || userPlan === 'pro') 
     ? 'deepseek-r1t2-chimera' 
     : 'deepseek-r1t-chimera';
@@ -68,7 +66,7 @@ export const generateResponse = async (
   // Inject Subject Context
   systemInstruction = `CURRENT SUBJECT CONTEXT: ${subjectName}. All responses must relate to ${subjectName}.\n\n${systemInstruction}`;
   
-  // For modes requiring JSON, enforce it strictly in system prompt since we don't have responseSchema
+  // For modes requiring JSON, enforce it strictly in system prompt
   if (mode === AppMode.PRESENTATION || mode === AppMode.TEACHER_TEST) {
     systemInstruction += "\n\nIMPORTANT: OUTPUT ONLY VALID JSON. DO NOT WRAP IN MARKDOWN. NO EXTRA TEXT.";
   }
@@ -141,6 +139,7 @@ export const generateResponse = async (
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
       let fullText = "";
+      let buffer = "";
 
       if (reader) {
           while (true) {
@@ -148,7 +147,9 @@ export const generateResponse = async (
               if (done) break;
               
               const chunk = decoder.decode(value, { stream: true });
-              const lines = chunk.split('\n');
+              buffer += chunk;
+              const lines = buffer.split('\n');
+              buffer = lines.pop() || ""; // Keep the last incomplete line in buffer
               
               for (const line of lines) {
                   const trimmed = line.trim();
@@ -167,6 +168,10 @@ export const generateResponse = async (
           }
       }
 
+      // Remove <think> blocks for JSON extraction (clean processing)
+      const cleanedText = fullText.replace(/<think>[\s\S]*?<\/think>/g, "").trim();
+      const textToParse = cleanedText || fullText;
+
       // Post-Processing
       let finalType: Message['type'] = 'text';
       let slidesData: Slide[] | undefined;
@@ -176,20 +181,17 @@ export const generateResponse = async (
 
       // 1. Presentation Mode
       if (mode === AppMode.PRESENTATION) {
-          const slides = extractJSON(fullText);
+          const slides = extractJSON(textToParse);
           if (slides && Array.isArray(slides)) {
               finalType = 'slides';
               slidesData = slides;
               fullText = "Готово! Ето план за твоята презентация:";
-          } else {
-              // Fallback if JSON parse fails
-             // Keep fullText as is, potentially containing the error or raw text
           }
       }
 
       // 2. Teacher Test Mode
       else if (mode === AppMode.TEACHER_TEST) {
-          const test = extractJSON(fullText);
+          const test = extractJSON(textToParse);
           if (test && test.questions && Array.isArray(test.questions)) {
               finalType = 'test_generated';
               testData = test;
@@ -199,7 +201,7 @@ export const generateResponse = async (
 
       // 3. Standard Text Mode (Check for charts/geometry)
       else {
-          const chartMatch = fullText.match(/```json:chart\n([\s\S]*?)\n```/);
+          const chartMatch = textToParse.match(/```json:chart\n([\s\S]*?)\n```/);
           if (chartMatch) {
             try {
               chartData = JSON.parse(chartMatch[1]);
@@ -207,7 +209,7 @@ export const generateResponse = async (
             } catch (e) {}
           }
 
-          const geoMatch = fullText.match(/```json:geometry\n([\s\S]*?)\n```/);
+          const geoMatch = textToParse.match(/```json:geometry\n([\s\S]*?)\n```/);
           if (geoMatch) {
             try {
               geometryData = JSON.parse(geoMatch[1]);
