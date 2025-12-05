@@ -1,26 +1,24 @@
-
-import { AppMode, SubjectId, Slide, ChartData, GeometryData, Message, TestData, UserPlan } from "../types";
+import { GoogleGenAI, Type, GenerateContentResponse } from "@google/genai";
+import { AppMode, SubjectId, Slide, ChartData, GeometryData, Message, TestData } from "../types";
 import { SYSTEM_PROMPTS, SUBJECTS } from "../constants";
 
 // Helper for delay
 const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-// Helper to extract JSON from markdown or raw text
-function extractJSON(text: string): any {
+// Helper for retry logic with exponential backoff
+async function withRetry<T>(fn: () => Promise<T>, retries = 3, delay = 2000): Promise<T> {
   try {
-    // Try direct parse
-    return JSON.parse(text);
-  } catch (e) {
-    // Try extracting from markdown code blocks
-    const match = text.match(/```json\n([\s\S]*?)\n```/) || text.match(/```\n([\s\S]*?)\n```/);
-    if (match) {
-      try {
-        return JSON.parse(match[1]);
-      } catch (e2) {
-        return null;
-      }
+    return await fn();
+  } catch (error: any) {
+    const msg = error.toString().toLowerCase();
+    // 429: Too Many Requests, 503: Service Unavailable
+    // Also catch "resource exhausted" which is the text representation of 429
+    if ((msg.includes('429') || msg.includes('503') || msg.includes('resource exhausted')) && retries > 0) {
+      console.warn(`Gemini API Busy (429/503). Retrying... Attempts left: ${retries}. Waiting ${delay}ms.`);
+      await wait(delay);
+      return withRetry(fn, retries - 1, delay * 2); // Exponential backoff: 2s, 4s, 8s
     }
-    return null;
+    throw error;
   }
 }
 
@@ -28,239 +26,376 @@ export const generateResponse = async (
   subjectId: SubjectId,
   mode: AppMode,
   promptText: string,
-  imagesBase64: string[] = [],
+  imagesBase64?: string[],
   history: Message[] = [],
-  preferredModel: string = 'auto',
-  userPlan: UserPlan = 'free'
-): Promise<Message> => {
+  preferredModel: string = 'auto'
+): Promise<Message> => { // Explicit return type
   
   let apiKey = "";
-
-  // Strategy 1: Safely try import.meta.env (Vite standard)
   try {
-    // @ts-ignore
-    if (typeof import.meta !== 'undefined' && import.meta && import.meta.env) {
-      // @ts-ignore
-      apiKey = import.meta.env.VITE_OPENROUTER_API_KEY || "";
-    }
+    // Try both naming conventions to be safe
+    apiKey = process.env.GOOGLE_API_KEY || process.env.API_KEY || "";
   } catch (e) {
-    console.warn("Safe access to import.meta.env failed", e);
-  }
-
-  // Strategy 2: Fallback to process.env (Node/Polyfill) if key is missing
-  if (!apiKey) {
-      try {
-          // @ts-ignore
-          if (typeof process !== 'undefined' && process && process.env) {
-               // @ts-ignore
-               apiKey = process.env.VITE_OPENROUTER_API_KEY || "";
-          }
-      } catch(e) {
-          console.warn("Safe access to process.env failed", e);
-      }
+    console.error("Environment variable access error:", e);
   }
 
   if (!apiKey) {
       return {
           id: Date.now().toString(),
           role: 'model',
-          text: "Грешка: Не е намерен API ключ (VITE_OPENROUTER_API_KEY). Моля, проверете .env файла.",
+          text: "Грешка: Не е намерен API ключ (GOOGLE_API_KEY). Моля, проверете настройките на Environment Variables във Vercel.",
           isError: true,
           timestamp: Date.now()
       };
   }
 
+  const ai = new GoogleGenAI({ apiKey });
+  
   // Resolve Subject Name for Context
   const subjectConfig = SUBJECTS.find(s => s.id === subjectId);
   const subjectName = subjectConfig ? subjectConfig.name : "Unknown Subject";
 
-  // Select Model based on Plan
-  const model = (userPlan === 'plus' || userPlan === 'pro') 
-    ? 'deepseek-r1t2-chimera' 
-    : 'deepseek-r1t-chimera';
+  // 1. IMAGE GENERATION LOGIC (Global Detection)
+  const imageKeywords = /(draw|paint|generate image|create a picture|make an image|нарисувай|рисувай|генерирай изображение|генерирай снимка|направи снимка|изображение на)/i;
+  const isImageRequest = (subjectId === SubjectId.ART && mode === AppMode.DRAW) || imageKeywords.test(promptText);
 
-  // Determine System Prompt
+  if (isImageRequest) {
+    try {
+      const model = 'gemini-2.5-flash-image';
+      
+      let aspectRatio = "1:1";
+      if (promptText.match(/16[:\s]9|landscape|широк|пейзаж/i)) aspectRatio = "16:9";
+      else if (promptText.match(/9[:\s]16|portrait|портрет/i)) aspectRatio = "9:16";
+      else if (promptText.match(/4[:\s]3/)) aspectRatio = "4:3";
+      else if (promptText.match(/3[:\s]4/)) aspectRatio = "3:4";
+
+      const enhancedPrompt = promptText + " . high quality, realistic, detailed, 8k resolution";
+
+      // Apply retry logic for images
+      const response: GenerateContentResponse = await withRetry(() => ai.models.generateContent({
+        model: model, 
+        contents: enhancedPrompt,
+        config: {
+           imageConfig: {
+             aspectRatio: aspectRatio
+           }
+        }
+      }));
+      
+      let generatedImageBase64: string | undefined;
+
+      const candidates = response?.candidates;
+      if (candidates && candidates.length > 0) {
+        const parts = candidates[0]?.content?.parts;
+        if (parts && Array.isArray(parts)) {
+          for (const part of parts) {
+            if (part.inlineData?.data) {
+              generatedImageBase64 = part.inlineData.data;
+              break;
+            }
+          }
+        }
+      }
+
+      if (generatedImageBase64) {
+        return {
+          id: Date.now().toString(),
+          role: 'model',
+          text: "Ето изображението, което генерирах за теб:",
+          images: [`data:image/png;base64,${generatedImageBase64}`],
+          type: 'image_generated',
+          timestamp: Date.now()
+        };
+      } else {
+         let textResponse = "Не успях да генерирам изображение.";
+         try {
+             if (response.text) textResponse = response.text;
+         } catch (e) {}
+         
+         return { 
+           id: Date.now().toString(),
+           role: 'model',
+           text: textResponse,
+           timestamp: Date.now()
+         };
+      }
+
+    } catch (e) {
+      console.error("Image gen error", e);
+      return { 
+        id: Date.now().toString(),
+        role: 'model',
+        text: "Възникна грешка при генерирането на изображение. Моля, опитайте отново по-късно.", 
+        isError: true,
+        timestamp: Date.now()
+      };
+    }
+  }
+
+  // 2. PRESENTATION LOGIC
+  if (subjectId === SubjectId.ART && mode === AppMode.PRESENTATION) {
+    try {
+      // Apply retry logic for presentation
+      const response: GenerateContentResponse = await withRetry(() => ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: promptText,
+        config: {
+          systemInstruction: SYSTEM_PROMPTS.PRESENTATION,
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                title: { type: Type.STRING },
+                content: { type: Type.ARRAY, items: { type: Type.STRING } },
+                notes: { type: Type.STRING }
+              },
+              required: ["title", "content", "notes"]
+            }
+          }
+        }
+      }));
+
+      const jsonStr = response.text;
+      const slides: Slide[] = JSON.parse(jsonStr || "[]");
+      
+      return {
+        id: Date.now().toString(),
+        role: 'model',
+        text: "Готово! Ето план за твоята презентация:",
+        type: 'slides',
+        slidesData: slides,
+        timestamp: Date.now()
+      };
+    } catch (e) {
+      console.error("Presentation gen error", e);
+      return { 
+        id: Date.now().toString(),
+        role: 'model',
+        text: "Не успях да създам структурата на презентацията.", 
+        isError: true,
+        timestamp: Date.now()
+      };
+    }
+  }
+
+  // 3. TEACHER TEST LOGIC
+  if (mode === AppMode.TEACHER_TEST) {
+    try {
+      // CRITICAL UPDATE:
+      // We must inject the previous test data (JSON) back into the conversation text
+      // so the AI can "read" the test it generated previously and modify it.
+      
+      const testContextHistory: any[] = history
+      .filter(msg => !msg.isError)
+      .map(msg => {
+          const parts: any[] = [];
+          if (msg.images && msg.images.length > 0) {
+              msg.images.forEach(img => {
+                const match = img.match(/^data:(.+);base64,(.+)$/);
+                if (match) {
+                  parts.push({ inlineData: { mimeType: match[1], data: match[2] } });
+                }
+              });
+          }
+          
+          let textContent = msg.text;
+          
+          // Inject Test JSON if this message was a generated test
+          if (msg.type === 'test_generated' && msg.testData) {
+              textContent += `\n\n[SYSTEM CONTEXT - PREVIOUS TEST DATA]:\n${JSON.stringify(msg.testData)}`;
+          }
+          
+          parts.push({ text: textContent });
+          return { role: msg.role, parts: parts };
+      });
+      
+      // Inject Current Subject Context strictly into the prompt
+      // This forces the AI to respect the selected subject even if history implies otherwise (though starting fresh prevents that)
+      const contextPrompt = `CURRENT SUBJECT CONTEXT: ${subjectName}. The test MUST be about ${subjectName}.\n\nUser Request: ${promptText}`;
+      
+      testContextHistory.push({ role: 'user', parts: [{ text: contextPrompt }] });
+
+      const response: GenerateContentResponse = await withRetry(() => ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: testContextHistory,
+        config: {
+          systemInstruction: SYSTEM_PROMPTS.TEACHER_TEST,
+          responseMimeType: "application/json"
+        }
+      }));
+      
+      const jsonStr = response.text;
+      let testData: TestData;
+      try {
+        testData = JSON.parse(jsonStr || "{}");
+      } catch (e) {
+        throw new Error("Failed to parse Test JSON");
+      }
+
+      // Check if valid structure
+      if (!testData.questions || !Array.isArray(testData.questions)) {
+          throw new Error("Invalid test structure returned");
+      }
+
+      return {
+        id: Date.now().toString(),
+        role: 'model',
+        text: `Готово! Ето теста на тема: ${testData.title || promptText}`,
+        type: 'test_generated',
+        testData: testData,
+        timestamp: Date.now()
+      };
+
+    } catch (e) {
+      console.error("Test gen error", e);
+      return {
+        id: Date.now().toString(),
+        role: 'model',
+        text: "Възникна грешка при генерирането на теста. Моля опитайте отново.",
+        isError: true,
+        timestamp: Date.now()
+      }
+    }
+  }
+
+  // 4. TEXT & CHAT LOGIC
+  let modelName = 'gemini-2.5-flash';
+  if (preferredModel !== 'auto') {
+    modelName = preferredModel;
+  } else {
+    if ([SubjectId.MATH, SubjectId.PHYSICS, SubjectId.CHEMISTRY, SubjectId.IT].includes(subjectId)) {
+      modelName = 'gemini-3-pro-preview';
+    } else {
+      modelName = 'gemini-2.5-flash';
+    }
+  }
+
   let systemInstruction = SYSTEM_PROMPTS.DEFAULT;
   if (mode === AppMode.LEARN) systemInstruction = SYSTEM_PROMPTS.LEARN;
   else if (mode === AppMode.SOLVE) systemInstruction = SYSTEM_PROMPTS.SOLVE;
   else if (mode === AppMode.TEACHER_PLAN) systemInstruction = SYSTEM_PROMPTS.TEACHER_PLAN;
   else if (mode === AppMode.TEACHER_RESOURCES) systemInstruction = SYSTEM_PROMPTS.TEACHER_RESOURCES;
-  else if (mode === AppMode.TEACHER_TEST) systemInstruction = SYSTEM_PROMPTS.TEACHER_TEST;
-  else if (mode === AppMode.PRESENTATION) systemInstruction = SYSTEM_PROMPTS.PRESENTATION;
-
-  // Inject Subject Context
-  systemInstruction = `CURRENT SUBJECT CONTEXT: ${subjectName}. All responses must relate to ${subjectName}.\n\n${systemInstruction}`;
   
-  // For modes requiring JSON, enforce it strictly in system prompt
-  if (mode === AppMode.PRESENTATION || mode === AppMode.TEACHER_TEST) {
-    systemInstruction += "\n\nIMPORTANT: OUTPUT ONLY VALID JSON. DO NOT WRAP IN MARKDOWN. NO EXTRA TEXT.";
-  }
+  // Inject Subject Context into System Prompt for all modes to prevent hallucinations
+  systemInstruction = `CURRENT SUBJECT CONTEXT: ${subjectName}. All responses must relate to ${subjectName}.\n\n${systemInstruction}`;
 
-  // Construct Messages
-  const messages: { role: string, content: string }[] = [
-    { role: "system", content: systemInstruction }
-  ];
-
-  // History Processing
-  if (mode === AppMode.TEACHER_TEST) {
-      // Special history logic for Teacher Test (injects previous test JSON)
-      const testHistory = history.filter(msg => !msg.isError);
-      
-      testHistory.forEach(msg => {
-          let textContent = msg.text;
-          // Inject Test JSON if this message was a generated test
-          if (msg.type === 'test_generated' && msg.testData) {
-              textContent += `\n\n[SYSTEM CONTEXT - PREVIOUS TEST DATA]:\n${JSON.stringify(msg.testData)}`;
-          }
-          messages.push({
-              role: msg.role === 'model' ? 'assistant' : 'user',
-              content: textContent
-          });
-      });
-      
-      // Inject Current Subject Context into the prompt for tests
-      const contextPrompt = `CURRENT SUBJECT CONTEXT: ${subjectName}. The test MUST be about ${subjectName}.\n\nUser Request: ${promptText}`;
-      messages.push({ role: 'user', content: contextPrompt });
-
-  } else {
-      // Standard History
-      // Filter out special types to avoid confusing the text model, or include as text representation
-      history
-        .filter(msg => !msg.isError && msg.text && msg.type !== 'image_generated' && msg.type !== 'slides')
-        .forEach(msg => {
-             messages.push({
-                 role: msg.role === 'model' ? 'assistant' : 'user',
-                 content: msg.text
-             });
-        });
-      
-      // Note: DeepSeek R1 models via OpenRouter are primarily text. 
-      // We are omitting image inputs from history and prompt to avoid errors.
-      messages.push({ role: 'user', content: promptText });
-  }
-
-  // Perform API Call
   try {
-      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-          method: "POST",
-          headers: {
-              "Authorization": `Bearer ${apiKey}`,
-              "Content-Type": "application/json",
-              "HTTP-Referer": window.location.origin,
-              "X-Title": "uchebnik.ai"
-          },
-          body: JSON.stringify({
-              model: model,
-              messages: messages,
-              stream: true
-          })
+    const contents: any[] = history
+      .filter(msg => !msg.isError && msg.text && msg.type !== 'image_generated' && msg.type !== 'test_generated' && msg.type !== 'slides') 
+      .map(msg => {
+        const parts: any[] = [];
+        if (msg.images && msg.images.length > 0) {
+           msg.images.forEach(img => {
+             const match = img.match(/^data:(.+);base64,(.+)$/);
+             if (match) {
+               parts.push({ inlineData: { mimeType: match[1], data: match[2] } });
+             }
+           });
+        }
+        parts.push({ text: msg.text });
+        return { role: msg.role, parts: parts };
       });
 
-      if (!response.ok) {
-        throw new Error(`OpenRouter API Error: ${response.status} ${response.statusText}`);
-      }
+    const currentParts: any[] = [];
+    if (imagesBase64 && imagesBase64.length > 0) {
+      imagesBase64.forEach(img => {
+        const match = img.match(/^data:(.+);base64,(.+)$/);
+        if (match) {
+          currentParts.push({ inlineData: { mimeType: match[1], data: match[2] } });
+        }
+      });
+    }
+    currentParts.push({ text: promptText || " " });
+    
+    contents.push({ role: 'user', parts: currentParts });
 
-      // Handle Streaming Response
-      const reader = response.body?.getReader();
-      const decoder = new TextDecoder();
-      let fullText = "";
-      let buffer = "";
+    const performGenerate = async (mName: string) => {
+        return await ai.models.generateContent({
+            model: mName,
+            contents: contents,
+            config: {
+              systemInstruction: systemInstruction,
+            }
+        });
+    };
 
-      if (reader) {
-          while (true) {
-              const { done, value } = await reader.read();
-              if (done) break;
-              
-              const chunk = decoder.decode(value, { stream: true });
-              buffer += chunk;
-              const lines = buffer.split('\n');
-              buffer = lines.pop() || ""; // Keep the last incomplete line in buffer
-              
-              for (const line of lines) {
-                  const trimmed = line.trim();
-                  if (!trimmed || trimmed === 'data: [DONE]') continue;
-                  
-                  if (trimmed.startsWith('data: ')) {
-                      try {
-                          const data = JSON.parse(trimmed.slice(6));
-                          const content = data.choices[0]?.delta?.content || "";
-                          fullText += content;
-                      } catch (e) {
-                          // Ignore parse errors on partial chunks
-                      }
-                  }
-              }
-          }
-      }
+    let response: GenerateContentResponse;
+    
+    try {
+        // Attempt with retry
+        response = await withRetry(() => performGenerate(modelName));
+    } catch (err: any) {
+        const errStr = err.toString().toLowerCase();
+        // Fallback Logic: If Pro model fails with Rate Limit or Service Unavailable, try Flash
+        // This is crucial for avoiding 429s on the heavier model
+        if (modelName !== 'gemini-2.5-flash' && (errStr.includes('429') || errStr.includes('503') || errStr.includes('resource exhausted'))) {
+            console.warn(`Model ${modelName} failed with rate limit. Falling back to gemini-2.5-flash.`);
+            response = await withRetry(() => performGenerate('gemini-2.5-flash'));
+            // Optionally append a note to the text (handled below if we wanted)
+        } else {
+            throw err; // Re-throw if it's already Flash or a different error
+        }
+    }
 
-      // Remove <think> blocks for JSON extraction (clean processing)
-      const cleanedText = fullText.replace(/<think>[\s\S]*?<\/think>/g, "").trim();
-      const textToParse = cleanedText || fullText;
+    let text = "Няма отговор.";
+    try {
+        if(response.text) text = response.text;
+    } catch(e) {}
+    
+    let chartData: ChartData | undefined;
+    let geometryData: GeometryData | undefined;
 
-      // Post-Processing
-      let finalType: Message['type'] = 'text';
-      let slidesData: Slide[] | undefined;
-      let testData: TestData | undefined;
-      let chartData: ChartData | undefined;
-      let geometryData: GeometryData | undefined;
+    const chartMatch = text.match(/```json:chart\n([\s\S]*?)\n```/);
+    if (chartMatch) {
+      try {
+        chartData = JSON.parse(chartMatch[1]);
+        text = text.replace(chartMatch[0], "").trim();
+      } catch (e) {}
+    }
 
-      // 1. Presentation Mode
-      if (mode === AppMode.PRESENTATION) {
-          const slides = extractJSON(textToParse);
-          if (slides && Array.isArray(slides)) {
-              finalType = 'slides';
-              slidesData = slides;
-              fullText = "Готово! Ето план за твоята презентация:";
-          }
-      }
+    const geoMatch = text.match(/```json:geometry\n([\s\S]*?)\n```/);
+    if (geoMatch) {
+      try {
+        geometryData = JSON.parse(geoMatch[1]);
+        text = text.replace(geoMatch[0], "").trim();
+      } catch (e) {}
+    }
 
-      // 2. Teacher Test Mode
-      else if (mode === AppMode.TEACHER_TEST) {
-          const test = extractJSON(textToParse);
-          if (test && test.questions && Array.isArray(test.questions)) {
-              finalType = 'test_generated';
-              testData = test;
-              fullText = `Готово! Ето теста на тема: ${test.title || promptText}`;
-          }
-      }
-
-      // 3. Standard Text Mode (Check for charts/geometry)
-      else {
-          const chartMatch = textToParse.match(/```json:chart\n([\s\S]*?)\n```/);
-          if (chartMatch) {
-            try {
-              chartData = JSON.parse(chartMatch[1]);
-              fullText = fullText.replace(chartMatch[0], "").trim();
-            } catch (e) {}
-          }
-
-          const geoMatch = textToParse.match(/```json:geometry\n([\s\S]*?)\n```/);
-          if (geoMatch) {
-            try {
-              geometryData = JSON.parse(geoMatch[1]);
-              fullText = fullText.replace(geoMatch[0], "").trim();
-            } catch (e) {}
-          }
-      }
-
-      return {
-          id: Date.now().toString(),
-          role: 'model',
-          text: fullText,
-          type: finalType,
-          slidesData,
-          testData,
-          chartData,
-          geometryData,
-          timestamp: Date.now()
-      };
-
-  } catch (error: any) {
-    console.error("AI Service Error:", error);
     return {
       id: Date.now().toString(),
       role: 'model',
-      text: "Възникна грешка при връзката с AI (OpenRouter). Моля, опитайте отново.",
+      text: text,
+      type: 'text',
+      chartData: chartData,
+      geometryData: geometryData,
+      timestamp: Date.now()
+    };
+
+  } catch (error: any) {
+    console.error("Gemini API Error:", error);
+    
+    let errorMsg = "Възникна грешка при връзката с AI.";
+    const rawError = error.message || error.toString();
+
+    // Specific Error Messages for Easier Debugging
+    if (rawError.includes("403")) {
+        errorMsg = "Грешка 403: Достъпът е отказан. Вероятно API ключът е невалиден или има ограничения за домейна (Vercel).";
+    } else if (rawError.includes("404")) {
+        errorMsg = `Грешка 404: Моделът не е намерен или нямате достъп до него.`;
+    } else if (rawError.includes("429") || rawError.includes("resource exhausted")) {
+        errorMsg = "Грешка 429: Твърде много заявки (Rate Limit). Системата опита да повтори заявката, но сървърът е претоварен. Моля, изчакайте малко и опитайте отново.";
+    } else if (rawError.includes("fetch failed") || rawError.includes("NetworkError")) {
+        errorMsg = "Мрежова грешка. Проверете интернет връзката си.";
+    } else {
+        errorMsg += ` (Детайли: ${rawError.substring(0, 100)}...)`;
+    }
+
+    return {
+      id: Date.now().toString(),
+      role: 'model',
+      text: errorMsg,
       isError: true,
       timestamp: Date.now()
     };
