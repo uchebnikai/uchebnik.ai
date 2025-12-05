@@ -1,3 +1,4 @@
+
 import { AppMode, SubjectId, Slide, ChartData, GeometryData, Message, TestData, UserPlan } from "../types";
 import { SYSTEM_PROMPTS, SUBJECTS } from "../constants";
 
@@ -33,13 +34,37 @@ export const generateResponse = async (
   userPlan: UserPlan = 'free'
 ): Promise<Message> => {
   
-  const apiKey = import.meta.env.VITE_OPENROUTER_API_KEY || "";
+  let apiKey = "";
+
+  // Strategy 1: Safely try import.meta.env (Vite standard)
+  try {
+    // @ts-ignore
+    if (typeof import.meta !== 'undefined' && import.meta && import.meta.env) {
+      // @ts-ignore
+      apiKey = import.meta.env.VITE_OPENROUTER_API_KEY || "";
+    }
+  } catch (e) {
+    console.warn("Safe access to import.meta.env failed", e);
+  }
+
+  // Strategy 2: Fallback to process.env (Node/Polyfill) if key is missing
+  if (!apiKey) {
+      try {
+          // @ts-ignore
+          if (typeof process !== 'undefined' && process && process.env) {
+               // @ts-ignore
+               apiKey = process.env.VITE_OPENROUTER_API_KEY || "";
+          }
+      } catch(e) {
+          console.warn("Safe access to process.env failed", e);
+      }
+  }
 
   if (!apiKey) {
       return {
           id: Date.now().toString(),
           role: 'model',
-          text: "Грешка: Не е намерен API ключ (VITE_OPENROUTER_API_KEY).",
+          text: "Грешка: Не е намерен API ключ (VITE_OPENROUTER_API_KEY). Моля, проверете .env файла.",
           isError: true,
           timestamp: Date.now()
       };
