@@ -1353,7 +1353,16 @@ export const App = () => {
         preferredModel = 'gemini-2.5-flash';
       }
 
-      const response = await generateResponse(currentSubId, currentMode, finalPrompt, currentImgs, historyForAI, preferredModel);
+      // Pass userPlan to generateResponse so it can decide which model to use
+      const response = await generateResponse(
+          currentSubId, 
+          currentMode, 
+          finalPrompt, 
+          currentImgs, 
+          historyForAI, 
+          preferredModel, 
+          userPlan // Passing userPlan for model selection
+      );
       
       // Increment limit if user sent images
       if (currentImgs.length > 0) {
@@ -1857,7 +1866,7 @@ export const App = () => {
                  <div className="space-y-4 flex-1 mb-8">
                     <div className="flex items-center gap-3 text-sm font-medium text-gray-600 dark:text-gray-300"><CheckCircle size={18} className="text-gray-400 shrink-0"/> 4 изображения на ден</div>
                     <div className="flex items-center gap-3 text-sm font-medium text-gray-600 dark:text-gray-300"><CheckCircle size={18} className="text-gray-400 shrink-0"/> Стандартна скорост</div>
-                    <div className="flex items-center gap-3 text-sm font-medium text-gray-600 dark:text-gray-300"><CheckCircle size={18} className="text-gray-400 shrink-0"/> Basic AI (Gemini 2.5)</div>
+                    <div className="flex items-center gap-3 text-sm font-medium text-gray-600 dark:text-gray-300"><CheckCircle size={18} className="text-gray-400 shrink-0"/> Basic AI (DeepSeek R1)</div>
                  </div>
                  <button disabled={true} className="w-full py-3 rounded-xl font-bold bg-gray-100 dark:bg-white/5 text-gray-400 cursor-default">
                     {userPlan === 'free' ? 'Текущ план' : 'Стандартен'}
@@ -1872,7 +1881,7 @@ export const App = () => {
                  <div className="space-y-4 flex-1 mb-8">
                     <div className="flex items-center gap-3 text-sm font-bold text-zinc-800 dark:text-white"><CheckCircle size={18} className="text-indigo-500 shrink-0"/> 12 изображения на ден</div>
                     <div className="flex items-center gap-3 text-sm font-bold text-zinc-800 dark:text-white"><CheckCircle size={18} className="text-indigo-500 shrink-0"/> По-бърза скорост</div>
-                    <div className="flex items-center gap-3 text-sm font-bold text-zinc-800 dark:text-white"><CheckCircle size={18} className="text-indigo-500 shrink-0"/> Smarter AI (Gemini 3.0 Pro)</div>
+                    <div className="flex items-center gap-3 text-sm font-bold text-zinc-800 dark:text-white"><CheckCircle size={18} className="text-indigo-500 shrink-0"/> Smarter AI (DeepSeek R1 Pro)</div>
                  </div>
                  <button 
                     onClick={() => { if(userPlan !== 'plus') setTargetPlan('plus'); }} 
@@ -1891,7 +1900,7 @@ export const App = () => {
                  <div className="space-y-4 flex-1 mb-8">
                     <div className="flex items-center gap-3 text-sm font-medium text-zinc-700 dark:text-zinc-200"><CheckCircle size={18} className="text-amber-500 shrink-0"/> Неограничени изображения</div>
                     <div className="flex items-center gap-3 text-sm font-medium text-zinc-700 dark:text-zinc-200"><CheckCircle size={18} className="text-amber-500 shrink-0"/> Най-бърза скорост</div>
-                    <div className="flex items-center gap-3 text-sm font-medium text-zinc-700 dark:text-zinc-200"><CheckCircle size={18} className="text-amber-500 shrink-0"/> Pro-level AI (Gemini 3.0 Pro)</div>
+                    <div className="flex items-center gap-3 text-sm font-medium text-zinc-700 dark:text-zinc-200"><CheckCircle size={18} className="text-amber-500 shrink-0"/> Pro-level AI (DeepSeek R1 Pro)</div>
                  </div>
                  <button 
                     onClick={() => { if(userPlan !== 'pro') setTargetPlan('pro'); }}
