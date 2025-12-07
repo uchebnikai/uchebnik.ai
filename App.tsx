@@ -944,7 +944,7 @@ export const App = () => {
 
   if (authLoading) {
     return (
-       <div className="h-screen w-full flex items-center justify-center bg-background text-foreground">
+       <div className="h-screen w-full flex items-center justify-center bg-black text-white">
           <Loader2 className="animate-spin text-indigo-500" size={40} />
        </div>
     );
@@ -953,24 +953,32 @@ export const App = () => {
   const isPremium = userPlan === 'plus' || userPlan === 'pro';
 
   return (
-    <div className="flex h-full w-full relative overflow-hidden text-foreground">
-      {/* Background Image Layer */}
+    <div className="flex h-screen w-full relative overflow-hidden text-gray-100 bg-zinc-950 font-sans">
+      {/* Global Background Layer */}
+      <div className="aurora-bg">
+         <div className="aurora-orb orb-1"></div>
+         <div className="aurora-orb orb-2"></div>
+         <div className="aurora-orb orb-3"></div>
+      </div>
+
+      {/* User Custom Background Override */}
       {userSettings.customBackground && (
          <div 
-           className="fixed inset-0 z-0 bg-cover bg-center pointer-events-none transition-all duration-500"
+           className="fixed inset-0 z-0 bg-cover bg-center pointer-events-none transition-all duration-700 opacity-60 mix-blend-overlay"
            style={getBackgroundImageStyle(userSettings.customBackground)}
          />
       )}
       
       {showAuthModal && (
-        <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in" onClick={(e) => { if(e.target === e.currentTarget) setShowAuthModal(false) }}>
+        <div className="fixed inset-0 z-[200] bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in" onClick={(e) => { if(e.target === e.currentTarget) setShowAuthModal(false) }}>
            <div className="relative w-full max-w-md">
-              <button onClick={() => setShowAuthModal(false)} className="absolute top-4 right-4 z-50 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"><X size={20}/></button>
+              <button onClick={() => setShowAuthModal(false)} className="absolute top-4 right-4 z-50 text-white/50 hover:text-white transition-colors"><X size={20}/></button>
               <Auth isModal={true} onSuccess={() => setShowAuthModal(false)} />
            </div>
         </div>
       )}
 
+      {/* Floating Sidebar Container */}
       <Sidebar 
         sidebarOpen={sidebarOpen}
         setSidebarOpen={setSidebarOpen}
@@ -999,152 +1007,157 @@ export const App = () => {
         userRole={userRole}
       />
       
-      <main className="flex-1 flex flex-col relative w-full h-full overflow-hidden transition-all duration-300">
-        <AdminPanel 
-            showAdminAuth={showAdminAuth}
-            setShowAdminAuth={setShowAdminAuth}
-            showAdminPanel={showAdminPanel}
-            setShowAdminPanel={setShowAdminPanel}
-            adminPasswordInput={adminPasswordInput}
-            setAdminPasswordInput={setAdminPasswordInput}
-            handleAdminLogin={handleAdminLogin}
-            generateKey={generateKey}
-            generatedKeys={generatedKeys}
-            addToast={addToast}
-        />
-        <UpgradeModal 
-            showUnlockModal={showUnlockModal}
-            setShowUnlockModal={setShowUnlockModal}
-            targetPlan={targetPlan}
-            setTargetPlan={setTargetPlan}
-            unlockKeyInput={unlockKeyInput}
-            setUnlockKeyInput={setUnlockKeyInput}
-            handleUnlockSubmit={handleUnlockSubmit}
-            userPlan={userPlan}
-        />
-        <SettingsModal 
-            showSettings={showSettings}
-            setShowSettings={setShowSettings}
-            userMeta={userMeta}
-            editProfile={editProfile}
-            setEditProfile={setEditProfile}
-            handleUpdateAccount={handleUpdateAccount}
-            handleAvatarUpload={handleAvatarUpload}
-            userSettings={userSettings}
-            setUserSettings={setUserSettings}
-            isPremium={isPremium}
-            isDarkMode={isDarkMode}
-            setIsDarkMode={setIsDarkMode}
-            handleBackgroundUpload={handleBackgroundUpload}
-            handleClearMemory={handleClearMemory}
-        />
-        <Lightbox image={zoomedImage} onClose={() => setZoomedImage(null)} />
+      {/* Main Content Area */}
+      <main className="flex-1 flex flex-col relative w-full h-full overflow-hidden transition-all duration-300 z-10 lg:py-4 lg:pr-4">
         
-        <ConfirmModal 
-            isOpen={!!confirmModal}
-            title={confirmModal?.title || ''}
-            message={confirmModal?.message || ''}
-            onConfirm={confirmModal?.onConfirm || (() => {})}
-            onCancel={() => setConfirmModal(null)}
-        />
-
-        {/* Dynamic View Rendering */}
-        {!activeSubject ? (
-            <WelcomeScreen 
-                homeView={homeView}
-                userMeta={userMeta}
-                userSettings={userSettings}
-                handleSubjectChange={(s) => handleSubjectChange(s)}
-                setHomeView={setHomeView}
-                setUserRole={setUserRole}
+        {/* Holographic Content Wrapper */}
+        <div className="flex-1 flex flex-col relative w-full h-full rounded-[2.5rem] overflow-hidden bg-black/40 backdrop-blur-xl border border-white/10 shadow-2xl">
+            <AdminPanel 
+                showAdminAuth={showAdminAuth}
                 setShowAdminAuth={setShowAdminAuth}
+                showAdminPanel={showAdminPanel}
+                setShowAdminPanel={setShowAdminPanel}
+                adminPasswordInput={adminPasswordInput}
+                setAdminPasswordInput={setAdminPasswordInput}
+                handleAdminLogin={handleAdminLogin}
+                generateKey={generateKey}
+                generatedKeys={generatedKeys}
+                addToast={addToast}
             />
-        ) : showSubjectDashboard ? (
-            <SubjectDashboard 
-                activeSubject={activeSubject}
-                setActiveSubject={setActiveSubject}
-                setHomeView={setHomeView}
-                userRole={userRole}
+            <UpgradeModal 
+                showUnlockModal={showUnlockModal}
+                setShowUnlockModal={setShowUnlockModal}
+                targetPlan={targetPlan}
+                setTargetPlan={setTargetPlan}
+                unlockKeyInput={unlockKeyInput}
+                setUnlockKeyInput={setUnlockKeyInput}
+                handleUnlockSubmit={handleUnlockSubmit}
+                userPlan={userPlan}
+            />
+            <SettingsModal 
+                showSettings={showSettings}
+                setShowSettings={setShowSettings}
+                userMeta={userMeta}
+                editProfile={editProfile}
+                setEditProfile={setEditProfile}
+                handleUpdateAccount={handleUpdateAccount}
+                handleAvatarUpload={handleAvatarUpload}
                 userSettings={userSettings}
-                handleStartMode={handleStartMode}
+                setUserSettings={setUserSettings}
+                isPremium={isPremium}
+                isDarkMode={isDarkMode}
+                setIsDarkMode={setIsDarkMode}
+                handleBackgroundUpload={handleBackgroundUpload}
+                handleClearMemory={handleClearMemory}
             />
-        ) : (
-            <div className={`flex-1 flex flex-col relative h-full ${userSettings.customBackground ? 'bg-transparent' : 'bg-[#f9fafb] dark:bg-[#09090b]'}`}>
-                <ChatHeader 
-                    setSidebarOpen={setSidebarOpen}
-                    activeSubject={activeSubject}
-                    userRole={userRole}
-                    activeMode={activeMode}
-                    startVoiceCall={startVoiceCall}
-                    createNewSession={createNewSession}
-                    setHistoryDrawerOpen={setHistoryDrawerOpen}
+            <Lightbox image={zoomedImage} onClose={() => setZoomedImage(null)} />
+            
+            <ConfirmModal 
+                isOpen={!!confirmModal}
+                title={confirmModal?.title || ''}
+                message={confirmModal?.message || ''}
+                onConfirm={confirmModal?.onConfirm || (() => {})}
+                onCancel={() => setConfirmModal(null)}
+            />
+
+            {/* Dynamic View Rendering */}
+            {!activeSubject ? (
+                <WelcomeScreen 
+                    homeView={homeView}
+                    userMeta={userMeta}
                     userSettings={userSettings}
+                    handleSubjectChange={(s) => handleSubjectChange(s)}
+                    setHomeView={setHomeView}
+                    setUserRole={setUserRole}
+                    setShowAdminAuth={setShowAdminAuth}
                 />
-                
-                <HistoryDrawer 
-                    historyDrawerOpen={historyDrawerOpen}
-                    setHistoryDrawerOpen={setHistoryDrawerOpen}
-                    sessions={sessions}
-                    activeSessionId={activeSessionId}
-                    setActiveSessionId={setActiveSessionId}
-                    renameSessionId={renameSessionId}
-                    setRenameSessionId={setRenameSessionId}
-                    renameValue={renameValue}
-                    setRenameValue={setRenameValue}
-                    renameSession={renameSession}
-                    deleteSession={deleteSession}
+            ) : showSubjectDashboard ? (
+                <SubjectDashboard 
                     activeSubject={activeSubject}
                     setActiveSubject={setActiveSubject}
-                />
-                <VoiceCallOverlay 
-                    isVoiceCallActive={isVoiceCallActive}
-                    voiceCallStatus={voiceCallStatus}
-                    voiceMuted={voiceMuted}
-                    setVoiceMuted={setVoiceMuted}
-                    endVoiceCall={endVoiceCall}
-                    activeSubject={activeSubject}
-                />
-
-                <MessageList 
-                    currentMessages={currentMessages}
+                    setHomeView={setHomeView}
+                    userRole={userRole}
                     userSettings={userSettings}
-                    setZoomedImage={setZoomedImage}
-                    handleRate={handleRate}
-                    handleReply={handleReply}
-                    handleSpeak={handleSpeak}
-                    speakingMessageId={speakingMessageId}
-                    handleCopy={handleCopy}
-                    copiedId={copiedId}
-                    handleShare={handleShare}
-                    loadingSubject={!!loadingSubjects[activeSubject.id]}
-                    activeSubject={activeSubject}
-                    messagesEndRef={messagesEndRef}
+                    handleStartMode={handleStartMode}
                 />
+            ) : (
+                <div className="flex-1 flex flex-col relative h-full">
+                    <ChatHeader 
+                        setSidebarOpen={setSidebarOpen}
+                        activeSubject={activeSubject}
+                        userRole={userRole}
+                        activeMode={activeMode}
+                        startVoiceCall={startVoiceCall}
+                        createNewSession={createNewSession}
+                        setHistoryDrawerOpen={setHistoryDrawerOpen}
+                        userSettings={userSettings}
+                    />
+                    
+                    <HistoryDrawer 
+                        historyDrawerOpen={historyDrawerOpen}
+                        setHistoryDrawerOpen={setHistoryDrawerOpen}
+                        sessions={sessions}
+                        activeSessionId={activeSessionId}
+                        setActiveSessionId={setActiveSessionId}
+                        renameSessionId={renameSessionId}
+                        setRenameSessionId={setRenameSessionId}
+                        renameValue={renameValue}
+                        setRenameValue={setRenameValue}
+                        renameSession={renameSession}
+                        deleteSession={deleteSession}
+                        activeSubject={activeSubject}
+                        setActiveSubject={setActiveSubject}
+                    />
+                    <VoiceCallOverlay 
+                        isVoiceCallActive={isVoiceCallActive}
+                        voiceCallStatus={voiceCallStatus}
+                        voiceMuted={voiceMuted}
+                        setVoiceMuted={setVoiceMuted}
+                        endVoiceCall={endVoiceCall}
+                        activeSubject={activeSubject}
+                    />
 
-                <ChatInputArea 
-                    replyingTo={replyingTo}
-                    setReplyingTo={setReplyingTo}
-                    userSettings={userSettings}
-                    fileInputRef={fileInputRef}
-                    loadingSubject={!!loadingSubjects[activeSubject.id]}
-                    handleImageUpload={handleImageUpload}
-                    toggleListening={toggleListening}
-                    isListening={isListening}
-                    inputValue={inputValue}
-                    setInputValue={setInputValue}
-                    handleSend={() => handleSend()}
-                    selectedImages={selectedImages}
-                    handleRemoveImage={handleRemoveImage}
-                />
-            </div>
-        )}
+                    <MessageList 
+                        currentMessages={currentMessages}
+                        userSettings={userSettings}
+                        setZoomedImage={setZoomedImage}
+                        handleRate={handleRate}
+                        handleReply={handleReply}
+                        handleSpeak={handleSpeak}
+                        speakingMessageId={speakingMessageId}
+                        handleCopy={handleCopy}
+                        copiedId={copiedId}
+                        handleShare={handleShare}
+                        loadingSubject={!!loadingSubjects[activeSubject.id]}
+                        activeSubject={activeSubject}
+                        messagesEndRef={messagesEndRef}
+                    />
+
+                    <ChatInputArea 
+                        replyingTo={replyingTo}
+                        setReplyingTo={setReplyingTo}
+                        userSettings={userSettings}
+                        fileInputRef={fileInputRef}
+                        loadingSubject={!!loadingSubjects[activeSubject.id]}
+                        handleImageUpload={handleImageUpload}
+                        toggleListening={toggleListening}
+                        isListening={isListening}
+                        inputValue={inputValue}
+                        setInputValue={setInputValue}
+                        handleSend={() => handleSend()}
+                        selectedImages={selectedImages}
+                        handleRemoveImage={handleRemoveImage}
+                    />
+                </div>
+            )}
+        </div>
       </main>
 
-      <div className="fixed top-4 right-4 z-[100] flex flex-col gap-2 pointer-events-none">
+      <div className="fixed top-6 right-6 z-[100] flex flex-col gap-3 pointer-events-none">
         {toasts.map(t => (
           <div key={t.id} className={`${TOAST_CONTAINER} ${t.type === 'error' ? TOAST_ERROR : t.type === 'success' ? TOAST_SUCCESS : TOAST_INFO}`}>
-             {t.type === 'error' ? <AlertCircle size={18}/> : t.type === 'success' ? <CheckCircle size={18}/> : <Info size={18}/>}
-             <span className="font-medium text-sm">{t.message}</span>
+             {t.type === 'error' ? <AlertCircle size={20}/> : t.type === 'success' ? <CheckCircle size={20}/> : <Info size={20}/>}
+             <span className="font-semibold text-sm tracking-wide">{t.message}</span>
           </div>
         ))}
       </div>

@@ -46,33 +46,35 @@ export const MessageList = ({
 }: MessageListProps) => {
 
   return (
-      <div className={`flex-1 overflow-y-auto px-2 lg:px-8 py-4 lg:py-8 custom-scrollbar scroll-smooth ${userSettings.textSize === 'large' ? 'text-lg' : userSettings.textSize === 'small' ? 'text-sm' : 'text-base'}`}>
-         <div className="max-w-4xl mx-auto space-y-8 lg:space-y-12 pb-40 pt-2 lg:pt-4">
+      <div className={`flex-1 overflow-y-auto px-4 lg:px-8 py-4 lg:py-8 custom-scrollbar scroll-smooth ${userSettings.textSize === 'large' ? 'text-lg' : userSettings.textSize === 'small' ? 'text-sm' : 'text-base'}`}>
+         <div className="max-w-4xl mx-auto space-y-12 pb-48 pt-24">
             {currentMessages.map((msg) => (
-               <div key={msg.id} id={msg.id} className={`group flex flex-col gap-2 ${SLIDE_UP} duration-700 ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
+               <div key={msg.id} id={msg.id} className={`group flex flex-col gap-2 ${SLIDE_UP} ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
+                  
+                  {/* Message Bubble */}
                   <div className={`${MSG_CONTAINER_BASE} ${msg.role === 'user' ? MSG_BUBBLE_USER : MSG_BUBBLE_MODEL}`}>
                      
-                     {/* Quote Block for Replies */}
                      {msg.replyToId && (() => {
                         const rMsg = currentMessages.find(m => m.id === msg.replyToId);
                         if (rMsg) return (
-                           <div className="mb-3 pl-3 border-l-2 border-current/30 text-xs opacity-70 cursor-pointer hover:opacity-100 transition-opacity" onClick={() => document.getElementById(rMsg.id)?.scrollIntoView({behavior:'smooth', block:'center'})}>
-                              <div className="font-bold mb-0.5">{rMsg.role === 'user' ? 'Ти' : 'uchebnik.ai'}</div>
+                           <div className="mb-4 pl-3 border-l-2 border-white/40 text-xs opacity-80 cursor-pointer hover:opacity-100 transition-opacity" onClick={() => document.getElementById(rMsg.id)?.scrollIntoView({behavior:'smooth', block:'center'})}>
+                              <div className="font-bold mb-0.5 text-indigo-200">{rMsg.role === 'user' ? 'Ти' : 'uchebnik.ai'}</div>
                               <div className="truncate italic">{rMsg.text ? rMsg.text.substring(0, 100) : (rMsg.images?.length ? '[Изображение]' : '')}</div>
                            </div>
                         )
                      })()}
 
                      {Array.isArray(msg.images) && msg.images.length > 0 && (
-                        <div className="flex gap-3 mb-5 overflow-x-auto pb-2 snap-x">
-                            {msg.images.map((img, i) => ( img && typeof img === 'string' ? ( <img key={i} src={img} onClick={() => setZoomedImage(img)} className="h-40 lg:h-56 rounded-2xl object-cover border border-white/20 snap-center shadow-lg cursor-pointer hover:scale-[1.02] transition-transform"/> ) : null ))}
+                        <div className="flex gap-4 mb-5 overflow-x-auto pb-2 snap-x no-scrollbar">
+                            {msg.images.map((img, i) => ( img && typeof img === 'string' ? ( <img key={i} src={img} onClick={() => setZoomedImage(img)} className="h-48 lg:h-64 rounded-2xl object-cover border border-white/20 snap-center shadow-2xl cursor-pointer hover:scale-[1.02] transition-transform"/> ) : null ))}
                         </div>
                      )}
                      
+                     {/* Dynamic Content Renderers */}
                      {msg.type === 'slides' && msg.slidesData && (
                         <div className="space-y-4">
-                           <div className="flex justify-between items-center pb-4 border-b border-indigo-500/20"><span className="font-bold flex gap-2 items-center text-sm"><Projector size={18} className="text-indigo-500"/> Генерирана Презентация</span><button onClick={() => handleDownloadPPTX(msg.slidesData!, activeSubject, userSettings)} className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-xl text-xs font-bold flex gap-2 transition-colors shadow-lg shadow-emerald-500/20"><Download size={14}/> Изтегли PPTX</button></div>
-                           <div className="grid gap-4">{msg.slidesData.map((s, i) => (<div key={i} className="bg-white/40 dark:bg-black/40 p-5 rounded-2xl border border-indigo-500/10"><h4 className="font-bold mb-3 text-base text-indigo-600 dark:text-indigo-400">{i+1}. {s.title}</h4><ul className="space-y-2">{s.content.map((p, j) => <li key={j} className="text-sm opacity-80 flex gap-2"><div className="w-1.5 h-1.5 rounded-full bg-gray-400 mt-2 shrink-0"/>{p}</li>)}</ul></div>))}</div>
+                           <div className="flex justify-between items-center pb-4 border-b border-white/10"><span className="font-bold flex gap-2 items-center text-sm"><Projector size={18} className="text-indigo-400"/> Генерирана Презентация</span><button onClick={() => handleDownloadPPTX(msg.slidesData!, activeSubject, userSettings)} className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl text-xs font-bold flex gap-2 transition-colors shadow-[0_0_15px_rgba(16,185,129,0.3)]"><Download size={14}/> Изтегли PPTX</button></div>
+                           <div className="grid gap-4">{msg.slidesData.map((s, i) => (<div key={i} className="bg-black/30 p-5 rounded-2xl border border-white/10"><h4 className="font-bold mb-3 text-base text-indigo-300">{i+1}. {s.title}</h4><ul className="space-y-2">{s.content.map((p, j) => <li key={j} className="text-sm opacity-80 flex gap-2"><div className="w-1.5 h-1.5 rounded-full bg-indigo-500 mt-2 shrink-0"/>{p}</li>)}</ul></div>))}</div>
                         </div>
                      )}
 
@@ -84,42 +86,42 @@ export const MessageList = ({
                      {msg.chartData && <ChartRenderer data={msg.chartData} />}
                      {msg.geometryData && <GeometryRenderer data={msg.geometryData} />}
                      
-                     <div className={`text-[10px] mt-2 lg:mt-4 font-bold tracking-wide flex items-center justify-end gap-1.5 opacity-60`}>
+                     <div className={`text-[10px] mt-3 font-bold tracking-wide flex items-center justify-end gap-1.5 opacity-50`}>
                         {msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : ''}
                         {msg.role === 'user' && <Check size={12} />}
                      </div>
                   </div>
 
-                  <div className={`flex gap-1 px-4 transition-all duration-300 ${msg.role === 'user' ? 'opacity-0 group-hover:opacity-100' : 'opacity-100'}`}>
-                     {/* Action Buttons */}
-                     <div className="flex bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border border-indigo-500/20 rounded-full p-1.5 shadow-sm mt-1">
+                  {/* Message Actions */}
+                  <div className={`flex gap-1 px-2 transition-all duration-300 ${msg.role === 'user' ? 'opacity-0 group-hover:opacity-100' : 'opacity-100'}`}>
+                     <div className="flex bg-black/60 backdrop-blur-xl border border-white/10 rounded-full p-1 shadow-lg mt-1">
                         {msg.role === 'model' && (
                            <>
-                             <button onClick={() => handleRate(msg.id, 'up')} className={`p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 transition-colors ${msg.rating === 'up' ? 'text-green-500' : 'text-gray-400'}`}><ThumbsUp size={14} className="lg:w-4 lg:h-4"/></button>
-                             <button onClick={() => handleRate(msg.id, 'down')} className={`p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 transition-colors ${msg.rating === 'down' ? 'text-red-500' : 'text-gray-400'}`}><ThumbsDown size={14} className="lg:w-4 lg:h-4"/></button>
-                             <div className="w-px h-4 bg-gray-200 dark:bg-white/10 mx-1 self-center"/>
+                             <button onClick={() => handleRate(msg.id, 'up')} className={`p-2 rounded-full hover:bg-white/10 transition-colors ${msg.rating === 'up' ? 'text-emerald-400' : 'text-gray-400'}`}><ThumbsUp size={14}/></button>
+                             <button onClick={() => handleRate(msg.id, 'down')} className={`p-2 rounded-full hover:bg-white/10 transition-colors ${msg.rating === 'down' ? 'text-red-400' : 'text-gray-400'}`}><ThumbsDown size={14}/></button>
+                             <div className="w-px h-4 bg-white/10 mx-1 self-center"/>
                            </>
                         )}
-                        <button onClick={() => handleReply(msg)} className="p-2 text-gray-400 hover:text-indigo-500 dark:hover:text-indigo-400 transition-colors" title="Отговор"><Reply size={14} className="lg:w-4 lg:h-4"/></button>
-                        <button onClick={() => handleSpeak(msg.text, msg.id)} className={`p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 transition-colors ${speakingMessageId === msg.id ? 'text-indigo-500 animate-pulse' : 'text-gray-400'}`}>{speakingMessageId === msg.id ? <Square size={14} fill="currentColor"/> : <Volume2 size={14} className="lg:w-4 lg:h-4"/>}</button>
-                        <button onClick={() => handleCopy(msg.text, msg.id)} className="p-2 text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">{copiedId === msg.id ? <Check size={14} className="text-green-500"/> : <Copy size={14} className="lg:w-4 lg:h-4"/>}</button>
-                        <button onClick={() => handleShare(msg.text)} className="p-2 text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"><Share2 size={14} className="lg:w-4 lg:h-4"/></button>
+                        <button onClick={() => handleReply(msg)} className="p-2 text-gray-400 hover:text-white transition-colors"><Reply size={14}/></button>
+                        <button onClick={() => handleSpeak(msg.text, msg.id)} className={`p-2 rounded-full hover:bg-white/10 transition-colors ${speakingMessageId === msg.id ? 'text-indigo-400 animate-pulse' : 'text-gray-400'}`}>{speakingMessageId === msg.id ? <Square size={14} fill="currentColor"/> : <Volume2 size={14}/></button>
+                        <button onClick={() => handleCopy(msg.text, msg.id)} className="p-2 text-gray-400 hover:text-white transition-colors">{copiedId === msg.id ? <Check size={14} className="text-emerald-500"/> : <Copy size={14}/>}</button>
+                        <button onClick={() => handleShare(msg.text)} className="p-2 text-gray-400 hover:text-white transition-colors"><Share2 size={14}/></button>
                      </div>
                   </div>
                </div>
             ))}
             
             {loadingSubject && (
-               <div className={`flex gap-4 pl-4 ${FADE_IN} duration-500`}>
-                  <div className={`w-10 h-10 lg:w-12 lg:h-12 rounded-full bg-white dark:bg-zinc-900 border border-indigo-500/20 flex items-center justify-center shadow-sm ${PULSE_SLOW}`}><Sparkles size={18} className="text-indigo-500"/></div>
-                  <div className="bg-white/50 dark:bg-white/5 px-6 py-4 rounded-[24px] lg:rounded-[32px] rounded-bl-sm border border-indigo-500/20 flex items-center gap-2 backdrop-blur-md">
-                     <div className={`w-2.5 h-2.5 bg-indigo-500 rounded-full ${BOUNCE_DELAY}`}/>
-                     <div className={`w-2.5 h-2.5 bg-indigo-500 rounded-full ${BOUNCE_DELAY} delay-100`}/>
-                     <div className={`w-2.5 h-2.5 bg-indigo-500 rounded-full ${BOUNCE_DELAY} delay-200`}/>
+               <div className={`flex gap-4 pl-4 ${FADE_IN}`}>
+                  <div className={`w-10 h-10 rounded-full bg-black/40 border border-indigo-500/50 flex items-center justify-center shadow-[0_0_15px_rgba(79,70,229,0.3)] ${PULSE_SLOW}`}><Sparkles size={18} className="text-indigo-400"/></div>
+                  <div className="bg-black/30 px-6 py-4 rounded-[2rem] rounded-bl-sm border border-white/10 flex items-center gap-2 backdrop-blur-md">
+                     <div className={`w-2 h-2 bg-indigo-500 rounded-full ${BOUNCE_DELAY}`}/>
+                     <div className={`w-2 h-2 bg-indigo-500 rounded-full ${BOUNCE_DELAY} delay-100`}/>
+                     <div className={`w-2 h-2 bg-indigo-500 rounded-full ${BOUNCE_DELAY} delay-200`}/>
                   </div>
                </div>
             )}
-            <div ref={messagesEndRef} className="h-6 lg:h-10"/>
+            <div ref={messagesEndRef} className="h-6"/>
          </div>
       </div>
   );
