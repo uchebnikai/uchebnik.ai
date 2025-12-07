@@ -103,7 +103,9 @@ export const MessageList = ({
                            </>
                         )}
                         <button onClick={() => handleReply(msg)} className="p-2 text-gray-400 hover:text-white transition-colors"><Reply size={14}/></button>
-                        <button onClick={() => handleSpeak(msg.text, msg.id)} className={`p-2 rounded-full hover:bg-white/10 transition-colors ${speakingMessageId === msg.id ? 'text-indigo-400 animate-pulse' : 'text-gray-400'}`}>{speakingMessageId === msg.id ? <Square size={14} fill="currentColor"/> : <Volume2 size={14}/></button>
+                        <button onClick={() => handleSpeak(msg.text, msg.id)} className={`p-2 rounded-full hover:bg-white/10 transition-colors ${speakingMessageId === msg.id ? 'text-indigo-400 animate-pulse' : 'text-gray-400'}`}>
+                           {speakingMessageId === msg.id ? <Square size={14} fill="currentColor"/> : <Volume2 size={14}/>}
+                        </button>
                         <button onClick={() => handleCopy(msg.text, msg.id)} className="p-2 text-gray-400 hover:text-white transition-colors">{copiedId === msg.id ? <Check size={14} className="text-emerald-500"/> : <Copy size={14}/>}</button>
                         <button onClick={() => handleShare(msg.text)} className="p-2 text-gray-400 hover:text-white transition-colors"><Share2 size={14}/></button>
                      </div>
