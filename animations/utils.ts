@@ -1,0 +1,1 @@
+export const getStaggeredDelay = (index: number, step = 50) => ({ animationDelay: `${index * step}ms` });

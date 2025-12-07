@@ -1,6 +1,9 @@
 import React from 'react';
 import { Reply, X, ImageIcon, Mic, MicOff, ArrowUpRight } from 'lucide-react';
 import { Message, UserSettings } from '../../types';
+import { INPUT_AREA_BASE, INPUT_AREA_CUSTOM_BG, INPUT_AREA_DEFAULT_BG } from '../../styles/chat';
+import { SLIDE_UP, FADE_IN, ZOOM_IN } from '../../animations/transitions';
+import { getDynamicHeightStyle } from '../../styles/utils';
 
 interface ChatInputAreaProps {
   replyingTo: Message | null;
@@ -40,7 +43,7 @@ export const ChatInputArea = ({
             
             {/* Reply Banner */}
             {replyingTo && (
-               <div className="mb-2 mx-4 bg-white/90 dark:bg-zinc-800/90 backdrop-blur-md border border-indigo-500/20 p-3 rounded-2xl flex items-center justify-between shadow-lg animate-in slide-in-from-bottom-2 fade-in">
+               <div className={`mb-2 mx-4 bg-white/90 dark:bg-zinc-800/90 backdrop-blur-md border border-indigo-500/20 p-3 rounded-2xl flex items-center justify-between shadow-lg ${SLIDE_UP} ${FADE_IN}`}>
                   <div className="flex items-center gap-3 overflow-hidden">
                      <div className="p-2 bg-indigo-100 dark:bg-indigo-500/20 rounded-full text-indigo-600 dark:text-indigo-400 shrink-0">
                         <Reply size={16}/>
@@ -56,9 +59,7 @@ export const ChatInputArea = ({
                </div>
             )}
 
-            <div className={`relative 
-               ${userSettings.customBackground ? 'bg-white/50 dark:bg-black/50 border-white/20' : 'bg-white/80 dark:bg-zinc-900/80 border-white/10'}
-               backdrop-blur-xl border shadow-2xl rounded-[28px] transition-all duration-300 focus-within:ring-2 focus-within:ring-indigo-500/30 focus-within:bg-white dark:focus-within:bg-black p-2 flex items-end gap-2 ${loadingSubject ? 'opacity-70 pointer-events-none' : ''}`}>
+            <div className={`${INPUT_AREA_BASE} ${userSettings.customBackground ? INPUT_AREA_CUSTOM_BG : INPUT_AREA_DEFAULT_BG} ${loadingSubject ? 'opacity-70 pointer-events-none' : ''}`}>
                
                {/* Attach Button */}
                <button onClick={() => fileInputRef.current?.click()} disabled={loadingSubject} className="flex-none w-10 h-10 rounded-full flex items-center justify-center text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-white/10 transition-colors">
@@ -85,7 +86,7 @@ export const ChatInputArea = ({
                       disabled={loadingSubject}
                       className="w-full bg-transparent border-none focus:ring-0 p-0 text-base text-zinc-900 dark:text-zinc-100 placeholder-gray-400 resize-none max-h-32 min-h-[24px] leading-6"
                       rows={1}
-                      style={{ height: '24px' }}
+                      style={getDynamicHeightStyle(24)}
                    />
                </div>
 
@@ -98,7 +99,7 @@ export const ChatInputArea = ({
                {selectedImages.length > 0 && (
                    <div className="absolute bottom-full left-0 mb-2 ml-2 flex gap-2">
                       {selectedImages.map((img, i) => ( 
-                          <div key={i} className="relative group shrink-0 animate-in zoom-in-95">
+                          <div key={i} className={`relative group shrink-0 ${ZOOM_IN}`}>
                               <img src={img} className="h-16 w-16 rounded-xl object-cover border-2 border-white dark:border-zinc-700 shadow-lg"/>
                               <button onClick={() => handleRemoveImage(i)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-md hover:scale-110 transition-transform"><X size={10}/></button>
                           </div>

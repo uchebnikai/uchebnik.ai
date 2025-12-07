@@ -14,6 +14,8 @@ import { Session as SupabaseSession } from '@supabase/supabase-js';
 import { resizeImage } from './utils/image';
 import { generateChecksum, isValidKey } from './utils/security';
 import { useTheme } from './hooks/useTheme';
+import { getBackgroundImageStyle } from './styles/utils';
+import { TOAST_CONTAINER, TOAST_ERROR, TOAST_SUCCESS, TOAST_INFO } from './styles/ui';
 
 // Components
 import { Lightbox } from './components/ui/Lightbox';
@@ -956,7 +958,7 @@ export const App = () => {
       {userSettings.customBackground && (
          <div 
            className="fixed inset-0 z-0 bg-cover bg-center pointer-events-none transition-all duration-500"
-           style={{ backgroundImage: `url(${userSettings.customBackground})` }}
+           style={getBackgroundImageStyle(userSettings.customBackground)}
          />
       )}
       
@@ -1140,7 +1142,7 @@ export const App = () => {
 
       <div className="fixed top-4 right-4 z-[100] flex flex-col gap-2 pointer-events-none">
         {toasts.map(t => (
-          <div key={t.id} className={`pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-xl shadow-xl border backdrop-blur-md animate-in slide-in-from-right fade-in duration-300 ${t.type === 'error' ? 'bg-red-500/10 border-red-500/20 text-red-600 dark:text-red-400' : t.type === 'success' ? 'bg-green-500/10 border-green-500/20 text-green-600 dark:text-green-400' : 'bg-white/80 dark:bg-zinc-800/80 border-indigo-500/20 text-zinc-800 dark:text-zinc-200'}`}>
+          <div key={t.id} className={`${TOAST_CONTAINER} ${t.type === 'error' ? TOAST_ERROR : t.type === 'success' ? TOAST_SUCCESS : TOAST_INFO}`}>
              {t.type === 'error' ? <AlertCircle size={18}/> : t.type === 'success' ? <CheckCircle size={18}/> : <Info size={18}/>}
              <span className="font-medium text-sm">{t.message}</span>
           </div>

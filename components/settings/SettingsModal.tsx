@@ -3,6 +3,9 @@ import { X, User, Upload, Lock, Check, Palette, Plus, Moon, Sun, ImageIcon, Edit
 import { Button } from '../ui/Button';
 import { UserSettings } from '../../types';
 import { AI_MODELS } from '../../constants';
+import { INPUT_SETTINGS } from '../../styles/ui';
+import { getDynamicColorStyle } from '../../styles/theme';
+import { MODAL_ENTER } from '../../animations/transitions';
 
 interface SettingsModalProps {
   showSettings: boolean;
@@ -45,7 +48,7 @@ export const SettingsModal = ({
 
   return (
   <div className="fixed inset-0 z-[90] bg-black/60 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-300">
-    <div className="bg-white/90 dark:bg-zinc-900/90 w-full max-w-2xl h-[85vh] rounded-[32px] border border-white/20 shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-300 backdrop-blur-xl ring-1 ring-black/5">
+    <div className={`bg-white/90 dark:bg-zinc-900/90 w-full max-w-2xl h-[85vh] rounded-[32px] border border-white/20 shadow-2xl overflow-hidden flex flex-col ${MODAL_ENTER} backdrop-blur-xl ring-1 ring-black/5`}>
       
       {/* Header */}
       <div className="px-8 py-6 border-b border-gray-200/50 dark:border-white/10 flex justify-between items-center bg-white/50 dark:bg-black/20 backdrop-blur-md sticky top-0 z-10">
@@ -88,15 +91,15 @@ export const SettingsModal = ({
                 <div className="flex-1 w-full grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-1.5">
                         <label className="text-xs font-bold text-gray-500 ml-1">Име</label>
-                        <input value={editProfile.firstName} onChange={e => setEditProfile({...editProfile, firstName: e.target.value})} className="w-full bg-gray-50 dark:bg-black/20 p-3 rounded-xl outline-none border border-gray-200 dark:border-white/10 focus:border-indigo-500 focus:bg-white dark:focus:bg-black/40 transition-all font-medium"/>
+                        <input value={editProfile.firstName} onChange={e => setEditProfile({...editProfile, firstName: e.target.value})} className={INPUT_SETTINGS}/>
                     </div>
                     <div className="space-y-1.5">
                         <label className="text-xs font-bold text-gray-500 ml-1">Фамилия</label>
-                        <input value={editProfile.lastName} onChange={e => setEditProfile({...editProfile, lastName: e.target.value})} className="w-full bg-gray-50 dark:bg-black/20 p-3 rounded-xl outline-none border border-gray-200 dark:border-white/10 focus:border-indigo-500 focus:bg-white dark:focus:bg-black/40 transition-all font-medium"/>
+                        <input value={editProfile.lastName} onChange={e => setEditProfile({...editProfile, lastName: e.target.value})} className={INPUT_SETTINGS}/>
                     </div>
                     <div className="col-span-full space-y-1.5">
                         <label className="text-xs font-bold text-gray-500 ml-1">Имейл</label>
-                        <input value={editProfile.email} onChange={e => setEditProfile({...editProfile, email: e.target.value})} className="w-full bg-gray-50 dark:bg-black/20 p-3 rounded-xl outline-none border border-gray-200 dark:border-white/10 focus:border-indigo-500 focus:bg-white dark:focus:bg-black/40 transition-all font-medium"/>
+                        <input value={editProfile.email} onChange={e => setEditProfile({...editProfile, email: e.target.value})} className={INPUT_SETTINGS}/>
                     </div>
                     
                     <div className="col-span-full pt-4 border-t border-gray-100 dark:border-white/5 mt-2">
@@ -135,7 +138,7 @@ export const SettingsModal = ({
                     <label className="text-sm font-bold flex items-center gap-2">Основен Цвят</label>
                     <div className={`flex flex-wrap gap-3 ${!isPremium ? 'pointer-events-none' : ''}`}>
                         {['#6366f1', '#ec4899', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'].map(c => (
-                            <button key={c} onClick={() => setUserSettings((prev: any) => ({...prev, themeColor: c}))} className={`w-10 h-10 rounded-full transition-all shadow-sm flex items-center justify-center ${userSettings.themeColor === c ? 'ring-2 ring-offset-2 ring-indigo-500 scale-110 dark:ring-offset-zinc-900' : 'hover:scale-105'}`} style={{backgroundColor: c}}>
+                            <button key={c} onClick={() => setUserSettings((prev: any) => ({...prev, themeColor: c}))} className={`w-10 h-10 rounded-full transition-all shadow-sm flex items-center justify-center ${userSettings.themeColor === c ? 'ring-2 ring-offset-2 ring-indigo-500 scale-110 dark:ring-offset-zinc-900' : 'hover:scale-105'}`} style={getDynamicColorStyle(c)}>
                                 {userSettings.themeColor === c && <Check size={16} className="text-white drop-shadow-md"/>}
                             </button>
                         ))}

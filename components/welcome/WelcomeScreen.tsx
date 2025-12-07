@@ -3,6 +3,8 @@ import { Shield, Sparkles, MessageSquare, ArrowRight, School, GraduationCap, Bri
 import { SubjectConfig, UserRole, UserSettings, SubjectId } from '../../types';
 import { SUBJECTS } from '../../constants';
 import { DynamicIcon } from '../ui/DynamicIcon';
+import { ZOOM_IN, SLIDE_UP, FADE_IN } from '../../animations/transitions';
+import { getStaggeredDelay } from '../../animations/utils';
 
 interface WelcomeScreenProps {
   homeView: 'landing' | 'school_select' | 'student_subjects' | 'teacher_subjects';
@@ -29,7 +31,7 @@ export const WelcomeScreen = ({
       {!userSettings.customBackground && <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-indigo-200/20 via-background to-background dark:from-indigo-900/20 dark:via-background dark:to-background pointer-events-none"></div>}
       
       {homeView === 'landing' && (
-        <div className="max-w-5xl w-full flex flex-col items-center justify-center min-h-[80vh] relative z-10 animate-in fade-in zoom-in-95 duration-700">
+        <div className={`max-w-5xl w-full flex flex-col items-center justify-center min-h-[80vh] relative z-10 ${ZOOM_IN} duration-700`}>
           
           <button onClick={() => setShowAdminAuth(true)} className="absolute top-0 right-0 p-2 text-gray-300 hover:text-indigo-500 transition-colors">
               <Shield size={16} />
@@ -77,7 +79,7 @@ export const WelcomeScreen = ({
 
       {/* School Selection View */}
       {homeView === 'school_select' && (
-        <div className="max-w-5xl w-full flex flex-col items-center justify-center min-h-[80vh] relative z-10 animate-in fade-in slide-in-from-bottom-10 duration-500">
+        <div className={`max-w-5xl w-full flex flex-col items-center justify-center min-h-[80vh] relative z-10 ${SLIDE_UP} duration-500`}>
              <button onClick={() => setHomeView('landing')} className="absolute top-0 left-4 md:left-0 flex items-center gap-2 text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors font-bold"><ArrowLeft size={20}/> Назад</button>
              <h2 className="text-4xl md:text-5xl font-black text-zinc-900 dark:text-white mb-12 tracking-tight">Избери Роля</h2>
              
@@ -104,14 +106,14 @@ export const WelcomeScreen = ({
 
       {/* Subjects Grid (Shared for Student/Teacher) */}
       {(homeView === 'student_subjects' || homeView === 'teacher_subjects') && (
-        <div className="max-w-7xl w-full py-8 md:py-12 px-4 animate-in slide-in-from-bottom-10 fade-in duration-500 relative z-10">
+        <div className={`max-w-7xl w-full py-8 md:py-12 px-4 ${SLIDE_UP} fade-in duration-500 relative z-10`}>
            <button onClick={() => setHomeView('school_select')} className="mb-8 md:mb-10 flex items-center gap-3 text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors font-semibold group"><div className="p-3 bg-white dark:bg-zinc-900 rounded-full border border-indigo-500/10 shadow-sm group-hover:-translate-x-1 transition-transform"><ArrowLeft size={18} /></div> Назад към роли</button>
            <h2 className="text-3xl md:text-4xl font-bold text-zinc-900 dark:text-white mb-2 tracking-tight px-2">{homeView === 'student_subjects' ? 'Ученик' : 'Учител'} • Предмети</h2>
            <p className="text-gray-500 px-2 mb-10 font-medium">Избери предмет, за да започнеш.</p>
 
            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6 pb-20">
               {SUBJECTS.filter(s => s.id !== SubjectId.GENERAL).map((s, i) => (
-                <button key={s.id} onClick={() => handleSubjectChange(s)} style={{animationDelay: `${i*50}ms`}} className="group flex flex-col items-center text-center p-6 md:p-8 bg-white/60 dark:bg-white/5 backdrop-blur-xl rounded-[32px] border border-indigo-500/20 hover:border-indigo-500/50 shadow-sm hover:shadow-2xl hover:shadow-indigo-500/10 transition-all duration-300 hover:-translate-y-2 animate-in fade-in fill-mode-backwards">
+                <button key={s.id} onClick={() => handleSubjectChange(s)} style={getStaggeredDelay(i)} className={`group flex flex-col items-center text-center p-6 md:p-8 bg-white/60 dark:bg-white/5 backdrop-blur-xl rounded-[32px] border border-indigo-500/20 hover:border-indigo-500/50 shadow-sm hover:shadow-2xl hover:shadow-indigo-500/10 transition-all duration-300 hover:-translate-y-2 ${FADE_IN} fill-mode-backwards`}>
                    <div className={`w-16 h-16 md:w-20 md:h-20 rounded-3xl ${s.color} text-white flex items-center justify-center mb-4 md:mb-6 shadow-xl shadow-indigo-500/20 group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300`}><DynamicIcon name={s.icon} className="w-8 h-8 md:w-10 md:h-10" /></div>
                    <h3 className="font-bold text-zinc-900 dark:text-white text-lg md:text-xl mb-2">{s.name}</h3>
                    <p className="text-xs text-gray-500 dark:text-gray-400 font-medium opacity-0 group-hover:opacity-100 transition-opacity transform translate-y-2 group-hover:translate-y-0 duration-300">Натисни за старт</p>

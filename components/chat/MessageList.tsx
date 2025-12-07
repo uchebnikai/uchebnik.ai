@@ -10,6 +10,8 @@ import { CodeBlock } from '../ui/CodeBlock';
 import { ChartRenderer } from './ChartRenderer';
 import { GeometryRenderer } from './GeometryRenderer';
 import { TestRenderer } from './TestRenderer';
+import { MSG_BUBBLE_USER, MSG_BUBBLE_MODEL, MSG_CONTAINER_BASE } from '../../styles/chat';
+import { SLIDE_UP, PULSE_SLOW, BOUNCE_DELAY, FADE_IN } from '../../animations/transitions';
 
 interface MessageListProps {
   currentMessages: Message[];
@@ -47,8 +49,8 @@ export const MessageList = ({
       <div className={`flex-1 overflow-y-auto px-2 lg:px-8 py-4 lg:py-8 custom-scrollbar scroll-smooth ${userSettings.textSize === 'large' ? 'text-lg' : userSettings.textSize === 'small' ? 'text-sm' : 'text-base'}`}>
          <div className="max-w-4xl mx-auto space-y-8 lg:space-y-12 pb-40 pt-2 lg:pt-4">
             {currentMessages.map((msg) => (
-               <div key={msg.id} id={msg.id} className={`group flex flex-col gap-2 animate-in slide-in-from-bottom-4 duration-700 ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
-                  <div className={`relative group px-5 py-4 lg:px-8 lg:py-6 max-w-[90%] md:max-w-[85%] lg:max-w-[75%] backdrop-blur-md shadow-sm break-words overflow-hidden min-w-0 ${msg.role === 'user' ? 'bg-gradient-to-br from-indigo-600 to-accent-600 text-white rounded-[24px] lg:rounded-[32px] rounded-br-none shadow-xl shadow-indigo-500/20' : 'glass-panel text-zinc-800 dark:text-zinc-200 rounded-[24px] lg:rounded-[32px] rounded-bl-none border-indigo-500/20'}`}>
+               <div key={msg.id} id={msg.id} className={`group flex flex-col gap-2 ${SLIDE_UP} duration-700 ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
+                  <div className={`${MSG_CONTAINER_BASE} ${msg.role === 'user' ? MSG_BUBBLE_USER : MSG_BUBBLE_MODEL}`}>
                      
                      {/* Quote Block for Replies */}
                      {msg.replyToId && (() => {
@@ -108,12 +110,12 @@ export const MessageList = ({
             ))}
             
             {loadingSubject && (
-               <div className="flex gap-4 pl-4 animate-in fade-in duration-500">
-                  <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-full bg-white dark:bg-zinc-900 border border-indigo-500/20 flex items-center justify-center shadow-sm"><Sparkles size={18} className="text-indigo-500 animate-pulse-slow"/></div>
+               <div className={`flex gap-4 pl-4 ${FADE_IN} duration-500`}>
+                  <div className={`w-10 h-10 lg:w-12 lg:h-12 rounded-full bg-white dark:bg-zinc-900 border border-indigo-500/20 flex items-center justify-center shadow-sm ${PULSE_SLOW}`}><Sparkles size={18} className="text-indigo-500"/></div>
                   <div className="bg-white/50 dark:bg-white/5 px-6 py-4 rounded-[24px] lg:rounded-[32px] rounded-bl-sm border border-indigo-500/20 flex items-center gap-2 backdrop-blur-md">
-                     <div className="w-2.5 h-2.5 bg-indigo-500 rounded-full animate-bounce"/>
-                     <div className="w-2.5 h-2.5 bg-indigo-500 rounded-full animate-bounce delay-100"/>
-                     <div className="w-2.5 h-2.5 bg-indigo-500 rounded-full animate-bounce delay-200"/>
+                     <div className={`w-2.5 h-2.5 bg-indigo-500 rounded-full ${BOUNCE_DELAY}`}/>
+                     <div className={`w-2.5 h-2.5 bg-indigo-500 rounded-full ${BOUNCE_DELAY} delay-100`}/>
+                     <div className={`w-2.5 h-2.5 bg-indigo-500 rounded-full ${BOUNCE_DELAY} delay-200`}/>
                   </div>
                </div>
             )}

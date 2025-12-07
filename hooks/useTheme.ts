@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { UserSettings } from '../types';
-import { hexToRgb, rgbToHsl, hslToRgb, adjustBrightness } from '../utils/theme';
+import { hexToRgb, rgbToHsl, hslToRgb, adjustBrightness } from '../styles/theme';
 
 export const useTheme = (userSettings: UserSettings) => {
   useEffect(() => {

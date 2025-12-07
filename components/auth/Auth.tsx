@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { supabase } from '../../supabaseClient';
 import { Loader2, Mail, Lock, User, ArrowRight, Sparkles, CheckCircle, AlertCircle, Calendar } from 'lucide-react';
+import { GLASS_PANEL, INPUT_AUTH } from '../../styles/ui';
+import { ZOOM_IN } from '../../animations/transitions';
 
 type AuthMode = 'login' | 'register' | 'forgot_password' | 'update_password';
 
@@ -90,7 +92,7 @@ export const Auth = ({ isModal = false, onSuccess }: AuthProps) => {
             </>
         )}
 
-      <div className={`w-full max-w-md p-8 glass-panel rounded-[32px] border border-white/20 shadow-2xl animate-in zoom-in-95 duration-500 relative z-10 ${isModal ? '' : 'mx-4'}`}>
+      <div className={`w-full max-w-md p-8 ${GLASS_PANEL} ${ZOOM_IN} duration-500 relative z-10 ${isModal ? '' : 'mx-4'}`}>
         <div className="flex flex-col items-center mb-8">
             <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-indigo-500 via-accent-500 to-accent-600 flex items-center justify-center text-white shadow-lg shadow-indigo-500/30 mb-4">
                 <Sparkles size={32} fill="currentColor" />
@@ -134,7 +136,7 @@ export const Auth = ({ isModal = false, onSuccess }: AuthProps) => {
                         value={firstName}
                         onChange={(e) => setFirstName(e.target.value)}
                         required
-                        className="w-full pl-11 pr-3 py-3.5 rounded-xl bg-gray-50/50 dark:bg-black/20 border border-gray-200 dark:border-white/10 focus:border-indigo-500 outline-none transition-all placeholder:text-gray-400"
+                        className={INPUT_AUTH}
                         placeholder="Иван"
                         />
                     </div>
@@ -148,7 +150,7 @@ export const Auth = ({ isModal = false, onSuccess }: AuthProps) => {
                         value={lastName}
                         onChange={(e) => setLastName(e.target.value)}
                         required
-                        className="w-full pl-11 pr-3 py-3.5 rounded-xl bg-gray-50/50 dark:bg-black/20 border border-gray-200 dark:border-white/10 focus:border-indigo-500 outline-none transition-all placeholder:text-gray-400"
+                        className={INPUT_AUTH}
                         placeholder="Иванов"
                         />
                     </div>
@@ -164,7 +166,7 @@ export const Auth = ({ isModal = false, onSuccess }: AuthProps) => {
                       value={birthDate}
                       onChange={(e) => setBirthDate(e.target.value)}
                       required
-                      className="w-full pl-11 pr-4 py-3.5 rounded-xl bg-gray-50/50 dark:bg-black/20 border border-gray-200 dark:border-white/10 focus:border-indigo-500 outline-none transition-all placeholder:text-gray-400 text-gray-500"
+                      className={`${INPUT_AUTH} text-gray-500`}
                       />
                   </div>
               </div>
@@ -181,7 +183,7 @@ export const Auth = ({ isModal = false, onSuccess }: AuthProps) => {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
-                    className="w-full pl-11 pr-4 py-3.5 rounded-xl bg-gray-50/50 dark:bg-black/20 border border-gray-200 dark:border-white/10 focus:border-indigo-500 outline-none transition-all placeholder:text-gray-400"
+                    className={INPUT_AUTH}
                     placeholder="name@example.com"
                     />
                 </div>
@@ -199,7 +201,7 @@ export const Auth = ({ isModal = false, onSuccess }: AuthProps) => {
                     onChange={(e) => setPassword(e.target.value)}
                     required
                     minLength={6}
-                    className="w-full pl-11 pr-4 py-3.5 rounded-xl bg-gray-50/50 dark:bg-black/20 border border-gray-200 dark:border-white/10 focus:border-indigo-500 outline-none transition-all placeholder:text-gray-400"
+                    className={INPUT_AUTH}
                     placeholder="••••••••"
                     />
                 </div>
