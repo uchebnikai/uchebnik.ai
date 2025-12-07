@@ -16,6 +16,7 @@ export const Auth = ({ isModal = false, onSuccess }: AuthProps) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   
+  // Registration Fields
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [birthDate, setBirthDate] = useState('');
@@ -73,6 +74,7 @@ export const Auth = ({ isModal = false, onSuccess }: AuthProps) => {
     }
   };
 
+  // Check for password recovery hash in URL
   React.useEffect(() => {
       const hash = window.location.hash;
       if (hash && hash.includes('type=recovery')) {
@@ -81,20 +83,24 @@ export const Auth = ({ isModal = false, onSuccess }: AuthProps) => {
   }, []);
 
   return (
-    <div className={`flex items-center justify-center w-full relative ${isModal ? 'bg-transparent p-0' : 'bg-transparent min-h-screen overflow-hidden'}`}>
+    <div className={`flex items-center justify-center w-full relative ${isModal ? 'bg-transparent p-0' : 'bg-background min-h-screen overflow-hidden'}`}>
         {!isModal && (
-            <div className="absolute inset-0 bg-black/50 z-0" />
+            <>
+                {/* Background Effects */}
+                <div className="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] bg-indigo-500/20 rounded-full blur-[120px] pointer-events-none" />
+                <div className="absolute bottom-[-10%] left-[-5%] w-[400px] h-[400px] bg-accent-500/20 rounded-full blur-[100px] pointer-events-none" />
+            </>
         )}
 
-      <div className={`w-full max-w-md p-10 bg-black/40 backdrop-blur-2xl border border-white/10 rounded-[2.5rem] shadow-2xl ${ZOOM_IN} relative z-10 ${isModal ? '' : 'mx-4'}`}>
-        <div className="flex flex-col items-center mb-10">
-            <div className="w-20 h-20 rounded-[1.5rem] bg-gradient-to-tr from-indigo-500 to-violet-600 flex items-center justify-center text-white shadow-[0_0_40px_rgba(99,102,241,0.4)] mb-6 border border-white/20">
-                <Sparkles size={40} fill="currentColor" />
+      <div className={`w-full max-w-md p-8 ${GLASS_PANEL} ${ZOOM_IN} duration-500 relative z-10 ${isModal ? '' : 'mx-4'}`}>
+        <div className="flex flex-col items-center mb-8">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-indigo-500 via-accent-500 to-accent-600 flex items-center justify-center text-white shadow-lg shadow-indigo-500/30 mb-4">
+                <Sparkles size={32} fill="currentColor" />
             </div>
-          <h1 className="text-4xl font-black text-center tracking-tight text-white font-display drop-shadow-md">
+          <h1 className="text-3xl font-bold text-center tracking-tight text-foreground font-display">
              uchebnik.ai
           </h1>
-          <p className="text-gray-400 mt-2 text-center text-sm font-medium tracking-wide">
+          <p className="text-gray-500 mt-2 text-center text-sm font-medium">
             {mode === 'login' && 'Влезте в акаунта си'}
             {mode === 'register' && 'Създайте нов акаунт'}
             {mode === 'forgot_password' && 'Възстановяване на парола'}
@@ -103,14 +109,14 @@ export const Auth = ({ isModal = false, onSuccess }: AuthProps) => {
         </div>
 
         {error && (
-          <div className="mb-6 p-4 rounded-xl bg-red-900/40 border border-red-500/30 text-red-200 text-sm flex gap-3 items-start animate-in slide-in-from-top-2">
+          <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-sm flex gap-3 items-start animate-in slide-in-from-top-2">
             <AlertCircle size={18} className="shrink-0 mt-0.5" />
             <span>{error}</span>
           </div>
         )}
 
         {successMsg && (
-          <div className="mb-6 p-4 rounded-xl bg-emerald-900/40 border border-emerald-500/30 text-emerald-200 text-sm flex gap-3 items-start animate-in slide-in-from-top-2">
+          <div className="mb-6 p-4 rounded-xl bg-green-500/10 border border-green-500/20 text-green-600 dark:text-green-400 text-sm flex gap-3 items-start animate-in slide-in-from-top-2">
             <CheckCircle size={18} className="shrink-0 mt-0.5" />
             <span>{successMsg}</span>
           </div>
@@ -122,6 +128,7 @@ export const Auth = ({ isModal = false, onSuccess }: AuthProps) => {
             <>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
+                    <label className="text-xs font-bold text-gray-500 uppercase ml-1">Име</label>
                     <div className="relative">
                         <User className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                         <input
@@ -130,11 +137,12 @@ export const Auth = ({ isModal = false, onSuccess }: AuthProps) => {
                         onChange={(e) => setFirstName(e.target.value)}
                         required
                         className={INPUT_AUTH}
-                        placeholder="Име"
+                        placeholder="Иван"
                         />
                     </div>
                 </div>
                 <div className="space-y-1">
+                    <label className="text-xs font-bold text-gray-500 uppercase ml-1">Фамилия</label>
                     <div className="relative">
                         <User className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                         <input
@@ -143,13 +151,14 @@ export const Auth = ({ isModal = false, onSuccess }: AuthProps) => {
                         onChange={(e) => setLastName(e.target.value)}
                         required
                         className={INPUT_AUTH}
-                        placeholder="Фамилия"
+                        placeholder="Иванов"
                         />
                     </div>
                 </div>
               </div>
 
               <div className="space-y-1">
+                  <label className="text-xs font-bold text-gray-500 uppercase ml-1">Дата на раждане</label>
                   <div className="relative">
                       <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                       <input
@@ -157,7 +166,7 @@ export const Auth = ({ isModal = false, onSuccess }: AuthProps) => {
                       value={birthDate}
                       onChange={(e) => setBirthDate(e.target.value)}
                       required
-                      className={`${INPUT_AUTH} text-gray-300`}
+                      className={`${INPUT_AUTH} text-gray-500`}
                       />
                   </div>
               </div>
@@ -166,6 +175,7 @@ export const Auth = ({ isModal = false, onSuccess }: AuthProps) => {
 
           {mode !== 'update_password' && (
             <div className="space-y-1">
+                <label className="text-xs font-bold text-gray-500 uppercase ml-1">Имейл</label>
                 <div className="relative">
                     <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                     <input
@@ -174,7 +184,7 @@ export const Auth = ({ isModal = false, onSuccess }: AuthProps) => {
                     onChange={(e) => setEmail(e.target.value)}
                     required
                     className={INPUT_AUTH}
-                    placeholder="Email"
+                    placeholder="name@example.com"
                     />
                 </div>
             </div>
@@ -182,6 +192,7 @@ export const Auth = ({ isModal = false, onSuccess }: AuthProps) => {
 
           {mode !== 'forgot_password' && (
             <div className="space-y-1">
+                <label className="text-xs font-bold text-gray-500 uppercase ml-1">Парола</label>
                 <div className="relative">
                     <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                     <input
@@ -191,7 +202,7 @@ export const Auth = ({ isModal = false, onSuccess }: AuthProps) => {
                     required
                     minLength={6}
                     className={INPUT_AUTH}
-                    placeholder="Парола"
+                    placeholder="••••••••"
                     />
                 </div>
             </div>
@@ -200,7 +211,7 @@ export const Auth = ({ isModal = false, onSuccess }: AuthProps) => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-4 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold tracking-wide shadow-[0_0_25px_rgba(79,70,229,0.3)] transition-all active:scale-95 disabled:opacity-70 disabled:scale-100 flex items-center justify-center gap-2 mt-4"
+            className="w-full py-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold shadow-lg shadow-indigo-500/25 transition-all active:scale-95 disabled:opacity-70 disabled:scale-100 flex items-center justify-center gap-2 mt-2"
           >
             {loading ? <Loader2 size={20} className="animate-spin" /> : (
                 <>
@@ -214,32 +225,32 @@ export const Auth = ({ isModal = false, onSuccess }: AuthProps) => {
           </button>
         </form>
 
-        <div className="mt-8 pt-6 border-t border-white/5 flex flex-col gap-3 text-center text-sm">
+        <div className="mt-6 pt-6 border-t border-gray-200 dark:border-white/10 flex flex-col gap-3 text-center text-sm">
           {mode === 'login' && (
             <>
-              <p className="text-gray-400">
+              <p className="text-gray-500">
                 Нямате акаунт?{' '}
-                <button onClick={() => setMode('register')} className="text-indigo-400 font-bold hover:text-indigo-300 transition-colors">
+                <button onClick={() => setMode('register')} className="text-indigo-500 font-bold hover:underline">
                   Регистрация
                 </button>
               </p>
-              <button onClick={() => setMode('forgot_password')} className="text-gray-500 hover:text-white transition-colors text-xs">
+              <button onClick={() => setMode('forgot_password')} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-xs">
                 Забравена парола?
               </button>
             </>
           )}
 
           {mode === 'register' && (
-            <p className="text-gray-400">
+            <p className="text-gray-500">
               Имате акаунт?{' '}
-              <button onClick={() => setMode('login')} className="text-indigo-400 font-bold hover:text-indigo-300 transition-colors">
+              <button onClick={() => setMode('login')} className="text-indigo-500 font-bold hover:underline">
                 Вход
               </button>
             </p>
           )}
 
           {(mode === 'forgot_password' || mode === 'update_password') && (
-            <button onClick={() => setMode('login')} className="text-indigo-400 font-bold hover:text-indigo-300 transition-colors">
+            <button onClick={() => setMode('login')} className="text-indigo-500 font-bold hover:underline">
               Назад към вход
             </button>
           )}
