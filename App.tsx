@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useRef } from 'react';
 import { SubjectConfig, SubjectId, AppMode, Message, Slide, UserSettings, Session, UserPlan, UserRole, HomeViewType } from './types';
 import { SUBJECTS } from './constants';
@@ -109,7 +110,7 @@ export const App = () => {
     reduceMotion: false, 
     responseLength: 'concise', 
     creativity: 'balanced', 
-    languageLevel: 'standard',
+    languageLevel: 'standard', 
     preferredModel: 'auto',
     themeColor: '#6366f1',
     customBackground: null
@@ -1052,11 +1053,11 @@ export const App = () => {
 
         {/* Dynamic View Rendering */}
         {!activeSubject ? (
-            homeView === 'terms' ? <TermsOfService onBack={() => setHomeView('landing')} /> :
-            homeView === 'privacy' ? <PrivacyPolicy onBack={() => setHomeView('landing')} /> :
-            homeView === 'cookies' ? <CookiePolicy onBack={() => setHomeView('landing')} /> :
-            homeView === 'about' ? <About onBack={() => setHomeView('landing')} /> :
-            homeView === 'contact' ? <Contact onBack={() => setHomeView('landing')} /> :
+            homeView === 'terms' ? <TermsOfService onBack={() => setHomeView('landing')} userSettings={userSettings} /> :
+            homeView === 'privacy' ? <PrivacyPolicy onBack={() => setHomeView('landing')} userSettings={userSettings} /> :
+            homeView === 'cookies' ? <CookiePolicy onBack={() => setHomeView('landing')} userSettings={userSettings} /> :
+            homeView === 'about' ? <About onBack={() => setHomeView('landing')} userSettings={userSettings} /> :
+            homeView === 'contact' ? <Contact onBack={() => setHomeView('landing')} userSettings={userSettings} /> :
             <WelcomeScreen 
                 homeView={homeView}
                 userMeta={userMeta}

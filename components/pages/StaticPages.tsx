@@ -3,41 +3,57 @@ import React from 'react';
 import { ArrowLeft, Mail, MapPin, Globe } from 'lucide-react';
 import { SLIDE_UP, FADE_IN } from '../../animations/transitions';
 import { GLASS_PANEL } from '../../styles/ui';
+import { UserSettings } from '../../types';
 
 interface PageProps {
   onBack: () => void;
+  userSettings: UserSettings;
 }
 
 // Reusable Layout for all static pages to ensure design consistency
-const PageLayout = ({ title, children, onBack }: { title: string, children: React.ReactNode, onBack: () => void }) => (
-  <div className={`flex-1 overflow-y-auto custom-scrollbar p-4 md:p-8 flex flex-col items-center relative overflow-x-hidden w-full ${FADE_IN}`}>
-    <div className={`max-w-4xl w-full mx-auto min-h-[80vh] flex flex-col items-start relative z-10 ${SLIDE_UP}`}>
-      <button 
-        onClick={onBack} 
-        className="mb-8 flex items-center gap-3 text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors font-bold group"
-      >
-        <div className="p-2.5 bg-white dark:bg-zinc-900 rounded-full border border-indigo-500/10 shadow-sm group-hover:-translate-x-1 transition-transform">
-          <ArrowLeft size={18} />
-        </div> 
-        Назад
-      </button>
+const PageLayout = ({ title, children, onBack, userSettings }: { title: string, children: React.ReactNode, onBack: () => void, userSettings: UserSettings }) => {
+  const hasCustomBg = !!userSettings?.customBackground;
+  
+  return (
+    <div className={`flex-1 overflow-y-auto custom-scrollbar p-4 md:p-8 flex flex-col items-center relative overflow-x-hidden w-full ${FADE_IN} ${hasCustomBg ? 'bg-transparent' : 'bg-white dark:bg-zinc-950'}`}>
+      
+      {/* Dynamic Background Effects (Aurora/Blur) */}
+      {!hasCustomBg && (
+        <>
+            <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-indigo-200/20 via-background to-background dark:from-indigo-900/20 dark:via-background dark:to-background pointer-events-none z-0"></div>
+            <div className="fixed top-[-10%] right-[-5%] w-[500px] h-[500px] bg-indigo-500/10 dark:bg-indigo-500/20 rounded-full blur-[120px] pointer-events-none z-0 animate-pulse-slow" />
+            <div className="fixed bottom-[-10%] left-[-5%] w-[400px] h-[400px] bg-purple-500/10 dark:bg-purple-500/20 rounded-full blur-[100px] pointer-events-none z-0 animate-pulse-slow delay-1000" />
+        </>
+      )}
 
-      <div className={`w-full p-8 md:p-12 ${GLASS_PANEL} bg-white/80 dark:bg-black/40 backdrop-blur-2xl border-indigo-500/10`}>
-        <h1 className="text-3xl md:text-5xl font-black text-zinc-900 dark:text-white mb-8 tracking-tight font-display">{title}</h1>
-        <div className="prose dark:prose-invert max-w-none text-zinc-600 dark:text-zinc-300 leading-relaxed space-y-6">
-          {children}
+      <div className={`max-w-4xl w-full mx-auto min-h-[80vh] flex flex-col items-start relative z-10 ${SLIDE_UP}`}>
+        <button 
+          onClick={onBack} 
+          className="mb-8 flex items-center gap-3 text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors font-bold group"
+        >
+          <div className="p-2.5 bg-white dark:bg-zinc-900 rounded-full border border-indigo-500/10 shadow-sm group-hover:-translate-x-1 transition-transform">
+            <ArrowLeft size={18} />
+          </div> 
+          Назад
+        </button>
+
+        <div className={`w-full p-8 md:p-12 ${GLASS_PANEL} bg-white/70 dark:bg-black/50 backdrop-blur-2xl border-indigo-500/10 shadow-2xl`}>
+          <h1 className="text-3xl md:text-5xl font-black text-zinc-900 dark:text-white mb-8 tracking-tight font-display">{title}</h1>
+          <div className="prose dark:prose-invert max-w-none text-zinc-600 dark:text-zinc-300 leading-relaxed space-y-6">
+            {children}
+          </div>
+        </div>
+
+        <div className="w-full mt-8 text-center text-sm text-gray-400 pb-8 font-medium">
+           &copy; {new Date().getFullYear()} uchebnik.ai. Всички права запазени.
         </div>
       </div>
-
-      <div className="w-full mt-8 text-center text-sm text-gray-400 pb-8">
-         &copy; {new Date().getFullYear()} uchebnik.ai. Всички права запазени.
-      </div>
     </div>
-  </div>
-);
+  );
+};
 
-export const TermsOfService = ({ onBack }: PageProps) => (
-  <PageLayout title="Общи условия" onBack={onBack}>
+export const TermsOfService = ({ onBack, userSettings }: PageProps) => (
+  <PageLayout title="Общи условия" onBack={onBack} userSettings={userSettings}>
     <p className="text-lg font-medium">Последна актуализация: Октомври 2023</p>
     
     <h3>1. Въведение</h3>
@@ -59,8 +75,8 @@ export const TermsOfService = ({ onBack }: PageProps) => (
   </PageLayout>
 );
 
-export const PrivacyPolicy = ({ onBack }: PageProps) => (
-  <PageLayout title="Политика за поверителност" onBack={onBack}>
+export const PrivacyPolicy = ({ onBack, userSettings }: PageProps) => (
+  <PageLayout title="Политика за поверителност" onBack={onBack} userSettings={userSettings}>
     <p>Вашата поверителност е от първостепенно значение за нас. Тази политика описва как събираме и обработваме вашите данни.</p>
     
     <h3>1. Данни, които събираме</h3>
@@ -84,8 +100,8 @@ export const PrivacyPolicy = ({ onBack }: PageProps) => (
   </PageLayout>
 );
 
-export const CookiePolicy = ({ onBack }: PageProps) => (
-  <PageLayout title="Политика за бисквитки" onBack={onBack}>
+export const CookiePolicy = ({ onBack, userSettings }: PageProps) => (
+  <PageLayout title="Политика за бисквитки" onBack={onBack} userSettings={userSettings}>
     <p>Ние използваме бисквитки и подобни технологии, за да подобрим вашето преживяване.</p>
     
     <h3>1. Какво са бисквитки?</h3>
@@ -100,8 +116,8 @@ export const CookiePolicy = ({ onBack }: PageProps) => (
   </PageLayout>
 );
 
-export const About = ({ onBack }: PageProps) => (
-  <PageLayout title="За нас" onBack={onBack}>
+export const About = ({ onBack, userSettings }: PageProps) => (
+  <PageLayout title="За нас" onBack={onBack} userSettings={userSettings}>
     <div className="flex flex-col gap-6">
         <p className="text-lg font-medium leading-relaxed">
             <strong>uchebnik.ai</strong> е иновативна образователна платформа от следващо поколение, създадена с мисията да трансформира начина, по който българските ученици учат и възприемат информация.
@@ -124,8 +140,8 @@ export const About = ({ onBack }: PageProps) => (
   </PageLayout>
 );
 
-export const Contact = ({ onBack }: PageProps) => (
-  <PageLayout title="Контакти" onBack={onBack}>
+export const Contact = ({ onBack, userSettings }: PageProps) => (
+  <PageLayout title="Контакти" onBack={onBack} userSettings={userSettings}>
     <p className="text-lg">Имате въпроси, предложения или се нуждаете от помощ? Екипът ни е тук за вас.</p>
     
     <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6 not-prose">
