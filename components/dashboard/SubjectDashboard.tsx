@@ -1,12 +1,13 @@
+
 import React from 'react';
 import { ArrowLeft, Zap, Book, CheckCircle, FileJson } from 'lucide-react';
 import { DynamicIcon } from '../ui/DynamicIcon';
-import { SubjectConfig, UserRole, UserSettings, AppMode } from '../../types';
+import { SubjectConfig, UserRole, UserSettings, AppMode, HomeViewType } from '../../types';
 
 interface SubjectDashboardProps {
   activeSubject: SubjectConfig | null;
   setActiveSubject: (subject: SubjectConfig | null) => void;
-  setHomeView: (view: 'school_select') => void;
+  setHomeView: (view: HomeViewType) => void;
   userRole: UserRole | null;
   userSettings: UserSettings;
   handleStartMode: (mode: AppMode) => void;

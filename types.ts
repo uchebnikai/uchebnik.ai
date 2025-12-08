@@ -1,5 +1,4 @@
 
-
 export enum SubjectId {
   GENERAL = 'general',
   ENGLISH = 'english',
@@ -29,6 +28,9 @@ export enum AppMode {
   TEACHER_PLAN = 'teacher_plan',
   TEACHER_RESOURCES = 'teacher_resources'
 }
+
+// New type for managing view state including static pages
+export type HomeViewType = 'landing' | 'school_select' | 'student_subjects' | 'teacher_subjects' | 'terms' | 'privacy' | 'cookies' | 'about' | 'contact';
 
 export type UserRole = 'student' | 'teacher';
 

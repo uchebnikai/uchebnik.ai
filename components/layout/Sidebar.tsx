@@ -1,8 +1,9 @@
+
 import React, { useState } from 'react';
-import { Sparkles, MessageSquare, Trash2, Plus, School, GraduationCap, Briefcase, ChevronDown, User, Settings, CreditCard, HelpCircle, LogOut, ArrowRight, ChevronUp } from 'lucide-react';
+import { Sparkles, MessageSquare, Trash2, Plus, School, GraduationCap, Briefcase, ChevronDown, User, Settings, CreditCard, HelpCircle, LogOut, ArrowRight, ChevronUp, FileText } from 'lucide-react';
 import { DynamicIcon } from '../ui/DynamicIcon';
 import { SUBJECTS } from '../../constants';
-import { SubjectId, AppMode, Session, UserRole, UserSettings, UserPlan, SubjectConfig } from '../../types';
+import { SubjectId, AppMode, Session, UserRole, UserSettings, UserPlan, SubjectConfig, HomeViewType } from '../../types';
 
 interface SidebarProps {
   sidebarOpen: boolean;
@@ -11,7 +12,7 @@ interface SidebarProps {
   userPlan: UserPlan;
   activeSubject: SubjectConfig | null;
   setActiveSubject: (subject: SubjectConfig | null) => void;
-  setHomeView: (view: 'landing' | 'school_select' | 'student_subjects' | 'teacher_subjects') => void;
+  setHomeView: (view: HomeViewType) => void;
   setUserRole: (role: UserRole | null) => void;
   handleSubjectChange: (subject: SubjectConfig, role?: UserRole) => void;
   activeSessionId: string | null;
@@ -258,6 +259,9 @@ export const Sidebar = ({
                                  </button>
                                  <button onClick={() => {setShowUnlockModal(true); setProfileMenuOpen(false)}} className="w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-white/5 text-sm font-medium flex items-center gap-3 transition-colors">
                                     <CreditCard size={16} className="text-gray-500"/> Управление на плана
+                                 </button>
+                                 <button onClick={() => {setActiveSubject(null); setHomeView('terms'); setProfileMenuOpen(false); if(isMobile) setSidebarOpen(false);}} className="w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-white/5 text-sm font-medium flex items-center gap-3 transition-colors">
+                                    <FileText size={16} className="text-gray-500"/> Общи условия
                                  </button>
                                   <button onClick={() => {addToast('Свържете се с нас в Discord за помощ.', 'info'); setProfileMenuOpen(false)}} className="w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-white/5 text-sm font-medium flex items-center gap-3 transition-colors">
                                     <HelpCircle size={16} className="text-gray-500"/> Помощ

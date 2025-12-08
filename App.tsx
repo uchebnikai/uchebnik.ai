@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect, useRef } from 'react';
-import { SubjectConfig, SubjectId, AppMode, Message, Slide, UserSettings, Session, UserPlan, UserRole } from './types';
+import { SubjectConfig, SubjectId, AppMode, Message, Slide, UserSettings, Session, UserPlan, UserRole, HomeViewType } from './types';
 import { SUBJECTS } from './constants';
 import { generateResponse } from './services/geminiService';
 import { supabase } from './supabaseClient';
@@ -31,6 +32,7 @@ import { WelcomeScreen } from './components/welcome/WelcomeScreen';
 import { ChatHeader } from './components/chat/ChatHeader';
 import { MessageList } from './components/chat/MessageList';
 import { ChatInputArea } from './components/chat/ChatInputArea';
+import { TermsOfService, PrivacyPolicy, CookiePolicy, About, Contact } from './components/pages/StaticPages';
 
 interface GeneratedKey {
   code: string;
@@ -64,7 +66,7 @@ export const App = () => {
   const [speakingMessageId, setSpeakingMessageId] = useState<string | null>(null);
   
   // Revised Home Views
-  const [homeView, setHomeView] = useState<'landing' | 'school_select' | 'student_subjects' | 'teacher_subjects'>('landing');
+  const [homeView, setHomeView] = useState<HomeViewType>('landing');
 
   const [memoryUsage, setMemoryUsage] = useState(0); 
   const MAX_MEMORY = 50000; 
@@ -1050,6 +1052,11 @@ export const App = () => {
 
         {/* Dynamic View Rendering */}
         {!activeSubject ? (
+            homeView === 'terms' ? <TermsOfService onBack={() => setHomeView('landing')} /> :
+            homeView === 'privacy' ? <PrivacyPolicy onBack={() => setHomeView('landing')} /> :
+            homeView === 'cookies' ? <CookiePolicy onBack={() => setHomeView('landing')} /> :
+            homeView === 'about' ? <About onBack={() => setHomeView('landing')} /> :
+            homeView === 'contact' ? <Contact onBack={() => setHomeView('landing')} /> :
             <WelcomeScreen 
                 homeView={homeView}
                 userMeta={userMeta}

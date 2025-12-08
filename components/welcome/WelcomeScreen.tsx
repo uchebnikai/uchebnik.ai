@@ -1,17 +1,18 @@
+
 import React from 'react';
 import { Shield, Sparkles, MessageSquare, ArrowRight, School, GraduationCap, Briefcase, ArrowLeft } from 'lucide-react';
-import { SubjectConfig, UserRole, UserSettings, SubjectId } from '../../types';
+import { SubjectConfig, UserRole, UserSettings, HomeViewType, SubjectId } from '../../types';
 import { SUBJECTS } from '../../constants';
 import { DynamicIcon } from '../ui/DynamicIcon';
 import { ZOOM_IN, SLIDE_UP, FADE_IN } from '../../animations/transitions';
 import { getStaggeredDelay } from '../../animations/utils';
 
 interface WelcomeScreenProps {
-  homeView: 'landing' | 'school_select' | 'student_subjects' | 'teacher_subjects';
+  homeView: HomeViewType;
   userMeta: any;
   userSettings: UserSettings;
   handleSubjectChange: (subject: SubjectConfig) => void;
-  setHomeView: (view: 'landing' | 'school_select' | 'student_subjects' | 'teacher_subjects') => void;
+  setHomeView: (view: HomeViewType) => void;
   setUserRole: (role: UserRole) => void;
   setShowAdminAuth: (val: boolean) => void;
 }
@@ -69,9 +70,16 @@ export const WelcomeScreen = ({
             </button>
           </div>
 
-          <footer className="w-full py-8 text-center mt-auto opacity-60 hover:opacity-100 transition-opacity">
-              <p className="text-xs font-medium text-gray-400">
-                  Created by <a href="https://www.instagram.com/vanyoy" target="_blank" rel="noopener noreferrer" className="hover:text-indigo-500 transition-colors">Vanyo</a> & <a href="https://www.instagram.com/s_ivanov6" target="_blank" rel="noopener noreferrer" className="hover:text-indigo-500 transition-colors">Svetlyo</a>
+          <footer className="w-full py-12 mt-auto text-center">
+              <div className="flex flex-wrap justify-center gap-6 mb-6 text-sm font-medium text-zinc-500 dark:text-zinc-400">
+                  <button onClick={() => setHomeView('about')} className="hover:text-indigo-500 transition-colors">За нас</button>
+                  <button onClick={() => setHomeView('contact')} className="hover:text-indigo-500 transition-colors">Контакти</button>
+                  <button onClick={() => setHomeView('terms')} className="hover:text-indigo-500 transition-colors">Общи условия</button>
+                  <button onClick={() => setHomeView('privacy')} className="hover:text-indigo-500 transition-colors">Поверителност</button>
+                  <button onClick={() => setHomeView('cookies')} className="hover:text-indigo-500 transition-colors">Бисквитки</button>
+              </div>
+              <p className="text-xs text-zinc-400 dark:text-zinc-600">
+                  &copy; {new Date().getFullYear()} uchebnik.ai. Created by <a href="https://www.instagram.com/vanyoy" target="_blank" rel="noopener noreferrer" className="hover:text-indigo-500 transition-colors font-medium">Vanyo</a> & <a href="https://www.instagram.com/s_ivanov6" target="_blank" rel="noopener noreferrer" className="hover:text-indigo-500 transition-colors font-medium">Svetlyo</a>
               </p>
           </footer>
         </div>
