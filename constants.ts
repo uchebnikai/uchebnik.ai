@@ -3,8 +3,8 @@ import { SubjectId, AppMode, SubjectConfig } from './types';
 
 export const AI_MODELS = [
   { id: 'auto', name: 'Автоматичен', description: 'Избира най-добрия модел според плана.' },
-  { id: 'google/gemini-2.0-flash-lite-preview-02-05:free', name: 'Gemini Flash Lite', description: 'Много бърз и точен модел (Препоръчан).' },
-  { id: 'deepseek/deepseek-r1:free', name: 'DeepSeek R1', description: 'Мощен модел за математика и логика.' }
+  { id: 'tngtech/deepseek-r1t-chimera:free', name: 'DeepSeek Free', description: 'Бърз и ефективен модел (Безплатен).' },
+  { id: 'tngtech/deepseek-r1t2-chimera:free', name: 'DeepSeek Pro', description: 'Мощен модел за сложни задачи (Pro).' }
 ];
 
 export const GRADE_PROMPTS = {
@@ -134,4 +134,56 @@ export const SUBJECTS: SubjectConfig[] = [
     id: SubjectId.HISTORY,
     name: 'История',
     icon: 'Landmark',
-    color
+    color: 'bg-amber-600',
+    modes: [AppMode.LEARN],
+    description: 'Събития и дати.'
+  },
+  {
+    id: SubjectId.GEOGRAPHY,
+    name: 'География',
+    icon: 'Globe',
+    color: 'bg-cyan-500',
+    modes: [AppMode.LEARN],
+    description: 'Държави и карти.'
+  },
+   {
+    id: SubjectId.FRENCH,
+    name: 'Френски език',
+    icon: 'Languages',
+    color: 'bg-blue-600',
+    modes: [AppMode.SOLVE, AppMode.LEARN, AppMode.CHAT],
+    description: 'Превод и упражнения.'
+  },
+  {
+    id: SubjectId.IT,
+    name: 'Информатика',
+    icon: 'Cpu',
+    color: 'bg-slate-600',
+    modes: [AppMode.SOLVE, AppMode.LEARN],
+    description: 'Програмиране и технологии.'
+  },
+  {
+    id: SubjectId.PHILOSOPHY,
+    name: 'Философия',
+    icon: 'Brain',
+    color: 'bg-purple-400',
+    modes: [AppMode.LEARN],
+    description: 'Логика и етика.'
+  },
+  {
+    id: SubjectId.ART,
+    name: 'Изкуство',
+    icon: 'Palette',
+    color: 'bg-pink-500',
+    modes: [AppMode.DRAW, AppMode.PRESENTATION, AppMode.LEARN],
+    description: 'Рисуване и дизайн.'
+  },
+  {
+    id: SubjectId.PE,
+    name: 'Спорт',
+    icon: 'Activity',
+    color: 'bg-orange-500',
+    modes: [AppMode.LEARN],
+    description: 'Фитнес и здраве.'
+  }
+];
