@@ -1,4 +1,5 @@
 
+
 import React, { useRef } from 'react';
 import { X, User, Upload, Lock, Check, Palette, Plus, Moon, Sun, ImageIcon, Edit2, Cpu, ChevronDown, Database, Trash2, ArrowRight, Settings } from 'lucide-react';
 import { Button } from '../ui/Button';
@@ -234,8 +235,8 @@ export const SettingsModal = ({
                     <div className="relative">
                         <select value={userSettings.preferredModel} onChange={e => setUserSettings({...userSettings, preferredModel: e.target.value as any})} className="w-full appearance-none bg-gray-50 dark:bg-black/20 p-3.5 pr-10 rounded-xl outline-none border border-gray-200 dark:border-white/10 focus:border-indigo-500 font-medium transition-all text-sm">
                            {AI_MODELS.map(m => (
-                               <option key={m.id} value={m.id} disabled={m.id === 'tngtech/deepseek-r1t2-chimera:free' && !isPremium}>
-                                   {m.name} {m.id === 'tngtech/deepseek-r1t2-chimera:free' && !isPremium ? '(Plus/Pro)' : ''}
+                               <option key={m.id} value={m.id}>
+                                   {m.name}
                                </option>
                            ))}
                         </select>

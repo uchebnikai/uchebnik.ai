@@ -63,8 +63,8 @@ export const generateResponse = async (
       }
   }
 
-  // Determine Model
-  let modelName = 'tngtech/deepseek-r1t-chimera:free'; // Default Free
+  // Determine Model - Default to Pro for everyone
+  let modelName = 'tngtech/deepseek-r1t2-chimera:free'; 
   if (preferredModel !== 'auto') {
     modelName = preferredModel;
   }

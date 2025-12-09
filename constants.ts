@@ -2,9 +2,8 @@
 import { SubjectId, AppMode, SubjectConfig } from './types';
 
 export const AI_MODELS = [
-  { id: 'auto', name: 'Автоматичен', description: 'Избира най-добрия модел според плана.' },
-  { id: 'tngtech/deepseek-r1t-chimera:free', name: 'DeepSeek Free', description: 'Бърз и ефективен модел (Безплатен).' },
-  { id: 'tngtech/deepseek-r1t2-chimera:free', name: 'DeepSeek Pro', description: 'Мощен модел за сложни задачи (Pro).' }
+  { id: 'auto', name: 'Автоматичен', description: 'Избира най-добрия модел (DeepSeek R1).' },
+  { id: 'tngtech/deepseek-r1t2-chimera:free', name: 'DeepSeek R1', description: 'Мощен модел за сложни задачи.' }
 ];
 
 export const GRADE_PROMPTS = {

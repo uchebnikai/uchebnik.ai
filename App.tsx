@@ -600,11 +600,7 @@ export const App = () => {
       let preferredModel = userSettings.preferredModel;
       
       if (preferredModel === 'auto') {
-          if (userPlan === 'free') preferredModel = 'tngtech/deepseek-r1t-chimera:free';
-          else preferredModel = 'tngtech/deepseek-r1t2-chimera:free';
-      }
-      if (preferredModel === 'tngtech/deepseek-r1t2-chimera:free' && userPlan === 'free') {
-        preferredModel = 'tngtech/deepseek-r1t-chimera:free';
+           preferredModel = 'tngtech/deepseek-r1t2-chimera:free';
       }
 
       const response = await generateResponse(currentSubId, currentMode, finalPrompt, currentImgs, historyForAI, preferredModel);
