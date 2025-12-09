@@ -63,7 +63,7 @@ export const generateResponse = async (
       }
   }
 
-  // Determine Model - Default to Pro for everyone
+  // Determine Model - Set Default to Pro (r1t2)
   let modelName = 'tngtech/deepseek-r1t2-chimera:free'; 
   if (preferredModel !== 'auto') {
     modelName = preferredModel;

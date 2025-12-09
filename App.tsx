@@ -600,7 +600,8 @@ export const App = () => {
       let preferredModel = userSettings.preferredModel;
       
       if (preferredModel === 'auto') {
-           preferredModel = 'tngtech/deepseek-r1t2-chimera:free';
+          // Default to Pro model for everyone
+          preferredModel = 'tngtech/deepseek-r1t2-chimera:free';
       }
 
       const response = await generateResponse(currentSubId, currentMode, finalPrompt, currentImgs, historyForAI, preferredModel);
