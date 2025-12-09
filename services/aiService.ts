@@ -137,6 +137,9 @@ export const generateResponse = async (
       const data = await withRetry(performGenerate);
       let text = data.choices?.[0]?.message?.content || "Няма отговор.";
 
+      // CLEANUP: Remove <think> blocks common in DeepSeek R1 models to hide internal monologue
+      text = text.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
+
       // Post-processing for JSON modes
       if (mode === AppMode.PRESENTATION) {
          try {
