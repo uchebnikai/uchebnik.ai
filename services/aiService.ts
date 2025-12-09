@@ -83,6 +83,9 @@ export const generateResponse = async (
       systemInstruction += "\n\nIMPORTANT: YOU MUST RETURN VALID JSON ONLY. NO MARKDOWN BLOCK, JUST THE JSON STRING.";
   }
 
+  // CRITICAL: Enforce Thinking Tags to allow filtering
+  systemInstruction += "\n\nIMPORTANT: If you use internal reasoning or chain-of-thought, you MUST enclose it strictly within <think> and </think> tags. Do NOT output raw thinking text without tags.";
+
   systemInstruction = `CURRENT SUBJECT CONTEXT: ${subjectName}. All responses must relate to ${subjectName}.\n\n${systemInstruction}`;
 
   // Prepare Messages
@@ -137,8 +140,21 @@ export const generateResponse = async (
       const data = await withRetry(performGenerate);
       let text = data.choices?.[0]?.message?.content || "Няма отговор.";
 
-      // CLEANUP: Remove <think> blocks common in DeepSeek R1 models to hide internal monologue
-      text = text.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
+      // CLEANUP LOGIC: Remove <think> blocks common in DeepSeek R1 models
+      
+      // Strategy 1: If we see a closing </think> tag, assume everything before it is garbage thinking.
+      // This handles cases where the opening <think> might be missing or malformed at the very start.
+      if (text.includes('</think>')) {
+          const parts = text.split('</think>');
+          // Take the last part (the actual response)
+          text = parts[parts.length - 1];
+      }
+
+      // Strategy 2: Remove any remaining proper <think>...</think> blocks (e.g. if they appear in middle)
+      text = text.replace(/<think>[\s\S]*?<\/think>/gi, "");
+
+      // Strategy 3: Trim whitespace left over
+      text = text.trim();
 
       // Post-processing for JSON modes
       if (mode === AppMode.PRESENTATION) {
