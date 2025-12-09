@@ -396,7 +396,7 @@ export const App = () => {
     };
 
     if (subjectId === SubjectId.GENERAL) {
-        welcomeText = `Здравей${greetingName}! Аз съм uchebnik.ai. Попитай ме каквото и да е!`;
+        welcomeText = `Здравей${greetingName}! Аз съм Uchebnik AI. Попитай ме каквото и да е!`;
     } else {
         if (role === 'teacher') {
              welcomeText = `Здравейте, колега! Аз съм Вашият AI асистент по **${subjectName}**. Как мога да Ви съдействам?`;
@@ -737,7 +737,7 @@ export const App = () => {
                      let welcomeText = "";
                      const subjectName = SUBJECTS.find(sub=>sub.id === s.subjectId)?.name;
                      if(s.subjectId === SubjectId.GENERAL) {
-                         welcomeText = `Здравей${greetingName}! Аз съм uchebnik.ai. Попитай ме каквото и да е!`;
+                         welcomeText = `Здравей${greetingName}! Аз съм Uchebnik AI. Попитай ме каквото и да е!`;
                      } else {
                          if(s.role === 'teacher') {
                              welcomeText = `Здравейте, колега! Аз съм Вашият AI асистент по **${subjectName}**. Как мога да Ви съдействам?`;

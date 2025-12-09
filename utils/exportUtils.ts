@@ -6,7 +6,7 @@ export const handleDownloadPPTX = (slides: Slide[], activeSubject: SubjectConfig
     const p = new pptxgen();
     p.defineSlideMaster({
         title: 'MASTER', background: { color: 'FFFFFF' },
-        objects: [ {rect:{x:0,y:0,w:'100%',h:0.15,fill:{color:'4F46E5'}}}, {text: {text: "uchebnik.ai", options: {x: 0.5, y: '90%', fontSize: 10, color: 'D1D5DB'}}}, ],
+        objects: [ {rect:{x:0,y:0,w:'100%',h:0.15,fill:{color:'4F46E5'}}}, {text: {text: "Uchebnik AI", options: {x: 0.5, y: '90%', fontSize: 10, color: 'D1D5DB'}}}, ],
         slideNumber: { x: '95%', y: '90%', fontSize: 10, color: '6B7280' }
     });
     const cover = p.addSlide({masterName:'MASTER'});

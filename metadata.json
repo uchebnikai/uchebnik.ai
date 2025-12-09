@@ -1,5 +1,5 @@
 {
-  "name": "uchebnik.ai (real)",
+  "name": "Uchebnik AI",
   "description": "Интелигентен помощник за ученици от 10-ти клас. Решаване на задачи, резюмиране на уроци, генерация на презентации и рисунки.",
   "requestFramePermissions": [
     "camera",

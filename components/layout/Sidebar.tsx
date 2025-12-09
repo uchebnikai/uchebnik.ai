@@ -1,4 +1,5 @@
 
+
 import React, { useState } from 'react';
 import { Sparkles, MessageSquare, Trash2, Plus, School, GraduationCap, Briefcase, ChevronDown, User, Settings, CreditCard, HelpCircle, LogOut, ArrowRight, ChevronUp, FileText } from 'lucide-react';
 import { DynamicIcon } from '../ui/DynamicIcon';
@@ -81,7 +82,7 @@ export const Sidebar = ({
                   <Sparkles size={20} fill="currentColor" />
                </div>
                <div className="text-left">
-                  <h1 className="font-bold text-xl text-zinc-900 dark:text-white tracking-tight font-display">uchebnik.ai</h1>
+                  <h1 className="font-bold text-xl text-zinc-900 dark:text-white tracking-tight font-display">Uchebnik AI</h1>
                   <p className={`text-[10px] font-bold tracking-widest uppercase ${userPlan === 'pro' ? 'text-amber-500' : userPlan === 'plus' ? 'text-indigo-500' : 'text-gray-500'}`}>
                     {userPlan === 'pro' ? 'PRO PLAN' : userPlan === 'plus' ? 'PLUS PLAN' : 'FREE PLAN'}
                   </p>

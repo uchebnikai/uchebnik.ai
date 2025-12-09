@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { ArrowLeft, Mail, MapPin, Globe } from 'lucide-react';
 import { SLIDE_UP, FADE_IN } from '../../animations/transitions';
@@ -45,7 +44,7 @@ const PageLayout = ({ title, children, onBack, userSettings }: { title: string, 
         </div>
 
         <div className="w-full mt-8 text-center text-sm text-gray-400 pb-8 font-medium">
-           &copy; {new Date().getFullYear()} uchebnik.ai. Всички права запазени.
+           &copy; {new Date().getFullYear()} Uchebnik AI. Всички права запазени.
         </div>
       </div>
     </div>
@@ -57,10 +56,10 @@ export const TermsOfService = ({ onBack, userSettings }: PageProps) => (
     <p className="text-lg font-medium">Последна актуализация: Октомври 2023</p>
     
     <h3>1. Въведение</h3>
-    <p>Добре дошли в uchebnik.ai. Използвайки нашия уебсайт и услуги, вие се съгласявате да спазвате следните общи условия. Ако не сте съгласни с някоя част от условията, моля не използвайте нашите услуги.</p>
+    <p>Добре дошли в Uchebnik AI. Използвайки нашия уебсайт и услуги, вие се съгласявате да спазвате следните общи условия. Ако не сте съгласни с някоя част от условията, моля не използвайте нашите услуги.</p>
     
     <h3>2. Използване на услугите</h3>
-    <p>Вие се съгласявате да използвате uchebnik.ai само за законни образователни цели. Забранено е:</p>
+    <p>Вие се съгласявате да използвате Uchebnik AI само за законни образователни цели. Забранено е:</p>
     <ul className="list-disc pl-5 space-y-2">
         <li>Използването на платформата за генериране на вредно или незаконно съдържание.</li>
         <li>Опитите за неоторизиран достъп до нашите системи.</li>
@@ -68,10 +67,10 @@ export const TermsOfService = ({ onBack, userSettings }: PageProps) => (
     </ul>
 
     <h3>3. Интелектуална собственост</h3>
-    <p>Цялото съдържание, включено в този сайт (код, дизайн, лога), е собственост на uchebnik.ai. Генерираното от AI съдържание принадлежи на потребителя, съгласно условията на използваните AI модели.</p>
+    <p>Цялото съдържание, включено в този сайт (код, дизайн, лога), е собственост на Uchebnik AI. Генерираното от AI съдържание принадлежи на потребителя, съгласно условията на използваните AI модели.</p>
 
     <h3>4. Ограничение на отговорността</h3>
-    <p>Uchebnik.ai е помощен инструмент. Въпреки че се стремим към точност, AI може да генерира грешна информация. Ние не носим отговорност за оценки, изпитни резултати или академични последствия от използването на платформата.</p>
+    <p>Uchebnik AI е помощен инструмент. Въпреки че се стремим към точност, AI може да генерира грешна информация. Ние не носим отговорност за оценки, изпитни резултати или академични последствия от използването на платформата.</p>
   </PageLayout>
 );
 
@@ -120,7 +119,7 @@ export const About = ({ onBack, userSettings }: PageProps) => (
   <PageLayout title="За нас" onBack={onBack} userSettings={userSettings}>
     <div className="flex flex-col gap-6">
         <p className="text-lg font-medium leading-relaxed">
-            <strong>uchebnik.ai</strong> е иновативна образователна платформа от следващо поколение, създадена с мисията да трансформира начина, по който българските ученици учат и възприемат информация.
+            <strong>Uchebnik AI</strong> е иновативна образователна платформа от следващо поколение, създадена с мисията да трансформира начина, по който българските ученици учат и възприемат информация.
         </p>
         <p>
             Ние вярваме, че изкуственият интелект не трябва да замества ученето, а да го прави по-интересно, персонализирано и достъпно. Нашата цел е да предоставим "суперсили" на всеки ученик и учител.
@@ -150,7 +149,7 @@ export const Contact = ({ onBack, userSettings }: PageProps) => (
                 <Mail className="text-indigo-500"/> Email Support
             </h3>
             <p className="text-gray-500 mb-4 text-sm">За технически въпроси и партньорства:</p>
-            <a href="mailto:support@uchebnik.ai" className="text-indigo-600 dark:text-indigo-400 font-bold hover:underline">support@uchebnik.ai</a>
+            <a href="mailto:support@uchebnikai.com" className="text-indigo-600 dark:text-indigo-400 font-bold hover:underline">support@uchebnikai.com</a>
         </div>
 
         <div className="p-6 bg-white dark:bg-zinc-900 rounded-2xl border border-[#5865F2]/30 shadow-lg">

@@ -98,7 +98,7 @@ export const Auth = ({ isModal = false, onSuccess }: AuthProps) => {
                 <Sparkles size={32} fill="currentColor" />
             </div>
           <h1 className="text-3xl font-bold text-center tracking-tight text-foreground font-display">
-             uchebnik.ai
+             Uchebnik AI
           </h1>
           <p className="text-gray-500 mt-2 text-center text-sm font-medium">
             {mode === 'login' && 'Влезте в акаунта си'}

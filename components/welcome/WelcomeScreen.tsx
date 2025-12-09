@@ -1,4 +1,5 @@
 
+
 import React from 'react';
 import { Shield, Sparkles, MessageSquare, ArrowRight, School, GraduationCap, Briefcase, ArrowLeft } from 'lucide-react';
 import { SubjectConfig, UserRole, UserSettings, HomeViewType, SubjectId } from '../../types';
@@ -79,7 +80,7 @@ export const WelcomeScreen = ({
                   <button onClick={() => setHomeView('cookies')} className="hover:text-indigo-500 transition-colors">Бисквитки</button>
               </div>
               <p className="text-xs text-zinc-400 dark:text-zinc-600">
-                  &copy; {new Date().getFullYear()} uchebnik.ai. Created by <a href="https://www.instagram.com/vanyoy" target="_blank" rel="noopener noreferrer" className="hover:text-indigo-500 transition-colors font-medium">Vanyo</a> & <a href="https://www.instagram.com/s_ivanov6" target="_blank" rel="noopener noreferrer" className="hover:text-indigo-500 transition-colors font-medium">Svetlyo</a>
+                  &copy; {new Date().getFullYear()} Uchebnik AI. Created by <a href="https://www.instagram.com/vanyoy" target="_blank" rel="noopener noreferrer" className="hover:text-indigo-500 transition-colors font-medium">Vanyo</a> & <a href="https://www.instagram.com/s_ivanov6" target="_blank" rel="noopener noreferrer" className="hover:text-indigo-500 transition-colors font-medium">Svetlyo</a>
               </p>
           </footer>
         </div>
