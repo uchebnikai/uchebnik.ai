@@ -4,11 +4,10 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig(({ mode }) => {
   // Load env file based on `mode` in the current working directory.
-  // Set the third parameter to '' to load all env regardless of the `VITE_` prefix.
   const env = loadEnv(mode, (process as any).cwd(), '');
   
-  // Prioritize process.env (Vercel) -> loaded env file -> empty string
-  const apiKey = process.env.GOOGLE_API_KEY || env.GOOGLE_API_KEY || '';
+  // OpenRouter API Key
+  const apiKey = "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";
 
   return {
     plugins: [react()],
@@ -16,8 +15,7 @@ export default defineConfig(({ mode }) => {
       outDir: 'dist',
     },
     define: {
-      // Safely expose the variable. JSON.stringify ensures it's treated as a string literal.
-      'process.env.GOOGLE_API_KEY': JSON.stringify(apiKey),
+      'process.env.OPENROUTER_API_KEY': JSON.stringify(apiKey),
     },
   };
 });

@@ -1,9 +1,8 @@
 
-
 import React, { useState, useEffect, useRef } from 'react';
 import { SubjectConfig, SubjectId, AppMode, Message, Slide, UserSettings, Session, UserPlan, UserRole, HomeViewType } from './types';
 import { SUBJECTS } from './constants';
-import { generateResponse } from './services/geminiService';
+import { generateResponse } from './services/aiService';
 import { supabase } from './supabaseClient';
 import { Auth } from './components/auth/Auth';
 import { 
@@ -600,11 +599,12 @@ export const App = () => {
 
       let preferredModel = userSettings.preferredModel;
       
-      if (preferredModel === 'auto' && userPlan === 'free') {
-        preferredModel = 'gemini-2.5-flash';
+      if (preferredModel === 'auto') {
+          if (userPlan === 'free') preferredModel = 'tngtech/deepseek-r1t-chimera:free';
+          else preferredModel = 'tngtech/deepseek-r1t2-chimera:free';
       }
-      if (preferredModel === 'gemini-3-pro-preview' && userPlan === 'free') {
-        preferredModel = 'gemini-2.5-flash';
+      if (preferredModel === 'tngtech/deepseek-r1t2-chimera:free' && userPlan === 'free') {
+        preferredModel = 'tngtech/deepseek-r1t-chimera:free';
       }
 
       const response = await generateResponse(currentSubId, currentMode, finalPrompt, currentImgs, historyForAI, preferredModel);
@@ -914,7 +914,7 @@ export const App = () => {
        const newPlan = targetPlan || 'pro';
        setUserPlan(newPlan);
        if (newPlan !== 'free') {
-            setUserSettings(prev => ({ ...prev, preferredModel: 'gemini-3-pro-preview' }));
+            setUserSettings(prev => ({ ...prev, preferredModel: 'tngtech/deepseek-r1t2-chimera:free' }));
        }
        setShowUnlockModal(false);
        setUnlockKeyInput('');
