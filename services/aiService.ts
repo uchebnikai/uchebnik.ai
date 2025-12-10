@@ -47,40 +47,56 @@ export const generateResponse = async (
   const subjectConfig = SUBJECTS.find(s => s.id === subjectId);
   const subjectName = subjectConfig ? subjectConfig.name : "Unknown Subject";
 
-  // IMAGE GENERATION CHECK
-  const imageKeywords = /(draw|paint|generate image|create a picture|make an image|нарисувай|рисувай|генерирай изображение|генерирай снимка|направи снимка|изображение на)/i;
-  const isImageRequest = (subjectId === SubjectId.ART && mode === AppMode.DRAW) || imageKeywords.test(promptText);
-
-  if (isImageRequest) {
-      // DeepSeek doesn't generate images. We'll offer SVG generation instead or explain limitation.
-      if (!promptText.toLowerCase().includes('svg') && !promptText.toLowerCase().includes('чертеж')) {
-           return {
-            id: Date.now().toString(),
-            role: 'model',
-            text: "Този модел (DeepSeek) не поддържа генериране на изображения (снимки). Мога обаче да генерирам SVG чертежи и диаграми за математика, физика и други предмети. Опитайте да поискате 'чертеж' или 'диаграма'.",
-            timestamp: Date.now()
-          };
-      }
-  }
-
-  // Determine Model - Set Default to Pro (r1t2)
+  // Determine Model - Default to Pro for everyone
   let modelName = 'tngtech/deepseek-r1t2-chimera:free'; 
-  if (preferredModel !== 'auto') {
+  if (preferredModel !== 'auto' && preferredModel) {
     modelName = preferredModel;
   }
 
+  // IMAGE GENERATION CHECK
+  // DeepSeek R1 is a text model. It cannot generate raster images.
+  // We will intercept this and offering SVG or text description instead.
+  const imageKeywords = /(draw|paint|generate image|create a picture|make an image|нарисувай|рисувай|генерирай изображение|генерирай снимка|направи снимка|изображение на)/i;
+  const isImageRequest = (subjectId === SubjectId.ART && mode === AppMode.DRAW) || imageKeywords.test(promptText);
+
   // Prepare System Instruction
   let systemInstruction = SYSTEM_PROMPTS.DEFAULT;
-  if (mode === AppMode.LEARN) systemInstruction = SYSTEM_PROMPTS.LEARN;
-  else if (mode === AppMode.SOLVE) systemInstruction = SYSTEM_PROMPTS.SOLVE;
-  else if (mode === AppMode.TEACHER_PLAN) systemInstruction = SYSTEM_PROMPTS.TEACHER_PLAN;
-  else if (mode === AppMode.TEACHER_RESOURCES) systemInstruction = SYSTEM_PROMPTS.TEACHER_RESOURCES;
-  else if (mode === AppMode.TEACHER_TEST) systemInstruction = SYSTEM_PROMPTS.TEACHER_TEST;
-  else if (mode === AppMode.PRESENTATION) systemInstruction = SYSTEM_PROMPTS.PRESENTATION;
+  let forceJson = false;
+
+  if (isImageRequest) {
+      // Special instruction for Art/Draw mode since model is text-only
+      systemInstruction = `You are an AI that helps with art concepts. 
+      IMPORTANT: You CANNOT generate pixel/raster images (PNG/JPG). 
+      If the user asks for a drawing, you MUST generate an SVG code block using the json:geometry format.
+      
+      Format:
+      \`\`\`json:geometry
+      {
+        "title": "Short title",
+        "svg": "<svg>...</svg>"
+      }
+      \`\`\`
+      
+      If an SVG is not appropriate, describe the image in detail.`;
+  } else if (mode === AppMode.LEARN) {
+      systemInstruction = SYSTEM_PROMPTS.LEARN;
+  } else if (mode === AppMode.SOLVE) {
+      systemInstruction = SYSTEM_PROMPTS.SOLVE;
+  } else if (mode === AppMode.TEACHER_PLAN) {
+      systemInstruction = SYSTEM_PROMPTS.TEACHER_PLAN;
+  } else if (mode === AppMode.TEACHER_RESOURCES) {
+      systemInstruction = SYSTEM_PROMPTS.TEACHER_RESOURCES;
+  } else if (mode === AppMode.TEACHER_TEST) {
+      systemInstruction = SYSTEM_PROMPTS.TEACHER_TEST;
+      forceJson = true;
+  } else if (mode === AppMode.PRESENTATION) {
+      systemInstruction = SYSTEM_PROMPTS.PRESENTATION;
+      forceJson = true;
+  }
 
   // Add JSON enforcement for structured modes
-  if (mode === AppMode.PRESENTATION || mode === AppMode.TEACHER_TEST) {
-      systemInstruction += "\n\nIMPORTANT: YOU MUST RETURN VALID JSON ONLY. NO MARKDOWN BLOCK, JUST THE JSON STRING.";
+  if (forceJson) {
+      systemInstruction += "\n\nIMPORTANT: YOU MUST RETURN VALID JSON ONLY. NO MARKDOWN BLOCK WRAPPING THE JSON (IF POSSIBLE), JUST THE JSON STRING.";
   }
 
   // CRITICAL: Enforce Thinking Tags to allow filtering
@@ -93,7 +109,9 @@ export const generateResponse = async (
       { role: "system", content: systemInstruction }
   ];
 
-  // Add history (text only, as DeepSeek R1 is text focused usually)
+  // Add history (Text only - DeepSeek R1 typically doesn't support Vision in free tier reliably)
+  // If images are present in history, we usually ignore them for text-only models or send them if supported.
+  // For safety with the 'free' chimera endpoint, we'll strip images to prevent 400 errors.
   history.filter(msg => !msg.isError && msg.text && msg.type !== 'image_generated' && msg.type !== 'slides').forEach(msg => {
       messages.push({
           role: msg.role === 'model' ? 'assistant' : 'user',
@@ -103,8 +121,13 @@ export const generateResponse = async (
 
   // Current User Message
   let finalUserPrompt = promptText;
+  
+  if (imagesBase64 && imagesBase64.length > 0) {
+      finalUserPrompt += "\n\n[System Note: The user attached images, but I can only process text. I will answer based on the text prompt.]";
+  }
+
   if (mode === AppMode.TEACHER_TEST) {
-      // If editing a test, inject context logic similar to Gemini service
+      // If editing a test, inject context logic
       const prevTest = history.find(m => m.type === 'test_generated')?.testData;
       if (prevTest) {
           finalUserPrompt = `[PREVIOUS TEST CONTEXT]: ${JSON.stringify(prevTest)}\n\nUSER REQUEST: ${promptText}`;
@@ -143,17 +166,15 @@ export const generateResponse = async (
       // CLEANUP LOGIC: Remove <think> blocks common in DeepSeek R1 models
       
       // Strategy 1: If we see a closing </think> tag, assume everything before it is garbage thinking.
-      // This handles cases where the opening <think> might be missing or malformed at the very start.
       if (text.includes('</think>')) {
           const parts = text.split('</think>');
-          // Take the last part (the actual response)
           text = parts[parts.length - 1];
       }
 
-      // Strategy 2: Remove any remaining proper <think>...</think> blocks (e.g. if they appear in middle)
+      // Strategy 2: Remove any remaining proper <think>...</think> blocks
       text = text.replace(/<think>[\s\S]*?<\/think>/gi, "");
 
-      // Strategy 3: Trim whitespace left over
+      // Strategy 3: Trim whitespace
       text = text.trim();
 
       // Post-processing for JSON modes
@@ -173,7 +194,7 @@ export const generateResponse = async (
              };
          } catch (e) {
              console.error("Presentation JSON parse error", e);
-             // Fallback to text
+             // Fallback to text if parsing fails
          }
       }
 
