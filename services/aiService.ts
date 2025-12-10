@@ -47,14 +47,13 @@ export const generateResponse = async (
   const subjectConfig = SUBJECTS.find(s => s.id === subjectId);
   const subjectName = subjectConfig ? subjectConfig.name : "Unknown Subject";
 
-  // Determine Model - Default to Pro for everyone
+  // Determine Model
   let modelName = 'tngtech/deepseek-r1t2-chimera:free'; 
   if (preferredModel !== 'auto' && preferredModel) {
     modelName = preferredModel;
   }
 
   // IMAGE GENERATION CHECK
-  // DeepSeek R1 is a text model. It cannot generate raster images.
   const imageKeywords = /(draw|paint|generate image|create a picture|make an image|нарисувай|рисувай|генерирай изображение|генерирай снимка|направи снимка|изображение на)/i;
   const isImageRequest = (subjectId === SubjectId.ART && mode === AppMode.DRAW) || imageKeywords.test(promptText);
 
@@ -63,7 +62,7 @@ export const generateResponse = async (
   let forceJson = false;
 
   if (isImageRequest) {
-      // Special instruction for Art/Draw mode since model is text-only
+      // Special instruction for Art/Draw mode
       systemInstruction = `You are an AI that helps with art concepts. 
       IMPORTANT: You CANNOT generate pixel/raster images (PNG/JPG). 
       If the user asks for a drawing, you MUST generate an SVG code block using the json:geometry format.
@@ -98,7 +97,7 @@ export const generateResponse = async (
       systemInstruction += "\n\nIMPORTANT: YOU MUST RETURN VALID JSON ONLY. NO MARKDOWN BLOCK WRAPPING THE JSON (IF POSSIBLE), JUST THE JSON STRING.";
   }
 
-  // CRITICAL: Enforce Thinking Tags to allow filtering
+  // Enforce Thinking Tags
   systemInstruction += "\n\nIMPORTANT: If you use internal reasoning or chain-of-thought, you MUST enclose it strictly within <think> and </think> tags. Do NOT output raw thinking text without tags.";
 
   systemInstruction = `CURRENT SUBJECT CONTEXT: ${subjectName}. All responses must relate to ${subjectName}.\n\n${systemInstruction}`;
@@ -108,34 +107,34 @@ export const generateResponse = async (
       { role: "system", content: systemInstruction }
   ];
 
-  // Add history (Text only - DeepSeek R1 typically doesn't support Vision in free tier reliably)
-  // We strip images from history to prevent 400 errors with text-only models.
+  // Add history (Text only usually to save tokens/prevent errors)
   history.filter(msg => !msg.isError && msg.text && msg.type !== 'image_generated' && msg.type !== 'slides').forEach(msg => {
       messages.push({
           role: msg.role === 'model' ? 'assistant' : 'user',
-          content: msg.text
+          content: msg.text 
       });
   });
 
-  // Current User Message
+  // Current User Message Construction
   let finalUserPrompt = promptText;
   let userContent: any;
 
   if (mode === AppMode.TEACHER_TEST) {
-      // If editing a test, inject context logic
       const prevTest = history.find(m => m.type === 'test_generated')?.testData;
       if (prevTest) {
           finalUserPrompt = `[PREVIOUS TEST CONTEXT]: ${JSON.stringify(prevTest)}\n\nUSER REQUEST: ${promptText}`;
       }
   }
 
+  const hasImages = imagesBase64 && imagesBase64.length > 0;
+
   // DIRECT IMAGE HANDLING: Send images directly to DeepSeek via OpenRouter multimodal format
-  if (imagesBase64 && imagesBase64.length > 0) {
+  if (hasImages) {
       userContent = [
           { type: "text", text: finalUserPrompt },
           ...imagesBase64.map(img => ({
               type: "image_url",
-              image_url: { url: img }
+              image_url: { url: img } // Ensure img is data:image/jpeg;base64,...
           }))
       ];
   } else {
@@ -144,6 +143,15 @@ export const generateResponse = async (
 
   messages.push({ role: "user", content: userContent });
 
+  // Adjust params for vision requests
+  const requestBody: any = {
+      model: modelName,
+      messages: messages,
+  };
+
+  // Some vision models prefer no temperature or specific temp. R1 likes 0.6.
+  requestBody.temperature = 0.6;
+
   try {
       const performGenerate = async () => {
           const res = await fetch(API_URL, {
@@ -151,14 +159,10 @@ export const generateResponse = async (
               headers: {
                   "Authorization": `Bearer ${apiKey}`,
                   "Content-Type": "application/json",
-                  "HTTP-Referer": window.location.origin, // Required by OpenRouter
+                  "HTTP-Referer": window.location.origin,
                   "X-Title": "Uchebnik AI"
               },
-              body: JSON.stringify({
-                  model: modelName,
-                  messages: messages,
-                  temperature: 0.7
-              })
+              body: JSON.stringify(requestBody)
           });
 
           if (!res.ok) {
@@ -171,24 +175,16 @@ export const generateResponse = async (
       const data = await withRetry(performGenerate);
       let text = data.choices?.[0]?.message?.content || "Няма отговор.";
 
-      // CLEANUP LOGIC: Remove <think> blocks common in DeepSeek R1 models
-      
-      // Strategy 1: If we see a closing </think> tag, assume everything before it is garbage thinking.
+      // CLEANUP LOGIC: Remove <think> blocks
       if (text.includes('</think>')) {
           const parts = text.split('</think>');
           text = parts[parts.length - 1];
       }
-
-      // Strategy 2: Remove any remaining proper <think>...</think> blocks
-      text = text.replace(/<think>[\s\S]*?<\/think>/gi, "");
-
-      // Strategy 3: Trim whitespace
-      text = text.trim();
+      text = text.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
 
       // Post-processing for JSON modes
       if (mode === AppMode.PRESENTATION) {
          try {
-             // Extract JSON if wrapped in code block
              const jsonMatch = text.match(/```json\n([\s\S]*?)\n```/) || text.match(/```([\s\S]*?)```/);
              const jsonStr = jsonMatch ? jsonMatch[1] : text;
              const slides: Slide[] = JSON.parse(jsonStr);
@@ -202,7 +198,6 @@ export const generateResponse = async (
              };
          } catch (e) {
              console.error("Presentation JSON parse error", e);
-             // Fallback to text if parsing fails
          }
       }
 
@@ -224,7 +219,7 @@ export const generateResponse = async (
           }
       }
 
-      // Check for Charts/Geometry in normal response
+      // Check for Charts/Geometry
       let chartData: ChartData | undefined;
       let geometryData: GeometryData | undefined;
 
@@ -256,6 +251,18 @@ export const generateResponse = async (
 
   } catch (error: any) {
       console.error("DeepSeek API Error:", error);
+      
+      // Better error message for multimodal issues
+      if (hasImages && error.toString().includes("400")) {
+          return {
+              id: Date.now().toString(),
+              role: 'model',
+              text: "Избраният AI модел има затруднения с обработката на това изображение. Моля, опитайте да го преоразмерите или използвайте само текст.",
+              isError: true,
+              timestamp: Date.now()
+          };
+      }
+
       return {
           id: Date.now().toString(),
           role: 'model',
