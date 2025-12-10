@@ -47,15 +47,13 @@ export const generateResponse = async (
   const subjectConfig = SUBJECTS.find(s => s.id === subjectId);
   const subjectName = subjectConfig ? subjectConfig.name : "Unknown Subject";
 
-  // Determine Model - Default to Pro for everyone
+  // Determine Model
   let modelName = 'tngtech/deepseek-r1t2-chimera:free'; 
   if (preferredModel !== 'auto' && preferredModel) {
     modelName = preferredModel;
   }
 
   // IMAGE GENERATION CHECK
-  // DeepSeek R1 is a text model. It cannot generate raster images.
-  // We will intercept this and offering SVG or text description instead.
   const imageKeywords = /(draw|paint|generate image|create a picture|make an image|нарисувай|рисувай|генерирай изображение|генерирай снимка|направи снимка|изображение на)/i;
   const isImageRequest = (subjectId === SubjectId.ART && mode === AppMode.DRAW) || imageKeywords.test(promptText);
 
@@ -64,7 +62,7 @@ export const generateResponse = async (
   let forceJson = false;
 
   if (isImageRequest) {
-      // Special instruction for Art/Draw mode since model is text-only
+      // Special instruction for Art/Draw mode
       systemInstruction = `You are an AI that helps with art concepts. 
       IMPORTANT: You CANNOT generate pixel/raster images (PNG/JPG). 
       If the user asks for a drawing, you MUST generate an SVG code block using the json:geometry format.
@@ -99,7 +97,7 @@ export const generateResponse = async (
       systemInstruction += "\n\nIMPORTANT: YOU MUST RETURN VALID JSON ONLY. NO MARKDOWN BLOCK WRAPPING THE JSON (IF POSSIBLE), JUST THE JSON STRING.";
   }
 
-  // CRITICAL: Enforce Thinking Tags to allow filtering
+  // Enforce Thinking Tags
   systemInstruction += "\n\nIMPORTANT: If you use internal reasoning or chain-of-thought, you MUST enclose it strictly within <think> and </think> tags. Do NOT output raw thinking text without tags.";
 
   systemInstruction = `CURRENT SUBJECT CONTEXT: ${subjectName}. All responses must relate to ${subjectName}.\n\n${systemInstruction}`;
@@ -109,32 +107,39 @@ export const generateResponse = async (
       { role: "system", content: systemInstruction }
   ];
 
-  // Add history (Text only - DeepSeek R1 typically doesn't support Vision in free tier reliably)
-  // If images are present in history, we usually ignore them for text-only models or send them if supported.
-  // For safety with the 'free' chimera endpoint, we'll strip images to prevent 400 errors.
+  // Add history (Text only usually to save tokens/prevent errors, but can include images if supported)
   history.filter(msg => !msg.isError && msg.text && msg.type !== 'image_generated' && msg.type !== 'slides').forEach(msg => {
       messages.push({
           role: msg.role === 'model' ? 'assistant' : 'user',
-          content: msg.text
+          content: msg.text 
       });
   });
 
-  // Current User Message
+  // Current User Message Construction
   let finalUserPrompt = promptText;
-  
-  if (imagesBase64 && imagesBase64.length > 0) {
-      finalUserPrompt += "\n\n[System Note: The user attached images, but I can only process text. I will answer based on the text prompt.]";
-  }
+  let userContent: any;
 
   if (mode === AppMode.TEACHER_TEST) {
-      // If editing a test, inject context logic
       const prevTest = history.find(m => m.type === 'test_generated')?.testData;
       if (prevTest) {
           finalUserPrompt = `[PREVIOUS TEST CONTEXT]: ${JSON.stringify(prevTest)}\n\nUSER REQUEST: ${promptText}`;
       }
   }
 
-  messages.push({ role: "user", content: finalUserPrompt });
+  // DIRECT IMAGE HANDLING: Send images directly to DeepSeek via OpenRouter
+  if (imagesBase64 && imagesBase64.length > 0) {
+      userContent = [
+          { type: "text", text: finalUserPrompt },
+          ...imagesBase64.map(img => ({
+              type: "image_url",
+              image_url: { url: img }
+          }))
+      ];
+  } else {
+      userContent = finalUserPrompt;
+  }
+
+  messages.push({ role: "user", content: userContent });
 
   try {
       const performGenerate = async () => {
@@ -143,7 +148,7 @@ export const generateResponse = async (
               headers: {
                   "Authorization": `Bearer ${apiKey}`,
                   "Content-Type": "application/json",
-                  "HTTP-Referer": window.location.origin, // Required by OpenRouter
+                  "HTTP-Referer": window.location.origin,
                   "X-Title": "Uchebnik AI"
               },
               body: JSON.stringify({
@@ -163,24 +168,16 @@ export const generateResponse = async (
       const data = await withRetry(performGenerate);
       let text = data.choices?.[0]?.message?.content || "Няма отговор.";
 
-      // CLEANUP LOGIC: Remove <think> blocks common in DeepSeek R1 models
-      
-      // Strategy 1: If we see a closing </think> tag, assume everything before it is garbage thinking.
+      // CLEANUP LOGIC: Remove <think> blocks
       if (text.includes('</think>')) {
           const parts = text.split('</think>');
           text = parts[parts.length - 1];
       }
-
-      // Strategy 2: Remove any remaining proper <think>...</think> blocks
-      text = text.replace(/<think>[\s\S]*?<\/think>/gi, "");
-
-      // Strategy 3: Trim whitespace
-      text = text.trim();
+      text = text.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
 
       // Post-processing for JSON modes
       if (mode === AppMode.PRESENTATION) {
          try {
-             // Extract JSON if wrapped in code block
              const jsonMatch = text.match(/```json\n([\s\S]*?)\n```/) || text.match(/```([\s\S]*?)```/);
              const jsonStr = jsonMatch ? jsonMatch[1] : text;
              const slides: Slide[] = JSON.parse(jsonStr);
@@ -194,7 +191,6 @@ export const generateResponse = async (
              };
          } catch (e) {
              console.error("Presentation JSON parse error", e);
-             // Fallback to text if parsing fails
          }
       }
 
@@ -216,7 +212,7 @@ export const generateResponse = async (
           }
       }
 
-      // Check for Charts/Geometry in normal response
+      // Check for Charts/Geometry
       let chartData: ChartData | undefined;
       let geometryData: GeometryData | undefined;
 

@@ -1,5 +1,6 @@
-import React from 'react';
-import { History, X, Check, Edit2, Trash2 } from 'lucide-react';
+
+import React, { useState } from 'react';
+import { History, X, Check, Edit2, Trash2, Search } from 'lucide-react';
 import { Session, SubjectConfig } from '../../types';
 import { SUBJECTS } from '../../constants';
 
@@ -35,19 +36,38 @@ export const HistoryDrawer = ({
   setActiveSubject
 }: HistoryDrawerProps) => {
     
+    const [searchQuery, setSearchQuery] = useState('');
+
     if (!historyDrawerOpen) return null;
+
+    const filteredSessions = sessions.filter(s => 
+        s.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        s.messages.some(m => m.text && m.text.toLowerCase().includes(searchQuery.toLowerCase()))
+    );
+
     return (
       <div className="fixed inset-0 z-[60] flex justify-end">
         <div className="absolute inset-0 bg-black/40 backdrop-blur-md animate-in fade-in" onClick={() => setHistoryDrawerOpen(false)} />
-        <div className="relative w-full max-w-sm bg-white/95 dark:bg-zinc-900/95 h-full shadow-2xl p-6 overflow-y-auto animate-in slide-in-from-right duration-500 border-l border-indigo-500/20 backdrop-blur-3xl">
-           <div className="flex justify-between items-center mb-8">
+        <div className="relative w-full max-w-sm bg-white/95 dark:bg-zinc-900/95 h-full shadow-2xl p-6 overflow-y-auto animate-in slide-in-from-right duration-500 border-l border-indigo-500/20 backdrop-blur-3xl flex flex-col">
+           <div className="flex justify-between items-center mb-6">
               <h2 className="text-2xl font-bold flex items-center gap-2"><History size={24} className="text-indigo-500"/> История</h2>
               <button onClick={() => setHistoryDrawerOpen(false)} className="p-2 hover:bg-gray-100 dark:hover:bg-white/10 rounded-full transition-colors"><X size={20}/></button>
            </div>
            
-           <div className="space-y-4">
-             {sessions.length === 0 && <p className="text-center text-gray-400 py-10">Няма запазени разговори.</p>}
-             {sessions.map(s => (
+           <div className="relative mb-6">
+               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+               <input 
+                  type="text" 
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Търси в историята..."
+                  className="w-full pl-10 pr-4 py-2.5 bg-gray-100 dark:bg-black/30 rounded-xl border-none outline-none focus:ring-2 focus:ring-indigo-500/50 text-sm"
+               />
+           </div>
+
+           <div className="space-y-4 flex-1 overflow-y-auto custom-scrollbar -mr-2 pr-2">
+             {filteredSessions.length === 0 && <p className="text-center text-gray-400 py-10">Няма намерени разговори.</p>}
+             {filteredSessions.map(s => (
                <div key={s.id} className={`group p-4 rounded-2xl border transition-all ${activeSessionId === s.id ? 'bg-indigo-50 dark:bg-indigo-500/10 border-indigo-200 dark:border-indigo-500/30' : 'bg-white dark:bg-white/5 border-indigo-500/10 hover:border-indigo-300 dark:hover:border-indigo-500/20'}`}>
                   {renameSessionId === s.id ? (
                     <div className="flex items-center gap-2">

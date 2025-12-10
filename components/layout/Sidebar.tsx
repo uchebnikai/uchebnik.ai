@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { MessageSquare, Trash2, Plus, School, GraduationCap, Briefcase, ChevronDown, User, Settings, CreditCard, HelpCircle, LogOut, ArrowRight, ChevronUp, FileText } from 'lucide-react';
+import { MessageSquare, Trash2, Plus, School, GraduationCap, Briefcase, ChevronDown, User, Settings, CreditCard, HelpCircle, LogOut, ArrowRight, ChevronUp, FileText, Flame } from 'lucide-react';
 import { DynamicIcon } from '../ui/DynamicIcon';
 import { SUBJECTS } from '../../constants';
 import { SubjectId, AppMode, Session, UserRole, UserSettings, UserPlan, SubjectConfig, HomeViewType } from '../../types';
@@ -31,6 +31,7 @@ interface SidebarProps {
   addToast: (msg: string, type: 'success' | 'error' | 'info') => void;
   setShowSubjectDashboard: (val: boolean) => void;
   userRole: UserRole | null;
+  streak: number;
 }
 
 export const Sidebar = ({
@@ -58,7 +59,8 @@ export const Sidebar = ({
   setShowAuthModal,
   addToast,
   setShowSubjectDashboard,
-  userRole
+  userRole,
+  streak
 }: SidebarProps) => {
     
     // Internal State for Folders
@@ -288,8 +290,15 @@ export const Sidebar = ({
                                     ? `${userMeta.firstName} ${userMeta.lastName}`
                                     : (userSettings.userName || 'Потребител')}
                             </div>
-                            <div className={`text-[10px] font-bold uppercase tracking-wider ${userPlan === 'pro' ? 'text-amber-500' : userPlan === 'plus' ? 'text-indigo-500' : 'text-gray-500'}`}>
-                                {userPlan === 'pro' ? 'Pro Plan' : userPlan === 'plus' ? 'Plus Plan' : 'Free Plan'}
+                            <div className="flex items-center gap-2">
+                                <div className={`text-[10px] font-bold uppercase tracking-wider ${userPlan === 'pro' ? 'text-amber-500' : userPlan === 'plus' ? 'text-indigo-500' : 'text-gray-500'}`}>
+                                    {userPlan === 'pro' ? 'Pro Plan' : userPlan === 'plus' ? 'Plus Plan' : 'Free Plan'}
+                                </div>
+                                {streak > 0 && (
+                                    <div className="flex items-center gap-1 text-[10px] font-bold text-orange-500 bg-orange-100 dark:bg-orange-500/20 px-1.5 py-0.5 rounded-full">
+                                        <Flame size={10} fill="currentColor" /> {streak}
+                                    </div>
+                                )}
                             </div>
                          </div>
                          <ChevronUp size={16} className={`text-gray-400 transition-transform duration-300 ${profileMenuOpen ? 'rotate-180' : ''}`} />
