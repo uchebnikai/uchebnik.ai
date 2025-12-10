@@ -77,13 +77,13 @@ export const generateResponse = async (
   preferredModel: string = 'auto'
 ): Promise<Message> => {
   
-  const apiKey = process.env.OPENROUTER_API_KEY || "";
+  const apiKey = process.env.OPENROUTER_API_KEY || process.env.API_KEY || "";
 
   if (!apiKey) {
       return {
           id: Date.now().toString(),
           role: 'model',
-          text: "Грешка: Не е намерен OpenRouter API ключ. Моля, добавете го в .env файл.",
+          text: "Грешка: Не е намерен OpenRouter API ключ. Моля, добавете го в .env файл като OPENROUTER_API_KEY или API_KEY.",
           isError: true,
           timestamp: Date.now()
       };
