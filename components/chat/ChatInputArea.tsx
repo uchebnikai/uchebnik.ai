@@ -1,9 +1,9 @@
-import React from 'react';
+
+import React, { useRef, useEffect } from 'react';
 import { Reply, X, ImageIcon, Mic, MicOff, ArrowUpRight } from 'lucide-react';
 import { Message, UserSettings } from '../../types';
 import { INPUT_AREA_BASE, INPUT_AREA_CUSTOM_BG, INPUT_AREA_DEFAULT_BG } from '../../styles/chat';
 import { SLIDE_UP, FADE_IN, ZOOM_IN } from '../../animations/transitions';
-import { getDynamicHeightStyle } from '../../styles/utils';
 
 interface ChatInputAreaProps {
   replyingTo: Message | null;
@@ -36,6 +36,15 @@ export const ChatInputArea = ({
   selectedImages,
   handleRemoveImage
 }: ChatInputAreaProps) => {
+  
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 128) + 'px';
+    }
+  }, [inputValue]);
 
   return (
       <div className="absolute bottom-0 left-0 right-0 px-2 lg:px-4 pointer-events-none z-40 flex justify-center pb-safe">
@@ -75,18 +84,14 @@ export const ChatInputArea = ({
                {/* Textarea */}
                <div className="flex-1 py-2">
                    <textarea 
+                      ref={textareaRef}
                       value={inputValue}
-                      onChange={e => {
-                          setInputValue(e.target.value);
-                          e.target.style.height = 'auto';
-                          e.target.style.height = Math.min(e.target.scrollHeight, 128) + 'px';
-                      }}
+                      onChange={e => setInputValue(e.target.value)}
                       onKeyDown={e => {if(e.key === 'Enter' && !e.shiftKey && !loadingSubject){e.preventDefault(); handleSend();}}} 
                       placeholder={replyingTo ? "Напиши отговор..." : "Напиши съобщение..."}
                       disabled={loadingSubject}
                       className="w-full bg-transparent border-none focus:ring-0 p-0 text-base text-zinc-900 dark:text-zinc-100 placeholder-gray-400 resize-none max-h-32 min-h-[24px] leading-6"
                       rows={1}
-                      style={getDynamicHeightStyle(24)}
                    />
                </div>
 
