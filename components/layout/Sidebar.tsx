@@ -1,5 +1,4 @@
 
-
 import React, { useState } from 'react';
 import { Sparkles, MessageSquare, Trash2, Plus, School, GraduationCap, Briefcase, ChevronDown, User, Settings, CreditCard, HelpCircle, LogOut, ArrowRight, ChevronUp, FileText } from 'lucide-react';
 import { DynamicIcon } from '../ui/DynamicIcon';
@@ -74,8 +73,8 @@ export const Sidebar = ({
       <>
         {isMobile && sidebarOpen && <div className="fixed inset-0 bg-black/60 z-40 backdrop-blur-sm animate-in fade-in" onClick={() => setSidebarOpen(false)} />}
         <aside className={`fixed lg:relative inset-y-0 left-0 z-50 w-[280px] lg:w-[320px] 
-          ${userSettings.customBackground ? 'bg-white/30 dark:bg-black/40 backdrop-blur-2xl border-white/10' : 'bg-white/90 dark:bg-black/80 backdrop-blur-2xl border-white/5'}
-          border-r transition-transform duration-500 cubic-bezier(0.19, 1, 0.22, 1) flex flex-col ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'} shadow-2xl lg:shadow-none`}>
+          bg-white/60 dark:bg-black/60 backdrop-blur-2xl border-r border-white/20 dark:border-white/10
+          transition-transform duration-500 cubic-bezier(0.19, 1, 0.22, 1) flex flex-col ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'} shadow-2xl lg:shadow-none`}>
           <div className="p-6 pb-2">
             <button onClick={() => { setActiveSubject(null); setHomeView('landing'); setUserRole(null); if(isMobile) setSidebarOpen(false); }} className="flex items-center gap-3 w-full group mb-8">
                <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-indigo-500 via-accent-500 to-accent-600 flex items-center justify-center text-white shadow-lg shadow-indigo-500/30 group-hover:scale-105 transition-transform duration-300">
@@ -231,7 +230,7 @@ export const Sidebar = ({
 
           </div>
 
-          <div className={`p-4 border-t ${userSettings.customBackground ? 'border-white/10 bg-black/10' : 'border-gray-100 dark:border-white/5 bg-white/30 dark:bg-black/20'} space-y-3 backdrop-blur-md flex flex-col justify-center`}>
+          <div className={`p-4 border-t border-white/10 bg-white/20 dark:bg-black/20 space-y-3 backdrop-blur-md flex flex-col justify-center`}>
             {/* ... Rest of sidebar footer (profile) */}
              {userPlan !== 'pro' && (
                <button onClick={() => setShowUnlockModal(true)} className="w-full mb-1 group relative overflow-hidden rounded-2xl p-4 text-left shadow-xl transition-all hover:scale-[1.02] active:scale-[0.98]">
