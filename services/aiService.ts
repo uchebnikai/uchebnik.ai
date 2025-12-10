@@ -103,11 +103,10 @@ export const generateResponse = async (
   systemInstruction = `CURRENT SUBJECT CONTEXT: ${subjectName}. All responses must relate to ${subjectName}.\n\n${systemInstruction}`;
 
   // Prepare Messages
-  const messages: any[] = [
-      { role: "system", content: systemInstruction }
-  ];
+  // NOTE: DeepSeek R1 often fails if 'system' role is used with images. We merge it into the User message instead.
+  const messages: any[] = [];
 
-  // Add history (Text only usually to save tokens/prevent errors)
+  // Add history (Text only to prevent 400 errors from older contexts)
   history.filter(msg => !msg.isError && msg.text && msg.type !== 'image_generated' && msg.type !== 'slides').forEach(msg => {
       messages.push({
           role: msg.role === 'model' ? 'assistant' : 'user',
@@ -115,10 +114,9 @@ export const generateResponse = async (
       });
   });
 
-  // Current User Message Construction
+  // Construct Final User Prompt with System Instruction Merged
   let finalUserPrompt = promptText;
-  let userContent: any;
-
+  
   if (mode === AppMode.TEACHER_TEST) {
       const prevTest = history.find(m => m.type === 'test_generated')?.testData;
       if (prevTest) {
@@ -126,15 +124,24 @@ export const generateResponse = async (
       }
   }
 
-  const hasImages = imagesBase64 && imagesBase64.length > 0;
+  // Prepend System Instruction to the prompt
+  // This is the most compatible way to send system instructions to R1 models on OpenRouter
+  finalUserPrompt = `[SYSTEM INSTRUCTION]: ${systemInstruction}\n\n[USER REQUEST]: ${finalUserPrompt}`;
 
-  // DIRECT IMAGE HANDLING: Send images directly to DeepSeek via OpenRouter multimodal format
+  const hasImages = imagesBase64 && imagesBase64.length > 0;
+  let userContent: any;
+
+  // DIRECT IMAGE HANDLING
   if (hasImages) {
       userContent = [
           { type: "text", text: finalUserPrompt },
           ...imagesBase64.map(img => ({
               type: "image_url",
-              image_url: { url: img } // Ensure img is data:image/jpeg;base64,...
+              image_url: { 
+                  url: img,
+                  // 'auto' detail is safer for free providers than 'high'
+                  detail: "auto" 
+              }
           }))
       ];
   } else {
@@ -147,10 +154,9 @@ export const generateResponse = async (
   const requestBody: any = {
       model: modelName,
       messages: messages,
+      // REMOVED ALL SAMPLING PARAMS (Temperature, Top_P, etc)
+      // DeepSeek R1 manages its own state. Sending temperature often triggers 400 Bad Request.
   };
-
-  // Some vision models prefer no temperature or specific temp. R1 likes 0.6.
-  requestBody.temperature = 0.6;
 
   try {
       const performGenerate = async () => {
@@ -159,14 +165,14 @@ export const generateResponse = async (
               headers: {
                   "Authorization": `Bearer ${apiKey}`,
                   "Content-Type": "application/json",
-                  "HTTP-Referer": window.location.origin,
-                  "X-Title": "Uchebnik AI"
+                  // Removed HTTP-Referer and X-Title as they sometimes trigger WAFs on free tiers
               },
               body: JSON.stringify(requestBody)
           });
 
           if (!res.ok) {
               const errText = await res.text();
+              console.error("OpenRouter API Error Body:", errText); 
               throw new Error(`API Error: ${res.status} ${errText}`);
           }
           return res.json();
@@ -252,12 +258,13 @@ export const generateResponse = async (
   } catch (error: any) {
       console.error("DeepSeek API Error:", error);
       
-      // Better error message for multimodal issues
-      if (hasImages && error.toString().includes("400")) {
+      if (hasImages) {
+          // If images fail, it's almost certainly the model rejecting the format.
+          // We return a specific error but keep the "Connection Error" phrasing for the toast if needed.
           return {
               id: Date.now().toString(),
               role: 'model',
-              text: "Избраният AI модел има затруднения с обработката на това изображение. Моля, опитайте да го преоразмерите или използвайте само текст.",
+              text: "Моделът не успя да обработи изображението. Това може да се дължи на натоварване на безплатния сървър или формат на файла. Моля, опитайте само с текст или по-малко изображение.",
               isError: true,
               timestamp: Date.now()
           };
