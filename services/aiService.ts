@@ -22,6 +22,38 @@ async function withRetry<T>(fn: () => Promise<T>, retries = 3, delay = 2000): Pr
   }
 }
 
+// Helper: Vision Analysis using Gemini
+// This function strictly sends images to Gemini to get a text description
+async function analyzeImages(apiKey: string, images: string[]): Promise<string> {
+    const res = await fetch(API_URL, {
+        method: "POST",
+        headers: {
+            "Authorization": `Bearer ${apiKey}`,
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            model: "google/gemini-2.0-flash-exp:free", 
+            messages: [{
+                role: "user",
+                content: [
+                    { type: "text", text: "Analyze this image in extreme detail. Transcribe any text exactly. If there are math problems, describe the numbers, variables, and geometry precisely. If it is a diagram, describe all connections. Return ONLY the description, no conversational filler." },
+                    ...images.map(img => ({
+                        type: "image_url",
+                        image_url: { url: img, detail: "auto" }
+                    }))
+                ]
+            }]
+        })
+    });
+
+    if (!res.ok) {
+        const err = await res.text();
+        throw new Error(`Vision API Failed: ${err}`);
+    }
+    const data = await res.json();
+    return data.choices?.[0]?.message?.content || "";
+}
+
 export const generateResponse = async (
   subjectId: SubjectId,
   mode: AppMode,
@@ -47,13 +79,32 @@ export const generateResponse = async (
   const subjectConfig = SUBJECTS.find(s => s.id === subjectId);
   const subjectName = subjectConfig ? subjectConfig.name : "Unknown Subject";
 
-  // Determine Model
-  let modelName = 'tngtech/deepseek-r1t2-chimera:free'; 
-  if (preferredModel !== 'auto' && preferredModel) {
-    modelName = preferredModel;
+  const hasImages = imagesBase64 && imagesBase64.length > 0;
+  let imageAnalysis = "";
+
+  // STEP 1: If images exist, analyze them with Gemini first (Vision-to-Text)
+  if (hasImages) {
+      try {
+          imageAnalysis = await withRetry(() => analyzeImages(apiKey, imagesBase64));
+      } catch (error) {
+          console.error("Image analysis failed:", error);
+           return {
+              id: Date.now().toString(),
+              role: 'model',
+              text: "Не успях да разчета изображението. Моля, опитайте отново с по-ясна снимка.",
+              isError: true,
+              timestamp: Date.now()
+          };
+      }
   }
 
-  // IMAGE GENERATION CHECK
+  // STEP 2: Use DeepSeek R1 for the actual reasoning and response (Text Only)
+  let modelName = 'tngtech/deepseek-r1t2-chimera:free'; 
+  if (preferredModel !== 'auto' && preferredModel) {
+      modelName = preferredModel;
+  }
+
+  // IMAGE GENERATION CHECK (Art Mode)
   const imageKeywords = /(draw|paint|generate image|create a picture|make an image|нарисувай|рисувай|генерирай изображение|генерирай снимка|направи снимка|изображение на)/i;
   const isImageRequest = (subjectId === SubjectId.ART && mode === AppMode.DRAW) || imageKeywords.test(promptText);
 
@@ -103,10 +154,9 @@ export const generateResponse = async (
   systemInstruction = `CURRENT SUBJECT CONTEXT: ${subjectName}. All responses must relate to ${subjectName}.\n\n${systemInstruction}`;
 
   // Prepare Messages
-  // NOTE: DeepSeek R1 often fails if 'system' role is used with images. We merge it into the User message instead.
   const messages: any[] = [];
 
-  // Add history (Text only to prevent 400 errors from older contexts)
+  // Add history (Text only)
   history.filter(msg => !msg.isError && msg.text && msg.type !== 'image_generated' && msg.type !== 'slides').forEach(msg => {
       messages.push({
           role: msg.role === 'model' ? 'assistant' : 'user',
@@ -114,48 +164,30 @@ export const generateResponse = async (
       });
   });
 
-  // Construct Final User Prompt with System Instruction Merged
+  // Construct Final User Prompt
   let finalUserPrompt = promptText;
   
+  // Inject Image Analysis result into the prompt for DeepSeek
+  if (imageAnalysis) {
+      finalUserPrompt = `[IMAGE CONTEXT]: The user has attached an image. Here is the detailed description of it:\n${imageAnalysis}\n\n[USER REQUEST]: ${promptText}`;
+  }
+
   if (mode === AppMode.TEACHER_TEST) {
       const prevTest = history.find(m => m.type === 'test_generated')?.testData;
       if (prevTest) {
-          finalUserPrompt = `[PREVIOUS TEST CONTEXT]: ${JSON.stringify(prevTest)}\n\nUSER REQUEST: ${promptText}`;
+          finalUserPrompt = `[PREVIOUS TEST CONTEXT]: ${JSON.stringify(prevTest)}\n\nUSER REQUEST: ${finalUserPrompt}`;
       }
   }
 
-  // Prepend System Instruction to the prompt
-  // This is the most compatible way to send system instructions to R1 models on OpenRouter
+  // System Prompt Strategy for DeepSeek
   finalUserPrompt = `[SYSTEM INSTRUCTION]: ${systemInstruction}\n\n[USER REQUEST]: ${finalUserPrompt}`;
 
-  const hasImages = imagesBase64 && imagesBase64.length > 0;
-  let userContent: any;
+  messages.push({ role: "user", content: finalUserPrompt });
 
-  // DIRECT IMAGE HANDLING
-  if (hasImages) {
-      userContent = [
-          { type: "text", text: finalUserPrompt },
-          ...imagesBase64.map(img => ({
-              type: "image_url",
-              image_url: { 
-                  url: img,
-                  // 'auto' detail is safer for free providers than 'high'
-                  detail: "auto" 
-              }
-          }))
-      ];
-  } else {
-      userContent = finalUserPrompt;
-  }
-
-  messages.push({ role: "user", content: userContent });
-
-  // Adjust params for vision requests
   const requestBody: any = {
       model: modelName,
       messages: messages,
-      // REMOVED ALL SAMPLING PARAMS (Temperature, Top_P, etc)
-      // DeepSeek R1 manages its own state. Sending temperature often triggers 400 Bad Request.
+      // No sampling params for reasoning models
   };
 
   try {
@@ -165,7 +197,6 @@ export const generateResponse = async (
               headers: {
                   "Authorization": `Bearer ${apiKey}`,
                   "Content-Type": "application/json",
-                  // Removed HTTP-Referer and X-Title as they sometimes trigger WAFs on free tiers
               },
               body: JSON.stringify(requestBody)
           });
@@ -258,18 +289,6 @@ export const generateResponse = async (
   } catch (error: any) {
       console.error("DeepSeek API Error:", error);
       
-      if (hasImages) {
-          // If images fail, it's almost certainly the model rejecting the format.
-          // We return a specific error but keep the "Connection Error" phrasing for the toast if needed.
-          return {
-              id: Date.now().toString(),
-              role: 'model',
-              text: "Моделът не успя да обработи изображението. Това може да се дължи на натоварване на безплатния сървър или формат на файла. Моля, опитайте само с текст или по-малко изображение.",
-              isError: true,
-              timestamp: Date.now()
-          };
-      }
-
       return {
           id: Date.now().toString(),
           role: 'model',
