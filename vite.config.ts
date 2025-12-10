@@ -7,8 +7,7 @@ export default defineConfig(({ mode }) => {
   // Load env file based on `mode` in the current working directory.
   const env = loadEnv(mode, (process as any).cwd(), '');
   
-  // Check for OPENROUTER_API_KEY, then API_KEY, then process.env.API_KEY
-  const apiKey = env.OPENROUTER_API_KEY || env.API_KEY || process.env.API_KEY || "";
+  const apiKey = env.OPENROUTER_API_KEY || "";
   
   // SECURITY: Load secrets from environment or fallback to default (for demo purposes only)
   // In production, strictly use .env files
@@ -23,7 +22,6 @@ export default defineConfig(({ mode }) => {
     },
     define: {
       'process.env.OPENROUTER_API_KEY': JSON.stringify(apiKey),
-      'process.env.API_KEY': JSON.stringify(apiKey),
       'process.env.ADMIN_HASH': JSON.stringify(adminHash),
       'process.env.SECRET_SALT': JSON.stringify(secretSalt),
     },
