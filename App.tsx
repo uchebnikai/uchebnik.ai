@@ -961,6 +961,15 @@ export const App = () => {
            style={getBackgroundImageStyle(userSettings.customBackground)}
          />
       )}
+
+      {/* Global Aurora Background (Visible when no custom background) */}
+      {!userSettings.customBackground && (
+        <>
+            <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-indigo-200/20 via-background to-background dark:from-indigo-900/20 dark:via-background dark:to-background pointer-events-none z-0"></div>
+            <div className="fixed top-[-10%] right-[-5%] w-[500px] h-[500px] bg-indigo-500/10 dark:bg-indigo-500/20 rounded-full blur-[120px] pointer-events-none z-0 animate-pulse-slow" />
+            <div className="fixed bottom-[-10%] left-[-5%] w-[400px] h-[400px] bg-purple-500/10 dark:bg-purple-500/20 rounded-full blur-[100px] pointer-events-none z-0 animate-pulse-slow delay-1000" />
+        </>
+      )}
       
       {showAuthModal && (
         <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in" onClick={(e) => { if(e.target === e.currentTarget) setShowAuthModal(false) }}>
@@ -999,7 +1008,7 @@ export const App = () => {
         userRole={userRole}
       />
       
-      <main className="flex-1 flex flex-col relative w-full h-full overflow-hidden transition-all duration-300">
+      <main className="flex-1 flex flex-col relative w-full h-full overflow-hidden transition-all duration-300 z-10">
         <AdminPanel 
             showAdminAuth={showAdminAuth}
             setShowAdminAuth={setShowAdminAuth}
@@ -1074,7 +1083,7 @@ export const App = () => {
                 handleStartMode={handleStartMode}
             />
         ) : (
-            <div className={`flex-1 flex flex-col relative h-full ${userSettings.customBackground ? 'bg-transparent' : 'bg-[#f9fafb] dark:bg-[#09090b]'}`}>
+            <div className={`flex-1 flex flex-col relative h-full bg-transparent`}>
                 <ChatHeader 
                     setSidebarOpen={setSidebarOpen}
                     activeSubject={activeSubject}

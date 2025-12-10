@@ -31,7 +31,7 @@ export const SubjectDashboard = ({
     const isStudent = userRole === 'student';
     
     return (
-      <div className={`flex-1 overflow-y-auto custom-scrollbar p-4 md:p-8 flex flex-col items-center justify-center relative overflow-x-hidden ${userSettings.customBackground ? 'bg-transparent' : 'bg-white dark:bg-zinc-950'}`}>
+      <div className={`flex-1 overflow-y-auto custom-scrollbar p-4 md:p-8 flex flex-col items-center justify-center relative overflow-x-hidden bg-transparent`}>
          <button onClick={() => { setActiveSubject(null); setHomeView('school_select'); }} className="absolute top-6 left-6 p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-white/10 rounded-full transition-colors z-20"><ArrowLeft size={24}/></button>
 
          <div className="max-w-3xl w-full text-center space-y-6 animate-in fade-in zoom-in-95 duration-500">

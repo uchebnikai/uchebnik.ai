@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { ArrowLeft, Mail, MapPin, Globe } from 'lucide-react';
 import { SLIDE_UP, FADE_IN } from '../../animations/transitions';
@@ -11,20 +12,9 @@ interface PageProps {
 
 // Reusable Layout for all static pages to ensure design consistency
 const PageLayout = ({ title, children, onBack, userSettings }: { title: string, children: React.ReactNode, onBack: () => void, userSettings: UserSettings }) => {
-  const hasCustomBg = !!userSettings?.customBackground;
-  
   return (
-    <div className={`flex-1 overflow-y-auto custom-scrollbar p-4 md:p-8 flex flex-col items-center relative overflow-x-hidden w-full ${FADE_IN} ${hasCustomBg ? 'bg-transparent' : 'bg-white dark:bg-zinc-950'}`}>
+    <div className={`flex-1 overflow-y-auto custom-scrollbar p-4 md:p-8 flex flex-col items-center relative overflow-x-hidden w-full ${FADE_IN} bg-transparent`}>
       
-      {/* Dynamic Background Effects (Aurora/Blur) */}
-      {!hasCustomBg && (
-        <>
-            <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-indigo-200/20 via-background to-background dark:from-indigo-900/20 dark:via-background dark:to-background pointer-events-none z-0"></div>
-            <div className="fixed top-[-10%] right-[-5%] w-[500px] h-[500px] bg-indigo-500/10 dark:bg-indigo-500/20 rounded-full blur-[120px] pointer-events-none z-0 animate-pulse-slow" />
-            <div className="fixed bottom-[-10%] left-[-5%] w-[400px] h-[400px] bg-purple-500/10 dark:bg-purple-500/20 rounded-full blur-[100px] pointer-events-none z-0 animate-pulse-slow delay-1000" />
-        </>
-      )}
-
       <div className={`max-w-4xl w-full mx-auto min-h-[80vh] flex flex-col items-start relative z-10 ${SLIDE_UP}`}>
         <button 
           onClick={onBack} 

@@ -1,5 +1,4 @@
 
-
 import React from 'react';
 import { Shield, Sparkles, MessageSquare, ArrowRight, School, GraduationCap, Briefcase, ArrowLeft } from 'lucide-react';
 import { SubjectConfig, UserRole, UserSettings, HomeViewType, SubjectId } from '../../types';
@@ -29,8 +28,7 @@ export const WelcomeScreen = ({
 }: WelcomeScreenProps) => {
 
     return (
-    <div className={`flex-1 overflow-y-auto custom-scrollbar p-4 md:p-8 flex flex-col items-center relative overflow-x-hidden ${userSettings.customBackground ? 'bg-transparent' : 'bg-white dark:bg-zinc-950'}`}>
-      {!userSettings.customBackground && <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-indigo-200/20 via-background to-background dark:from-indigo-900/20 dark:via-background dark:to-background pointer-events-none"></div>}
+    <div className={`flex-1 overflow-y-auto custom-scrollbar p-4 md:p-8 flex flex-col items-center relative overflow-x-hidden bg-transparent`}>
       
       {homeView === 'landing' && (
         <div className={`max-w-5xl w-full flex flex-col items-center justify-center min-h-[80vh] relative z-10 ${ZOOM_IN} duration-700`}>
