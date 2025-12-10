@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { SubjectConfig, SubjectId, AppMode, Message, Slide, UserSettings, Session, UserPlan, UserRole, HomeViewType } from './types';
 import { SUBJECTS } from './constants';
@@ -12,7 +13,7 @@ import { Session as SupabaseSession } from '@supabase/supabase-js';
 
 // Utils
 import { resizeImage } from './utils/image';
-import { generateChecksum, verifyAdminPassword, isValidKey } from './utils/security';
+import { generateChecksum, verifyAdminPassword, redeemKey, registerKeyInDb } from './utils/security';
 import { saveSessionsToStorage, getSessionsFromStorage, saveSettingsToStorage, getSettingsFromStorage } from './utils/storage';
 import { useTheme } from './hooks/useTheme';
 import { getBackgroundImageStyle } from './styles/utils';
@@ -91,6 +92,7 @@ export const App = () => {
   const [showUnlockModal, setShowUnlockModal] = useState(false);
   const [unlockKeyInput, setUnlockKeyInput] = useState('');
   const [targetPlan, setTargetPlan] = useState<UserPlan | null>(null);
+  const [unlockLoading, setUnlockLoading] = useState(false);
 
   // Voice State
   const [isVoiceCallActive, setIsVoiceCallActive] = useState(false);
@@ -966,9 +968,14 @@ export const App = () => {
   const handleRemoveImage = (index: number) => { setSelectedImages(prev => prev.filter((_, i) => i !== index)); };
   
   const handleUnlockSubmit = async () => {
+    setUnlockLoading(true);
     const key = unlockKeyInput.trim();
-    if (isValidKey(key)) {
-       const newPlan = targetPlan || 'pro';
+    
+    // Use async validation which checks DB
+    const result = await redeemKey(key, session?.user?.id);
+    
+    if (result.valid) {
+       const newPlan = targetPlan || result.plan || 'pro';
        setUserPlan(newPlan);
        if (newPlan !== 'free') {
             setUserSettings(prev => ({ ...prev, preferredModel: 'tngtech/deepseek-r1t2-chimera:free' }));
@@ -984,13 +991,14 @@ export const App = () => {
            });
        }
     } else {
-       addToast("Невалиден ключ.", 'error');
+       addToast(result.error || "Невалиден ключ.", 'error');
     }
+    setUnlockLoading(false);
   };
 
-  const handleAdminLogin = () => {
-    // Security Fix: Use verify function instead of plain string comparison
-    if (verifyAdminPassword(adminPasswordInput)) {
+  const handleAdminLogin = async () => {
+    const isValid = await verifyAdminPassword(adminPasswordInput);
+    if (isValid) {
       setShowAdminAuth(false);
       setShowAdminPanel(true);
       setAdminPasswordInput('');
@@ -1000,10 +1008,14 @@ export const App = () => {
     }
   };
 
-  const generateKey = () => {
+  const generateKey = async () => {
     const randomCore = Math.random().toString(36).substring(2, 8).toUpperCase(); // 6 chars
     const checksum = generateChecksum(randomCore);
     const newKeyCode = `UCH-${randomCore}-${checksum}`;
+    
+    // Register in DB for tracking
+    await registerKeyInDb(newKeyCode, 'pro');
+
     const newKeyObj: GeneratedKey = { code: newKeyCode, isUsed: false };
     const updatedKeys = [newKeyObj, ...generatedKeys];
     setGeneratedKeys(updatedKeys);

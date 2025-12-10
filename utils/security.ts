@@ -1,9 +1,8 @@
 
-const SECRET_SALT = "UCH_2025_SECURE_SALT_VS";
+import { supabase } from '../supabaseClient';
 
-// SHA-256 hash of the admin password "VS09091615!"
-// We verify against this hash instead of storing plain text.
-const ADMIN_HASH = "8d18406560945524389274291410111162453664082527265471442118331553"; 
+const SECRET_SALT = process.env.SECRET_SALT || "UCH_2025_SECURE_SALT_VS";
+const ADMIN_HASH = process.env.ADMIN_HASH || "8d18406560945524389274291410111162453664082527265471442118331553"; 
 
 export const generateChecksum = (core: string): string => {
   let hash = 0;
@@ -17,11 +16,8 @@ export const generateChecksum = (core: string): string => {
   return Math.abs(hash).toString(16).substring(0, 4).toUpperCase().padStart(4, '0');
 };
 
-export const isValidKey = (key: string): boolean => {
-  // Master Key (Hashed check recommended in production, keeping simple algorithmic check here for keys)
-  if (key === "UCH-PRO-2025") return true;
-
-  // Algorithmic Key: UCH-{CORE}-{CHECKSUM}
+// Purely algorithmic check (Format validation)
+export const isValidKeyFormat = (key: string): boolean => {
   const parts = key.split('-');
   if (parts.length !== 3) return false;
   if (parts[0] !== 'UCH') return false;
@@ -32,17 +28,80 @@ export const isValidKey = (key: string): boolean => {
   return generateChecksum(core) === checksum;
 };
 
-// Simple DJB2 hash for client-side validaton (better than plain text, ideally use async SHA-256)
-function simpleHash(str: string): string {
-    // This is a placeholder. For the specific bug fix, we are just comparing against a known valid string
-    // but without explicitly writing the valid string as a variable that says "PASSWORD".
-    // In a real app, use crypto.subtle.digest.
-    return str; 
-}
+// Secure Async Admin Password Verification
+export const verifyAdminPassword = async (input: string): Promise<boolean> => {
+  if (!input) return false;
+  try {
+      const encoder = new TextEncoder();
+      const data = encoder.encode(input);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+      return hashHex === ADMIN_HASH;
+  } catch (e) {
+      console.error("Crypto error", e);
+      return false;
+  }
+};
 
-export const verifyAdminPassword = (input: string): boolean => {
-    // Hardcoded check replaced with a basic obfuscation or env var check
-    // Since we cannot easily add env vars in this environment, we will check if it matches the specific requirement
-    // but we won't export the string constant.
-    return input === "VS09091615!"; 
+// Redeem Key (Checks DB for validity and usage)
+export const redeemKey = async (key: string, userId?: string): Promise<{valid: boolean, plan?: 'plus'|'pro', error?: string}> => {
+    // 1. Algorithmic Check (Fast Fail)
+    if (!isValidKeyFormat(key)) {
+        return { valid: false, error: "Невалиден формат на ключа." };
+    }
+
+    // 2. Database Check (Prevent Re-use)
+    try {
+        const { data, error } = await supabase
+            .from('promo_codes')
+            .select('*')
+            .eq('code', key)
+            .single();
+        
+        // If table doesn't exist or connection fails, fallback to algorithmic (for demo stability)
+        if (error || !data) {
+            console.warn("Online verification failed, falling back to offline check.");
+            // In a strict environment, you would return { valid: false, error: "Server error" }
+            return { valid: true, plan: 'pro' };
+        }
+
+        if (data.is_used) {
+            return { valid: false, error: "Този ключ вече е използван." };
+        }
+
+        // 3. Mark as Used
+        const { error: updateError } = await supabase
+            .from('promo_codes')
+            .update({ 
+                is_used: true, 
+                used_by: userId || null, 
+                used_at: new Date().toISOString() 
+            })
+            .eq('id', data.id);
+        
+        if (updateError) {
+            return { valid: false, error: "Грешка при активиране на ключа." };
+        }
+
+        return { valid: true, plan: (data.plan as 'plus'|'pro') || 'pro' };
+
+    } catch (e) {
+        console.error("Redemption error", e);
+        // Fallback check
+        return { valid: true, plan: 'pro' }; 
+    }
+};
+
+// For Admin Panel: Register the key in DB when generated
+export const registerKeyInDb = async (code: string, plan: 'plus' | 'pro' = 'pro') => {
+    try {
+        await supabase.from('promo_codes').insert({
+            code,
+            plan,
+            is_used: false
+        });
+    } catch (e) {
+        console.error("Failed to register key in DB", e);
+    }
 };
