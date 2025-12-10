@@ -47,13 +47,14 @@ export const generateResponse = async (
   const subjectConfig = SUBJECTS.find(s => s.id === subjectId);
   const subjectName = subjectConfig ? subjectConfig.name : "Unknown Subject";
 
-  // Determine Model
+  // Determine Model - Default to Pro for everyone
   let modelName = 'tngtech/deepseek-r1t2-chimera:free'; 
   if (preferredModel !== 'auto' && preferredModel) {
     modelName = preferredModel;
   }
 
   // IMAGE GENERATION CHECK
+  // DeepSeek R1 is a text model. It cannot generate raster images.
   const imageKeywords = /(draw|paint|generate image|create a picture|make an image|нарисувай|рисувай|генерирай изображение|генерирай снимка|направи снимка|изображение на)/i;
   const isImageRequest = (subjectId === SubjectId.ART && mode === AppMode.DRAW) || imageKeywords.test(promptText);
 
@@ -62,7 +63,7 @@ export const generateResponse = async (
   let forceJson = false;
 
   if (isImageRequest) {
-      // Special instruction for Art/Draw mode
+      // Special instruction for Art/Draw mode since model is text-only
       systemInstruction = `You are an AI that helps with art concepts. 
       IMPORTANT: You CANNOT generate pixel/raster images (PNG/JPG). 
       If the user asks for a drawing, you MUST generate an SVG code block using the json:geometry format.
@@ -97,7 +98,7 @@ export const generateResponse = async (
       systemInstruction += "\n\nIMPORTANT: YOU MUST RETURN VALID JSON ONLY. NO MARKDOWN BLOCK WRAPPING THE JSON (IF POSSIBLE), JUST THE JSON STRING.";
   }
 
-  // Enforce Thinking Tags
+  // CRITICAL: Enforce Thinking Tags to allow filtering
   systemInstruction += "\n\nIMPORTANT: If you use internal reasoning or chain-of-thought, you MUST enclose it strictly within <think> and </think> tags. Do NOT output raw thinking text without tags.";
 
   systemInstruction = `CURRENT SUBJECT CONTEXT: ${subjectName}. All responses must relate to ${subjectName}.\n\n${systemInstruction}`;
@@ -107,26 +108,28 @@ export const generateResponse = async (
       { role: "system", content: systemInstruction }
   ];
 
-  // Add history (Text only usually to save tokens/prevent errors, but can include images if supported)
+  // Add history (Text only - DeepSeek R1 typically doesn't support Vision in free tier reliably)
+  // We strip images from history to prevent 400 errors with text-only models.
   history.filter(msg => !msg.isError && msg.text && msg.type !== 'image_generated' && msg.type !== 'slides').forEach(msg => {
       messages.push({
           role: msg.role === 'model' ? 'assistant' : 'user',
-          content: msg.text 
+          content: msg.text
       });
   });
 
-  // Current User Message Construction
+  // Current User Message
   let finalUserPrompt = promptText;
   let userContent: any;
 
   if (mode === AppMode.TEACHER_TEST) {
+      // If editing a test, inject context logic
       const prevTest = history.find(m => m.type === 'test_generated')?.testData;
       if (prevTest) {
           finalUserPrompt = `[PREVIOUS TEST CONTEXT]: ${JSON.stringify(prevTest)}\n\nUSER REQUEST: ${promptText}`;
       }
   }
 
-  // DIRECT IMAGE HANDLING: Send images directly to DeepSeek via OpenRouter
+  // DIRECT IMAGE HANDLING: Send images directly to DeepSeek via OpenRouter multimodal format
   if (imagesBase64 && imagesBase64.length > 0) {
       userContent = [
           { type: "text", text: finalUserPrompt },
@@ -148,7 +151,7 @@ export const generateResponse = async (
               headers: {
                   "Authorization": `Bearer ${apiKey}`,
                   "Content-Type": "application/json",
-                  "HTTP-Referer": window.location.origin,
+                  "HTTP-Referer": window.location.origin, // Required by OpenRouter
                   "X-Title": "Uchebnik AI"
               },
               body: JSON.stringify({
@@ -168,16 +171,24 @@ export const generateResponse = async (
       const data = await withRetry(performGenerate);
       let text = data.choices?.[0]?.message?.content || "Няма отговор.";
 
-      // CLEANUP LOGIC: Remove <think> blocks
+      // CLEANUP LOGIC: Remove <think> blocks common in DeepSeek R1 models
+      
+      // Strategy 1: If we see a closing </think> tag, assume everything before it is garbage thinking.
       if (text.includes('</think>')) {
           const parts = text.split('</think>');
           text = parts[parts.length - 1];
       }
-      text = text.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
+
+      // Strategy 2: Remove any remaining proper <think>...</think> blocks
+      text = text.replace(/<think>[\s\S]*?<\/think>/gi, "");
+
+      // Strategy 3: Trim whitespace
+      text = text.trim();
 
       // Post-processing for JSON modes
       if (mode === AppMode.PRESENTATION) {
          try {
+             // Extract JSON if wrapped in code block
              const jsonMatch = text.match(/```json\n([\s\S]*?)\n```/) || text.match(/```([\s\S]*?)```/);
              const jsonStr = jsonMatch ? jsonMatch[1] : text;
              const slides: Slide[] = JSON.parse(jsonStr);
@@ -191,6 +202,7 @@ export const generateResponse = async (
              };
          } catch (e) {
              console.error("Presentation JSON parse error", e);
+             // Fallback to text if parsing fails
          }
       }
 
@@ -212,7 +224,7 @@ export const generateResponse = async (
           }
       }
 
-      // Check for Charts/Geometry
+      // Check for Charts/Geometry in normal response
       let chartData: ChartData | undefined;
       let geometryData: GeometryData | undefined;
 
