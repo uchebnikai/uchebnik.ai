@@ -80,7 +80,7 @@ export const Sidebar = ({
                <img 
                   src="https://i.ibb.co/LDgTCm9N/6151f23e-b922-4c62-930f-853884bf4c89.png" 
                   alt="Uchebnik AI Logo" 
-                  className="w-10 h-10 rounded-xl object-contain drop-shadow-md group-hover:scale-110 transition-transform duration-300" 
+                  className="w-10 h-10 rounded-2xl object-contain drop-shadow-md group-hover:scale-110 transition-transform duration-300" 
                />
                <div className="text-left">
                   <h1 className="font-bold text-xl text-zinc-900 dark:text-white tracking-tight font-display">Uchebnik AI</h1>
