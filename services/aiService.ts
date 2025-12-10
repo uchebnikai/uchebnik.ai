@@ -1,4 +1,5 @@
 
+
 import { AppMode, SubjectId, Slide, ChartData, GeometryData, Message, TestData } from "../types";
 import { SYSTEM_PROMPTS, SUBJECTS } from "../constants";
 
@@ -22,8 +23,7 @@ async function withRetry<T>(fn: () => Promise<T>, retries = 3, delay = 2000): Pr
   }
 }
 
-// Helper: Vision Analysis using Gemini
-// This function strictly sends images to Gemini to get a text description
+// Vision Analysis using Gemini
 async function analyzeImages(apiKey: string, images: string[]): Promise<string> {
     const res = await fetch(API_URL, {
         method: "POST",
@@ -56,12 +56,10 @@ async function analyzeImages(apiKey: string, images: string[]): Promise<string> 
 
 // Improved JSON Extractor
 function extractJson(text: string): string | null {
-  // Try finding Markdown block first
   const match = text.match(/```json\n([\s\S]*?)\n```/) || text.match(/```([\s\S]*?)```/);
   if (match && match[1]) {
       return match[1];
   }
-  // Fallback: Find first '{' and last '}'
   const start = text.indexOf('{');
   const end = text.lastIndexOf('}');
   if (start !== -1 && end !== -1 && end > start) {
@@ -91,14 +89,12 @@ export const generateResponse = async (
       };
   }
 
-  // Resolve Subject Name for Context
   const subjectConfig = SUBJECTS.find(s => s.id === subjectId);
   const subjectName = subjectConfig ? subjectConfig.name : "Unknown Subject";
 
   const hasImages = imagesBase64 && imagesBase64.length > 0;
   let imageAnalysis = "";
 
-  // STEP 1: If images exist, analyze them with Gemini first (Vision-to-Text)
   if (hasImages) {
       try {
           imageAnalysis = await withRetry(() => analyzeImages(apiKey, imagesBase64));
@@ -114,22 +110,18 @@ export const generateResponse = async (
       }
   }
 
-  // STEP 2: Use DeepSeek R1 for the actual reasoning and response (Text Only)
   let modelName = 'tngtech/deepseek-r1t2-chimera:free'; 
   if (preferredModel !== 'auto' && preferredModel) {
       modelName = preferredModel;
   }
 
-  // IMAGE GENERATION CHECK (Art Mode)
   const imageKeywords = /(draw|paint|generate image|create a picture|make an image|нарисувай|рисувай|генерирай изображение|генерирай снимка|направи снимка|изображение на)/i;
   const isImageRequest = (subjectId === SubjectId.ART && mode === AppMode.DRAW) || imageKeywords.test(promptText);
 
-  // Prepare System Instruction
   let systemInstruction = SYSTEM_PROMPTS.DEFAULT;
   let forceJson = false;
 
   if (isImageRequest) {
-      // Special instruction for Art/Draw mode
       systemInstruction = `You are an AI that helps with art concepts. 
       IMPORTANT: You CANNOT generate pixel/raster images (PNG/JPG). 
       If the user asks for a drawing, you MUST generate an SVG code block using the json:geometry format.
@@ -159,21 +151,16 @@ export const generateResponse = async (
       forceJson = true;
   }
 
-  // Add JSON enforcement for structured modes
   if (forceJson) {
       systemInstruction += "\n\nIMPORTANT: YOU MUST RETURN VALID JSON ONLY. NO MARKDOWN BLOCK WRAPPING THE JSON (IF POSSIBLE), JUST THE JSON STRING.";
   }
 
-  // Enforce Thinking Tags
   systemInstruction += "\n\nIMPORTANT: If you use internal reasoning or chain-of-thought, you MUST enclose it strictly within <think> and </think> tags. Do NOT output raw thinking text without tags.";
 
   systemInstruction = `CURRENT SUBJECT CONTEXT: ${subjectName}. All responses must relate to ${subjectName}.\n\n${systemInstruction}`;
 
-  // Prepare Messages
   const messages: any[] = [];
 
-  // Add history (Text only)
-  // BUG FIX: Incorporate image context from previous messages if available
   history.filter(msg => !msg.isError && msg.text && msg.type !== 'image_generated' && msg.type !== 'slides').forEach(msg => {
       let content = msg.text;
       if (msg.imageAnalysis) {
@@ -185,10 +172,8 @@ export const generateResponse = async (
       });
   });
 
-  // Construct Final User Prompt
   let finalUserPrompt = promptText;
   
-  // Inject Image Analysis result into the prompt for DeepSeek
   if (imageAnalysis) {
       finalUserPrompt = `[IMAGE CONTEXT]: The user has attached an image. Here is the detailed description of it:\n${imageAnalysis}\n\n[USER REQUEST]: ${promptText}`;
   }
@@ -200,7 +185,6 @@ export const generateResponse = async (
       }
   }
 
-  // System Prompt Strategy for DeepSeek
   finalUserPrompt = `[SYSTEM INSTRUCTION]: ${systemInstruction}\n\n[USER REQUEST]: ${finalUserPrompt}`;
 
   messages.push({ role: "user", content: finalUserPrompt });
@@ -208,7 +192,6 @@ export const generateResponse = async (
   const requestBody: any = {
       model: modelName,
       messages: messages,
-      // No sampling params for reasoning models
   };
 
   try {
@@ -233,14 +216,12 @@ export const generateResponse = async (
       const data = await withRetry(performGenerate);
       let text = data.choices?.[0]?.message?.content || "Няма отговор.";
 
-      // CLEANUP LOGIC: Remove <think> blocks
       if (text.includes('</think>')) {
           const parts = text.split('</think>');
           text = parts[parts.length - 1];
       }
       text = text.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
 
-      // Post-processing for JSON modes
       if (mode === AppMode.PRESENTATION) {
          try {
              const jsonStr = extractJson(text);
@@ -253,7 +234,7 @@ export const generateResponse = async (
                      type: 'slides',
                      slidesData: slides,
                      timestamp: Date.now(),
-                     imageAnalysis: imageAnalysis // Return context so App.tsx can save it
+                     imageAnalysis: imageAnalysis
                  };
              } else {
                  throw new Error("No JSON found");
@@ -285,7 +266,6 @@ export const generateResponse = async (
           }
       }
 
-      // Check for Charts/Geometry
       let chartData: ChartData | undefined;
       let geometryData: GeometryData | undefined;
 

@@ -1,9 +1,14 @@
 
-import React, { useRef, useEffect } from 'react';
-import { Reply, X, ImageIcon, Mic, MicOff, ArrowUpRight } from 'lucide-react';
+
+import React, { useRef, useEffect, useState } from 'react';
+import { Reply, X, ImageIcon, Mic, MicOff, ArrowUpRight, Calculator } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
 import { Message, UserSettings } from '../../types';
 import { INPUT_AREA_BASE, INPUT_AREA_CUSTOM_BG, INPUT_AREA_DEFAULT_BG } from '../../styles/chat';
 import { SLIDE_UP, FADE_IN, ZOOM_IN } from '../../animations/transitions';
+import { resizeImage } from '../../utils/image';
 
 interface ChatInputAreaProps {
   replyingTo: Message | null;
@@ -15,11 +20,29 @@ interface ChatInputAreaProps {
   toggleListening: () => void;
   isListening: boolean;
   inputValue: string;
-  setInputValue: (val: string) => void;
+  setInputValue: React.Dispatch<React.SetStateAction<string>>;
   handleSend: () => void;
   selectedImages: string[];
   handleRemoveImage: (index: number) => void;
 }
+
+const MATH_SYMBOLS = [
+  { label: '√', val: '\\sqrt{}' },
+  { label: 'π', val: '\\pi' },
+  { label: '∫', val: '\\int' },
+  { label: 'x²', val: '^2' },
+  { label: 'xⁿ', val: '^' },
+  { label: '½', val: '\\frac{}{}' },
+  { label: 'Σ', val: '\\sum' },
+  { label: '≤', val: '\\le' },
+  { label: '≥', val: '\\ge' },
+  { label: '≠', val: '\\neq' },
+  { label: '∞', val: '\\infty' },
+  { label: 'θ', val: '\\theta' },
+  { label: 'Δ', val: '\\Delta' },
+  { label: 'α', val: '\\alpha' },
+  { label: 'β', val: '\\beta' },
+];
 
 export const ChatInputArea = ({
   replyingTo,
@@ -38,6 +61,8 @@ export const ChatInputArea = ({
 }: ChatInputAreaProps) => {
   
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  
+  const [showMath, setShowMath] = useState(false);
 
   useEffect(() => {
     if (textareaRef.current) {
@@ -46,10 +71,50 @@ export const ChatInputArea = ({
     }
   }, [inputValue]);
 
+  const insertMath = (latex: string) => {
+    if (textareaRef.current) {
+      const start = textareaRef.current.selectionStart;
+      const end = textareaRef.current.selectionEnd;
+      const newValue = inputValue.substring(0, start) + latex + inputValue.substring(end);
+      setInputValue(newValue);
+      // Focus back and move cursor inside brackets if present
+      setTimeout(() => {
+        if(textareaRef.current) {
+            textareaRef.current.focus();
+            const offset = latex.includes('{}') ? latex.indexOf('{}') + 1 : latex.length;
+            textareaRef.current.setSelectionRange(start + offset, start + offset);
+        }
+      }, 0);
+    }
+  };
+
+  const hasMath = /[\\^_{}]/.test(inputValue) || showMath;
+
   return (
       <div className="absolute bottom-0 left-0 right-0 px-2 lg:px-4 pointer-events-none z-40 flex justify-center pb-safe">
          <div className="w-full max-w-3xl pointer-events-auto mb-4 lg:mb-6">
             
+            {/* Live Math Preview */}
+            {hasMath && inputValue.trim() && (
+               <div className={`mb-2 mx-4 bg-white/90 dark:bg-zinc-800/90 backdrop-blur-md border border-indigo-500/20 p-3 rounded-2xl shadow-lg ${FADE_IN}`}>
+                  <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Преглед</div>
+                  <div className="text-sm font-medium text-zinc-800 dark:text-zinc-200">
+                     <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>{`$${inputValue}$`}</ReactMarkdown>
+                  </div>
+               </div>
+            )}
+
+            {/* Math Keypad */}
+            {showMath && (
+                <div className={`mb-2 mx-4 bg-white/90 dark:bg-zinc-800/90 backdrop-blur-md border border-indigo-500/20 p-3 rounded-2xl shadow-lg grid grid-cols-5 gap-2 ${SLIDE_UP}`}>
+                    {MATH_SYMBOLS.map((sym, i) => (
+                        <button key={i} onClick={() => insertMath(sym.val)} className="p-2 rounded-lg bg-gray-50 dark:bg-white/5 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 text-zinc-700 dark:text-zinc-200 text-sm font-bold transition-colors">
+                            {sym.label}
+                        </button>
+                    ))}
+                </div>
+            )}
+
             {/* Reply Banner */}
             {replyingTo && (
                <div className={`mb-2 mx-4 bg-white/90 dark:bg-zinc-800/90 backdrop-blur-md border border-indigo-500/20 p-3 rounded-2xl flex items-center justify-between shadow-lg ${SLIDE_UP} ${FADE_IN}`}>
@@ -75,6 +140,11 @@ export const ChatInputArea = ({
                   <ImageIcon size={20} strokeWidth={2}/>
                </button>
                <input type="file" ref={fileInputRef} onChange={handleImageUpload} className="hidden" accept="image/*" multiple />
+
+               {/* Math Toggle */}
+               <button onClick={() => setShowMath(!showMath)} className={`flex-none w-10 h-10 rounded-full flex items-center justify-center transition-colors ${showMath ? 'text-indigo-600 bg-indigo-50 dark:bg-white/10' : 'text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-white/10'}`}>
+                  <Calculator size={20} strokeWidth={2}/>
+               </button>
 
                {/* Voice Button */}
                <button onClick={toggleListening} disabled={loadingSubject} className={`flex-none w-10 h-10 rounded-full flex items-center justify-center transition-all active:scale-95 disabled:opacity-50 ${isListening ? 'bg-red-500 text-white shadow-lg shadow-red-500/30 animate-pulse' : 'text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-white/10'}`}>

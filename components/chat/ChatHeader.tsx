@@ -1,5 +1,7 @@
+
+
 import React from 'react';
-import { Menu, Phone, Plus, History } from 'lucide-react';
+import { Menu, Phone, Plus, History, Maximize } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { DynamicIcon } from '../ui/DynamicIcon';
 import { SubjectConfig, UserRole, AppMode, SubjectId, UserSettings } from '../../types';
@@ -13,6 +15,7 @@ interface ChatHeaderProps {
   createNewSession: (id: SubjectId, role?: UserRole, mode?: AppMode) => void;
   setHistoryDrawerOpen: (val: boolean) => void;
   userSettings: UserSettings;
+  setFocusMode: (val: boolean) => void;
 }
 
 export const ChatHeader = ({
@@ -23,7 +26,8 @@ export const ChatHeader = ({
   startVoiceCall,
   createNewSession,
   setHistoryDrawerOpen,
-  userSettings
+  userSettings,
+  setFocusMode
 }: ChatHeaderProps) => {
     return (
       <header className={`sticky top-0 lg:top-4 mx-0 lg:mx-8 z-30 h-16 lg:h-18 
@@ -48,6 +52,7 @@ export const ChatHeader = ({
             </div>
          </div>
          <div className="flex items-center gap-1.5 lg:gap-3 shrink-0 ml-2">
+             <Button variant="ghost" onClick={() => setFocusMode(true)} className="w-9 h-9 lg:w-10 lg:h-10 p-0 rounded-full" icon={Maximize} title="Focus Mode" />
              <Button variant="secondary" onClick={startVoiceCall} className="w-10 h-10 lg:w-12 lg:h-12 p-0 rounded-full border-none bg-indigo-50 text-indigo-600 hover:bg-indigo-100 dark:bg-indigo-500/20 dark:text-indigo-300 dark:hover:bg-indigo-500/30" icon={Phone} />
              <div className="hidden lg:block h-8 w-px bg-gray-200 dark:bg-white/10 mx-1" />
              <Button variant="primary" onClick={() => activeSubject && createNewSession(activeSubject.id, userRole || undefined, activeMode)} className="h-9 lg:h-10 px-3 lg:px-4 text-xs lg:text-sm rounded-xl shadow-none"><Plus size={16} className="lg:w-[18px] lg:h-[18px]"/><span className="hidden sm:inline">Нов</span></Button>

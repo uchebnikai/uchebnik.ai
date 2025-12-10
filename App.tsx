@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useRef } from 'react';
 import { SubjectConfig, SubjectId, AppMode, Message, Slide, UserSettings, Session, UserPlan, UserRole, HomeViewType } from './types';
 import { SUBJECTS } from './constants';
@@ -6,7 +7,7 @@ import { generateResponse } from './services/aiService';
 import { supabase } from './supabaseClient';
 import { Auth } from './components/auth/Auth';
 import { 
-  Loader2, X, AlertCircle, CheckCircle, Info, Menu
+  Loader2, X, AlertCircle, CheckCircle, Info, Minimize
 } from 'lucide-react';
 
 import { Session as SupabaseSession } from '@supabase/supabase-js';
@@ -119,6 +120,9 @@ export const App = () => {
   const [notification, setNotification] = useState<{ message: string, subjectId: string } | null>(null);
   const [isListening, setIsListening] = useState(false);
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
+  
+  // Focus Mode
+  const [focusMode, setFocusMode] = useState(false);
 
   // --- Toast & Confirm State ---
   const [toasts, setToasts] = useState<{id: string, message: string, type: 'success'|'error'|'info'}[]>([]);
@@ -149,6 +153,10 @@ export const App = () => {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  
+  // Sync debounce timers
+  const syncSessionsTimer = useRef<NodeJS.Timeout | null>(null);
+  const syncSettingsTimer = useRef<NodeJS.Timeout | null>(null);
 
   // --- Custom Hooks ---
   useTheme(userSettings);
@@ -194,6 +202,80 @@ export const App = () => {
 
     return () => subscription.unsubscribe();
   }, []);
+  
+  // Cloud Sync: Load Data on Login
+  useEffect(() => {
+      if (!session?.user?.id) return;
+      
+      const loadRemoteData = async () => {
+          // Load Settings
+          const { data: profileData } = await supabase
+              .from('profiles')
+              .select('settings, theme_color, custom_background')
+              .eq('id', session.user.id)
+              .single();
+          
+          if (profileData && profileData.settings) {
+              const merged = { ...profileData.settings, themeColor: profileData.theme_color, customBackground: profileData.custom_background };
+              setUserSettings(prev => ({ ...prev, ...merged }));
+          }
+
+          // Load Sessions
+          const { data: sessionData } = await supabase
+              .from('user_data')
+              .select('data')
+              .eq('user_id', session.user.id)
+              .single();
+              
+          if (sessionData && sessionData.data) {
+              // Merge strategy: Remote wins if conflicts, otherwise simple set
+              // For simplicity in this demo, remote wins if local is empty or just overwrite
+              // Real app would merge by ID
+              setSessions(sessionData.data);
+          }
+      };
+      
+      loadRemoteData();
+  }, [session?.user?.id]);
+
+  // Cloud Sync: Save Sessions on Change
+  useEffect(() => {
+      if (!session?.user?.id) return;
+      
+      if (syncSessionsTimer.current) clearTimeout(syncSessionsTimer.current);
+      
+      syncSessionsTimer.current = setTimeout(async () => {
+          // Upsert into user_data table (assuming JSONB column 'data')
+          // If table doesn't exist, this will fail silently in console, keeping app working locally
+          await supabase.from('user_data').upsert({
+              user_id: session.user.id,
+              data: sessions,
+              updated_at: new Date().toISOString()
+          });
+      }, 2000); // 2 second debounce
+
+      return () => { if(syncSessionsTimer.current) clearTimeout(syncSessionsTimer.current); };
+  }, [sessions, session?.user?.id]);
+
+  // Cloud Sync: Save Settings on Change
+  useEffect(() => {
+      if (!session?.user?.id) return;
+      
+      if (syncSettingsTimer.current) clearTimeout(syncSettingsTimer.current);
+      
+      syncSettingsTimer.current = setTimeout(async () => {
+          await supabase.from('profiles').upsert({
+              id: session.user.id,
+              settings: userSettings,
+              theme_color: userSettings.themeColor,
+              custom_background: userSettings.customBackground,
+              updated_at: new Date().toISOString()
+          });
+      }, 1000);
+
+      return () => { if(syncSettingsTimer.current) clearTimeout(syncSettingsTimer.current); };
+  }, [userSettings, session?.user?.id]);
+
 
   // Window Resize Listener
   useEffect(() => {
@@ -212,7 +294,7 @@ export const App = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Data Loading Effect (Now using IndexedDB)
+  // Data Loading Effect (IndexedDB)
   useEffect(() => {
     const initData = async () => {
         const userId = session?.user?.id;
@@ -1037,7 +1119,7 @@ export const App = () => {
       {/* Background Image Layer */}
       {userSettings.customBackground && (
          <div 
-           className="fixed inset-0 z-0 bg-cover bg-center pointer-events-none transition-all duration-500"
+           className={`fixed inset-0 z-0 bg-cover bg-center pointer-events-none transition-all duration-500 ${focusMode ? 'brightness-[0.2] grayscale' : ''}`}
            style={getBackgroundImageStyle(userSettings.customBackground)}
          />
       )}
@@ -1045,9 +1127,9 @@ export const App = () => {
       {/* Global Aurora Background (Visible when no custom background) */}
       {!userSettings.customBackground && (
         <>
-            <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-indigo-200/20 via-background to-background dark:from-indigo-900/20 dark:via-background dark:to-background pointer-events-none z-0"></div>
-            <div className="fixed top-[-10%] right-[-5%] w-[500px] h-[500px] bg-indigo-500/10 dark:bg-indigo-500/20 rounded-full blur-[120px] pointer-events-none z-0 animate-pulse-slow" />
-            <div className="fixed bottom-[-10%] left-[-5%] w-[400px] h-[400px] bg-purple-500/10 dark:bg-purple-500/20 rounded-full blur-[100px] pointer-events-none z-0 animate-pulse-slow delay-1000" />
+            <div className={`fixed inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-indigo-200/20 via-background to-background dark:from-indigo-900/20 dark:via-background dark:to-background pointer-events-none z-0 transition-all duration-500 ${focusMode ? 'brightness-[0.4]' : ''}`}></div>
+            <div className={`fixed top-[-10%] right-[-5%] w-[500px] h-[500px] bg-indigo-500/10 dark:bg-indigo-500/20 rounded-full blur-[120px] pointer-events-none z-0 animate-pulse-slow transition-opacity ${focusMode ? 'opacity-20' : ''}`} />
+            <div className={`fixed bottom-[-10%] left-[-5%] w-[400px] h-[400px] bg-purple-500/10 dark:bg-purple-500/20 rounded-full blur-[100px] pointer-events-none z-0 animate-pulse-slow delay-1000 transition-opacity ${focusMode ? 'opacity-20' : ''}`} />
         </>
       )}
       
@@ -1060,34 +1142,45 @@ export const App = () => {
         </div>
       )}
 
-      <Sidebar 
-        sidebarOpen={sidebarOpen}
-        setSidebarOpen={setSidebarOpen}
-        userSettings={userSettings}
-        userPlan={userPlan}
-        activeSubject={activeSubject}
-        setActiveSubject={setActiveSubject}
-        setHomeView={setHomeView}
-        setUserRole={setUserRole}
-        handleSubjectChange={handleSubjectChange}
-        activeSessionId={activeSessionId}
-        setActiveSessionId={setActiveSessionId}
-        sessions={sessions}
-        deleteSession={deleteSession}
-        createNewSession={createNewSession}
-        unreadSubjects={unreadSubjects}
-        activeMode={activeMode}
-        userMeta={userMeta}
-        session={session}
-        setShowUnlockModal={setShowUnlockModal}
-        setShowSettings={setShowSettings}
-        handleLogout={handleLogout}
-        setShowAuthModal={setShowAuthModal}
-        addToast={addToast}
-        setShowSubjectDashboard={setShowSubjectDashboard}
-        userRole={userRole}
-        streak={streak}
-      />
+      {/* Exit Focus Mode Button */}
+      {focusMode && (
+          <div className="fixed top-4 right-4 z-50 animate-in fade-in">
+              <button onClick={() => setFocusMode(false)} className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-full text-white transition-colors border border-white/10">
+                  <Minimize size={18}/> Exit Focus
+              </button>
+          </div>
+      )}
+
+      {!focusMode && (
+          <Sidebar 
+            sidebarOpen={sidebarOpen}
+            setSidebarOpen={setSidebarOpen}
+            userSettings={userSettings}
+            userPlan={userPlan}
+            activeSubject={activeSubject}
+            setActiveSubject={setActiveSubject}
+            setHomeView={setHomeView}
+            setUserRole={setUserRole}
+            handleSubjectChange={handleSubjectChange}
+            activeSessionId={activeSessionId}
+            setActiveSessionId={setActiveSessionId}
+            sessions={sessions}
+            deleteSession={deleteSession}
+            createNewSession={createNewSession}
+            unreadSubjects={unreadSubjects}
+            activeMode={activeMode}
+            userMeta={userMeta}
+            session={session}
+            setShowUnlockModal={setShowUnlockModal}
+            setShowSettings={setShowSettings}
+            handleLogout={handleLogout}
+            setShowAuthModal={setShowAuthModal}
+            addToast={addToast}
+            setShowSubjectDashboard={setShowSubjectDashboard}
+            userRole={userRole}
+            streak={streak}
+          />
+      )}
       
       <main className="flex-1 flex flex-col relative w-full h-full overflow-hidden transition-all duration-300 z-10">
         <AdminPanel 
@@ -1165,16 +1258,19 @@ export const App = () => {
             />
         ) : (
             <div className={`flex-1 flex flex-col relative h-full bg-transparent`}>
-                <ChatHeader 
-                    setSidebarOpen={setSidebarOpen}
-                    activeSubject={activeSubject}
-                    userRole={userRole}
-                    activeMode={activeMode}
-                    startVoiceCall={startVoiceCall}
-                    createNewSession={createNewSession}
-                    setHistoryDrawerOpen={setHistoryDrawerOpen}
-                    userSettings={userSettings}
-                />
+                {!focusMode && (
+                    <ChatHeader 
+                        setSidebarOpen={setSidebarOpen}
+                        activeSubject={activeSubject}
+                        userRole={userRole}
+                        activeMode={activeMode}
+                        startVoiceCall={startVoiceCall}
+                        createNewSession={createNewSession}
+                        setHistoryDrawerOpen={setHistoryDrawerOpen}
+                        userSettings={userSettings}
+                        setFocusMode={setFocusMode}
+                    />
+                )}
                 
                 <HistoryDrawer 
                     historyDrawerOpen={historyDrawerOpen}
