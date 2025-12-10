@@ -30,7 +30,7 @@ export const UpgradeModal = ({
     if (targetPlan) {
         return (
             <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in">
-                <div className="bg-white dark:bg-zinc-900 w-full max-w-sm p-8 rounded-3xl border border-indigo-500/20 shadow-2xl space-y-6 relative animate-in zoom-in-95 duration-300">
+                <div className="bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl w-full max-w-sm p-8 rounded-3xl border border-indigo-500/20 shadow-2xl space-y-6 relative animate-in zoom-in-95 duration-300">
                     <button onClick={() => {setTargetPlan(null); setShowUnlockModal(false);}} className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors"><X size={20}/></button>
                     <button onClick={() => setTargetPlan(null)} className="absolute top-4 left-4 text-gray-400 hover:text-white transition-colors flex items-center gap-1 text-xs"><ArrowLeft size={14}/> Назад</button>
                     <div className="flex flex-col items-center gap-4 text-center mt-4">
@@ -47,7 +47,7 @@ export const UpgradeModal = ({
                         value={unlockKeyInput}
                         onChange={e => setUnlockKeyInput(e.target.value)}
                         placeholder="Въведете код"
-                        className="w-full bg-gray-100 dark:bg-black p-4 rounded-xl outline-none border border-transparent focus:border-indigo-500 text-center font-bold text-lg tracking-wider"
+                        className="w-full bg-gray-100 dark:bg-black/50 p-4 rounded-xl outline-none border border-transparent focus:border-indigo-500 text-center font-bold text-lg tracking-wider"
                         autoFocus
                     />
                     <Button onClick={handleUnlockSubmit} className={`w-full py-4 text-base shadow-lg border-none ${targetPlan === 'plus' ? 'bg-indigo-600 hover:bg-indigo-500 shadow-indigo-500/30' : 'bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 shadow-orange-500/30'}`}>
@@ -68,7 +68,7 @@ export const UpgradeModal = ({
                <p className="text-lg text-gray-400">Отключете пълния потенциал на Uchebnik AI</p>
            </div>
            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="bg-white dark:bg-zinc-900 rounded-[32px] p-8 border border-gray-200 dark:border-white/5 flex flex-col relative overflow-hidden">
+              <div className="bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl rounded-[32px] p-8 border border-gray-200 dark:border-white/5 flex flex-col relative overflow-hidden">
                  <div className="mb-6">
                     <div className="text-sm font-bold text-gray-500 uppercase tracking-widest mb-2">Free Plan</div>
                     <div className="text-3xl font-black">Безплатен</div>
@@ -82,7 +82,7 @@ export const UpgradeModal = ({
                     {userPlan === 'free' ? 'Текущ план' : 'Стандартен'}
                  </button>
               </div>
-              <div className="bg-white dark:bg-zinc-900 rounded-[32px] p-8 border border-indigo-500/30 flex flex-col relative overflow-hidden shadow-2xl shadow-indigo-500/10 scale-105 z-10">
+              <div className="bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl rounded-[32px] p-8 border border-indigo-500/30 flex flex-col relative overflow-hidden shadow-2xl shadow-indigo-500/10 scale-105 z-10">
                  <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-indigo-500 to-purple-500"/>
                  <div className="mb-6">
                     <div className="text-sm font-bold text-indigo-500 uppercase tracking-widest mb-2 flex items-center gap-2"><Zap size={16}/> Plus Plan</div>
@@ -101,7 +101,7 @@ export const UpgradeModal = ({
                     {userPlan === 'plus' ? 'Текущ план' : 'Избери Plus'}
                  </button>
               </div>
-              <div className="bg-white dark:bg-zinc-900 rounded-[32px] p-8 border border-amber-500/30 flex flex-col relative overflow-hidden shadow-2xl shadow-amber-500/10">
+              <div className="bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl rounded-[32px] p-8 border border-amber-500/30 flex flex-col relative overflow-hidden shadow-2xl shadow-amber-500/10">
                  <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-amber-400 to-orange-500"/>
                  <div className="mb-6">
                     <div className="text-sm font-bold text-amber-500 uppercase tracking-widest mb-2 flex items-center gap-2"><Crown size={16}/> Pro Plan</div>

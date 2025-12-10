@@ -1,3 +1,4 @@
+
 :root {
   --background: 0 0% 100%;
   --foreground: 240 10% 3.9%;
@@ -53,15 +54,15 @@ body {
 
 /* Glassmorphism Utilities */
 .glass-panel {
-  background: rgba(255, 255, 255, 0.6);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 .dark .glass-panel {
-  background: rgba(10, 10, 12, 0.6);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
@@ -75,32 +76,34 @@ body {
 
 /* Custom Background Mode Adjustments */
 body.custom-bg-active .glass-panel {
-  background: rgba(255, 255, 255, 0.1); /* More transparent */
+  background: rgba(255, 255, 255, 0.2);
   border: 1px solid rgba(var(--primary-500), 0.2);
 }
 body.custom-bg-active.dark .glass-panel {
-  background: rgba(0, 0, 0, 0.3); /* More transparent */
+  background: rgba(0, 0, 0, 0.3);
   border: 1px solid rgba(var(--primary-500), 0.2);
 }
 
 /* Specific Transparency Overrides for Custom BG */
 body.custom-bg-active .glass-card {
-  background: rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.3);
 }
 body.custom-bg-active.dark .glass-card {
-  background: rgba(0, 0, 0, 0.4);
+  background: rgba(0, 0, 0, 0.3);
 }
 
 .glass-card {
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(0,0,0,0.05);
+  background: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
 }
 .dark .glass-card {
-  background: rgba(25, 25, 28, 0.5);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255,255,255,0.05);
+  background: rgba(20, 20, 23, 0.4);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2), 0 2px 4px -1px rgba(0, 0, 0, 0.1);
 }
 
@@ -133,7 +136,7 @@ body.custom-bg-active.dark .glass-card {
 .markdown-content a { color: rgb(var(--primary-500)); text-decoration: none; border-bottom: 1px solid transparent; transition: border-color 0.2s; word-break: break-all; }
 .markdown-content a:hover { border-bottom-color: rgb(var(--primary-500)); }
 
-/* Code Blocks - Scroll horizontally, don't break layout */
+/* Code Blocks */
 .markdown-content code { background: rgba(128,128,128,0.1); padding: 0.2em 0.4em; rounded: 6px; font-size: 0.85em; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; white-space: pre-wrap; word-break: break-all; }
 .markdown-content pre { background: transparent !important; padding: 0 !important; margin: 0 !important; overflow-x: auto; max-width: 100%; }
 .markdown-content pre code { white-space: pre; word-break: normal; display: block; }
@@ -143,6 +146,5 @@ body.custom-bg-active.dark .glass-card {
 .markdown-content th { background: rgba(128,128,128,0.05); font-weight: 600; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.05em; }
 .markdown-content tr:last-child td { border-bottom: none; }
 
-/* Mobile safe areas */
 .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
 .pt-safe { padding-top: env(safe-area-inset-top); }

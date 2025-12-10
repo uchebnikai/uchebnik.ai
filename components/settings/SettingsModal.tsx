@@ -1,5 +1,4 @@
 
-
 import React, { useRef } from 'react';
 import { X, User, Upload, Lock, Check, Palette, Plus, Moon, Sun, ImageIcon, Edit2, Cpu, ChevronDown, Database, Trash2, ArrowRight, Settings } from 'lucide-react';
 import { Button } from '../ui/Button';
@@ -50,10 +49,10 @@ export const SettingsModal = ({
 
   return (
   <div className="fixed inset-0 z-[90] bg-black/60 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-300">
-    <div className={`bg-white/90 dark:bg-zinc-900/90 w-full max-w-2xl h-[85vh] rounded-[32px] border border-white/20 shadow-2xl overflow-hidden flex flex-col ${MODAL_ENTER} backdrop-blur-xl ring-1 ring-black/5`}>
+    <div className={`bg-white/70 dark:bg-black/70 backdrop-blur-2xl w-full max-w-2xl h-[85vh] rounded-[32px] border border-white/20 shadow-2xl overflow-hidden flex flex-col ${MODAL_ENTER}`}>
       
       {/* Header */}
-      <div className="px-8 py-6 border-b border-gray-200/50 dark:border-white/10 flex justify-between items-center bg-white/50 dark:bg-black/20 backdrop-blur-md sticky top-0 z-10">
+      <div className="px-8 py-6 border-b border-gray-200/50 dark:border-white/10 flex justify-between items-center bg-white/20 dark:bg-white/5 backdrop-blur-sm sticky top-0 z-10">
          <div>
             <h2 className="text-2xl font-bold flex items-center gap-3 text-zinc-800 dark:text-white font-display">
                 <div className="p-2 bg-indigo-500/10 rounded-xl text-indigo-500"><Settings size={24}/></div>
@@ -61,7 +60,7 @@ export const SettingsModal = ({
             </h2>
             <p className="text-sm text-gray-500 font-medium ml-1">Управлявай своя профил и предпочитания</p>
          </div>
-         <button onClick={() => setShowSettings(false)} className="p-2.5 hover:bg-gray-100 dark:hover:bg-white/10 rounded-full transition-all text-gray-500 hover:text-zinc-900 dark:hover:text-white"><X size={24}/></button>
+         <button onClick={() => setShowSettings(false)} className="p-2.5 hover:bg-white/20 dark:hover:bg-white/10 rounded-full transition-all text-gray-500 hover:text-zinc-900 dark:hover:text-white"><X size={24}/></button>
       </div>
 
       {/* Content */}
@@ -112,11 +111,11 @@ export const SettingsModal = ({
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                              <div className="space-y-1.5">
                                 <label className="text-xs font-bold text-gray-500 ml-1">Текуща Парола</label>
-                                <input type="password" value={editProfile.currentPassword} onChange={e => setEditProfile({...editProfile, currentPassword: e.target.value})} className="w-full bg-gray-50 dark:bg-black/20 p-3 rounded-xl outline-none border border-gray-200 dark:border-white/10 focus:border-indigo-500 transition-all font-medium"/>
+                                <input type="password" value={editProfile.currentPassword} onChange={e => setEditProfile({...editProfile, currentPassword: e.target.value})} className={INPUT_SETTINGS}/>
                             </div>
                             <div className="space-y-1.5">
                                 <label className="text-xs font-bold text-gray-500 ml-1">Нова Парола</label>
-                                <input type="password" value={editProfile.password} onChange={e => setEditProfile({...editProfile, password: e.target.value})} placeholder="Непроменена" className="w-full bg-gray-50 dark:bg-black/20 p-3 rounded-xl outline-none border border-gray-200 dark:border-white/10 focus:border-indigo-500 transition-all font-medium"/>
+                                <input type="password" value={editProfile.password} onChange={e => setEditProfile({...editProfile, password: e.target.value})} placeholder="Непроменена" className={INPUT_SETTINGS}/>
                             </div>
                         </div>
                     </div>
@@ -136,7 +135,7 @@ export const SettingsModal = ({
              
              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Theme Color */}
-                <div className={`bg-gray-50/50 dark:bg-white/5 p-5 rounded-2xl border border-gray-200/50 dark:border-white/5 space-y-4 relative ${!isPremium ? 'opacity-80' : ''}`}>
+                <div className={`bg-white/30 dark:bg-white/5 p-5 rounded-2xl border border-white/20 dark:border-white/10 space-y-4 relative ${!isPremium ? 'opacity-80' : ''}`}>
                     <label className="text-sm font-bold flex items-center gap-2">Основен Цвят</label>
                     <div className={`flex flex-wrap gap-3 ${!isPremium ? 'pointer-events-none' : ''}`}>
                         {['#6366f1', '#ec4899', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'].map(c => (
@@ -159,7 +158,7 @@ export const SettingsModal = ({
                 </div>
 
                  {/* Dark Mode - Always Free */}
-                <div className="bg-gray-50/50 dark:bg-white/5 p-5 rounded-2xl border border-gray-200/50 dark:border-white/5 flex items-center justify-between">
+                <div className="bg-white/30 dark:bg-white/5 p-5 rounded-2xl border border-white/20 dark:border-white/10 flex items-center justify-between">
                     <div>
                         <div className="text-sm font-bold flex items-center gap-2 mb-1">{isDarkMode ? <Moon size={16} className="text-indigo-400"/> : <Sun size={16} className="text-amber-500"/>} Режим</div>
                         <div className="text-xs text-gray-500">{isDarkMode ? 'Тъмна тема' : 'Светла тема'}</div>
@@ -170,7 +169,7 @@ export const SettingsModal = ({
                 </div>
 
                 {/* Background */}
-                <div className={`col-span-full bg-gray-50/50 dark:bg-white/5 p-5 rounded-2xl border border-gray-200/50 dark:border-white/5 space-y-4 relative ${!isPremium ? 'opacity-80' : ''}`}>
+                <div className={`col-span-full bg-white/30 dark:bg-white/5 p-5 rounded-2xl border border-white/20 dark:border-white/10 space-y-4 relative ${!isPremium ? 'opacity-80' : ''}`}>
                      <div className="flex justify-between items-center">
                         <label className="text-sm font-bold flex items-center gap-2"><ImageIcon size={16}/> Фон на чата</label>
                         {userSettings.customBackground && isPremium && <button onClick={() => setUserSettings((prev: any) => ({...prev, customBackground: null}))} className="text-xs text-red-500 font-bold hover:bg-red-50 px-2 py-1 rounded-lg transition-colors">Премахни</button>}
@@ -222,7 +221,7 @@ export const SettingsModal = ({
                     <div key={field.key} className="space-y-1.5">
                         <label className="text-xs font-bold text-gray-500 ml-1">{field.label}</label>
                         <div className="relative">
-                            <select value={(userSettings as any)[field.key]} onChange={e => setUserSettings({...userSettings, [field.key]: e.target.value as any})} className="w-full appearance-none bg-gray-50 dark:bg-black/20 p-3.5 pr-10 rounded-xl outline-none border border-gray-200 dark:border-white/10 focus:border-indigo-500 font-medium transition-all text-sm">
+                            <select value={(userSettings as any)[field.key]} onChange={e => setUserSettings({...userSettings, [field.key]: e.target.value as any})} className={INPUT_SETTINGS}>
                                {field.options.map(([val, txt]) => <option key={val} value={val}>{txt}</option>)}
                             </select>
                             <ChevronDown size={16} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"/>
@@ -233,7 +232,7 @@ export const SettingsModal = ({
                  <div className="space-y-1.5">
                     <label className="text-xs font-bold text-gray-500 ml-1">AI Модел</label>
                     <div className="relative">
-                        <select value={userSettings.preferredModel} onChange={e => setUserSettings({...userSettings, preferredModel: e.target.value as any})} className="w-full appearance-none bg-gray-50 dark:bg-black/20 p-3.5 pr-10 rounded-xl outline-none border border-gray-200 dark:border-white/10 focus:border-indigo-500 font-medium transition-all text-sm">
+                        <select value={userSettings.preferredModel} onChange={e => setUserSettings({...userSettings, preferredModel: e.target.value as any})} className={INPUT_SETTINGS}>
                            {AI_MODELS.map(m => (
                                <option key={m.id} value={m.id}>
                                    {m.name}
@@ -253,7 +252,7 @@ export const SettingsModal = ({
                 <h3 className="text-sm font-bold text-gray-500 uppercase tracking-widest">Данни</h3>
              </div>
              
-             <div className="bg-gray-50/50 dark:bg-white/5 rounded-2xl border border-gray-200/50 dark:border-white/5 divide-y divide-gray-100 dark:divide-white/5 overflow-hidden">
+             <div className="bg-white/30 dark:bg-white/5 rounded-2xl border border-white/20 dark:border-white/5 divide-y divide-gray-100 dark:divide-white/5 overflow-hidden">
                  <button onClick={handleClearMemory} className="w-full flex items-center justify-between p-4 hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors group text-left">
                      <div className="flex items-center gap-4">
                          <div className="p-2.5 bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400 rounded-xl"><Trash2 size={18}/></div>
