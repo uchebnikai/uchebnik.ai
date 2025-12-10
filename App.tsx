@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { SubjectConfig, SubjectId, AppMode, Message, Slide, UserSettings, Session, UserPlan, UserRole, HomeViewType } from './types';
 import { SUBJECTS } from './constants';
@@ -13,7 +12,8 @@ import { Session as SupabaseSession } from '@supabase/supabase-js';
 
 // Utils
 import { resizeImage } from './utils/image';
-import { generateChecksum, isValidKey } from './utils/security';
+import { generateChecksum, verifyAdminPassword, isValidKey } from './utils/security';
+import { saveSessionsToStorage, getSessionsFromStorage, saveSettingsToStorage, getSettingsFromStorage } from './utils/storage';
 import { useTheme } from './hooks/useTheme';
 import { getBackgroundImageStyle } from './styles/utils';
 import { TOAST_CONTAINER, TOAST_ERROR, TOAST_SUCCESS, TOAST_INFO } from './styles/ui';
@@ -53,7 +53,6 @@ export const App = () => {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [inputValue, setInputValue] = useState('');
-  const [homeInputValue, setHomeInputValue] = useState('');
   const [pendingHomeMessage, setPendingHomeMessage] = useState<string | null>(null);
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
   const [isImageProcessing, setIsImageProcessing] = useState(false);
@@ -68,8 +67,6 @@ export const App = () => {
   // Revised Home Views
   const [homeView, setHomeView] = useState<HomeViewType>('landing');
 
-  const [memoryUsage, setMemoryUsage] = useState(0); 
-  const MAX_MEMORY = 50000; 
   const [renameSessionId, setRenameSessionId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
   
@@ -163,6 +160,11 @@ export const App = () => {
         setAuthLoading(false);
         if (session) {
             setShowAuthModal(false);
+            
+            // Sync Plan from Metadata if available
+            if (session.user.user_metadata?.plan) {
+                setUserPlan(session.user.user_metadata.plan);
+            }
         }
         if (session?.user?.user_metadata) {
             const meta = session.user.user_metadata;
@@ -191,117 +193,148 @@ export const App = () => {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Data Loading Effect & Streak Logic
+  // Window Resize Listener
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const userId = session?.user?.id;
-      const sessionsKey = userId ? `uchebnik_sessions_${userId}` : 'uchebnik_sessions';
-      const settingsKey = userId ? `uchebnik_settings_${userId}` : 'uchebnik_settings';
-      const planKey = userId ? `uchebnik_plan_${userId}` : 'uchebnik_user_plan';
-      const streakKey = userId ? `uchebnik_streak_${userId}` : 'uchebnik_streak';
-      const lastVisitKey = userId ? `uchebnik_last_visit_${userId}` : 'uchebnik_last_visit';
-
-      const savedSessions = localStorage.getItem(sessionsKey);
-      if (savedSessions) setSessions(JSON.parse(savedSessions));
-      else setSessions([]);
-
-      const savedSettings = localStorage.getItem(settingsKey);
-      if (savedSettings) setUserSettings(JSON.parse(savedSettings));
-      else {
-          if (userId) {
-             setUserSettings({
-                userName: session?.user?.user_metadata?.full_name || '', 
-                gradeLevel: '8-12', 
-                textSize: 'normal', 
-                haptics: true, 
-                notifications: true, 
-                sound: true, 
-                reduceMotion: false, 
-                responseLength: 'concise', 
-                creativity: 'balanced', 
-                languageLevel: 'standard',
-                preferredModel: 'auto',
-                themeColor: '#6366f1',
-                customBackground: null
-              });
-          }
-      }
-      
-      const savedPlan = localStorage.getItem(planKey);
-      if (savedPlan) setUserPlan(savedPlan as UserPlan);
-      else {
-          if (!userId) {
-              const oldPro = localStorage.getItem('uchebnik_pro_status');
-              if (oldPro === 'unlocked') {
-                  setUserPlan('pro');
-                  localStorage.setItem('uchebnik_user_plan', 'pro');
-              } else {
-                  setUserPlan('free');
-              }
-          } else {
-              setUserPlan('free'); 
-          }
-      }
-
-      const savedAdminKeys = localStorage.getItem('uchebnik_admin_keys');
-      if (savedAdminKeys) setGeneratedKeys(JSON.parse(savedAdminKeys));
-
-      const today = new Date().toDateString();
-      const lastUsageDate = localStorage.getItem('uchebnik_image_date');
-      const lastUsageCount = localStorage.getItem('uchebnik_image_count');
-
-      if (lastUsageDate !== today) {
-          setDailyImageCount(0);
-          localStorage.setItem('uchebnik_image_date', today);
-          localStorage.setItem('uchebnik_image_count', '0');
-      } else {
-          setDailyImageCount(parseInt(lastUsageCount || '0'));
-      }
-
-      // Streak Logic
-      const lastVisit = localStorage.getItem(lastVisitKey);
-      const savedStreak = parseInt(localStorage.getItem(streakKey) || '0', 10);
-      
-      if (lastVisit !== today) {
-          const yesterday = new Date();
-          yesterday.setDate(yesterday.getDate() - 1);
-          
-          if (lastVisit === yesterday.toDateString()) {
-              // Streak continues
-              const newStreak = savedStreak + 1;
-              setStreak(newStreak);
-              localStorage.setItem(streakKey, newStreak.toString());
-          } else {
-              // Streak broken, reset to 1
-              setStreak(1);
-              localStorage.setItem(streakKey, '1');
-          }
-          localStorage.setItem(lastVisitKey, today);
-      } else {
-          setStreak(savedStreak);
-      }
-
-      if (!savedSettings) {
-         setIsDarkMode(true);
-      }
-    }
+    const handleResize = () => {
+       if (window.innerWidth >= 1024) {
+           setSidebarOpen(true);
+       } else {
+           setSidebarOpen(false);
+       }
+    };
     
+    // Initial check
+    if (window.innerWidth >= 1024) setSidebarOpen(true);
+    
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Data Loading Effect (Now using IndexedDB)
+  useEffect(() => {
+    const initData = async () => {
+        const userId = session?.user?.id;
+        const sessionsKey = userId ? `uchebnik_sessions_${userId}` : 'uchebnik_sessions';
+        const settingsKey = userId ? `uchebnik_settings_${userId}` : 'uchebnik_settings';
+        const planKey = userId ? `uchebnik_plan_${userId}` : 'uchebnik_user_plan';
+        const streakKey = userId ? `uchebnik_streak_${userId}` : 'uchebnik_streak';
+        const lastVisitKey = userId ? `uchebnik_last_visit_${userId}` : 'uchebnik_last_visit';
+
+        try {
+            // Load Sessions
+            const loadedSessions = await getSessionsFromStorage(sessionsKey);
+            if (loadedSessions && loadedSessions.length > 0) setSessions(loadedSessions);
+            else {
+                // Fallback migration from localStorage if IDB is empty
+                const lsSessions = localStorage.getItem(sessionsKey);
+                if (lsSessions) {
+                    try {
+                        const parsed = JSON.parse(lsSessions);
+                        setSessions(parsed);
+                        // Save to IDB immediately
+                        await saveSessionsToStorage(sessionsKey, parsed);
+                        // Optional: localStorage.removeItem(sessionsKey);
+                    } catch(e){}
+                }
+            }
+
+            // Load Settings
+            const loadedSettings = await getSettingsFromStorage(settingsKey);
+            if (loadedSettings) setUserSettings(loadedSettings);
+            else {
+                 // Fallback or Defaults
+                 const lsSettings = localStorage.getItem(settingsKey);
+                 if (lsSettings) setUserSettings(JSON.parse(lsSettings));
+                 else if (userId) {
+                    setUserSettings({
+                        userName: session?.user?.user_metadata?.full_name || '', 
+                        gradeLevel: '8-12', 
+                        textSize: 'normal', 
+                        haptics: true, 
+                        notifications: true, 
+                        sound: true, 
+                        reduceMotion: false, 
+                        responseLength: 'concise', 
+                        creativity: 'balanced', 
+                        languageLevel: 'standard',
+                        preferredModel: 'auto',
+                        themeColor: '#6366f1',
+                        customBackground: null
+                    });
+                 }
+            }
+        } catch (err) {
+            console.error("Initialization Error", err);
+        }
+
+        // Plan & Streak (Keep in LocalStorage for now as they are small)
+        const savedPlan = localStorage.getItem(planKey);
+        if (savedPlan) setUserPlan(savedPlan as UserPlan);
+        else {
+           // Ensure local storage consistency for guest users
+           if (!userId) {
+               const oldPro = localStorage.getItem('uchebnik_pro_status');
+               if (oldPro === 'unlocked') {
+                   setUserPlan('pro');
+                   localStorage.setItem('uchebnik_user_plan', 'pro');
+               }
+           }
+        }
+
+        const savedAdminKeys = localStorage.getItem('uchebnik_admin_keys');
+        if (savedAdminKeys) setGeneratedKeys(JSON.parse(savedAdminKeys));
+
+        const today = new Date().toDateString();
+        const lastUsageDate = localStorage.getItem('uchebnik_image_date');
+        const lastUsageCount = localStorage.getItem('uchebnik_image_count');
+
+        if (lastUsageDate !== today) {
+            setDailyImageCount(0);
+            localStorage.setItem('uchebnik_image_date', today);
+            localStorage.setItem('uchebnik_image_count', '0');
+        } else {
+            setDailyImageCount(parseInt(lastUsageCount || '0'));
+        }
+
+        // Streak Logic
+        const lastVisit = localStorage.getItem(lastVisitKey);
+        const savedStreak = parseInt(localStorage.getItem(streakKey) || '0', 10);
+        
+        if (lastVisit !== today) {
+            const yesterday = new Date();
+            yesterday.setDate(yesterday.getDate() - 1);
+            
+            if (lastVisit === yesterday.toDateString()) {
+                const newStreak = savedStreak + 1;
+                setStreak(newStreak);
+                localStorage.setItem(streakKey, newStreak.toString());
+            } else {
+                setStreak(1);
+                localStorage.setItem(streakKey, '1');
+            }
+            localStorage.setItem(lastVisitKey, today);
+        } else {
+            setStreak(savedStreak);
+        }
+    };
+
+    initData();
+
     const loadVoices = () => { if (typeof window !== 'undefined' && window.speechSynthesis) window.speechSynthesis.getVoices(); };
     if (typeof window !== 'undefined' && window.speechSynthesis) { loadVoices(); window.speechSynthesis.onvoiceschanged = loadVoices; }
-    
-    if (typeof window !== 'undefined' && window.innerWidth >= 1024) setSidebarOpen(true);
   }, [session]);
 
+  // Persist Data (IndexedDB)
   useEffect(() => { 
       const userId = session?.user?.id;
       const key = userId ? `uchebnik_sessions_${userId}` : 'uchebnik_sessions';
-      try { localStorage.setItem(key, JSON.stringify(sessions)); } catch(e) { console.error("Session storage error", e); } 
+      saveSessionsToStorage(key, sessions);
   }, [sessions, session]);
 
   useEffect(() => { 
       const userId = session?.user?.id;
       const key = userId ? `uchebnik_settings_${userId}` : 'uchebnik_settings';
-      try { localStorage.setItem(key, JSON.stringify(userSettings)); } catch(e) { console.error("Settings storage error", e); } 
+      saveSettingsToStorage(key, userSettings);
   }, [userSettings, session]);
 
   useEffect(() => {
@@ -311,13 +344,6 @@ export const App = () => {
   }, [userPlan, session]);
 
   useEffect(() => { document.documentElement.classList.toggle('dark', isDarkMode); }, [isDarkMode]);
-
-  useEffect(() => {
-    if(activeSessionId) {
-      const s = sessions.find(s => s.id === activeSessionId);
-      setMemoryUsage(s ? s.messages.reduce((acc, msg) => acc + (msg.text?.length || 0), 0) : 0);
-    }
-  }, [sessions, activeSessionId]);
   
   useEffect(() => { activeSubjectRef.current = activeSubject; if(activeSubject && isVoiceCallActive) endVoiceCall(); }, [activeSubject]);
   useEffect(() => { sessionsRef.current = sessions; }, [sessions]);
@@ -357,6 +383,14 @@ export const App = () => {
       startVoiceRecognition();
     }
   }, [isVoiceCallActive]);
+
+  // Clean up speech on unmount
+  useEffect(() => {
+    return () => {
+        window.speechSynthesis.cancel();
+        if(audioRef.current) audioRef.current.pause();
+    }
+  }, []);
 
   // --- Logic Helpers ---
   const checkImageLimit = (count = 1): boolean => {
@@ -625,9 +659,7 @@ export const App = () => {
       const historyForAI = [...sessionMessages, newUserMsg];
 
       let preferredModel = userSettings.preferredModel;
-      
       if (preferredModel === 'auto') {
-          // Default to Pro model for everyone
           preferredModel = 'tngtech/deepseek-r1t2-chimera:free';
       }
 
@@ -640,7 +672,8 @@ export const App = () => {
       setLoadingSubjects(prev => ({ ...prev, [currentSubId]: false }));
       const newAiMsg: Message = {
         id: (Date.now() + 1).toString(), role: 'model', text: response.text, isError: response.isError, type: response.type as Message['type'], 
-        slidesData: response.slidesData, testData: response.testData, chartData: response.chartData, geometryData: response.geometryData, images: response.images || [], timestamp: Date.now()
+        slidesData: response.slidesData, testData: response.testData, chartData: response.chartData, geometryData: response.geometryData, images: response.images || [], timestamp: Date.now(),
+        imageAnalysis: response.imageAnalysis // Save context for future
       };
 
       setSessions(prev => prev.map(s => s.id === sessId ? { ...s, messages: [...s.messages, newAiMsg], lastModified: Date.now(), preview: response.text.substring(0, 50) } : s));
@@ -796,7 +829,7 @@ export const App = () => {
 
     const estimatedDuration = Math.max(3000, (text.length / 10) * 1000 + 2000); 
     speakingTimeoutRef.current = setTimeout(() => {
-        console.warn("Speech synthesis timed out, forcing next turn.");
+        // Force stop if taking too long (race condition fix)
         safeOnEnd();
     }, estimatedDuration);
 
@@ -932,7 +965,7 @@ export const App = () => {
 
   const handleRemoveImage = (index: number) => { setSelectedImages(prev => prev.filter((_, i) => i !== index)); };
   
-  const handleUnlockSubmit = () => {
+  const handleUnlockSubmit = async () => {
     const key = unlockKeyInput.trim();
     if (isValidKey(key)) {
        const newPlan = targetPlan || 'pro';
@@ -943,13 +976,21 @@ export const App = () => {
        setShowUnlockModal(false);
        setUnlockKeyInput('');
        addToast(`Успешно активирахте план ${newPlan.toUpperCase()}!`, 'success');
+       
+       // Sync to Supabase if logged in
+       if (session) {
+           await supabase.auth.updateUser({
+               data: { plan: newPlan }
+           });
+       }
     } else {
        addToast("Невалиден ключ.", 'error');
     }
   };
 
   const handleAdminLogin = () => {
-    if (adminPasswordInput === "VS09091615!") {
+    // Security Fix: Use verify function instead of plain string comparison
+    if (verifyAdminPassword(adminPasswordInput)) {
       setShowAdminAuth(false);
       setShowAdminPanel(true);
       setAdminPasswordInput('');

@@ -78,6 +78,7 @@ export interface Message {
   text: string;
   timestamp: number; // New: For history tracking
   images?: string[]; // base64
+  imageAnalysis?: string; // Context for the image (fixes bug where context is lost in history)
   isError?: boolean;
   type?: 'text' | 'image_generated' | 'slides' | 'test_generated';
   slidesData?: Slide[]; // For presentation mode

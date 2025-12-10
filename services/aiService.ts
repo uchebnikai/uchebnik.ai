@@ -54,6 +54,22 @@ async function analyzeImages(apiKey: string, images: string[]): Promise<string> 
     return data.choices?.[0]?.message?.content || "";
 }
 
+// Improved JSON Extractor
+function extractJson(text: string): string | null {
+  // Try finding Markdown block first
+  const match = text.match(/```json\n([\s\S]*?)\n```/) || text.match(/```([\s\S]*?)```/);
+  if (match && match[1]) {
+      return match[1];
+  }
+  // Fallback: Find first '{' and last '}'
+  const start = text.indexOf('{');
+  const end = text.lastIndexOf('}');
+  if (start !== -1 && end !== -1 && end > start) {
+      return text.substring(start, end + 1);
+  }
+  return null;
+}
+
 export const generateResponse = async (
   subjectId: SubjectId,
   mode: AppMode,
@@ -69,7 +85,7 @@ export const generateResponse = async (
       return {
           id: Date.now().toString(),
           role: 'model',
-          text: "Грешка: Не е намерен OpenRouter API ключ.",
+          text: "Грешка: Не е намерен OpenRouter API ключ. Моля, добавете го в .env файл.",
           isError: true,
           timestamp: Date.now()
       };
@@ -157,10 +173,15 @@ export const generateResponse = async (
   const messages: any[] = [];
 
   // Add history (Text only)
+  // BUG FIX: Incorporate image context from previous messages if available
   history.filter(msg => !msg.isError && msg.text && msg.type !== 'image_generated' && msg.type !== 'slides').forEach(msg => {
+      let content = msg.text;
+      if (msg.imageAnalysis) {
+          content += `\n\n[CONTEXT FROM ATTACHED IMAGE: ${msg.imageAnalysis}]`;
+      }
       messages.push({
           role: msg.role === 'model' ? 'assistant' : 'user',
-          content: msg.text 
+          content: content
       });
   });
 
@@ -222,17 +243,21 @@ export const generateResponse = async (
       // Post-processing for JSON modes
       if (mode === AppMode.PRESENTATION) {
          try {
-             const jsonMatch = text.match(/```json\n([\s\S]*?)\n```/) || text.match(/```([\s\S]*?)```/);
-             const jsonStr = jsonMatch ? jsonMatch[1] : text;
-             const slides: Slide[] = JSON.parse(jsonStr);
-             return {
-                 id: Date.now().toString(),
-                 role: 'model',
-                 text: "Готово! Ето план за твоята презентация:",
-                 type: 'slides',
-                 slidesData: slides,
-                 timestamp: Date.now()
-             };
+             const jsonStr = extractJson(text);
+             if (jsonStr) {
+                 const slides: Slide[] = JSON.parse(jsonStr);
+                 return {
+                     id: Date.now().toString(),
+                     role: 'model',
+                     text: "Готово! Ето план за твоята презентация:",
+                     type: 'slides',
+                     slidesData: slides,
+                     timestamp: Date.now(),
+                     imageAnalysis: imageAnalysis // Return context so App.tsx can save it
+                 };
+             } else {
+                 throw new Error("No JSON found");
+             }
          } catch (e) {
              console.error("Presentation JSON parse error", e);
          }
@@ -240,17 +265,21 @@ export const generateResponse = async (
 
       if (mode === AppMode.TEACHER_TEST) {
           try {
-             const jsonMatch = text.match(/```json\n([\s\S]*?)\n```/) || text.match(/```([\s\S]*?)```/);
-             const jsonStr = jsonMatch ? jsonMatch[1] : text;
-             const testData: TestData = JSON.parse(jsonStr);
-             return {
-                 id: Date.now().toString(),
-                 role: 'model',
-                 text: `Готово! Ето теста на тема: ${testData.title || promptText}`,
-                 type: 'test_generated',
-                 testData: testData,
-                 timestamp: Date.now()
-             };
+             const jsonStr = extractJson(text);
+             if (jsonStr) {
+                 const testData: TestData = JSON.parse(jsonStr);
+                 return {
+                     id: Date.now().toString(),
+                     role: 'model',
+                     text: `Готово! Ето теста на тема: ${testData.title || promptText}`,
+                     type: 'test_generated',
+                     testData: testData,
+                     timestamp: Date.now(),
+                     imageAnalysis: imageAnalysis
+                 };
+             } else {
+                throw new Error("No JSON found");
+             }
           } catch (e) {
               console.error("Test JSON parse error", e);
           }
@@ -283,7 +312,8 @@ export const generateResponse = async (
           type: 'text',
           chartData: chartData,
           geometryData: geometryData,
-          timestamp: Date.now()
+          timestamp: Date.now(),
+          imageAnalysis: imageAnalysis
       };
 
   } catch (error: any) {

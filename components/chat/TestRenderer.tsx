@@ -1,9 +1,14 @@
+
 import React, { useState } from 'react';
 import { FileText, X, FileType, Loader2, Download, Printer } from 'lucide-react';
 import * as docx from 'docx';
 import { jsPDF } from "jspdf";
 import { TestData } from '../../types';
 import { cleanMathText } from '../../utils/text';
+
+// Cache font buffer at module level to avoid re-fetching
+let cachedFontBuffer: ArrayBuffer | null = null;
+const FONT_URL = "https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.66/fonts/Roboto/Roboto-Regular.ttf";
 
 export const TestRenderer = ({ data }: { data: TestData }) => {
   const [visible, setVisible] = useState(true);
@@ -88,12 +93,16 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
       try {
         const doc = new jsPDF();
         try {
-            const fontUrl = "https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.66/fonts/Roboto/Roboto-Regular.ttf";
-            const fontBytes = await fetch(fontUrl).then(res => res.arrayBuffer());
+            if (!cachedFontBuffer) {
+                const fontBytes = await fetch(FONT_URL).then(res => res.arrayBuffer());
+                cachedFontBuffer = fontBytes;
+            }
+            
             const filename = "Roboto-Regular.ttf";
             let binary = '';
-            const bytes = new Uint8Array(fontBytes);
+            const bytes = new Uint8Array(cachedFontBuffer as ArrayBuffer);
             const len = bytes.byteLength;
+            // Batch string creation for better performance on large fonts
             for (let i = 0; i < len; i++) {
                 binary += String.fromCharCode(bytes[i]);
             }
