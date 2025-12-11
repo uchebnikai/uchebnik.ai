@@ -48,7 +48,7 @@ async function analyzeImages(apiKey: string, images: string[]): Promise<string> 
 
     if (!res.ok) {
         const err = await res.text();
-        throw new Error(`Vision API Failed: ${err}`);
+        throw new Error(`Vision API Failed: ${res.status} ${err}`);
     }
     const data = await res.json();
     return data.choices?.[0]?.message?.content || "";
@@ -125,7 +125,7 @@ export const generateResponse = async (
   }
 
   if (!apiKey) {
-      console.error("API Key missing. Checked import.meta.env.VITE_OPENROUTER_API_KEY and process.env.OPENROUTER_API_KEY");
+      console.error("API Key missing.");
       return {
           id: Date.now().toString(),
           role: 'model',
@@ -163,6 +163,7 @@ export const generateResponse = async (
       : preferredModel;
       
   const fallbackModel = 'deepseek/deepseek-r1:free';
+  const emergencyModel = 'meta-llama/llama-3-8b-instruct:free';
 
   const imageKeywords = /(draw|paint|generate image|create a picture|make an image|нарисувай|рисувай|генерирай изображение|генерирай снимка|направи снимка|изображение на)/i;
   const isImageRequest = (subjectId === SubjectId.ART && mode === AppMode.DRAW) || imageKeywords.test(promptText);
@@ -199,6 +200,12 @@ export const generateResponse = async (
   systemInstruction = `CURRENT SUBJECT CONTEXT: ${subjectName}. All responses must relate to ${subjectName}.\n\n${systemInstruction}`;
 
   const messages: any[] = [];
+  
+  // Use 'system' role for system instruction
+  messages.push({
+      role: "system",
+      content: systemInstruction
+  });
 
   history.filter(msg => !msg.isError && msg.text && msg.type !== 'image_generated' && msg.type !== 'slides').forEach(msg => {
       let content = msg.text;
@@ -223,7 +230,7 @@ export const generateResponse = async (
       }
   }
 
-  finalUserPrompt = `[SYSTEM INSTRUCTION]: ${systemInstruction}\n\n[USER REQUEST]: ${finalUserPrompt}`;
+  // System instruction is now in a separate message, so just push user prompt
   messages.push({ role: "user", content: finalUserPrompt });
 
   const performRequest = async (model: string): Promise<Message> => {
@@ -231,6 +238,9 @@ export const generateResponse = async (
 
       if (!response.ok) {
           const errText = await response.text();
+          if (response.status === 401) {
+              throw new Error("Invalid API Key (401)");
+          }
           throw new Error(`API Error: ${response.status} ${errText}`);
       }
 
@@ -382,29 +392,47 @@ export const generateResponse = async (
   try {
       return await performRequest(primaryModel);
   } catch (error: any) {
-      console.warn(`Primary model ${primaryModel} failed: ${error.message}. Trying fallback...`);
+      console.warn(`Primary model ${primaryModel} failed: ${error.message}.`);
       
-      // If we were using auto/primary and it failed, try fallback
-      if (primaryModel !== fallbackModel) {
+      // Attempt Fallback Strategy
+      const failedModels = [primaryModel];
+
+      // Tier 2: DeepSeek R1 (Good for reasoning)
+      if (!failedModels.includes(fallbackModel)) {
           try {
-             if (onStreamUpdate) onStreamUpdate("Сменям модела поради натоварване...", "");
-             return await performRequest(fallbackModel);
-          } catch (fallbackError: any) {
-             console.error("Fallback model failed:", fallbackError);
-             return {
-                id: Date.now().toString(),
-                role: 'model',
-                text: "Възникна грешка при връзката с AI услугите. Моля, проверете интернет връзката си или опитайте по-късно.",
-                isError: true,
-                timestamp: Date.now()
-             };
+              if (onStreamUpdate) onStreamUpdate("Сменям модела (DeepSeek)...", "");
+              return await performRequest(fallbackModel);
+          } catch (fbError: any) {
+              console.warn(`Fallback 1 failed: ${fbError.message}`);
+              failedModels.push(fallbackModel);
           }
       }
+
+      // Tier 3: Llama 3 8B (Reliable, fast, free)
+      if (!failedModels.includes(emergencyModel)) {
+          try {
+              if (onStreamUpdate) onStreamUpdate("Сменям модела (Llama)...", "");
+              return await performRequest(emergencyModel);
+          } catch (fb2Error: any) {
+               console.warn(`Fallback 2 failed: ${fb2Error.message}`);
+               failedModels.push(emergencyModel);
+          }
+      }
+
+      // If all failed, analyze errors to give user feedback
+      const allErrors = [error.toString(), ...failedModels.map(m => "failed")].join(" ");
+      let userMsg = "Възникна грешка при връзката с AI услугите.";
       
+      if (error.message.includes("401") || allErrors.includes("401")) {
+          userMsg = "Грешка: Невалиден API ключ. Моля проверете настройките или се свържете с администратор.";
+      } else if (error.message.includes("429") || allErrors.includes("429")) {
+          userMsg = "Системата е натоварена (Rate Limit). Моля изчакайте малко и опитайте отново.";
+      }
+
       return {
           id: Date.now().toString(),
           role: 'model',
-          text: "Възникна грешка при връзката с AI модела. Моля опитайте отново.",
+          text: userMsg,
           isError: true,
           timestamp: Date.now()
       };
