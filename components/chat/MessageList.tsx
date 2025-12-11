@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import remarkGfm from 'remark-gfm';
-import { Projector, Download, Check, ThumbsUp, ThumbsDown, Reply, Volume2, Square, Copy, Share2, Sparkles, Brain, ChevronDown, ChevronUp, Lightbulb } from 'lucide-react';
+import { Projector, Download, Check, ThumbsUp, ThumbsDown, Reply, Volume2, Square, Copy, Share2, Sparkles, Brain, ChevronDown, ChevronUp, Lightbulb, Loader2 } from 'lucide-react';
 import { Message, UserSettings, SubjectConfig } from '../../types';
 import { handleDownloadPPTX } from '../../utils/exportUtils';
 import { CodeBlock } from '../ui/CodeBlock';
@@ -46,6 +46,20 @@ export const MessageList = ({
 }: MessageListProps) => {
 
   const [expandedReasoning, setExpandedReasoning] = useState<Record<string, boolean>>({});
+  // Track which message is currently streaming (simplified logic: the last model message if it's very recent)
+  const [streamingId, setStreamingId] = useState<string | null>(null);
+
+  useEffect(() => {
+      if (currentMessages.length > 0) {
+          const lastMsg = currentMessages[currentMessages.length - 1];
+          if (lastMsg.role === 'model' && !lastMsg.isError) {
+              // If the message is being updated (we can't easily detect "done" from props without a flag, 
+              // but we can assume if it's the last one and loadingSubject is false, it might be streaming or just finished.
+              // For UI purposes, we'll treat the last message as "active" for animations)
+              setStreamingId(lastMsg.id);
+          }
+      }
+  }, [currentMessages]);
 
   const toggleReasoning = (id: string) => {
      setExpandedReasoning(prev => ({
@@ -54,10 +68,22 @@ export const MessageList = ({
      }));
   };
 
+  // Auto-expand reasoning if it's the only thing responding so far and it's the active stream
+  useEffect(() => {
+      const lastMsg = currentMessages[currentMessages.length - 1];
+      if (lastMsg && lastMsg.role === 'model' && lastMsg.reasoning && !lastMsg.text && !expandedReasoning[lastMsg.id]) {
+          setExpandedReasoning(prev => ({ ...prev, [lastMsg.id]: true }));
+      }
+  }, [currentMessages]);
+
   return (
       <div className={`flex-1 overflow-y-auto px-2 lg:px-8 py-4 lg:py-8 custom-scrollbar scroll-smooth ${userSettings.textSize === 'large' ? 'text-lg' : userSettings.textSize === 'small' ? 'text-sm' : 'text-base'}`}>
          <div className="max-w-4xl mx-auto space-y-8 lg:space-y-12 pb-40 pt-2 lg:pt-4">
-            {currentMessages.map((msg) => (
+            {currentMessages.map((msg, index) => {
+               const isLast = index === currentMessages.length - 1;
+               const isStreaming = isLast && msg.role === 'model' && !loadingSubject; // Approximate streaming state
+
+               return (
                <div key={msg.id} id={msg.id} className={`group flex flex-col gap-2 ${SLIDE_UP} duration-700 ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
                   <div className={`${MSG_CONTAINER_BASE} ${msg.role === 'user' ? MSG_BUBBLE_USER : MSG_BUBBLE_MODEL}`}>
                      
@@ -78,32 +104,42 @@ export const MessageList = ({
                         </div>
                      )}
                      
-                     {/* Reasoning / Thinking Toggle */}
+                     {/* Enhanced Reasoning / Thinking UI */}
                      {msg.reasoning && (
-                        <div className="mb-4">
-                           <button 
-                              onClick={() => toggleReasoning(msg.id)}
-                              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all border w-full sm:w-auto
-                                 ${expandedReasoning[msg.id] 
-                                    ? 'bg-indigo-100/50 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-300 border-indigo-500/20' 
-                                    : 'bg-gray-50/50 dark:bg-white/5 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/10'
-                                 }`}
-                           >
-                              <Brain size={14} className={expandedReasoning[msg.id] ? 'text-indigo-500 animate-pulse' : 'opacity-70'} />
-                              <span>{expandedReasoning[msg.id] ? 'Скрий мислите' : 'Виж как разсъждавам'}</span>
-                              {expandedReasoning[msg.id] ? <ChevronUp size={12}/> : <ChevronDown size={12}/>}
-                           </button>
-                           
-                           {expandedReasoning[msg.id] && (
-                              <div className="mt-2 text-xs text-zinc-600 dark:text-zinc-400 bg-gray-50/80 dark:bg-black/20 p-4 rounded-xl border-l-2 border-indigo-500/30 animate-in slide-in-from-top-2 fade-in">
-                                 <div className="flex items-center gap-2 mb-2 text-indigo-500 font-bold opacity-70 uppercase tracking-widest text-[10px]">
-                                     <Lightbulb size={12}/> Chain of Thought
-                                 </div>
-                                 <div className="markdown-content italic opacity-90">
-                                    <ReactMarkdown>{msg.reasoning || ""}</ReactMarkdown>
-                                 </div>
-                              </div>
-                           )}
+                        <div className="mb-6">
+                           <div className={`rounded-xl overflow-hidden border transition-all duration-300 ${expandedReasoning[msg.id] ? 'bg-indigo-50/50 dark:bg-indigo-900/10 border-indigo-200 dark:border-indigo-500/20' : 'bg-gray-50 dark:bg-white/5 border-transparent'}`}>
+                               <button 
+                                  onClick={() => toggleReasoning(msg.id)}
+                                  className="w-full flex items-center justify-between px-4 py-3 text-left group/btn"
+                               >
+                                  <div className="flex items-center gap-2.5">
+                                      <div className={`p-1.5 rounded-lg ${isStreaming && !msg.text ? 'bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400' : 'bg-gray-200 dark:bg-white/10 text-gray-500'}`}>
+                                          {isStreaming && !msg.text ? <Loader2 size={14} className="animate-spin"/> : <Brain size={14} />}
+                                      </div>
+                                      <div className="flex flex-col">
+                                          <span className={`text-xs font-bold ${isStreaming && !msg.text ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-600 dark:text-gray-300'}`}>
+                                              {isStreaming && !msg.text ? 'Анализирам задачата...' : 'Мисловен процес'}
+                                          </span>
+                                          {!expandedReasoning[msg.id] && (
+                                              <span className="text-[10px] text-gray-400 truncate max-w-[150px] sm:max-w-[300px]">
+                                                  Натисни за детайли
+                                              </span>
+                                          )}
+                                      </div>
+                                  </div>
+                                  <ChevronDown size={14} className={`text-gray-400 transition-transform duration-300 ${expandedReasoning[msg.id] ? 'rotate-180' : ''}`}/>
+                               </button>
+                               
+                               {expandedReasoning[msg.id] && (
+                                  <div className="px-4 pb-4 pt-0 animate-in slide-in-from-top-1 fade-in">
+                                     <div className="h-px w-full bg-indigo-500/10 mb-3" />
+                                     <div className="text-xs md:text-sm text-zinc-600 dark:text-zinc-400 font-mono leading-relaxed opacity-90 break-words whitespace-pre-wrap">
+                                        {msg.reasoning}
+                                        {isStreaming && !msg.text && <span className="inline-block w-1.5 h-3 ml-1 bg-indigo-500 animate-pulse align-middle"/>}
+                                     </div>
+                                  </div>
+                               )}
+                           </div>
                         </div>
                      )}
 
@@ -118,7 +154,15 @@ export const MessageList = ({
                         <TestRenderer data={msg.testData} />
                      )}
 
-                     {msg.text && <div className="markdown-content w-full break-words overflow-hidden"><ReactMarkdown remarkPlugins={[remarkMath, remarkGfm]} rehypePlugins={[rehypeKatex]} components={{code: CodeBlock}}>{msg.text}</ReactMarkdown></div>}
+                     {msg.text && (
+                         <div className="markdown-content w-full break-words overflow-hidden">
+                             <ReactMarkdown remarkPlugins={[remarkMath, remarkGfm]} rehypePlugins={[rehypeKatex]} components={{code: CodeBlock}}>
+                                 {msg.text}
+                             </ReactMarkdown>
+                             {isStreaming && <span className="inline-block w-2 h-4 ml-0.5 bg-current opacity-70 animate-pulse align-middle rounded-sm"/>}
+                         </div>
+                     )}
+                     
                      {msg.chartData && <ChartRenderer data={msg.chartData} />}
                      {msg.geometryData && <GeometryRenderer data={msg.geometryData} />}
                      
@@ -145,7 +189,8 @@ export const MessageList = ({
                      </div>
                   </div>
                </div>
-            ))}
+               );
+            })}
             
             {loadingSubject && (
                <div className={`flex flex-col gap-2 pl-4 ${FADE_IN} duration-500`}>
@@ -157,7 +202,7 @@ export const MessageList = ({
                          <div className={`w-2 h-2 bg-indigo-500 rounded-full ${BOUNCE_DELAY} delay-200`}/>
                       </div>
                   </div>
-                  <div className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest pl-16 animate-pulse">Thinking...</div>
+                  <div className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest pl-16 animate-pulse">Инициализиране...</div>
                </div>
             )}
             <div ref={messagesEndRef} className="h-6 lg:h-10"/>
