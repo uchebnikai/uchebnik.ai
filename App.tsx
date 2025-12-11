@@ -5,7 +5,7 @@ import { generateResponse } from './services/aiService';
 import { supabase } from './supabaseClient';
 import { Auth } from './components/auth/Auth';
 import { 
-  Loader2, X, AlertCircle, CheckCircle, Info, Minimize
+  Loader2, X, AlertCircle, CheckCircle, Info, Minimize, Database
 } from 'lucide-react';
 
 import { Session as SupabaseSession } from '@supabase/supabase-js';
@@ -46,6 +46,8 @@ export const App = () => {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [isRemoteDataLoaded, setIsRemoteDataLoaded] = useState(false);
   const [syncStatus, setSyncStatus] = useState<'synced' | 'syncing' | 'error' | 'offline'>('synced');
+  const [syncErrorDetails, setSyncErrorDetails] = useState<string | null>(null);
+  const [missingDbTables, setMissingDbTables] = useState(false);
 
   // --- State ---
   const [userRole, setUserRole] = useState<UserRole | null>(null);
@@ -240,26 +242,40 @@ export const App = () => {
           setIsRemoteDataLoaded(false);
           isRemoteDataLoadedRef.current = false;
           setSyncStatus('syncing');
+          setMissingDbTables(false);
           
           try {
               // Load Settings
-              const { data: profileData } = await supabase
+              const { data: profileData, error: profileError } = await supabase
                   .from('profiles')
                   .select('settings, theme_color, custom_background')
                   .eq('id', session.user.id)
                   .single();
               
+              if (profileError && profileError.code === '42P01') {
+                  setMissingDbTables(true);
+                  throw new Error("Missing tables");
+              }
+
               if (profileData && profileData.settings) {
                   const merged = { ...profileData.settings, themeColor: profileData.theme_color, customBackground: profileData.custom_background };
                   setUserSettings(prev => ({ ...prev, ...merged }));
               }
 
               // Load Sessions
-              const { data: sessionData } = await supabase
+              const { data: sessionData, error: sessionError } = await supabase
                   .from('user_data')
                   .select('data')
                   .eq('user_id', session.user.id)
                   .single();
+              
+              if (sessionError) {
+                  if (sessionError.code === '42P01') { // undefined_table
+                      setMissingDbTables(true);
+                  } else if (sessionError.code !== 'PGRST116') { // not found is ok
+                      console.warn("Session load error:", sessionError);
+                  }
+              }
                   
               if (sessionData && sessionData.data) {
                   // Mark as incoming to prevent immediate save loop
@@ -269,7 +285,7 @@ export const App = () => {
               setSyncStatus('synced');
           } catch (err) {
               console.error("Failed to load remote data", err);
-              setSyncStatus('error');
+              // Don't set global error yet, wait for sync attempt
           } finally {
               setIsRemoteDataLoaded(true);
               isRemoteDataLoadedRef.current = true;
@@ -281,7 +297,7 @@ export const App = () => {
 
   // Cloud Sync: Realtime Subscription
   useEffect(() => {
-      if (!session?.user?.id) return;
+      if (!session?.user?.id || missingDbTables) return;
 
       const channel = supabase.channel(`sync:${session.user.id}`)
           .on('postgres_changes', { 
@@ -292,9 +308,8 @@ export const App = () => {
           }, (payload) => {
               const remoteSessions = (payload.new as any).data;
               if (remoteSessions) {
-                  // Compare to avoid infinite loops or unnecessary renders
-                  const currentJson = JSON.stringify(sessionsRef.current);
-                  const remoteJson = JSON.stringify(remoteSessions);
+                  const currentJson = JSON.stringify(sessionsRef.current.map(s => ({...s, messages: s.messages.map(m => ({...m, images: []}))})));
+                  const remoteJson = JSON.stringify(remoteSessions.map((s: Session) => ({...s, messages: s.messages.map((m: Message) => ({...m, images: []}))})));
                   
                   if (currentJson !== remoteJson) {
                       console.log("Applying realtime update from cloud");
@@ -307,12 +322,13 @@ export const App = () => {
           .subscribe();
 
       return () => { supabase.removeChannel(channel); };
-  }, [session?.user?.id]);
+  }, [session?.user?.id, missingDbTables]);
 
 
   // Cloud Sync: Save Sessions on Change
   useEffect(() => {
       if (!session?.user?.id || !isRemoteDataLoaded) return;
+      if (missingDbTables) return; // Stop if tables missing
       
       // If this change came from the cloud, don't save it back
       if (isIncomingUpdateRef.current) {
@@ -321,45 +337,63 @@ export const App = () => {
       }
       
       setSyncStatus('syncing');
+      setSyncErrorDetails(null);
 
       if (syncSessionsTimer.current) clearTimeout(syncSessionsTimer.current);
       
       syncSessionsTimer.current = setTimeout(async () => {
+          const sanitizedSessions = sessions.map(s => ({
+              ...s,
+              messages: s.messages.map(m => ({
+                  ...m,
+                  images: m.images ? [] : undefined 
+              }))
+          }));
+
           const { error } = await supabase.from('user_data').upsert({
               user_id: session.user.id,
-              data: sessions,
+              data: sanitizedSessions,
               updated_at: new Date().toISOString()
           });
           
           if (error) {
              console.error("Sync Error:", error);
              setSyncStatus('error');
+             setSyncErrorDetails(error.message || "Unknown error");
+             
+             if (error.code === '42P01') {
+                 setMissingDbTables(true);
+             }
           } else {
              setSyncStatus('synced');
           }
-      }, 1000); // 1s debounce
+      }, 2000); // 2s debounce
 
       return () => { if(syncSessionsTimer.current) clearTimeout(syncSessionsTimer.current); };
-  }, [sessions, session?.user?.id, isRemoteDataLoaded]);
+  }, [sessions, session?.user?.id, isRemoteDataLoaded, missingDbTables]);
 
   // Cloud Sync: Save Settings on Change
   useEffect(() => {
       if (!session?.user?.id || !isRemoteDataLoaded) return;
-      
+      if (missingDbTables) return;
+
       if (syncSettingsTimer.current) clearTimeout(syncSettingsTimer.current);
       
       syncSettingsTimer.current = setTimeout(async () => {
-          await supabase.from('profiles').upsert({
+          const { error } = await supabase.from('profiles').upsert({
               id: session.user.id,
               settings: userSettings,
               theme_color: userSettings.themeColor,
               custom_background: userSettings.customBackground,
               updated_at: new Date().toISOString()
           });
+          if (error && error.code === '42P01') {
+              setMissingDbTables(true);
+          }
       }, 1000);
 
       return () => { if(syncSettingsTimer.current) clearTimeout(syncSettingsTimer.current); };
-  }, [userSettings, session?.user?.id, isRemoteDataLoaded]);
+  }, [userSettings, session?.user?.id, isRemoteDataLoaded, missingDbTables]);
 
 
   // Window Resize Listener
@@ -393,18 +427,14 @@ export const App = () => {
             // Load Sessions
             const loadedSessions = await getSessionsFromStorage(sessionsKey);
             
-            // Only set sessions from local storage if remote data hasn't loaded yet.
-            // If remote data HAS loaded, it is the truth, and local storage might be stale.
             if (!isRemoteDataLoadedRef.current) {
                 if (loadedSessions && loadedSessions.length > 0) setSessions(loadedSessions);
                 else {
-                    // Fallback migration from localStorage if IDB is empty
                     const lsSessions = localStorage.getItem(sessionsKey);
                     if (lsSessions) {
                         try {
                             const parsed = JSON.parse(lsSessions);
                             setSessions(parsed);
-                            // Save to IDB immediately
                             await saveSessionsToStorage(sessionsKey, parsed);
                         } catch(e){}
                     }
@@ -416,7 +446,6 @@ export const App = () => {
             if (!isRemoteDataLoadedRef.current) {
                 if (loadedSettings) setUserSettings(loadedSettings);
                 else {
-                     // Fallback or Defaults
                      const lsSettings = localStorage.getItem(settingsKey);
                      if (lsSettings) setUserSettings(JSON.parse(lsSettings));
                      else if (userId) {
@@ -446,7 +475,6 @@ export const App = () => {
         const savedPlan = localStorage.getItem(planKey);
         if (savedPlan) setUserPlan(savedPlan as UserPlan);
         else {
-           // Ensure local storage consistency for guest users
            if (!userId) {
                const oldPro = localStorage.getItem('uchebnik_pro_status');
                if (oldPro === 'unlocked') {
@@ -1401,6 +1429,24 @@ export const App = () => {
             onConfirm={confirmModal?.onConfirm || (() => {})}
             onCancel={() => setConfirmModal(null)}
         />
+
+        {/* Sync Error Modal */}
+        {(syncStatus === 'error' && syncErrorDetails) || missingDbTables ? (
+            <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[100] animate-in slide-in-from-bottom-2 fade-in">
+                <div className={`backdrop-blur-md text-white px-4 py-3 rounded-xl shadow-lg flex items-center gap-3 max-w-md border ${missingDbTables ? 'bg-amber-600/90 border-amber-500/50' : 'bg-red-500/90 border-red-400/50'}`}>
+                    {missingDbTables ? <Database size={20} className="shrink-0"/> : <AlertCircle size={20} className="shrink-0"/>}
+                    <div className="flex-1 text-xs">
+                        <span className="font-bold block mb-0.5">{missingDbTables ? 'Database Setup Required' : 'Sync Error'}</span>
+                        <span className="opacity-90">
+                            {missingDbTables 
+                                ? 'Tables missing. Please run the SQL setup script in Supabase.' 
+                                : syncErrorDetails || 'Could not save to cloud.'}
+                        </span>
+                    </div>
+                    {!missingDbTables && <button onClick={() => setSyncStatus('synced')} className="p-1 hover:bg-white/20 rounded-lg transition-colors"><X size={16}/></button>}
+                </div>
+            </div>
+        ) : null}
 
         {/* Dynamic View Rendering */}
         {!activeSubject ? (
