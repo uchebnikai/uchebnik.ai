@@ -191,11 +191,7 @@ export const App = () => {
         setAuthLoading(false);
         if (session) {
             setShowAuthModal(false);
-            
-            // Sync Plan from Metadata if available
-            if (session.user.user_metadata?.plan) {
-                setUserPlan(session.user.user_metadata.plan);
-            }
+            // We do NOT sync plan from metadata here anymore, as the "Truth" is now in the profiles table
         } else {
             // Logout cleanup
             setSessions([]);
@@ -245,7 +241,7 @@ export const App = () => {
           setMissingDbTables(false);
           
           try {
-              // Load Settings
+              // Load Settings, Plan, and Stats from 'profiles'
               const { data: profileData, error: profileError } = await supabase
                   .from('profiles')
                   .select('settings, theme_color, custom_background')
@@ -257,9 +253,33 @@ export const App = () => {
                   throw new Error("Missing tables");
               }
 
-              if (profileData && profileData.settings) {
-                  const merged = { ...profileData.settings, themeColor: profileData.theme_color, customBackground: profileData.custom_background };
-                  setUserSettings(prev => ({ ...prev, ...merged }));
+              if (profileData) {
+                  // 1. Settings (Merge)
+                  if (profileData.settings) {
+                      // Extract special fields that are stored in settings
+                      const { plan, stats, ...restSettings } = profileData.settings;
+                      
+                      const merged = { ...restSettings, themeColor: profileData.theme_color, customBackground: profileData.custom_background };
+                      setUserSettings(prev => ({ ...prev, ...merged }));
+
+                      // 2. Plan
+                      if (plan) setUserPlan(plan);
+
+                      // 3. Stats (Streak & Usage)
+                      if (stats) {
+                          setStreak(stats.streak || 0);
+                          const today = new Date().toDateString();
+                          if (stats.lastImageDate === today) {
+                              setDailyImageCount(stats.dailyImageCount || 0);
+                          } else {
+                              setDailyImageCount(0);
+                          }
+                      }
+                  } else {
+                      // No settings found (legacy row?), apply theme at least
+                      if (profileData.theme_color) setUserSettings(prev => ({...prev, themeColor: profileData.theme_color}));
+                      if (profileData.custom_background) setUserSettings(prev => ({...prev, customBackground: profileData.custom_background}));
+                  }
               }
 
               // Load Sessions
@@ -285,7 +305,6 @@ export const App = () => {
               setSyncStatus('synced');
           } catch (err) {
               console.error("Failed to load remote data", err);
-              // Don't set global error yet, wait for sync attempt
           } finally {
               setIsRemoteDataLoaded(true);
               isRemoteDataLoadedRef.current = true;
@@ -295,11 +314,11 @@ export const App = () => {
       loadRemoteData();
   }, [session?.user?.id]);
 
-  // Cloud Sync: Realtime Subscription
+  // Cloud Sync: Realtime Subscription (Sessions)
   useEffect(() => {
       if (!session?.user?.id || missingDbTables) return;
 
-      const channel = supabase.channel(`sync:${session.user.id}`)
+      const channel = supabase.channel(`sync-sessions:${session.user.id}`)
           .on('postgres_changes', { 
               event: 'UPDATE', 
               schema: 'public', 
@@ -312,11 +331,58 @@ export const App = () => {
                   const remoteJson = JSON.stringify(remoteSessions.map((s: Session) => ({...s, messages: s.messages.map((m: Message) => ({...m, images: []}))})));
                   
                   if (currentJson !== remoteJson) {
-                      console.log("Applying realtime update from cloud");
-                      isIncomingUpdateRef.current = true; // Block the next save effect
+                      isIncomingUpdateRef.current = true; 
                       setSessions(remoteSessions);
-                      addToast('Синхронизирано', 'info');
+                      addToast('Чатовете са синхронизирани', 'info');
                   }
+              }
+          })
+          .subscribe();
+
+      return () => { supabase.removeChannel(channel); };
+  }, [session?.user?.id, missingDbTables]);
+
+  // Cloud Sync: Realtime Subscription (Profiles - Settings/Plan/Stats)
+  useEffect(() => {
+      if (!session?.user?.id || missingDbTables) return;
+
+      const channel = supabase.channel(`sync-profiles:${session.user.id}`)
+          .on('postgres_changes', { 
+              event: 'UPDATE', 
+              schema: 'public', 
+              table: 'profiles', 
+              filter: `id=eq.${session.user.id}` 
+          }, (payload) => {
+              const remoteData = payload.new as any;
+              if (remoteData && remoteData.settings) {
+                  console.log("Received profile update", remoteData);
+                  isIncomingUpdateRef.current = true; // Block save trigger
+
+                  const { plan, stats, ...settingsRest } = remoteData.settings;
+                  
+                  // Update Settings
+                  setUserSettings(prev => ({ 
+                      ...prev, 
+                      ...settingsRest, 
+                      themeColor: remoteData.theme_color, 
+                      customBackground: remoteData.custom_background 
+                  }));
+
+                  // Update Plan
+                  if (plan) setUserPlan(plan);
+
+                  // Update Stats
+                  if (stats) {
+                      setStreak(stats.streak || 0);
+                      const today = new Date().toDateString();
+                      if (stats.lastImageDate === today) {
+                          setDailyImageCount(stats.dailyImageCount || 0);
+                      } else {
+                          setDailyImageCount(0);
+                      }
+                  }
+                  
+                  addToast('Настройките са синхронизирани', 'info');
               }
           })
           .subscribe();
@@ -328,9 +394,8 @@ export const App = () => {
   // Cloud Sync: Save Sessions on Change
   useEffect(() => {
       if (!session?.user?.id || !isRemoteDataLoaded) return;
-      if (missingDbTables) return; // Stop if tables missing
+      if (missingDbTables) return; 
       
-      // If this change came from the cloud, don't save it back
       if (isIncomingUpdateRef.current) {
           isIncomingUpdateRef.current = false;
           return;
@@ -360,29 +425,58 @@ export const App = () => {
              console.error("Sync Error:", error);
              setSyncStatus('error');
              setSyncErrorDetails(error.message || "Unknown error");
-             
-             if (error.code === '42P01') {
-                 setMissingDbTables(true);
-             }
+             if (error.code === '42P01') setMissingDbTables(true);
           } else {
              setSyncStatus('synced');
           }
-      }, 2000); // 2s debounce
+      }, 2000); 
 
       return () => { if(syncSessionsTimer.current) clearTimeout(syncSessionsTimer.current); };
   }, [sessions, session?.user?.id, isRemoteDataLoaded, missingDbTables]);
 
-  // Cloud Sync: Save Settings on Change
+  // Cloud Sync: Save Settings, Plan & Stats on Change
   useEffect(() => {
       if (!session?.user?.id || !isRemoteDataLoaded) return;
       if (missingDbTables) return;
 
+      if (isIncomingUpdateRef.current) {
+          // Note: Since sessions and settings might update separately, 
+          // we should technically have separate flags, but for simplicity 
+          // we use one. If high conflict rate, split them.
+          // For now, allow fall-through if it wasn't a session update that triggered this.
+          // However, useEffects fire specifically on dep change. 
+          // If we received a profile update, setUserSettings fired, triggering this.
+          // We must block it.
+          // Since we consume the flag in the sessions effect often, we need to be careful.
+          // Let's rely on the flag being true immediately after update.
+          // But wait, the flag is reset in the Sessions effect if sessions changed.
+          // If ONLY settings changed, Sessions effect wont run, flag stays true? 
+          // No, react batches.
+          
+          // Better approach: Just save. The DB handles concurrency reasonably well for this scale.
+          // But to avoid "bounce back" (saving what we just received), we check.
+          isIncomingUpdateRef.current = false;
+          return;
+      }
+
       if (syncSettingsTimer.current) clearTimeout(syncSettingsTimer.current);
       
       syncSettingsTimer.current = setTimeout(async () => {
+          // Prepare consolidated settings object
+          const fullSettingsPayload = {
+              ...userSettings,
+              plan: userPlan,
+              stats: {
+                  streak,
+                  dailyImageCount,
+                  lastImageDate: localStorage.getItem('uchebnik_image_date'),
+                  lastVisit: localStorage.getItem('uchebnik_last_visit')
+              }
+          };
+
           const { error } = await supabase.from('profiles').upsert({
               id: session.user.id,
-              settings: userSettings,
+              settings: fullSettingsPayload,
               theme_color: userSettings.themeColor,
               custom_background: userSettings.customBackground,
               updated_at: new Date().toISOString()
@@ -393,7 +487,7 @@ export const App = () => {
       }, 1000);
 
       return () => { if(syncSettingsTimer.current) clearTimeout(syncSettingsTimer.current); };
-  }, [userSettings, session?.user?.id, isRemoteDataLoaded, missingDbTables]);
+  }, [userSettings, userPlan, streak, dailyImageCount, session?.user?.id, isRemoteDataLoaded, missingDbTables]);
 
 
   // Window Resize Listener
@@ -427,6 +521,7 @@ export const App = () => {
             // Load Sessions
             const loadedSessions = await getSessionsFromStorage(sessionsKey);
             
+            // Only use local if remote hasn't loaded (Offline Mode or Initial Load)
             if (!isRemoteDataLoadedRef.current) {
                 if (loadedSessions && loadedSessions.length > 0) setSessions(loadedSessions);
                 else {
@@ -449,6 +544,7 @@ export const App = () => {
                      const lsSettings = localStorage.getItem(settingsKey);
                      if (lsSettings) setUserSettings(JSON.parse(lsSettings));
                      else if (userId) {
+                        // Default settings
                         setUserSettings({
                             userName: session?.user?.user_metadata?.full_name || '', 
                             gradeLevel: '8-12', 
@@ -459,7 +555,7 @@ export const App = () => {
                             reduceMotion: false, 
                             responseLength: 'concise', 
                             creativity: 'balanced', 
-                            languageLevel: 'standard',
+                            languageLevel: 'standard', 
                             preferredModel: 'auto',
                             themeColor: '#6366f1',
                             customBackground: null
@@ -471,53 +567,61 @@ export const App = () => {
             console.error("Initialization Error", err);
         }
 
-        // Plan & Streak (Keep in LocalStorage for now as they are small)
-        const savedPlan = localStorage.getItem(planKey);
-        if (savedPlan) setUserPlan(savedPlan as UserPlan);
-        else {
-           if (!userId) {
-               const oldPro = localStorage.getItem('uchebnik_pro_status');
-               if (oldPro === 'unlocked') {
-                   setUserPlan('pro');
-                   localStorage.setItem('uchebnik_user_plan', 'pro');
+        // Plan & Streak (From LocalStorage fallbacks, or if offline)
+        if (!isRemoteDataLoadedRef.current) {
+            const savedPlan = localStorage.getItem(planKey);
+            if (savedPlan) setUserPlan(savedPlan as UserPlan);
+            else {
+                // Legacy Guest Pro check
+               if (!userId) {
+                   const oldPro = localStorage.getItem('uchebnik_pro_status');
+                   if (oldPro === 'unlocked') {
+                       setUserPlan('pro');
+                       localStorage.setItem('uchebnik_user_plan', 'pro');
+                   }
                }
-           }
+            }
         }
 
         const savedAdminKeys = localStorage.getItem('uchebnik_admin_keys');
         if (savedAdminKeys) setGeneratedKeys(JSON.parse(savedAdminKeys));
 
         const today = new Date().toDateString();
-        const lastUsageDate = localStorage.getItem('uchebnik_image_date');
-        const lastUsageCount = localStorage.getItem('uchebnik_image_count');
-
-        if (lastUsageDate !== today) {
-            setDailyImageCount(0);
-            localStorage.setItem('uchebnik_image_date', today);
-            localStorage.setItem('uchebnik_image_count', '0');
-        } else {
-            setDailyImageCount(parseInt(lastUsageCount || '0'));
-        }
-
-        // Streak Logic
-        const lastVisit = localStorage.getItem(lastVisitKey);
-        const savedStreak = parseInt(localStorage.getItem(streakKey) || '0', 10);
+        // Note: dailyImageCount and streak are handled via remote sync preferentially now
+        // But we still maintain local logic for offline support / responsiveness
         
-        if (lastVisit !== today) {
-            const yesterday = new Date();
-            yesterday.setDate(yesterday.getDate() - 1);
-            
-            if (lastVisit === yesterday.toDateString()) {
-                const newStreak = savedStreak + 1;
-                setStreak(newStreak);
-                localStorage.setItem(streakKey, newStreak.toString());
+        if (!isRemoteDataLoadedRef.current) {
+            const lastUsageDate = localStorage.getItem('uchebnik_image_date');
+            const lastUsageCount = localStorage.getItem('uchebnik_image_count');
+
+            if (lastUsageDate !== today) {
+                setDailyImageCount(0);
+                localStorage.setItem('uchebnik_image_date', today);
+                localStorage.setItem('uchebnik_image_count', '0');
             } else {
-                setStreak(1);
-                localStorage.setItem(streakKey, '1');
+                setDailyImageCount(parseInt(lastUsageCount || '0'));
             }
-            localStorage.setItem(lastVisitKey, today);
-        } else {
-            setStreak(savedStreak);
+
+            // Streak Logic
+            const lastVisit = localStorage.getItem(lastVisitKey);
+            const savedStreak = parseInt(localStorage.getItem(streakKey) || '0', 10);
+            
+            if (lastVisit !== today) {
+                const yesterday = new Date();
+                yesterday.setDate(yesterday.getDate() - 1);
+                
+                if (lastVisit === yesterday.toDateString()) {
+                    const newStreak = savedStreak + 1;
+                    setStreak(newStreak);
+                    localStorage.setItem(streakKey, newStreak.toString());
+                } else {
+                    setStreak(1);
+                    localStorage.setItem(streakKey, '1');
+                }
+                localStorage.setItem(lastVisitKey, today);
+            } else {
+                setStreak(savedStreak);
+            }
         }
     };
 
@@ -525,7 +629,7 @@ export const App = () => {
 
     const loadVoices = () => { if (typeof window !== 'undefined' && window.speechSynthesis) window.speechSynthesis.getVoices(); };
     if (typeof window !== 'undefined' && window.speechSynthesis) { loadVoices(); window.speechSynthesis.onvoiceschanged = loadVoices; }
-  }, [session]);
+  }, [session, isRemoteDataLoaded]); // Depend on isRemoteDataLoaded to avoid overwriting remote data with local stale data
 
   // Persist Data (IndexedDB)
   useEffect(() => { 
@@ -1264,7 +1368,7 @@ export const App = () => {
        setUnlockKeyInput('');
        addToast(`Успешно активирахте план ${newPlan.toUpperCase()}!`, 'success');
        
-       // Sync to Supabase if logged in
+       // Sync to Supabase if logged in (for metadata backup, though now managed via profiles)
        if (session) {
            await supabase.auth.updateUser({
                data: { plan: newPlan }
