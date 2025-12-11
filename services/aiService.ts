@@ -1,3 +1,5 @@
+
+
 import { AppMode, SubjectId, Slide, ChartData, GeometryData, Message, TestData } from "../types";
 import { SYSTEM_PROMPTS, SUBJECTS } from "../constants";
 
@@ -48,7 +50,7 @@ async function analyzeImages(apiKey: string, images: string[]): Promise<string> 
 
     if (!res.ok) {
         const err = await res.text();
-        throw new Error(`Vision API Failed: ${res.status} ${err}`);
+        throw new Error(`Vision API Failed: ${err}`);
     }
     const data = await res.json();
     return data.choices?.[0]?.message?.content || "";
@@ -68,37 +70,6 @@ function extractJson(text: string): string | null {
   return null;
 }
 
-// Core API Call function
-async function callOpenRouter(
-    apiKey: string,
-    modelName: string,
-    messages: any[]
-): Promise<Response> {
-    const isDeepSeek = modelName.includes('deepseek');
-    
-    const requestBody: any = {
-      model: modelName,
-      messages: messages,
-      stream: true // Enable streaming
-    };
-
-    // OpenRouter specific: include_reasoning is mostly for DeepSeek R1 to get the thought process
-    if (isDeepSeek) {
-        requestBody.include_reasoning = true;
-    }
-
-    return await fetch(API_URL, {
-        method: "POST",
-        headers: {
-            "Authorization": `Bearer ${apiKey}`,
-            "Content-Type": "application/json",
-            "HTTP-Referer": "https://uchebnik.ai",
-            "X-Title": "Uchebnik AI"
-        },
-        body: JSON.stringify(requestBody)
-    });
-}
-
 export const generateResponse = async (
   subjectId: SubjectId,
   mode: AppMode,
@@ -109,27 +80,13 @@ export const generateResponse = async (
   onStreamUpdate?: (text: string, reasoning: string) => void
 ): Promise<Message> => {
   
-  // Robust API Key Retrieval
-  let apiKey = "";
-  try {
-      // Check for Vite injected env var
-      const meta = import.meta as any;
-      if (typeof meta !== 'undefined' && meta.env && meta.env.VITE_OPENROUTER_API_KEY) {
-          apiKey = meta.env.VITE_OPENROUTER_API_KEY;
-      }
-  } catch (e) {}
+  const apiKey = process.env.OPENROUTER_API_KEY || "";
 
   if (!apiKey) {
-      // Fallback to process.env replacement or default defined in vite.config.ts
-      apiKey = process.env.OPENROUTER_API_KEY || "";
-  }
-
-  if (!apiKey) {
-      console.error("API Key missing.");
       return {
           id: Date.now().toString(),
           role: 'model',
-          text: "Грешка: Не е намерен API ключ. Моля, свържете се с администратор.",
+          text: "Грешка: Не е намерен OpenRouter API ключ.",
           isError: true,
           timestamp: Date.now()
       };
@@ -156,18 +113,10 @@ export const generateResponse = async (
       }
   }
 
-  // Model Selection Logic with Smart Fallback
-  const primaryModel = (preferredModel === 'auto' || !preferredModel) 
-      ? 'google/gemini-2.0-flash-exp:free' 
-      : preferredModel;
-      
-  // Pool of high-quality free models (Excluding Llama as requested)
-  // We prioritize the primary choice, then Chimera DeepSeek R1T2, then Chimera DeepSeek R1T, then Gemini Flash
-  const fallbackPool = [
-      'tngtech/deepseek-r1t2-chimera:free', // Preferred DeepSeek (R1T2)
-      'tngtech/deepseek-r1t-chimera:free',  // Tertiary DeepSeek (R1T)
-      'google/gemini-2.0-flash-exp:free'    // Gemini Flash (Reliable)
-  ];
+  let modelName = 'tngtech/deepseek-r1t2-chimera:free'; 
+  if (preferredModel !== 'auto' && preferredModel) {
+      modelName = preferredModel;
+  }
 
   const imageKeywords = /(draw|paint|generate image|create a picture|make an image|нарисувай|рисувай|генерирай изображение|генерирай снимка|направи снимка|изображение на)/i;
   const isImageRequest = (subjectId === SubjectId.ART && mode === AppMode.DRAW) || imageKeywords.test(promptText);
@@ -204,12 +153,6 @@ export const generateResponse = async (
   systemInstruction = `CURRENT SUBJECT CONTEXT: ${subjectName}. All responses must relate to ${subjectName}.\n\n${systemInstruction}`;
 
   const messages: any[] = [];
-  
-  // Use 'system' role for system instruction
-  messages.push({
-      role: "system",
-      content: systemInstruction
-  });
 
   history.filter(msg => !msg.isError && msg.text && msg.type !== 'image_generated' && msg.type !== 'slides').forEach(msg => {
       let content = msg.text;
@@ -234,20 +177,30 @@ export const generateResponse = async (
       }
   }
 
-  // System instruction is now in a separate message, so just push user prompt
+  finalUserPrompt = `[SYSTEM INSTRUCTION]: ${systemInstruction}\n\n[USER REQUEST]: ${finalUserPrompt}`;
   messages.push({ role: "user", content: finalUserPrompt });
 
-  const performRequest = async (model: string): Promise<Message> => {
-      const response = await callOpenRouter(apiKey, model, messages);
+  const requestBody: any = {
+      model: modelName,
+      messages: messages,
+      include_reasoning: true,
+      stream: true // Enable streaming
+  };
+
+  try {
+      const response = await fetch(API_URL, {
+          method: "POST",
+          headers: {
+              "Authorization": `Bearer ${apiKey}`,
+              "Content-Type": "application/json",
+              "HTTP-Referer": "https://uchebnik.ai",
+              "X-Title": "Uchebnik AI"
+          },
+          body: JSON.stringify(requestBody)
+      });
 
       if (!response.ok) {
           const errText = await response.text();
-          if (response.status === 401) {
-              throw new Error("Invalid API Key (401)");
-          }
-          if (response.status === 429) {
-              throw new Error("Rate Limit (429)");
-          }
           throw new Error(`API Error: ${response.status} ${errText}`);
       }
 
@@ -256,8 +209,12 @@ export const generateResponse = async (
       const reader = response.body.getReader();
       const decoder = new TextDecoder("utf-8");
       
+      let finalContent = "";
       let finalReasoning = "";
       let rawAccumulator = "";
+
+      // Logic to parse <think> tags from content if not provided in 'reasoning' field
+      // We will parse the accumulated raw content on each step to split it.
       
       while (true) {
           const { done, value } = await reader.read();
@@ -293,8 +250,12 @@ export const generateResponse = async (
                           const thinkMatch = rawAccumulator.match(/<think>([\s\S]*?)(?:<\/think>|$)/i);
                           if (thinkMatch) {
                               // If we found a think tag, extract it to reasoning
+                              // If the tag is closed, match[1] is the reasoning.
+                              // If not closed yet, match[1] is partial reasoning.
                               displayReasoning = (finalReasoning + thinkMatch[1]).trim();
+                              
                               // Remove the <think> block from content for display
+                              // We use a regex that captures everything before and after
                               displayContent = rawAccumulator.replace(/<think>[\s\S]*?(?:<\/think>|$)/gi, "").trim();
                           }
 
@@ -310,8 +271,11 @@ export const generateResponse = async (
       }
 
       // Final processing after stream ends
+      // Re-run extraction one last time to be sure
       let processedText = rawAccumulator;
       
+      // If we gathered reasoning from explicit field, great. 
+      // If not, we extract it from the text now.
       const thinkMatch = processedText.match(/<think>([\s\S]*?)(?:<\/think>|$)/i);
       if (thinkMatch) {
           if (!finalReasoning) {
@@ -322,6 +286,7 @@ export const generateResponse = async (
       }
 
       // Handle JSON Modes (Presentation / Test)
+      // These usually don't support streaming well for the JSON part, so we process at the end.
       if (mode === AppMode.PRESENTATION) {
          try {
              const jsonStr = extractJson(processedText);
@@ -391,48 +356,15 @@ export const generateResponse = async (
           imageAnalysis: imageAnalysis,
           reasoning: finalReasoning
       };
-  };
 
-  // Execution with Loop-based Fallback
-  const failedModels: string[] = [];
-  const candidateModels = [primaryModel, ...fallbackPool.filter(m => m !== primaryModel)]; // Ensure primary is first and unique
-
-  for (const model of candidateModels) {
-      try {
-          // If we had a rate limit error previously, wait a bit to let the API cool down
-          if (failedModels.length > 0) {
-             if (onStreamUpdate) {
-                 const modelShortName = model.includes('deepseek') ? 'DeepSeek' : 'Gemini';
-                 onStreamUpdate(`Системата е натоварена. Превключвам към ${modelShortName}...`, "");
-             }
-             // Specific delay for 429 errors or just general fallback stability
-             await wait(1500); 
-          }
-
-          return await performRequest(model);
-      } catch (error: any) {
-          console.warn(`Model ${model} failed: ${error.message}`);
-          failedModels.push(model);
-          
-          // If it was a severe auth error, stop immediately
-          if (error.message.includes("401")) {
-              return {
-                  id: Date.now().toString(),
-                  role: 'model',
-                  text: "Грешка: Невалиден API ключ (401). Моля проверете настройките.",
-                  isError: true,
-                  timestamp: Date.now()
-              };
-          }
-      }
+  } catch (error: any) {
+      console.error("DeepSeek API Error:", error);
+      return {
+          id: Date.now().toString(),
+          role: 'model',
+          text: "Възникна грешка при връзката с DeepSeek. Моля, опитайте отново.",
+          isError: true,
+          timestamp: Date.now()
+      };
   }
-
-  // If we reach here, all models failed
-  return {
-      id: Date.now().toString(),
-      role: 'model',
-      text: "Всички AI модели са натоварени в момента. Моля, изчакайте 30 секунди и опитайте отново.",
-      isError: true,
-      timestamp: Date.now()
-  };
 };

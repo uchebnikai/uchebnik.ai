@@ -772,7 +772,10 @@ export const App = () => {
       const historyForAI = [...sessionMessages, newUserMsg];
 
       let preferredModel = userSettings.preferredModel;
-      
+      if (preferredModel === 'auto') {
+          preferredModel = 'tngtech/deepseek-r1t2-chimera:free';
+      }
+
       // We remove the loading spinner immediately because we are showing the stream
       setLoadingSubjects(prev => ({ ...prev, [currentSubId]: false }));
 
