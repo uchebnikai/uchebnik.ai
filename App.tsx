@@ -46,6 +46,7 @@ export const App = () => {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [isRemoteDataLoaded, setIsRemoteDataLoaded] = useState(false);
   const [syncStatus, setSyncStatus] = useState<'synced' | 'syncing' | 'error' | 'offline'>('synced');
+  const [syncErrorDetails, setSyncErrorDetails] = useState<string | null>(null);
 
   // --- State ---
   const [userRole, setUserRole] = useState<UserRole | null>(null);
@@ -255,11 +256,16 @@ export const App = () => {
               }
 
               // Load Sessions
-              const { data: sessionData } = await supabase
+              const { data: sessionData, error: sessionError } = await supabase
                   .from('user_data')
                   .select('data')
                   .eq('user_id', session.user.id)
                   .single();
+              
+              if (sessionError && sessionError.code !== 'PGRST116') { // PGRST116 is "Row not found", which is fine for new users
+                  console.warn("Session load error:", sessionError);
+                  // Don't set error status here, let it try to sync later
+              }
                   
               if (sessionData && sessionData.data) {
                   // Mark as incoming to prevent immediate save loop
@@ -269,7 +275,7 @@ export const App = () => {
               setSyncStatus('synced');
           } catch (err) {
               console.error("Failed to load remote data", err);
-              setSyncStatus('error');
+              // Don't show error to user on load, just work offline until sync tries
           } finally {
               setIsRemoteDataLoaded(true);
               isRemoteDataLoadedRef.current = true;
@@ -293,8 +299,9 @@ export const App = () => {
               const remoteSessions = (payload.new as any).data;
               if (remoteSessions) {
                   // Compare to avoid infinite loops or unnecessary renders
-                  const currentJson = JSON.stringify(sessionsRef.current);
-                  const remoteJson = JSON.stringify(remoteSessions);
+                  // We ignore images in comparison to avoid large string ops
+                  const currentJson = JSON.stringify(sessionsRef.current.map(s => ({...s, messages: s.messages.map(m => ({...m, images: []}))})));
+                  const remoteJson = JSON.stringify(remoteSessions.map((s: Session) => ({...s, messages: s.messages.map((m: Message) => ({...m, images: []}))})));
                   
                   if (currentJson !== remoteJson) {
                       console.log("Applying realtime update from cloud");
@@ -321,23 +328,40 @@ export const App = () => {
       }
       
       setSyncStatus('syncing');
+      setSyncErrorDetails(null);
 
       if (syncSessionsTimer.current) clearTimeout(syncSessionsTimer.current);
       
       syncSessionsTimer.current = setTimeout(async () => {
+          // Prepare payload: Strip large images to avoid payload limits
+          // We keep the structure but remove the base64 data for syncing to `user_data` JSONB column
+          // Ideally images should go to Storage, but for now we prioritize Chat History text.
+          const sanitizedSessions = sessions.map(s => ({
+              ...s,
+              messages: s.messages.map(m => ({
+                  ...m,
+                  // If images exist, we sadly have to strip them for the JSON sync to be reliable without Storage
+                  // Alternatively, we could keep them if small, but base64 is risky.
+                  // We will replace with a placeholder or empty array to avoid error.
+                  images: m.images ? [] : undefined 
+              }))
+          }));
+
           const { error } = await supabase.from('user_data').upsert({
               user_id: session.user.id,
-              data: sessions,
+              data: sanitizedSessions,
               updated_at: new Date().toISOString()
           });
           
           if (error) {
              console.error("Sync Error:", error);
              setSyncStatus('error');
+             setSyncErrorDetails(error.message || "Unknown error");
+             // Retry logic could go here, but setTimeout handles debounce
           } else {
              setSyncStatus('synced');
           }
-      }, 1000); // 1s debounce
+      }, 2000); // 2s debounce to aggregate changes
 
       return () => { if(syncSessionsTimer.current) clearTimeout(syncSessionsTimer.current); };
   }, [sessions, session?.user?.id, isRemoteDataLoaded]);
@@ -1401,6 +1425,20 @@ export const App = () => {
             onConfirm={confirmModal?.onConfirm || (() => {})}
             onCancel={() => setConfirmModal(null)}
         />
+
+        {/* Sync Error Modal */}
+        {syncStatus === 'error' && syncErrorDetails && (
+            <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[100] animate-in slide-in-from-bottom-2 fade-in">
+                <div className="bg-red-500/90 backdrop-blur-md text-white px-4 py-3 rounded-xl shadow-lg flex items-center gap-3 max-w-sm border border-red-400/50">
+                    <AlertCircle size={20} className="shrink-0"/>
+                    <div className="flex-1 text-xs">
+                        <span className="font-bold block mb-0.5">Sync Error</span>
+                        <span className="opacity-90">{syncErrorDetails.includes('relation') ? 'Database table missing. Please check setup.' : 'Could not save to cloud.'}</span>
+                    </div>
+                    <button onClick={() => setSyncStatus('synced')} className="p-1 hover:bg-white/20 rounded-lg transition-colors"><X size={16}/></button>
+                </div>
+            </div>
+        )}
 
         {/* Dynamic View Rendering */}
         {!activeSubject ? (
