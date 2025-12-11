@@ -82,6 +82,12 @@ export const Auth = ({ isModal = false, onSuccess }: AuthProps) => {
         provider: 'google',
         options: {
           redirectTo: window.location.origin,
+          queryParams: {
+            // Explicitly pass the client_id to ensure Google receives the correct app ID
+            client_id: '632370938906-f6daog6qh4aqtaic1o2bao63t4gceomd.apps.googleusercontent.com',
+            access_type: 'offline',
+            prompt: 'consent',
+          },
         },
       });
       if (error) throw error;
