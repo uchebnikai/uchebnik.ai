@@ -23,7 +23,7 @@ async function withRetry<T>(fn: () => Promise<T>, retries = 3, delay = 2000): Pr
   }
 }
 
-// Vision Analysis using Gemini
+// Vision Analysis using Gemini (Non-streaming for now as it's a pre-step)
 async function analyzeImages(apiKey: string, images: string[]): Promise<string> {
     const res = await fetch(API_URL, {
         method: "POST",
@@ -76,7 +76,8 @@ export const generateResponse = async (
   promptText: string,
   imagesBase64?: string[],
   history: Message[] = [],
-  preferredModel: string = 'auto'
+  preferredModel: string = 'auto',
+  onStreamUpdate?: (text: string, reasoning: string) => void
 ): Promise<Message> => {
   
   const apiKey = process.env.OPENROUTER_API_KEY || "";
@@ -85,7 +86,7 @@ export const generateResponse = async (
       return {
           id: Date.now().toString(),
           role: 'model',
-          text: "Грешка: Не е намерен OpenRouter API ключ. Моля, добавете го в .env файл или Vercel environment variables.",
+          text: "Грешка: Не е намерен OpenRouter API ключ.",
           isError: true,
           timestamp: Date.now()
       };
@@ -112,9 +113,7 @@ export const generateResponse = async (
       }
   }
 
-  // Use the new Chimera model as default
   let modelName = 'tngtech/deepseek-r1t2-chimera:free'; 
-  
   if (preferredModel !== 'auto' && preferredModel) {
       modelName = preferredModel;
   }
@@ -129,16 +128,7 @@ export const generateResponse = async (
       systemInstruction = `You are an AI that helps with art concepts. 
       IMPORTANT: You CANNOT generate pixel/raster images (PNG/JPG). 
       If the user asks for a drawing, you MUST generate an SVG code block using the json:geometry format.
-      
-      Format:
-      \`\`\`json:geometry
-      {
-        "title": "Short title",
-        "svg": "<svg>...</svg>"
-      }
-      \`\`\`
-      
-      If an SVG is not appropriate, describe the image in detail.`;
+      Format: \`\`\`json:geometry { "title": "...", "svg": "..." } \`\`\``;
   } else if (mode === AppMode.LEARN) {
       systemInstruction = SYSTEM_PROMPTS.LEARN;
   } else if (mode === AppMode.SOLVE) {
@@ -159,9 +149,7 @@ export const generateResponse = async (
       systemInstruction += "\n\nIMPORTANT: YOU MUST RETURN VALID JSON ONLY. NO MARKDOWN BLOCK WRAPPING THE JSON (IF POSSIBLE), JUST THE JSON STRING.";
   }
 
-  // With Chimera/R1 models, we WANT <think> tags, we will parse them later.
   systemInstruction += "\n\nIMPORTANT: Show your reasoning process enclosed in <think> tags before your final answer.";
-
   systemInstruction = `CURRENT SUBJECT CONTEXT: ${subjectName}. All responses must relate to ${subjectName}.\n\n${systemInstruction}`;
 
   const messages: any[] = [];
@@ -178,9 +166,8 @@ export const generateResponse = async (
   });
 
   let finalUserPrompt = promptText;
-  
   if (imageAnalysis) {
-      finalUserPrompt = `[IMAGE CONTEXT]: The user has attached an image. Here is the detailed description of it:\n${imageAnalysis}\n\n[USER REQUEST]: ${promptText}`;
+      finalUserPrompt = `[IMAGE CONTEXT]: ${imageAnalysis}\n\n[USER REQUEST]: ${promptText}`;
   }
 
   if (mode === AppMode.TEACHER_TEST) {
@@ -191,56 +178,118 @@ export const generateResponse = async (
   }
 
   finalUserPrompt = `[SYSTEM INSTRUCTION]: ${systemInstruction}\n\n[USER REQUEST]: ${finalUserPrompt}`;
-
   messages.push({ role: "user", content: finalUserPrompt });
 
   const requestBody: any = {
       model: modelName,
       messages: messages,
-      include_reasoning: true // Crucial for R1 models on OpenRouter
+      include_reasoning: true,
+      stream: true // Enable streaming
   };
 
   try {
-      const performGenerate = async () => {
-          const res = await fetch(API_URL, {
-              method: "POST",
-              headers: {
-                  "Authorization": `Bearer ${apiKey}`,
-                  "Content-Type": "application/json",
-                  "HTTP-Referer": "https://uchebnik.ai",
-                  "X-Title": "Uchebnik AI"
-              },
-              body: JSON.stringify(requestBody)
-          });
+      const response = await fetch(API_URL, {
+          method: "POST",
+          headers: {
+              "Authorization": `Bearer ${apiKey}`,
+              "Content-Type": "application/json",
+              "HTTP-Referer": "https://uchebnik.ai",
+              "X-Title": "Uchebnik AI"
+          },
+          body: JSON.stringify(requestBody)
+      });
 
-          if (!res.ok) {
-              const errText = await res.text();
-              console.error("OpenRouter API Error Body:", errText); 
-              throw new Error(`API Error: ${res.status} ${errText}`);
-          }
-          return res.json();
-      };
+      if (!response.ok) {
+          const errText = await response.text();
+          throw new Error(`API Error: ${response.status} ${errText}`);
+      }
 
-      const data = await withRetry(performGenerate);
+      if (!response.body) throw new Error("No response body");
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder("utf-8");
       
-      let text = data.choices?.[0]?.message?.content || "Няма отговор.";
-      // Check for reasoning in special field (OpenAI/DeepSeek extension) or in text
-      let reasoning = data.choices?.[0]?.message?.reasoning || undefined;
+      let finalContent = "";
+      let finalReasoning = "";
+      let rawAccumulator = "";
 
-      // Extract Reasoning from text if not provided in field
-      if (!reasoning) {
-          const thinkMatch = text.match(/<think>([\s\S]*?)(?:<\/think>|$)/i);
-          if (thinkMatch) {
-              reasoning = thinkMatch[1].trim();
-              text = text.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
-              // Cleanup any leftover tags if regex was partial
-              text = text.replace(/<think>/g, "").replace(/<\/think>/g, "");
+      // Logic to parse <think> tags from content if not provided in 'reasoning' field
+      // We will parse the accumulated raw content on each step to split it.
+      
+      while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          
+          const chunk = decoder.decode(value);
+          const lines = chunk.split("\n");
+          
+          for (const line of lines) {
+              if (line.trim().startsWith("data: ")) {
+                  const jsonStr = line.replace("data: ", "").trim();
+                  if (jsonStr === "[DONE]") break;
+                  
+                  try {
+                      const data = JSON.parse(jsonStr);
+                      const delta = data.choices?.[0]?.delta;
+                      
+                      if (delta) {
+                          // Handle Reasoning Field (DeepSeek/OpenAI standard)
+                          if (delta.reasoning) {
+                              finalReasoning += delta.reasoning;
+                          }
+                          
+                          // Handle Content Field
+                          if (delta.content) {
+                              rawAccumulator += delta.content;
+                          }
+
+                          // If no explicit reasoning field, parse from content
+                          let displayContent = rawAccumulator;
+                          let displayReasoning = finalReasoning;
+
+                          const thinkMatch = rawAccumulator.match(/<think>([\s\S]*?)(?:<\/think>|$)/i);
+                          if (thinkMatch) {
+                              // If we found a think tag, extract it to reasoning
+                              // If the tag is closed, match[1] is the reasoning.
+                              // If not closed yet, match[1] is partial reasoning.
+                              displayReasoning = (finalReasoning + thinkMatch[1]).trim();
+                              
+                              // Remove the <think> block from content for display
+                              // We use a regex that captures everything before and after
+                              displayContent = rawAccumulator.replace(/<think>[\s\S]*?(?:<\/think>|$)/gi, "").trim();
+                          }
+
+                          if (onStreamUpdate) {
+                              onStreamUpdate(displayContent, displayReasoning);
+                          }
+                      }
+                  } catch (e) {
+                      console.error("Error parsing stream chunk", e);
+                  }
+              }
           }
       }
 
+      // Final processing after stream ends
+      // Re-run extraction one last time to be sure
+      let processedText = rawAccumulator;
+      
+      // If we gathered reasoning from explicit field, great. 
+      // If not, we extract it from the text now.
+      const thinkMatch = processedText.match(/<think>([\s\S]*?)(?:<\/think>|$)/i);
+      if (thinkMatch) {
+          if (!finalReasoning) {
+             finalReasoning = thinkMatch[1].trim();
+          }
+          processedText = processedText.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
+          processedText = processedText.replace(/<think>/g, "").replace(/<\/think>/g, "");
+      }
+
+      // Handle JSON Modes (Presentation / Test)
+      // These usually don't support streaming well for the JSON part, so we process at the end.
       if (mode === AppMode.PRESENTATION) {
          try {
-             const jsonStr = extractJson(text);
+             const jsonStr = extractJson(processedText);
              if (jsonStr) {
                  const slides: Slide[] = JSON.parse(jsonStr);
                  return {
@@ -251,19 +300,15 @@ export const generateResponse = async (
                      slidesData: slides,
                      timestamp: Date.now(),
                      imageAnalysis: imageAnalysis,
-                     reasoning: reasoning
+                     reasoning: finalReasoning
                  };
-             } else {
-                 throw new Error("No JSON found");
              }
-         } catch (e) {
-             console.error("Presentation JSON parse error", e);
-         }
+         } catch (e) { console.error("Presentation JSON parse error", e); }
       }
 
       if (mode === AppMode.TEACHER_TEST) {
           try {
-             const jsonStr = extractJson(text);
+             const jsonStr = extractJson(processedText);
              if (jsonStr) {
                  const testData: TestData = JSON.parse(jsonStr);
                  return {
@@ -274,50 +319,46 @@ export const generateResponse = async (
                      testData: testData,
                      timestamp: Date.now(),
                      imageAnalysis: imageAnalysis,
-                     reasoning: reasoning
+                     reasoning: finalReasoning
                  };
-             } else {
-                throw new Error("No JSON found");
              }
-          } catch (e) {
-              console.error("Test JSON parse error", e);
-          }
+          } catch (e) { console.error("Test JSON parse error", e); }
       }
 
+      // Handle Charts/Geometry
       let chartData: ChartData | undefined;
       let geometryData: GeometryData | undefined;
 
-      const chartMatch = text.match(/```json:chart\n([\s\S]*?)\n```/);
+      const chartMatch = processedText.match(/```json:chart\n([\s\S]*?)\n```/);
       if (chartMatch) {
         try {
           chartData = JSON.parse(chartMatch[1]);
-          text = text.replace(chartMatch[0], "").trim();
+          processedText = processedText.replace(chartMatch[0], "").trim();
         } catch (e) {}
       }
 
-      const geoMatch = text.match(/```json:geometry\n([\s\S]*?)\n```/);
+      const geoMatch = processedText.match(/```json:geometry\n([\s\S]*?)\n```/);
       if (geoMatch) {
         try {
           geometryData = JSON.parse(geoMatch[1]);
-          text = text.replace(geoMatch[0], "").trim();
+          processedText = processedText.replace(geoMatch[0], "").trim();
         } catch (e) {}
       }
 
       return {
           id: Date.now().toString(),
           role: 'model',
-          text: text,
+          text: processedText,
           type: 'text',
           chartData: chartData,
           geometryData: geometryData,
           timestamp: Date.now(),
           imageAnalysis: imageAnalysis,
-          reasoning: reasoning
+          reasoning: finalReasoning
       };
 
   } catch (error: any) {
       console.error("DeepSeek API Error:", error);
-      
       return {
           id: Date.now().toString(),
           role: 'model',

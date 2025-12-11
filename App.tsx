@@ -716,9 +716,24 @@ export const App = () => {
         replyToId: replyContext?.id
     };
 
+    const tempAiMsgId = (Date.now() + 1).toString();
+    const tempAiMsg: Message = {
+       id: tempAiMsgId,
+       role: 'model',
+       text: "",
+       timestamp: Date.now(),
+       reasoning: ""
+    };
+
     setSessions(prev => prev.map(s => {
         if (s.id === sessId) {
-            return { ...s, messages: [...s.messages, newUserMsg], lastModified: Date.now(), preview: textToSend.substring(0, 50), role: userRole || undefined };
+            return { 
+                ...s, 
+                messages: [...s.messages, newUserMsg, tempAiMsg], 
+                lastModified: Date.now(), 
+                preview: textToSend.substring(0, 50), 
+                role: userRole || undefined 
+            };
         }
         return s;
     }));
@@ -745,21 +760,63 @@ export const App = () => {
           preferredModel = 'tngtech/deepseek-r1t2-chimera:free';
       }
 
-      const response = await generateResponse(currentSubId, currentMode, finalPrompt, currentImgs, historyForAI, preferredModel);
+      // We remove the loading spinner immediately because we are showing the stream
+      setLoadingSubjects(prev => ({ ...prev, [currentSubId]: false }));
+
+      const response = await generateResponse(
+          currentSubId, 
+          currentMode, 
+          finalPrompt, 
+          currentImgs, 
+          historyForAI, 
+          preferredModel,
+          (textChunk, reasoningChunk) => {
+              // Real-time update
+              setSessions(prev => prev.map(s => {
+                  if (s.id === sessId) {
+                      return {
+                          ...s,
+                          messages: s.messages.map(m => {
+                              if (m.id === tempAiMsgId) {
+                                  return { ...m, text: textChunk, reasoning: reasoningChunk };
+                              }
+                              return m;
+                          })
+                      };
+                  }
+                  return s;
+              }));
+          }
+      );
       
       if (currentImgs.length > 0) {
           incrementImageCount(currentImgs.length);
       }
 
-      setLoadingSubjects(prev => ({ ...prev, [currentSubId]: false }));
-      const newAiMsg: Message = {
-        id: (Date.now() + 1).toString(), role: 'model', text: response.text, isError: response.isError, type: response.type as Message['type'], 
-        slidesData: response.slidesData, testData: response.testData, chartData: response.chartData, geometryData: response.geometryData, images: response.images || [], timestamp: Date.now(),
-        imageAnalysis: response.imageAnalysis, // Save context for future
-        reasoning: response.reasoning
-      };
-
-      setSessions(prev => prev.map(s => s.id === sessId ? { ...s, messages: [...s.messages, newAiMsg], lastModified: Date.now(), preview: response.text.substring(0, 50) } : s));
+      // Final update with complete response object (which might include slides/tests data)
+      setSessions(prev => prev.map(s => {
+          if (s.id === sessId) {
+              const updatedMessages = s.messages.map(m => {
+                  if (m.id === tempAiMsgId) {
+                      return {
+                          ...m,
+                          text: response.text,
+                          reasoning: response.reasoning,
+                          isError: response.isError,
+                          type: response.type,
+                          slidesData: response.slidesData,
+                          testData: response.testData,
+                          chartData: response.chartData,
+                          geometryData: response.geometryData,
+                          imageAnalysis: response.imageAnalysis
+                      };
+                  }
+                  return m;
+              });
+              return { ...s, messages: updatedMessages, lastModified: Date.now(), preview: response.text.substring(0, 50) };
+          }
+          return s;
+      }));
 
       if (activeSubjectRef.current?.id !== currentSubId) {
          setUnreadSubjects(prev => new Set(prev).add(currentSubId));
@@ -775,7 +832,17 @@ export const App = () => {
        console.error("HandleSend Error:", error);
        setLoadingSubjects(prev => ({ ...prev, [currentSubId]: false }));
        const errorMsg: Message = { id: Date.now().toString(), role: 'model', text: "Възникна грешка. Моля опитайте отново.", isError: true, timestamp: Date.now() };
-       setSessions(prev => prev.map(s => s.id === sessId ? { ...s, messages: [...s.messages, errorMsg] } : s));
+       // Replace the temp message with error or append error?
+       // Let's replace the temp message if it exists, or append if not found (though it should exist)
+       setSessions(prev => prev.map(s => {
+           if (s.id === sessId) {
+               return { 
+                   ...s, 
+                   messages: s.messages.map(m => m.id === tempAiMsgId ? errorMsg : m) 
+               };
+           }
+           return s;
+       }));
        return "Възникна грешка.";
     }
   };
