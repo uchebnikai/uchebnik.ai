@@ -162,7 +162,7 @@ export const generateResponse = async (
       ? 'google/gemini-2.0-flash-exp:free' 
       : preferredModel;
       
-  const fallbackModel = 'deepseek/deepseek-r1:free';
+  const fallbackModel = 'tngtech/deepseek-r1t2-chimera:free';
 
   const imageKeywords = /(draw|paint|generate image|create a picture|make an image|нарисувай|рисувай|генерирай изображение|генерирай снимка|направи снимка|изображение на)/i;
   const isImageRequest = (subjectId === SubjectId.ART && mode === AppMode.DRAW) || imageKeywords.test(promptText);
