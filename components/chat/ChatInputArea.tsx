@@ -1,7 +1,5 @@
-
-
 import React, { useRef, useEffect, useState } from 'react';
-import { Reply, X, ImageIcon, Mic, MicOff, ArrowUpRight, Calculator } from 'lucide-react';
+import { Reply, X, ImageIcon, Mic, MicOff, ArrowUpRight, Calculator, Camera } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
@@ -9,6 +7,7 @@ import { Message, UserSettings } from '../../types';
 import { INPUT_AREA_BASE, INPUT_AREA_CUSTOM_BG, INPUT_AREA_DEFAULT_BG } from '../../styles/chat';
 import { SLIDE_UP, FADE_IN, ZOOM_IN } from '../../animations/transitions';
 import { resizeImage } from '../../utils/image';
+import { CameraModal } from '../ui/CameraModal';
 
 interface ChatInputAreaProps {
   replyingTo: Message | null;
@@ -24,6 +23,7 @@ interface ChatInputAreaProps {
   handleSend: () => void;
   selectedImages: string[];
   handleRemoveImage: (index: number) => void;
+  onCameraCapture?: (base64: string) => void;
 }
 
 const MATH_SYMBOLS = [
@@ -57,12 +57,13 @@ export const ChatInputArea = ({
   setInputValue,
   handleSend,
   selectedImages,
-  handleRemoveImage
+  handleRemoveImage,
+  onCameraCapture
 }: ChatInputAreaProps) => {
   
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  
   const [showMath, setShowMath] = useState(false);
+  const [showCamera, setShowCamera] = useState(false);
 
   useEffect(() => {
     if (textareaRef.current) {
@@ -91,99 +92,118 @@ export const ChatInputArea = ({
   const hasMath = /[\\^_{}]/.test(inputValue) || showMath;
 
   return (
-      <div className="absolute bottom-0 left-0 right-0 px-2 lg:px-4 pointer-events-none z-40 flex justify-center pb-safe">
-         <div className="w-full max-w-3xl pointer-events-auto mb-4 lg:mb-6">
-            
-            {/* Live Math Preview */}
-            {hasMath && inputValue.trim() && (
-               <div className={`mb-2 mx-4 bg-white/90 dark:bg-zinc-800/90 backdrop-blur-md border border-indigo-500/20 p-3 rounded-2xl shadow-lg ${FADE_IN}`}>
-                  <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Преглед</div>
-                  <div className="text-sm font-medium text-zinc-800 dark:text-zinc-200">
-                     <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>{`$${inputValue}$`}</ReactMarkdown>
-                  </div>
-               </div>
-            )}
+      <>
+        {showCamera && onCameraCapture && (
+            <CameraModal 
+                onClose={() => setShowCamera(false)}
+                onCapture={(img) => {
+                    onCameraCapture(img);
+                    setShowCamera(false);
+                }}
+            />
+        )}
 
-            {/* Math Keypad */}
-            {showMath && (
-                <div className={`mb-2 mx-4 bg-white/90 dark:bg-zinc-800/90 backdrop-blur-md border border-indigo-500/20 p-3 rounded-2xl shadow-lg grid grid-cols-5 gap-2 ${SLIDE_UP}`}>
-                    {MATH_SYMBOLS.map((sym, i) => (
-                        <button key={i} onClick={() => insertMath(sym.val)} className="p-2 rounded-lg bg-gray-50 dark:bg-white/5 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 text-zinc-700 dark:text-zinc-200 text-sm font-bold transition-colors">
-                            {sym.label}
-                        </button>
-                    ))}
+        <div className="absolute bottom-0 left-0 right-0 px-2 lg:px-4 pointer-events-none z-40 flex justify-center pb-safe">
+            <div className="w-full max-w-3xl pointer-events-auto mb-4 lg:mb-6">
+                
+                {/* Live Math Preview */}
+                {hasMath && inputValue.trim() && (
+                <div className={`mb-2 mx-4 bg-white/90 dark:bg-zinc-800/90 backdrop-blur-md border border-indigo-500/20 p-3 rounded-2xl shadow-lg ${FADE_IN}`}>
+                    <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Преглед</div>
+                    <div className="text-sm font-medium text-zinc-800 dark:text-zinc-200">
+                        <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>{`$${inputValue}$`}</ReactMarkdown>
+                    </div>
                 </div>
-            )}
+                )}
 
-            {/* Reply Banner */}
-            {replyingTo && (
-               <div className={`mb-2 mx-4 bg-white/90 dark:bg-zinc-800/90 backdrop-blur-md border border-indigo-500/20 p-3 rounded-2xl flex items-center justify-between shadow-lg ${SLIDE_UP} ${FADE_IN}`}>
-                  <div className="flex items-center gap-3 overflow-hidden">
-                     <div className="p-2 bg-indigo-100 dark:bg-indigo-500/20 rounded-full text-indigo-600 dark:text-indigo-400 shrink-0">
-                        <Reply size={16}/>
-                     </div>
-                     <div className="flex flex-col overflow-hidden">
-                        <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Отговор на {replyingTo.role === 'user' ? 'теб' : 'uchebnik.ai'}</span>
-                        <span className="text-sm font-medium truncate text-zinc-800 dark:text-zinc-200">{replyingTo.text || "Изображение"}</span>
-                     </div>
-                  </div>
-                  <button onClick={() => setReplyingTo(null)} className="p-2 hover:bg-gray-200 dark:hover:bg-white/10 rounded-full text-gray-500 transition-colors">
-                     <X size={16}/>
-                  </button>
-               </div>
-            )}
+                {/* Math Keypad */}
+                {showMath && (
+                    <div className={`mb-2 mx-4 bg-white/90 dark:bg-zinc-800/90 backdrop-blur-md border border-indigo-500/20 p-3 rounded-2xl shadow-lg grid grid-cols-5 gap-2 ${SLIDE_UP}`}>
+                        {MATH_SYMBOLS.map((sym, i) => (
+                            <button key={i} onClick={() => insertMath(sym.val)} className="p-2 rounded-lg bg-gray-50 dark:bg-white/5 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 text-zinc-700 dark:text-zinc-200 text-sm font-bold transition-colors">
+                                {sym.label}
+                            </button>
+                        ))}
+                    </div>
+                )}
 
-            <div className={`${INPUT_AREA_BASE} ${userSettings.customBackground ? INPUT_AREA_CUSTOM_BG : INPUT_AREA_DEFAULT_BG} ${loadingSubject ? 'opacity-70 pointer-events-none' : ''}`}>
-               
-               {/* Attach Button */}
-               <button onClick={() => fileInputRef.current?.click()} disabled={loadingSubject} className="flex-none w-10 h-10 rounded-full flex items-center justify-center text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-white/10 transition-colors">
-                  <ImageIcon size={20} strokeWidth={2}/>
-               </button>
-               <input type="file" ref={fileInputRef} onChange={handleImageUpload} className="hidden" accept="image/*" multiple />
+                {/* Reply Banner */}
+                {replyingTo && (
+                <div className={`mb-2 mx-4 bg-white/90 dark:bg-zinc-800/90 backdrop-blur-md border border-indigo-500/20 p-3 rounded-2xl flex items-center justify-between shadow-lg ${SLIDE_UP} ${FADE_IN}`}>
+                    <div className="flex items-center gap-3 overflow-hidden">
+                        <div className="p-2 bg-indigo-100 dark:bg-indigo-500/20 rounded-full text-indigo-600 dark:text-indigo-400 shrink-0">
+                            <Reply size={16}/>
+                        </div>
+                        <div className="flex flex-col overflow-hidden">
+                            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Отговор на {replyingTo.role === 'user' ? 'теб' : 'uchebnik.ai'}</span>
+                            <span className="text-sm font-medium truncate text-zinc-800 dark:text-zinc-200">{replyingTo.text || "Изображение"}</span>
+                        </div>
+                    </div>
+                    <button onClick={() => setReplyingTo(null)} className="p-2 hover:bg-gray-200 dark:hover:bg-white/10 rounded-full text-gray-500 transition-colors">
+                        <X size={16}/>
+                    </button>
+                </div>
+                )}
 
-               {/* Math Toggle */}
-               <button onClick={() => setShowMath(!showMath)} className={`flex-none w-10 h-10 rounded-full flex items-center justify-center transition-colors ${showMath ? 'text-indigo-600 bg-indigo-50 dark:bg-white/10' : 'text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-white/10'}`}>
-                  <Calculator size={20} strokeWidth={2}/>
-               </button>
+                <div className={`${INPUT_AREA_BASE} ${userSettings.customBackground ? INPUT_AREA_CUSTOM_BG : INPUT_AREA_DEFAULT_BG} ${loadingSubject ? 'opacity-70 pointer-events-none' : ''}`}>
+                
+                {/* Attach Button */}
+                <button onClick={() => fileInputRef.current?.click()} disabled={loadingSubject} className="flex-none w-10 h-10 rounded-full flex items-center justify-center text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-white/10 transition-colors">
+                    <ImageIcon size={20} strokeWidth={2}/>
+                </button>
+                <input type="file" ref={fileInputRef} onChange={handleImageUpload} className="hidden" accept="image/*" multiple />
+                
+                {/* Camera Button */}
+                {onCameraCapture && (
+                    <button onClick={() => setShowCamera(true)} disabled={loadingSubject} className="flex-none w-10 h-10 rounded-full flex items-center justify-center text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-white/10 transition-colors">
+                        <Camera size={20} strokeWidth={2}/>
+                    </button>
+                )}
 
-               {/* Voice Button */}
-               <button onClick={toggleListening} disabled={loadingSubject} className={`flex-none w-10 h-10 rounded-full flex items-center justify-center transition-all active:scale-95 disabled:opacity-50 ${isListening ? 'bg-red-500 text-white shadow-lg shadow-red-500/30 animate-pulse' : 'text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-white/10'}`}>
-                  {isListening ? <MicOff size={20}/> : <Mic size={20} strokeWidth={2}/>}
-               </button>
+                {/* Math Toggle */}
+                <button onClick={() => setShowMath(!showMath)} className={`flex-none w-10 h-10 rounded-full flex items-center justify-center transition-colors ${showMath ? 'text-indigo-600 bg-indigo-50 dark:bg-white/10' : 'text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-white/10'}`}>
+                    <Calculator size={20} strokeWidth={2}/>
+                </button>
 
-               {/* Textarea */}
-               <div className="flex-1 py-2">
-                   <textarea 
-                      ref={textareaRef}
-                      value={inputValue}
-                      onChange={e => setInputValue(e.target.value)}
-                      onKeyDown={e => {if(e.key === 'Enter' && !e.shiftKey && !loadingSubject){e.preventDefault(); handleSend();}}} 
-                      placeholder={replyingTo ? "Напиши отговор..." : "Напиши съобщение..."}
-                      disabled={loadingSubject}
-                      className="w-full bg-transparent border-none focus:ring-0 p-0 text-base text-zinc-900 dark:text-zinc-100 placeholder-gray-400 resize-none max-h-32 min-h-[24px] leading-6"
-                      rows={1}
-                   />
-               </div>
+                {/* Voice Button */}
+                <button onClick={toggleListening} disabled={loadingSubject} className={`flex-none w-10 h-10 rounded-full flex items-center justify-center transition-all active:scale-95 disabled:opacity-50 ${isListening ? 'bg-red-500 text-white shadow-lg shadow-red-500/30 animate-pulse' : 'text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-white/10'}`}>
+                    {isListening ? <MicOff size={20}/> : <Mic size={20} strokeWidth={2}/>}
+                </button>
 
-               {/* Send Button */}
-               <button onClick={handleSend} disabled={(!inputValue.trim() && !selectedImages.length) || loadingSubject} className="flex-none w-10 h-10 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white flex items-center justify-center shadow-lg shadow-indigo-600/30 disabled:opacity-50 disabled:shadow-none transition-all active:scale-95">
-                  <ArrowUpRight size={22} strokeWidth={2.5} />
-               </button>
+                {/* Textarea */}
+                <div className="flex-1 py-2">
+                    <textarea 
+                        ref={textareaRef}
+                        value={inputValue}
+                        onChange={e => setInputValue(e.target.value)}
+                        onKeyDown={e => {if(e.key === 'Enter' && !e.shiftKey && !loadingSubject){e.preventDefault(); handleSend();}}} 
+                        placeholder={replyingTo ? "Напиши отговор..." : "Напиши съобщение..."}
+                        disabled={loadingSubject}
+                        className="w-full bg-transparent border-none focus:ring-0 p-0 text-base text-zinc-900 dark:text-zinc-100 placeholder-gray-400 resize-none max-h-32 min-h-[24px] leading-6"
+                        rows={1}
+                    />
+                </div>
 
-               {/* Image Preview Overlay */}
-               {selectedImages.length > 0 && (
-                   <div className="absolute bottom-full left-0 mb-2 ml-2 flex gap-2">
-                      {selectedImages.map((img, i) => ( 
-                          <div key={i} className={`relative group shrink-0 ${ZOOM_IN}`}>
-                              <img src={img} className="h-16 w-16 rounded-xl object-cover border-2 border-white dark:border-zinc-700 shadow-lg"/>
-                              <button onClick={() => handleRemoveImage(i)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-md hover:scale-110 transition-transform"><X size={10}/></button>
-                          </div>
-                      ))}
-                   </div>
-               )}
+                {/* Send Button */}
+                <button onClick={handleSend} disabled={(!inputValue.trim() && !selectedImages.length) || loadingSubject} className="flex-none w-10 h-10 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white flex items-center justify-center shadow-lg shadow-indigo-600/30 disabled:opacity-50 disabled:shadow-none transition-all active:scale-95">
+                    <ArrowUpRight size={22} strokeWidth={2.5} />
+                </button>
+
+                {/* Image Preview Overlay */}
+                {selectedImages.length > 0 && (
+                    <div className="absolute bottom-full left-0 mb-2 ml-2 flex gap-2">
+                        {selectedImages.map((img, i) => ( 
+                            <div key={i} className={`relative group shrink-0 ${ZOOM_IN}`}>
+                                <img src={img} className="h-16 w-16 rounded-xl object-cover border-2 border-white dark:border-zinc-700 shadow-lg"/>
+                                <button onClick={() => handleRemoveImage(i)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-md hover:scale-110 transition-transform"><X size={10}/></button>
+                            </div>
+                        ))}
+                    </div>
+                )}
+                </div>
+                <p className="text-center text-[10px] text-gray-400 mt-2 font-medium opacity-60">AI може да допуска грешки.</p>
             </div>
-            <p className="text-center text-[10px] text-gray-400 mt-2 font-medium opacity-60">AI може да допуска грешки.</p>
-         </div>
-      </div>
+        </div>
+      </>
   );
 };

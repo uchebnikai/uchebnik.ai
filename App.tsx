@@ -893,6 +893,15 @@ export const App = () => {
     }
   };
 
+  const handleCameraCapture = (base64Image: string) => {
+    if (!session) {
+        setShowAuthModal(true);
+        return;
+    }
+    if (!checkImageLimit(1)) return;
+    setSelectedImages(prev => [...prev, base64Image]);
+  };
+
   const handleBackgroundUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -1409,6 +1418,7 @@ export const App = () => {
                     handleSend={() => handleSend()}
                     selectedImages={selectedImages}
                     handleRemoveImage={handleRemoveImage}
+                    onCameraCapture={handleCameraCapture}
                 />
             </div>
         )}
