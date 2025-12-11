@@ -1,9 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import remarkGfm from 'remark-gfm';
-import { Projector, Download, Check, ThumbsUp, ThumbsDown, Reply, Volume2, Square, Copy, Share2, Sparkles } from 'lucide-react';
+import { Projector, Download, Check, ThumbsUp, ThumbsDown, Reply, Volume2, Square, Copy, Share2, Sparkles, Brain, ChevronDown, ChevronUp } from 'lucide-react';
 import { Message, UserSettings, SubjectConfig } from '../../types';
 import { handleDownloadPPTX } from '../../utils/exportUtils';
 import { CodeBlock } from '../ui/CodeBlock';
@@ -45,6 +45,15 @@ export const MessageList = ({
   messagesEndRef
 }: MessageListProps) => {
 
+  const [expandedReasoning, setExpandedReasoning] = useState<Record<string, boolean>>({});
+
+  const toggleReasoning = (id: string) => {
+     setExpandedReasoning(prev => ({
+        ...prev,
+        [id]: !prev[id]
+     }));
+  };
+
   return (
       <div className={`flex-1 overflow-y-auto px-2 lg:px-8 py-4 lg:py-8 custom-scrollbar scroll-smooth ${userSettings.textSize === 'large' ? 'text-lg' : userSettings.textSize === 'small' ? 'text-sm' : 'text-base'}`}>
          <div className="max-w-4xl mx-auto space-y-8 lg:space-y-12 pb-40 pt-2 lg:pt-4">
@@ -69,6 +78,25 @@ export const MessageList = ({
                         </div>
                      )}
                      
+                     {/* Reasoning / Thinking Toggle */}
+                     {msg.reasoning && (
+                        <div className="mb-4">
+                           <button 
+                              onClick={() => toggleReasoning(msg.id)}
+                              className="flex items-center gap-2 px-3 py-2 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 text-xs font-bold text-indigo-600 dark:text-indigo-400 transition-all border border-indigo-500/10"
+                           >
+                              <Brain size={14} className={expandedReasoning[msg.id] ? 'text-indigo-500' : 'opacity-70'} />
+                              <span>Thinking Process</span>
+                              {expandedReasoning[msg.id] ? <ChevronUp size={12}/> : <ChevronDown size={12}/>}
+                           </button>
+                           {expandedReasoning[msg.id] && (
+                              <div className="mt-2 pl-3 border-l-2 border-indigo-500/20 text-xs text-gray-500 dark:text-gray-400 italic bg-gray-50/50 dark:bg-white/5 p-3 rounded-r-xl animate-in slide-in-from-top-2 fade-in">
+                                 <ReactMarkdown>{msg.reasoning}</ReactMarkdown>
+                              </div>
+                           )}
+                        </div>
+                     )}
+
                      {msg.type === 'slides' && msg.slidesData && (
                         <div className="space-y-4">
                            <div className="flex justify-between items-center pb-4 border-b border-indigo-500/20"><span className="font-bold flex gap-2 items-center text-sm"><Projector size={18} className="text-indigo-500"/> Генерирана Презентация</span><button onClick={() => handleDownloadPPTX(msg.slidesData!, activeSubject, userSettings)} className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-xl text-xs font-bold flex gap-2 transition-colors shadow-lg shadow-emerald-500/20"><Download size={14}/> Изтегли PPTX</button></div>

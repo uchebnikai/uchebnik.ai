@@ -29,7 +29,9 @@ async function analyzeImages(apiKey: string, images: string[]): Promise<string> 
         method: "POST",
         headers: {
             "Authorization": `Bearer ${apiKey}`,
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
+            "HTTP-Referer": "https://uchebnik.ai",
+            "X-Title": "Uchebnik AI"
         },
         body: JSON.stringify({
             model: "google/gemini-2.0-flash-exp:free", 
@@ -83,7 +85,7 @@ export const generateResponse = async (
       return {
           id: Date.now().toString(),
           role: 'model',
-          text: "Грешка: Не е намерен OpenRouter API ключ. Моля, добавете го в .env файл.",
+          text: "Грешка: Не е намерен OpenRouter API ключ. Моля, добавете го в .env файл или Vercel environment variables.",
           isError: true,
           timestamp: Date.now()
       };
@@ -110,7 +112,9 @@ export const generateResponse = async (
       }
   }
 
+  // Use the new Chimera model as default
   let modelName = 'tngtech/deepseek-r1t2-chimera:free'; 
+  
   if (preferredModel !== 'auto' && preferredModel) {
       modelName = preferredModel;
   }
@@ -155,7 +159,8 @@ export const generateResponse = async (
       systemInstruction += "\n\nIMPORTANT: YOU MUST RETURN VALID JSON ONLY. NO MARKDOWN BLOCK WRAPPING THE JSON (IF POSSIBLE), JUST THE JSON STRING.";
   }
 
-  systemInstruction += "\n\nIMPORTANT: If you use internal reasoning or chain-of-thought, you MUST enclose it strictly within <think> and </think> tags. Do NOT output raw thinking text without tags.";
+  // With Chimera/R1 models, we WANT <think> tags, we will parse them later.
+  systemInstruction += "\n\nIMPORTANT: If you use internal reasoning or chain-of-thought, you MUST enclose it strictly within <think> and </think> tags.";
 
   systemInstruction = `CURRENT SUBJECT CONTEXT: ${subjectName}. All responses must relate to ${subjectName}.\n\n${systemInstruction}`;
 
@@ -201,6 +206,8 @@ export const generateResponse = async (
               headers: {
                   "Authorization": `Bearer ${apiKey}`,
                   "Content-Type": "application/json",
+                  "HTTP-Referer": "https://uchebnik.ai", // Required by OpenRouter free models
+                  "X-Title": "Uchebnik AI"
               },
               body: JSON.stringify(requestBody)
           });
@@ -215,12 +222,19 @@ export const generateResponse = async (
 
       const data = await withRetry(performGenerate);
       let text = data.choices?.[0]?.message?.content || "Няма отговор.";
+      let reasoning = undefined;
 
-      if (text.includes('</think>')) {
-          const parts = text.split('</think>');
-          text = parts[parts.length - 1];
+      // Extract Reasoning
+      const thinkMatch = text.match(/<think>([\s\S]*?)<\/think>/i);
+      if (thinkMatch) {
+          reasoning = thinkMatch[1].trim();
+          text = text.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
+      } else if (text.includes('</think>')) {
+           const parts = text.split('</think>');
+           if (parts.length > 1) {
+             text = parts[parts.length - 1].trim();
+           }
       }
-      text = text.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
 
       if (mode === AppMode.PRESENTATION) {
          try {
@@ -234,7 +248,8 @@ export const generateResponse = async (
                      type: 'slides',
                      slidesData: slides,
                      timestamp: Date.now(),
-                     imageAnalysis: imageAnalysis
+                     imageAnalysis: imageAnalysis,
+                     reasoning: reasoning
                  };
              } else {
                  throw new Error("No JSON found");
@@ -256,7 +271,8 @@ export const generateResponse = async (
                      type: 'test_generated',
                      testData: testData,
                      timestamp: Date.now(),
-                     imageAnalysis: imageAnalysis
+                     imageAnalysis: imageAnalysis,
+                     reasoning: reasoning
                  };
              } else {
                 throw new Error("No JSON found");
@@ -293,7 +309,8 @@ export const generateResponse = async (
           chartData: chartData,
           geometryData: geometryData,
           timestamp: Date.now(),
-          imageAnalysis: imageAnalysis
+          imageAnalysis: imageAnalysis,
+          reasoning: reasoning
       };
 
   } catch (error: any) {

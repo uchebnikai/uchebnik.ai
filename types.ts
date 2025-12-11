@@ -1,5 +1,6 @@
 
 
+
 export enum SubjectId {
   GENERAL = 'general',
   ENGLISH = 'english',
@@ -87,6 +88,7 @@ export interface Message {
   geometryData?: GeometryData; // For Math/Physics geometric drawings
   rating?: 'up' | 'down'; // User feedback
   replyToId?: string; // ID of the message being replied to
+  reasoning?: string; // Content from <think> tags
 }
 
 export interface Session {

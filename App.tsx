@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect, useRef } from 'react';
 import { SubjectConfig, SubjectId, AppMode, Message, Slide, UserSettings, Session, UserPlan, UserRole, HomeViewType } from './types';
 import { SUBJECTS } from './constants';
@@ -757,7 +755,8 @@ export const App = () => {
       const newAiMsg: Message = {
         id: (Date.now() + 1).toString(), role: 'model', text: response.text, isError: response.isError, type: response.type as Message['type'], 
         slidesData: response.slidesData, testData: response.testData, chartData: response.chartData, geometryData: response.geometryData, images: response.images || [], timestamp: Date.now(),
-        imageAnalysis: response.imageAnalysis // Save context for future
+        imageAnalysis: response.imageAnalysis, // Save context for future
+        reasoning: response.reasoning
       };
 
       setSessions(prev => prev.map(s => s.id === sessId ? { ...s, messages: [...s.messages, newAiMsg], lastModified: Date.now(), preview: response.text.substring(0, 50) } : s));
