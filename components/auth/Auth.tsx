@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { supabase } from '../../supabaseClient';
 import { Loader2, Mail, Lock, User, ArrowRight, Sparkles, CheckCircle, AlertCircle, Calendar } from 'lucide-react';
@@ -75,6 +74,23 @@ export const Auth = ({ isModal = false, onSuccess }: AuthProps) => {
     }
   };
 
+  const handleGoogleLogin = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin,
+        },
+      });
+      if (error) throw error;
+    } catch (err: any) {
+      setError(err.message || 'Грешка при вход с Google.');
+      setLoading(false);
+    }
+  };
+
   // Check for password recovery hash in URL
   React.useEffect(() => {
       const hash = window.location.hash;
@@ -119,6 +135,26 @@ export const Auth = ({ isModal = false, onSuccess }: AuthProps) => {
             <CheckCircle size={18} className="shrink-0 mt-0.5" />
             <span>{successMsg}</span>
           </div>
+        )}
+
+        {(mode === 'login' || mode === 'register') && (
+            <>
+                <button
+                    onClick={handleGoogleLogin}
+                    type="button"
+                    disabled={loading}
+                    className="w-full py-3.5 rounded-xl bg-white hover:bg-gray-50 text-gray-800 font-bold shadow-lg border border-gray-200 transition-all active:scale-95 disabled:opacity-70 flex items-center justify-center gap-3 mb-6 group"
+                >
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/1200px-Google_%22G%22_logo.svg.png" className="w-5 h-5 group-hover:scale-110 transition-transform" alt="Google" />
+                    <span>{mode === 'register' ? 'Регистрация с Google' : 'Вход с Google'}</span>
+                </button>
+
+                <div className="flex items-center gap-4 mb-6">
+                    <div className="h-px bg-gray-200 dark:bg-white/10 flex-1" />
+                    <span className="text-xs text-gray-400 font-bold uppercase tracking-wider">или с имейл</span>
+                    <div className="h-px bg-gray-200 dark:bg-white/10 flex-1" />
+                </div>
+            </>
         )}
 
         <form onSubmit={handleAuth} className="space-y-4">
