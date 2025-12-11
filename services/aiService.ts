@@ -156,13 +156,18 @@ export const generateResponse = async (
       }
   }
 
-  // Model Selection Logic with Fallback Preparation
-  // Default to Gemini 2.0 Flash Exp for 'auto' as it's reliable and fast
+  // Model Selection Logic with Smart Fallback
   const primaryModel = (preferredModel === 'auto' || !preferredModel) 
       ? 'google/gemini-2.0-flash-exp:free' 
       : preferredModel;
       
-  const fallbackModel = 'tngtech/deepseek-r1t2-chimera:free';
+  // Pool of high-quality free models (Excluding Llama as requested)
+  // We prioritize the primary choice, then Chimera DeepSeek R1T2, then Chimera DeepSeek R1T, then Gemini Flash
+  const fallbackPool = [
+      'tngtech/deepseek-r1t2-chimera:free', // Preferred DeepSeek (R1T2)
+      'tngtech/deepseek-r1t-chimera:free',  // Tertiary DeepSeek (R1T)
+      'google/gemini-2.0-flash-exp:free'    // Gemini Flash (Reliable)
+  ];
 
   const imageKeywords = /(draw|paint|generate image|create a picture|make an image|нарисувай|рисувай|генерирай изображение|генерирай снимка|направи снимка|изображение на)/i;
   const isImageRequest = (subjectId === SubjectId.ART && mode === AppMode.DRAW) || imageKeywords.test(promptText);
@@ -240,6 +245,9 @@ export const generateResponse = async (
           if (response.status === 401) {
               throw new Error("Invalid API Key (401)");
           }
+          if (response.status === 429) {
+              throw new Error("Rate Limit (429)");
+          }
           throw new Error(`API Error: ${response.status} ${errText}`);
       }
 
@@ -285,10 +293,7 @@ export const generateResponse = async (
                           const thinkMatch = rawAccumulator.match(/<think>([\s\S]*?)(?:<\/think>|$)/i);
                           if (thinkMatch) {
                               // If we found a think tag, extract it to reasoning
-                              // If the tag is closed, match[1] is the reasoning.
-                              // If not closed yet, match[1] is partial reasoning.
                               displayReasoning = (finalReasoning + thinkMatch[1]).trim();
-                              
                               // Remove the <think> block from content for display
                               displayContent = rawAccumulator.replace(/<think>[\s\S]*?(?:<\/think>|$)/gi, "").trim();
                           }
@@ -388,41 +393,46 @@ export const generateResponse = async (
       };
   };
 
-  try {
-      return await performRequest(primaryModel);
-  } catch (error: any) {
-      console.warn(`Primary model ${primaryModel} failed: ${error.message}.`);
-      
-      // Attempt Fallback Strategy
-      const failedModels = [primaryModel];
+  // Execution with Loop-based Fallback
+  const failedModels: string[] = [];
+  const candidateModels = [primaryModel, ...fallbackPool.filter(m => m !== primaryModel)]; // Ensure primary is first and unique
 
-      // Tier 2: DeepSeek R1 (Good for reasoning)
-      if (!failedModels.includes(fallbackModel)) {
-          try {
-              if (onStreamUpdate) onStreamUpdate("Сменям модела (DeepSeek)...", "");
-              return await performRequest(fallbackModel);
-          } catch (fbError: any) {
-              console.warn(`Fallback 1 failed: ${fbError.message}`);
-              failedModels.push(fallbackModel);
+  for (const model of candidateModels) {
+      try {
+          // If we had a rate limit error previously, wait a bit to let the API cool down
+          if (failedModels.length > 0) {
+             if (onStreamUpdate) {
+                 const modelShortName = model.includes('deepseek') ? 'DeepSeek' : 'Gemini';
+                 onStreamUpdate(`Системата е натоварена. Превключвам към ${modelShortName}...`, "");
+             }
+             // Specific delay for 429 errors or just general fallback stability
+             await wait(1500); 
+          }
+
+          return await performRequest(model);
+      } catch (error: any) {
+          console.warn(`Model ${model} failed: ${error.message}`);
+          failedModels.push(model);
+          
+          // If it was a severe auth error, stop immediately
+          if (error.message.includes("401")) {
+              return {
+                  id: Date.now().toString(),
+                  role: 'model',
+                  text: "Грешка: Невалиден API ключ (401). Моля проверете настройките.",
+                  isError: true,
+                  timestamp: Date.now()
+              };
           }
       }
-
-      // If all failed, analyze errors to give user feedback
-      const allErrors = [error.toString(), ...failedModels.map(m => "failed")].join(" ");
-      let userMsg = "Възникна грешка при връзката с AI услугите.";
-      
-      if (error.message.includes("401") || allErrors.includes("401")) {
-          userMsg = "Грешка: Невалиден API ключ. Моля проверете настройките или се свържете с администратор.";
-      } else if (error.message.includes("429") || allErrors.includes("429")) {
-          userMsg = "Системата е натоварена (Rate Limit). Моля изчакайте малко и опитайте отново.";
-      }
-
-      return {
-          id: Date.now().toString(),
-          role: 'model',
-          text: userMsg,
-          isError: true,
-          timestamp: Date.now()
-      };
   }
+
+  // If we reach here, all models failed
+  return {
+      id: Date.now().toString(),
+      role: 'model',
+      text: "Всички AI модели са натоварени в момента. Моля, изчакайте 30 секунди и опитайте отново.",
+      isError: true,
+      timestamp: Date.now()
+  };
 };
