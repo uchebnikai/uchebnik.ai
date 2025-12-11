@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { MessageSquare, Trash2, Plus, School, GraduationCap, Briefcase, ChevronDown, User, Settings, CreditCard, HelpCircle, LogOut, ArrowRight, ChevronUp, FileText, Flame } from 'lucide-react';
+import { MessageSquare, Trash2, Plus, School, GraduationCap, Briefcase, ChevronDown, User, Settings, CreditCard, HelpCircle, LogOut, ArrowRight, ChevronUp, FileText, Flame, CloudOff, RefreshCw, Cloud } from 'lucide-react';
 import { DynamicIcon } from '../ui/DynamicIcon';
 import { SUBJECTS } from '../../constants';
 import { SubjectId, AppMode, Session, UserRole, UserSettings, UserPlan, SubjectConfig, HomeViewType } from '../../types';
@@ -32,6 +32,7 @@ interface SidebarProps {
   setShowSubjectDashboard: (val: boolean) => void;
   userRole: UserRole | null;
   streak: number;
+  syncStatus?: 'synced' | 'syncing' | 'error' | 'offline';
 }
 
 export const Sidebar = ({
@@ -60,7 +61,8 @@ export const Sidebar = ({
   addToast,
   setShowSubjectDashboard,
   userRole,
-  streak
+  streak,
+  syncStatus = 'synced'
 }: SidebarProps) => {
     
     // Internal State for Folders
@@ -299,6 +301,11 @@ export const Sidebar = ({
                                         <Flame size={10} fill="currentColor" /> {streak}
                                     </div>
                                 )}
+                            </div>
+                            <div className="text-[10px] uppercase font-bold tracking-widest flex items-center gap-1.5 opacity-60 mt-1">
+                                {syncStatus === 'syncing' && <><RefreshCw size={10} className="animate-spin"/> Syncing...</>}
+                                {syncStatus === 'synced' && <><Cloud size={10} className="text-emerald-500"/> Synced</>}
+                                {syncStatus === 'error' && <><CloudOff size={10} className="text-red-500"/> Sync Error</>}
                             </div>
                          </div>
                          <ChevronUp size={16} className={`text-gray-400 transition-transform duration-300 ${profileMenuOpen ? 'rotate-180' : ''}`} />

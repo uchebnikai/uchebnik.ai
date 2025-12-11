@@ -45,6 +45,7 @@ export const App = () => {
   const [authLoading, setAuthLoading] = useState(true);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [isRemoteDataLoaded, setIsRemoteDataLoaded] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<'synced' | 'syncing' | 'error' | 'offline'>('synced');
 
   // --- State ---
   const [userRole, setUserRole] = useState<UserRole | null>(null);
@@ -157,6 +158,8 @@ export const App = () => {
   const syncSessionsTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const syncSettingsTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   
+  // Flag to prevent save loops when receiving data from cloud
+  const isIncomingUpdateRef = useRef(false);
   const isRemoteDataLoadedRef = useRef(false);
 
   // --- Custom Hooks ---
@@ -191,7 +194,13 @@ export const App = () => {
             if (session.user.user_metadata?.plan) {
                 setUserPlan(session.user.user_metadata.plan);
             }
+        } else {
+            // Logout cleanup
+            setSessions([]);
+            setSyncStatus('synced');
+            setIsRemoteDataLoaded(false);
         }
+
         if (session?.user?.user_metadata) {
             const meta = session.user.user_metadata;
             const firstName = meta.first_name || '';
@@ -230,6 +239,7 @@ export const App = () => {
       const loadRemoteData = async () => {
           setIsRemoteDataLoaded(false);
           isRemoteDataLoadedRef.current = false;
+          setSyncStatus('syncing');
           
           try {
               // Load Settings
@@ -252,11 +262,14 @@ export const App = () => {
                   .single();
                   
               if (sessionData && sessionData.data) {
-                  // If remote data exists, it is the single source of truth for a logged in user
+                  // Mark as incoming to prevent immediate save loop
+                  isIncomingUpdateRef.current = true;
                   setSessions(sessionData.data);
               }
+              setSyncStatus('synced');
           } catch (err) {
               console.error("Failed to load remote data", err);
+              setSyncStatus('error');
           } finally {
               setIsRemoteDataLoaded(true);
               isRemoteDataLoadedRef.current = true;
@@ -266,15 +279,52 @@ export const App = () => {
       loadRemoteData();
   }, [session?.user?.id]);
 
+  // Cloud Sync: Realtime Subscription
+  useEffect(() => {
+      if (!session?.user?.id) return;
+
+      const channel = supabase.channel(`sync:${session.user.id}`)
+          .on('postgres_changes', { 
+              event: 'UPDATE', 
+              schema: 'public', 
+              table: 'user_data', 
+              filter: `user_id=eq.${session.user.id}` 
+          }, (payload) => {
+              const remoteSessions = (payload.new as any).data;
+              if (remoteSessions) {
+                  // Compare to avoid infinite loops or unnecessary renders
+                  const currentJson = JSON.stringify(sessionsRef.current);
+                  const remoteJson = JSON.stringify(remoteSessions);
+                  
+                  if (currentJson !== remoteJson) {
+                      console.log("Applying realtime update from cloud");
+                      isIncomingUpdateRef.current = true; // Block the next save effect
+                      setSessions(remoteSessions);
+                      addToast('Синхронизирано', 'info');
+                  }
+              }
+          })
+          .subscribe();
+
+      return () => { supabase.removeChannel(channel); };
+  }, [session?.user?.id]);
+
+
   // Cloud Sync: Save Sessions on Change
   useEffect(() => {
       if (!session?.user?.id || !isRemoteDataLoaded) return;
       
+      // If this change came from the cloud, don't save it back
+      if (isIncomingUpdateRef.current) {
+          isIncomingUpdateRef.current = false;
+          return;
+      }
+      
+      setSyncStatus('syncing');
+
       if (syncSessionsTimer.current) clearTimeout(syncSessionsTimer.current);
       
       syncSessionsTimer.current = setTimeout(async () => {
-          // Upsert into user_data table (assuming JSONB column 'data')
-          // If table doesn't exist, this will fail silently in console, keeping app working locally
           const { error } = await supabase.from('user_data').upsert({
               user_id: session.user.id,
               data: sessions,
@@ -283,9 +333,11 @@ export const App = () => {
           
           if (error) {
              console.error("Sync Error:", error);
-             // Optionally notify user only on critical failures, avoiding spam
+             setSyncStatus('error');
+          } else {
+             setSyncStatus('synced');
           }
-      }, 2000); // 2 second debounce
+      }, 1000); // 1s debounce
 
       return () => { if(syncSessionsTimer.current) clearTimeout(syncSessionsTimer.current); };
   }, [sessions, session?.user?.id, isRemoteDataLoaded]);
@@ -330,11 +382,6 @@ export const App = () => {
   // Data Loading Effect (IndexedDB)
   useEffect(() => {
     const initData = async () => {
-        // If we are logged in and waiting for remote data, or already have remote data,
-        // we might skip loading stale local data to avoid overwriting.
-        // However, for offline support, we load local first.
-        // But if remote load finishes *before* local load, we must NOT overwrite remote with local.
-        
         const userId = session?.user?.id;
         const sessionsKey = userId ? `uchebnik_sessions_${userId}` : 'uchebnik_sessions';
         const settingsKey = userId ? `uchebnik_settings_${userId}` : 'uchebnik_settings';
@@ -1302,6 +1349,7 @@ export const App = () => {
             setShowSubjectDashboard={setShowSubjectDashboard}
             userRole={userRole}
             streak={streak}
+            syncStatus={syncStatus}
           />
       )}
       
