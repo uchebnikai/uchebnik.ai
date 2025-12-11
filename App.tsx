@@ -44,6 +44,7 @@ export const App = () => {
   const [session, setSession] = useState<SupabaseSession | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [isRemoteDataLoaded, setIsRemoteDataLoaded] = useState(false);
 
   // --- State ---
   const [userRole, setUserRole] = useState<UserRole | null>(null);
@@ -155,6 +156,8 @@ export const App = () => {
   // Sync debounce timers
   const syncSessionsTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const syncSettingsTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  
+  const isRemoteDataLoadedRef = useRef(false);
 
   // --- Custom Hooks ---
   useTheme(userSettings);
@@ -218,33 +221,45 @@ export const App = () => {
   
   // Cloud Sync: Load Data on Login
   useEffect(() => {
-      if (!session?.user?.id) return;
+      if (!session?.user?.id) {
+          setIsRemoteDataLoaded(false);
+          isRemoteDataLoadedRef.current = false;
+          return;
+      }
       
       const loadRemoteData = async () => {
-          // Load Settings
-          const { data: profileData } = await supabase
-              .from('profiles')
-              .select('settings, theme_color, custom_background')
-              .eq('id', session.user.id)
-              .single();
+          setIsRemoteDataLoaded(false);
+          isRemoteDataLoadedRef.current = false;
           
-          if (profileData && profileData.settings) {
-              const merged = { ...profileData.settings, themeColor: profileData.theme_color, customBackground: profileData.custom_background };
-              setUserSettings(prev => ({ ...prev, ...merged }));
-          }
-
-          // Load Sessions
-          const { data: sessionData } = await supabase
-              .from('user_data')
-              .select('data')
-              .eq('user_id', session.user.id)
-              .single();
+          try {
+              // Load Settings
+              const { data: profileData } = await supabase
+                  .from('profiles')
+                  .select('settings, theme_color, custom_background')
+                  .eq('id', session.user.id)
+                  .single();
               
-          if (sessionData && sessionData.data) {
-              // Merge strategy: Remote wins if conflicts, otherwise simple set
-              // For simplicity in this demo, remote wins if local is empty or just overwrite
-              // Real app would merge by ID
-              setSessions(sessionData.data);
+              if (profileData && profileData.settings) {
+                  const merged = { ...profileData.settings, themeColor: profileData.theme_color, customBackground: profileData.custom_background };
+                  setUserSettings(prev => ({ ...prev, ...merged }));
+              }
+
+              // Load Sessions
+              const { data: sessionData } = await supabase
+                  .from('user_data')
+                  .select('data')
+                  .eq('user_id', session.user.id)
+                  .single();
+                  
+              if (sessionData && sessionData.data) {
+                  // If remote data exists, it is the single source of truth for a logged in user
+                  setSessions(sessionData.data);
+              }
+          } catch (err) {
+              console.error("Failed to load remote data", err);
+          } finally {
+              setIsRemoteDataLoaded(true);
+              isRemoteDataLoadedRef.current = true;
           }
       };
       
@@ -253,26 +268,31 @@ export const App = () => {
 
   // Cloud Sync: Save Sessions on Change
   useEffect(() => {
-      if (!session?.user?.id) return;
+      if (!session?.user?.id || !isRemoteDataLoaded) return;
       
       if (syncSessionsTimer.current) clearTimeout(syncSessionsTimer.current);
       
       syncSessionsTimer.current = setTimeout(async () => {
           // Upsert into user_data table (assuming JSONB column 'data')
           // If table doesn't exist, this will fail silently in console, keeping app working locally
-          await supabase.from('user_data').upsert({
+          const { error } = await supabase.from('user_data').upsert({
               user_id: session.user.id,
               data: sessions,
               updated_at: new Date().toISOString()
           });
+          
+          if (error) {
+             console.error("Sync Error:", error);
+             // Optionally notify user only on critical failures, avoiding spam
+          }
       }, 2000); // 2 second debounce
 
       return () => { if(syncSessionsTimer.current) clearTimeout(syncSessionsTimer.current); };
-  }, [sessions, session?.user?.id]);
+  }, [sessions, session?.user?.id, isRemoteDataLoaded]);
 
   // Cloud Sync: Save Settings on Change
   useEffect(() => {
-      if (!session?.user?.id) return;
+      if (!session?.user?.id || !isRemoteDataLoaded) return;
       
       if (syncSettingsTimer.current) clearTimeout(syncSettingsTimer.current);
       
@@ -287,7 +307,7 @@ export const App = () => {
       }, 1000);
 
       return () => { if(syncSettingsTimer.current) clearTimeout(syncSettingsTimer.current); };
-  }, [userSettings, session?.user?.id]);
+  }, [userSettings, session?.user?.id, isRemoteDataLoaded]);
 
 
   // Window Resize Listener
@@ -310,6 +330,11 @@ export const App = () => {
   // Data Loading Effect (IndexedDB)
   useEffect(() => {
     const initData = async () => {
+        // If we are logged in and waiting for remote data, or already have remote data,
+        // we might skip loading stale local data to avoid overwriting.
+        // However, for offline support, we load local first.
+        // But if remote load finishes *before* local load, we must NOT overwrite remote with local.
+        
         const userId = session?.user?.id;
         const sessionsKey = userId ? `uchebnik_sessions_${userId}` : 'uchebnik_sessions';
         const settingsKey = userId ? `uchebnik_settings_${userId}` : 'uchebnik_settings';
@@ -320,45 +345,51 @@ export const App = () => {
         try {
             // Load Sessions
             const loadedSessions = await getSessionsFromStorage(sessionsKey);
-            if (loadedSessions && loadedSessions.length > 0) setSessions(loadedSessions);
-            else {
-                // Fallback migration from localStorage if IDB is empty
-                const lsSessions = localStorage.getItem(sessionsKey);
-                if (lsSessions) {
-                    try {
-                        const parsed = JSON.parse(lsSessions);
-                        setSessions(parsed);
-                        // Save to IDB immediately
-                        await saveSessionsToStorage(sessionsKey, parsed);
-                        // Optional: localStorage.removeItem(sessionsKey);
-                    } catch(e){}
+            
+            // Only set sessions from local storage if remote data hasn't loaded yet.
+            // If remote data HAS loaded, it is the truth, and local storage might be stale.
+            if (!isRemoteDataLoadedRef.current) {
+                if (loadedSessions && loadedSessions.length > 0) setSessions(loadedSessions);
+                else {
+                    // Fallback migration from localStorage if IDB is empty
+                    const lsSessions = localStorage.getItem(sessionsKey);
+                    if (lsSessions) {
+                        try {
+                            const parsed = JSON.parse(lsSessions);
+                            setSessions(parsed);
+                            // Save to IDB immediately
+                            await saveSessionsToStorage(sessionsKey, parsed);
+                        } catch(e){}
+                    }
                 }
             }
 
             // Load Settings
             const loadedSettings = await getSettingsFromStorage(settingsKey);
-            if (loadedSettings) setUserSettings(loadedSettings);
-            else {
-                 // Fallback or Defaults
-                 const lsSettings = localStorage.getItem(settingsKey);
-                 if (lsSettings) setUserSettings(JSON.parse(lsSettings));
-                 else if (userId) {
-                    setUserSettings({
-                        userName: session?.user?.user_metadata?.full_name || '', 
-                        gradeLevel: '8-12', 
-                        textSize: 'normal', 
-                        haptics: true, 
-                        notifications: true, 
-                        sound: true, 
-                        reduceMotion: false, 
-                        responseLength: 'concise', 
-                        creativity: 'balanced', 
-                        languageLevel: 'standard',
-                        preferredModel: 'auto',
-                        themeColor: '#6366f1',
-                        customBackground: null
-                    });
-                 }
+            if (!isRemoteDataLoadedRef.current) {
+                if (loadedSettings) setUserSettings(loadedSettings);
+                else {
+                     // Fallback or Defaults
+                     const lsSettings = localStorage.getItem(settingsKey);
+                     if (lsSettings) setUserSettings(JSON.parse(lsSettings));
+                     else if (userId) {
+                        setUserSettings({
+                            userName: session?.user?.user_metadata?.full_name || '', 
+                            gradeLevel: '8-12', 
+                            textSize: 'normal', 
+                            haptics: true, 
+                            notifications: true, 
+                            sound: true, 
+                            reduceMotion: false, 
+                            responseLength: 'concise', 
+                            creativity: 'balanced', 
+                            languageLevel: 'standard',
+                            preferredModel: 'auto',
+                            themeColor: '#6366f1',
+                            customBackground: null
+                        });
+                     }
+                }
             }
         } catch (err) {
             console.error("Initialization Error", err);
