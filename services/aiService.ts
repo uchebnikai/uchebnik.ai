@@ -163,7 +163,6 @@ export const generateResponse = async (
       : preferredModel;
       
   const fallbackModel = 'deepseek/deepseek-r1:free';
-  const emergencyModel = 'meta-llama/llama-3-8b-instruct:free';
 
   const imageKeywords = /(draw|paint|generate image|create a picture|make an image|нарисувай|рисувай|генерирай изображение|генерирай снимка|направи снимка|изображение на)/i;
   const isImageRequest = (subjectId === SubjectId.ART && mode === AppMode.DRAW) || imageKeywords.test(promptText);
@@ -405,17 +404,6 @@ export const generateResponse = async (
           } catch (fbError: any) {
               console.warn(`Fallback 1 failed: ${fbError.message}`);
               failedModels.push(fallbackModel);
-          }
-      }
-
-      // Tier 3: Llama 3 8B (Reliable, fast, free)
-      if (!failedModels.includes(emergencyModel)) {
-          try {
-              if (onStreamUpdate) onStreamUpdate("Сменям модела (Llama)...", "");
-              return await performRequest(emergencyModel);
-          } catch (fb2Error: any) {
-               console.warn(`Fallback 2 failed: ${fb2Error.message}`);
-               failedModels.push(emergencyModel);
           }
       }
 
