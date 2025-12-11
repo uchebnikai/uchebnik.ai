@@ -3,7 +3,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import remarkGfm from 'remark-gfm';
-import { Projector, Download, Check, ThumbsUp, ThumbsDown, Reply, Volume2, Square, Copy, Share2, Sparkles, Brain, ChevronDown, ChevronUp } from 'lucide-react';
+import { Projector, Download, Check, ThumbsUp, ThumbsDown, Reply, Volume2, Square, Copy, Share2, Sparkles, Brain, ChevronDown, ChevronUp, Lightbulb } from 'lucide-react';
 import { Message, UserSettings, SubjectConfig } from '../../types';
 import { handleDownloadPPTX } from '../../utils/exportUtils';
 import { CodeBlock } from '../ui/CodeBlock';
@@ -83,15 +83,25 @@ export const MessageList = ({
                         <div className="mb-4">
                            <button 
                               onClick={() => toggleReasoning(msg.id)}
-                              className="flex items-center gap-2 px-3 py-2 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 text-xs font-bold text-indigo-600 dark:text-indigo-400 transition-all border border-indigo-500/10"
+                              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all border w-full sm:w-auto
+                                 ${expandedReasoning[msg.id] 
+                                    ? 'bg-indigo-100/50 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-300 border-indigo-500/20' 
+                                    : 'bg-gray-50/50 dark:bg-white/5 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-white/10 hover:bg-gray-100 dark:hover:bg-white/10'
+                                 }`}
                            >
-                              <Brain size={14} className={expandedReasoning[msg.id] ? 'text-indigo-500' : 'opacity-70'} />
-                              <span>Thinking Process</span>
+                              <Brain size={14} className={expandedReasoning[msg.id] ? 'text-indigo-500 animate-pulse' : 'opacity-70'} />
+                              <span>{expandedReasoning[msg.id] ? 'Скрий мислите' : 'Виж как разсъждавам'}</span>
                               {expandedReasoning[msg.id] ? <ChevronUp size={12}/> : <ChevronDown size={12}/>}
                            </button>
+                           
                            {expandedReasoning[msg.id] && (
-                              <div className="mt-2 pl-3 border-l-2 border-indigo-500/20 text-xs text-gray-500 dark:text-gray-400 italic bg-gray-50/50 dark:bg-white/5 p-3 rounded-r-xl animate-in slide-in-from-top-2 fade-in">
-                                 <ReactMarkdown>{msg.reasoning}</ReactMarkdown>
+                              <div className="mt-2 text-xs text-zinc-600 dark:text-zinc-400 bg-gray-50/80 dark:bg-black/20 p-4 rounded-xl border-l-2 border-indigo-500/30 animate-in slide-in-from-top-2 fade-in">
+                                 <div className="flex items-center gap-2 mb-2 text-indigo-500 font-bold opacity-70 uppercase tracking-widest text-[10px]">
+                                     <Lightbulb size={12}/> Chain of Thought
+                                 </div>
+                                 <div className="markdown-content italic opacity-90">
+                                    <ReactMarkdown>{msg.reasoning || ""}</ReactMarkdown>
+                                 </div>
                               </div>
                            )}
                         </div>
@@ -138,13 +148,16 @@ export const MessageList = ({
             ))}
             
             {loadingSubject && (
-               <div className={`flex gap-4 pl-4 ${FADE_IN} duration-500`}>
-                  <div className={`w-10 h-10 lg:w-12 lg:h-12 rounded-full bg-white dark:bg-zinc-900 border border-indigo-500/20 flex items-center justify-center shadow-sm ${PULSE_SLOW}`}><Sparkles size={18} className="text-indigo-500"/></div>
-                  <div className="bg-white/50 dark:bg-white/5 px-6 py-4 rounded-[24px] lg:rounded-[32px] rounded-bl-sm border border-indigo-500/20 flex items-center gap-2 backdrop-blur-md">
-                     <div className={`w-2.5 h-2.5 bg-indigo-500 rounded-full ${BOUNCE_DELAY}`}/>
-                     <div className={`w-2.5 h-2.5 bg-indigo-500 rounded-full ${BOUNCE_DELAY} delay-100`}/>
-                     <div className={`w-2.5 h-2.5 bg-indigo-500 rounded-full ${BOUNCE_DELAY} delay-200`}/>
+               <div className={`flex flex-col gap-2 pl-4 ${FADE_IN} duration-500`}>
+                  <div className="flex gap-4">
+                      <div className={`w-10 h-10 lg:w-12 lg:h-12 rounded-full bg-white dark:bg-zinc-900 border border-indigo-500/20 flex items-center justify-center shadow-sm ${PULSE_SLOW}`}><Brain size={18} className="text-indigo-500"/></div>
+                      <div className="bg-white/50 dark:bg-white/5 px-6 py-4 rounded-[24px] lg:rounded-[32px] rounded-bl-sm border border-indigo-500/20 flex items-center gap-2 backdrop-blur-md">
+                         <div className={`w-2 h-2 bg-indigo-500 rounded-full ${BOUNCE_DELAY}`}/>
+                         <div className={`w-2 h-2 bg-indigo-500 rounded-full ${BOUNCE_DELAY} delay-100`}/>
+                         <div className={`w-2 h-2 bg-indigo-500 rounded-full ${BOUNCE_DELAY} delay-200`}/>
+                      </div>
                   </div>
+                  <div className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest pl-16 animate-pulse">Thinking...</div>
                </div>
             )}
             <div ref={messagesEndRef} className="h-6 lg:h-10"/>

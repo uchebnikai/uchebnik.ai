@@ -160,7 +160,7 @@ export const generateResponse = async (
   }
 
   // With Chimera/R1 models, we WANT <think> tags, we will parse them later.
-  systemInstruction += "\n\nIMPORTANT: If you use internal reasoning or chain-of-thought, you MUST enclose it strictly within <think> and </think> tags.";
+  systemInstruction += "\n\nIMPORTANT: Show your reasoning process enclosed in <think> tags before your final answer.";
 
   systemInstruction = `CURRENT SUBJECT CONTEXT: ${subjectName}. All responses must relate to ${subjectName}.\n\n${systemInstruction}`;
 
@@ -197,6 +197,7 @@ export const generateResponse = async (
   const requestBody: any = {
       model: modelName,
       messages: messages,
+      include_reasoning: true // Crucial for R1 models on OpenRouter
   };
 
   try {
@@ -206,7 +207,7 @@ export const generateResponse = async (
               headers: {
                   "Authorization": `Bearer ${apiKey}`,
                   "Content-Type": "application/json",
-                  "HTTP-Referer": "https://uchebnik.ai", // Required by OpenRouter free models
+                  "HTTP-Referer": "https://uchebnik.ai",
                   "X-Title": "Uchebnik AI"
               },
               body: JSON.stringify(requestBody)
@@ -221,19 +222,20 @@ export const generateResponse = async (
       };
 
       const data = await withRetry(performGenerate);
+      
       let text = data.choices?.[0]?.message?.content || "Няма отговор.";
-      let reasoning = undefined;
+      // Check for reasoning in special field (OpenAI/DeepSeek extension) or in text
+      let reasoning = data.choices?.[0]?.message?.reasoning || undefined;
 
-      // Extract Reasoning
-      const thinkMatch = text.match(/<think>([\s\S]*?)<\/think>/i);
-      if (thinkMatch) {
-          reasoning = thinkMatch[1].trim();
-          text = text.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
-      } else if (text.includes('</think>')) {
-           const parts = text.split('</think>');
-           if (parts.length > 1) {
-             text = parts[parts.length - 1].trim();
-           }
+      // Extract Reasoning from text if not provided in field
+      if (!reasoning) {
+          const thinkMatch = text.match(/<think>([\s\S]*?)(?:<\/think>|$)/i);
+          if (thinkMatch) {
+              reasoning = thinkMatch[1].trim();
+              text = text.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
+              // Cleanup any leftover tags if regex was partial
+              text = text.replace(/<think>/g, "").replace(/<\/think>/g, "");
+          }
       }
 
       if (mode === AppMode.PRESENTATION) {

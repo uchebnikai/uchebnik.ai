@@ -153,8 +153,8 @@ export const App = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
   // Sync debounce timers
-  const syncSessionsTimer = useRef<NodeJS.Timeout | null>(null);
-  const syncSettingsTimer = useRef<NodeJS.Timeout | null>(null);
+  const syncSessionsTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const syncSettingsTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // --- Custom Hooks ---
   useTheme(userSettings);
