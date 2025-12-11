@@ -163,6 +163,21 @@ export const App = () => {
 
   // Auth Effect
   useEffect(() => {
+    // Check for errors in the URL hash from OAuth redirects
+    const handleHashError = () => {
+        const hash = window.location.hash;
+        if (hash && hash.includes('error=')) {
+            const params = new URLSearchParams(hash.substring(1));
+            const errorDescription = params.get('error_description');
+            if (errorDescription) {
+                addToast(`Грешка при вход: ${decodeURIComponent(errorDescription)}`, 'error');
+                // Clean URL
+                window.history.replaceState(null, '', window.location.pathname);
+            }
+        }
+    };
+    handleHashError();
+
     const syncProfile = (session: SupabaseSession | null) => {
         setSession(session);
         setAuthLoading(false);
