@@ -722,7 +722,8 @@ export const App = () => {
        role: 'model',
        text: "",
        timestamp: Date.now(),
-       reasoning: ""
+       reasoning: "",
+       isStreaming: true
     };
 
     setSessions(prev => prev.map(s => {
@@ -778,7 +779,7 @@ export const App = () => {
                           ...s,
                           messages: s.messages.map(m => {
                               if (m.id === tempAiMsgId) {
-                                  return { ...m, text: textChunk, reasoning: reasoningChunk };
+                                  return { ...m, text: textChunk, reasoning: reasoningChunk, isStreaming: true };
                               }
                               return m;
                           })
@@ -808,7 +809,8 @@ export const App = () => {
                           testData: response.testData,
                           chartData: response.chartData,
                           geometryData: response.geometryData,
-                          imageAnalysis: response.imageAnalysis
+                          imageAnalysis: response.imageAnalysis,
+                          isStreaming: false
                       };
                   }
                   return m;
@@ -831,7 +833,7 @@ export const App = () => {
     } catch (error) {
        console.error("HandleSend Error:", error);
        setLoadingSubjects(prev => ({ ...prev, [currentSubId]: false }));
-       const errorMsg: Message = { id: Date.now().toString(), role: 'model', text: "Възникна грешка. Моля опитайте отново.", isError: true, timestamp: Date.now() };
+       const errorMsg: Message = { id: Date.now().toString(), role: 'model', text: "Възникна грешка. Моля опитайте отново.", isError: true, timestamp: Date.now(), isStreaming: false };
        // Replace the temp message with error or append error?
        // Let's replace the temp message if it exists, or append if not found (though it should exist)
        setSessions(prev => prev.map(s => {

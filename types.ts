@@ -1,6 +1,8 @@
 
 
 
+
+
 export enum SubjectId {
   GENERAL = 'general',
   ENGLISH = 'english',
@@ -89,6 +91,7 @@ export interface Message {
   rating?: 'up' | 'down'; // User feedback
   replyToId?: string; // ID of the message being replied to
   reasoning?: string; // Content from <think> tags
+  isStreaming?: boolean; // Track if the message is currently being generated
 }
 
 export interface Session {

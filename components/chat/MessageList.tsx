@@ -46,20 +46,6 @@ export const MessageList = ({
 }: MessageListProps) => {
 
   const [expandedReasoning, setExpandedReasoning] = useState<Record<string, boolean>>({});
-  // Track which message is currently streaming (simplified logic: the last model message if it's very recent)
-  const [streamingId, setStreamingId] = useState<string | null>(null);
-
-  useEffect(() => {
-      if (currentMessages.length > 0) {
-          const lastMsg = currentMessages[currentMessages.length - 1];
-          if (lastMsg.role === 'model' && !lastMsg.isError) {
-              // If the message is being updated (we can't easily detect "done" from props without a flag, 
-              // but we can assume if it's the last one and loadingSubject is false, it might be streaming or just finished.
-              // For UI purposes, we'll treat the last message as "active" for animations)
-              setStreamingId(lastMsg.id);
-          }
-      }
-  }, [currentMessages]);
 
   const toggleReasoning = (id: string) => {
      setExpandedReasoning(prev => ({
@@ -68,20 +54,19 @@ export const MessageList = ({
      }));
   };
 
-  // Auto-expand reasoning if it's the only thing responding so far and it's the active stream
+  // Auto-expand reasoning only if not already set (undefined)
   useEffect(() => {
       const lastMsg = currentMessages[currentMessages.length - 1];
-      if (lastMsg && lastMsg.role === 'model' && lastMsg.reasoning && !lastMsg.text && !expandedReasoning[lastMsg.id]) {
+      if (lastMsg && lastMsg.role === 'model' && lastMsg.reasoning && !lastMsg.text && expandedReasoning[lastMsg.id] === undefined) {
           setExpandedReasoning(prev => ({ ...prev, [lastMsg.id]: true }));
       }
-  }, [currentMessages]);
+  }, [currentMessages, expandedReasoning]);
 
   return (
       <div className={`flex-1 overflow-y-auto px-2 lg:px-8 py-4 lg:py-8 custom-scrollbar scroll-smooth ${userSettings.textSize === 'large' ? 'text-lg' : userSettings.textSize === 'small' ? 'text-sm' : 'text-base'}`}>
          <div className="max-w-4xl mx-auto space-y-8 lg:space-y-12 pb-40 pt-2 lg:pt-4">
             {currentMessages.map((msg, index) => {
-               const isLast = index === currentMessages.length - 1;
-               const isStreaming = isLast && msg.role === 'model' && !loadingSubject; // Approximate streaming state
+               const isStreaming = msg.isStreaming;
 
                return (
                <div key={msg.id} id={msg.id} className={`group flex flex-col gap-2 ${SLIDE_UP} duration-700 ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
@@ -152,6 +137,14 @@ export const MessageList = ({
 
                      {msg.type === 'test_generated' && msg.testData && (
                         <TestRenderer data={msg.testData} />
+                     )}
+
+                     {/* Initializing State */}
+                     {isStreaming && !msg.text && !msg.reasoning && (
+                        <div className="flex items-center gap-3 text-sm text-gray-500 italic py-2 animate-pulse">
+                           <Loader2 className="animate-spin text-indigo-500" size={18}/>
+                           <span>Подготовка на отговора...</span>
+                        </div>
                      )}
 
                      {msg.text && (
