@@ -5,16 +5,70 @@ import { jsPDF } from "jspdf";
 import { TestData } from '../../types';
 import { cleanMathText } from '../../utils/text';
 import { ChartRenderer } from './ChartRenderer';
+import { GeometryRenderer } from './GeometryRenderer';
 
 // Cache font buffer at module level to avoid re-fetching
 let cachedFontBuffer: ArrayBuffer | null = null;
 const FONT_URL = "https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.66/fonts/Roboto/Roboto-Regular.ttf";
+
+// Helper to convert SVG String to PNG Base64 for Export
+const svgToPng = (svgString: string): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    // basic cleanup for safety and size definition
+    const svgBlob = new Blob([svgString], {type: 'image/svg+xml;charset=utf-8'});
+    const url = URL.createObjectURL(svgBlob);
+    
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 600; 
+      canvas.height = 400;
+      const ctx = canvas.getContext('2d');
+      if(ctx) {
+          ctx.fillStyle = 'white';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          // Scale to fit
+          const scale = Math.min(600 / img.width, 400 / img.height);
+          const w = img.width * scale || 600;
+          const h = img.height * scale || 400;
+          const x = (600 - w) / 2;
+          const y = (400 - h) / 2;
+          ctx.drawImage(img, x, y, w, h);
+          resolve(canvas.toDataURL('image/png'));
+      } else {
+          reject("No canvas context");
+      }
+      URL.revokeObjectURL(url);
+    };
+    img.onerror = (e) => reject(e);
+    img.src = url;
+  });
+};
 
 export const TestRenderer = ({ data }: { data: TestData }) => {
   const [visible, setVisible] = useState(true);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
   const handleDownloadWord = async () => {
+    // Pre-process questions to convert geometry SVGs to PNGs
+    const processedQuestions = await Promise.all(data.questions.map(async (q) => {
+        let imageRun = null;
+        if (q.geometryData?.svg) {
+            try {
+                const pngBase64 = await svgToPng(q.geometryData.svg);
+                const base64Data = pngBase64.split(',')[1];
+                imageRun = new docx.ImageRun({
+                    data: Uint8Array.from(atob(base64Data), c => c.charCodeAt(0)),
+                    transformation: { width: 300, height: 200 },
+                    type: "png"
+                });
+            } catch (e) {
+                console.error("Failed to convert SVG for Word", e);
+            }
+        }
+        return { ...q, imageRun };
+    }));
+
     const doc = new docx.Document({
         sections: [{
             properties: {},
@@ -37,23 +91,36 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
                     alignment: docx.AlignmentType.CENTER,
                     spacing: { after: 400 }
                 }),
-                ...data.questions.flatMap((q, index) => [
-                    new docx.Paragraph({
-                        children: [new docx.TextRun({ text: `${index + 1}. ${cleanMathText(q.question)}`, bold: true, size: 24 })],
-                        spacing: { before: 200, after: 100 }
-                    }),
-                    // Note: Charts are omitted in simple Word export for now
-                    ...(q.options ? q.options.map(opt => 
+                ...processedQuestions.flatMap((q, index) => {
+                    const elements = [
                         new docx.Paragraph({
-                            children: [new docx.TextRun({ text: cleanMathText(opt), size: 24 })],
-                            spacing: { after: 50 },
-                            indent: { left: 720 }
+                            children: [new docx.TextRun({ text: `${index + 1}. ${cleanMathText(q.question)}`, bold: true, size: 24 })],
+                            spacing: { before: 200, after: 100 }
                         })
-                    ) : [
-                        new docx.Paragraph({ children: [new docx.TextRun({ text: "____________________________________________________________________" })], spacing: { after: 100 } }),
-                        new docx.Paragraph({ children: [new docx.TextRun({ text: "____________________________________________________________________" })], spacing: { after: 200 } })
-                    ])
-                ]),
+                    ];
+
+                    if (q.imageRun) {
+                        elements.push(new docx.Paragraph({
+                            children: [q.imageRun],
+                            alignment: docx.AlignmentType.CENTER,
+                            spacing: { after: 100 }
+                        }));
+                    }
+
+                    if (q.options) {
+                        q.options.forEach(opt => {
+                            elements.push(new docx.Paragraph({
+                                children: [new docx.TextRun({ text: cleanMathText(opt), size: 24 })],
+                                spacing: { after: 50 },
+                                indent: { left: 720 }
+                            }));
+                        });
+                    } else {
+                        elements.push(new docx.Paragraph({ children: [new docx.TextRun({ text: "____________________________________________________________________" })], spacing: { after: 100 } }));
+                        elements.push(new docx.Paragraph({ children: [new docx.TextRun({ text: "____________________________________________________________________" })], spacing: { after: 200 } }));
+                    }
+                    return elements;
+                }),
                 new docx.Paragraph({
                     children: [
                         new docx.TextRun({ text: "Подпис на учител: ___________________        Подпис на ученик: ___________________", size: 24 })
@@ -114,6 +181,7 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
             console.error("Failed to load Cyrillic font", e);
             alert("Warning: Could not load Cyrillic font. Text might look incorrect.");
         }
+        
         doc.setFontSize(12);
         doc.text("Име: __________________________________________", 20, 20);
         doc.text("Клас: _________", 20, 30);
@@ -124,8 +192,12 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
         doc.setTextColor(100);
         doc.text(`${data.subject} | ${data.grade || ''}`, 105, 58, { align: 'center' });
         doc.setTextColor(0);
+        
         let y = 70;
-        data.questions.forEach((q, i) => {
+        
+        // Loop sequentially to handle async image generation
+        for (let i = 0; i < data.questions.length; i++) {
+            const q = data.questions[i];
             if (y > 250) { doc.addPage(); y = 20; }
             doc.setFontSize(12);
             const questionText = `${i + 1}. ${cleanMathText(q.question)}`;
@@ -133,11 +205,22 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
             doc.text(splitQ, 20, y);
             y += splitQ.length * 7;
             
-            if (q.chartData) {
-                // Placeholder for Chart in PDF (since converting HTML chart to image is complex)
+            if (q.geometryData?.svg) {
+                try {
+                    const pngBase64 = await svgToPng(q.geometryData.svg);
+                    if (y > 200) { doc.addPage(); y = 20; }
+                    doc.addImage(pngBase64, 'PNG', 25, y, 80, 60);
+                    y += 65;
+                } catch(e) {
+                    doc.setTextColor(150);
+                    doc.text("[Чертеж - виж онлайн]", 25, y);
+                    doc.setTextColor(0);
+                    y += 10;
+                }
+            } else if (q.chartData) {
                 doc.setFontSize(10);
                 doc.setTextColor(150);
-                doc.text("[Графика - виж онлайн версията]", 25, y);
+                doc.text("[Графика - виж онлайн]", 25, y);
                 doc.setTextColor(0);
                 doc.setFontSize(12);
                 y += 10;
@@ -155,7 +238,8 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
                doc.line(20, y+15, 190, y+15);
                y += 25;
             }
-        });
+        }
+
         if (y > 230) { doc.addPage(); y = 40; } else { y += 20; }
         doc.text("Подпис на учител: ___________________", 20, y);
         doc.text("Подпис на ученик: ___________________", 100, y);
@@ -201,6 +285,8 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
                 .grade-field { margin-top: 30px; font-weight: bold; font-size: 18px; page-break-inside: avoid; }
                 .key { margin-top: 50px; page-break-before: always; }
                 .chart-placeholder { border: 1px dashed #ccc; padding: 20px; text-align: center; color: #999; font-size: 12px; margin: 10px 0; }
+                .geometry-container { margin: 15px 0; border: 1px solid #eee; padding: 10px; display: flex; justify-content: center; }
+                .geometry-container svg { max-width: 300px; height: auto; }
                 @media print {
                    @page { margin: 2cm; }
                 }
@@ -216,7 +302,10 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
             ${data.questions.map((q, i) => `
                 <div class="question">
                     <div class="q-text">${i + 1}. ${cleanMathText(q.question)}</div>
+                    
+                    ${q.geometryData ? `<div class="geometry-container">${q.geometryData.svg}</div>` : ''}
                     ${q.chartData ? `<div class="chart-placeholder">[Графика: ${q.chartData.title || 'Данни'}]</div>` : ''}
+                    
                     ${q.options 
                         ? q.options.map(o => `<div class="option">${cleanMathText(o)}</div>`).join('') 
                         : `<div class="open-lines"></div><div class="open-lines"></div>`}
@@ -279,6 +368,12 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
                 <div key={i} className="p-4 bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-gray-100 dark:border-white/5">
                     <p className="font-bold text-sm mb-3 flex gap-2"><span className="text-indigo-500">{i + 1}.</span> {cleanMathText(q.question)}</p>
                     
+                    {q.geometryData && (
+                        <div className="mb-4 flex justify-center p-4 bg-white/50 dark:bg-white/5 rounded-xl border border-indigo-500/10">
+                            <div className="w-full max-w-[300px]" dangerouslySetInnerHTML={{__html: q.geometryData.svg}} />
+                        </div>
+                    )}
+
                     {q.chartData && (
                         <div className="mb-4 h-56 w-full border border-gray-100 dark:border-white/5 rounded-xl overflow-hidden bg-white/50 dark:bg-black/20">
                             <ChartRenderer data={q.chartData} forceVisible={true} />

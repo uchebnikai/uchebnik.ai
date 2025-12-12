@@ -62,6 +62,7 @@ export interface TestQuestion {
   correctAnswer?: string; // For the key
   type: 'multiple_choice' | 'open_answer';
   chartData?: ChartData; // Optional chart for the question
+  geometryData?: GeometryData; // Optional geometry drawing
 }
 
 export interface TestData {
