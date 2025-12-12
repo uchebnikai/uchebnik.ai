@@ -3,8 +3,8 @@ import { BarChart2, X } from 'lucide-react';
 import { ResponsiveContainer, LineChart, CartesianGrid, XAxis, YAxis, Tooltip, Line, BarChart, Bar } from 'recharts';
 import { ChartData } from '../../types';
 
-export const ChartRenderer = ({ data }: { data: ChartData }) => {
-  const [visible, setVisible] = useState(false);
+export const ChartRenderer = ({ data, forceVisible = false }: { data: ChartData, forceVisible?: boolean }) => {
+  const [visible, setVisible] = useState(forceVisible);
 
   if (!visible) {
     return (
@@ -16,11 +16,13 @@ export const ChartRenderer = ({ data }: { data: ChartData }) => {
   }
 
   return (
-    <div className="mt-4 p-5 glass-card rounded-3xl animate-in fade-in zoom-in-95 duration-300">
-      <div className="flex justify-between items-center mb-6">
-        <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest">{data.title || "Графика"}</h4>
-        <button onClick={() => setVisible(false)} className="p-1.5 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-full transition-colors text-gray-400"><X size={16} /></button>
-      </div>
+    <div className={`mt-4 p-5 glass-card rounded-3xl animate-in fade-in zoom-in-95 duration-300 ${forceVisible ? 'bg-white/40 dark:bg-zinc-900/40 border border-indigo-500/10' : ''}`}>
+      {!forceVisible && (
+        <div className="flex justify-between items-center mb-6">
+            <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest">{data.title || "Графика"}</h4>
+            <button onClick={() => setVisible(false)} className="p-1.5 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-full transition-colors text-gray-400"><X size={16} /></button>
+        </div>
+      )}
       <div className="h-64 w-full">
         <ResponsiveContainer width="100%" height="100%">
           {data.type === 'line' ? (

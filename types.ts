@@ -1,8 +1,3 @@
-
-
-
-
-
 export enum SubjectId {
   GENERAL = 'general',
   ENGLISH = 'english',
@@ -66,6 +61,7 @@ export interface TestQuestion {
   options?: string[]; // If multiple choice
   correctAnswer?: string; // For the key
   type: 'multiple_choice' | 'open_answer';
+  chartData?: ChartData; // Optional chart for the question
 }
 
 export interface TestData {

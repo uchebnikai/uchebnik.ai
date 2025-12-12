@@ -262,8 +262,8 @@ export const App = () => {
                       const merged = { ...restSettings, themeColor: profileData.theme_color, customBackground: profileData.custom_background };
                       setUserSettings(prev => ({ ...prev, ...merged }));
 
-                      // 2. Plan
-                      if (plan) setUserPlan(plan);
+                      // 2. Plan (Ensure fallback)
+                      setUserPlan(plan || 'free');
 
                       // 3. Stats (Streak & Usage)
                       if (stats) {
@@ -368,8 +368,8 @@ export const App = () => {
                       customBackground: remoteData.custom_background 
                   }));
 
-                  // Update Plan
-                  if (plan) setUserPlan(plan);
+                  // Update Plan (Robust check)
+                  if (plan !== undefined) setUserPlan(plan);
 
                   // Update Stats
                   if (stats) {
@@ -1368,7 +1368,7 @@ export const App = () => {
        setUnlockKeyInput('');
        addToast(`Успешно активирахте план ${newPlan.toUpperCase()}!`, 'success');
        
-       // Sync to Supabase if logged in (for metadata backup, though now managed via profiles)
+       // Sync to Supabase if logged in
        if (session) {
            await supabase.auth.updateUser({
                data: { plan: newPlan }

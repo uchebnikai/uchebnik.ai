@@ -1,10 +1,10 @@
-
 import React, { useState } from 'react';
 import { FileText, X, FileType, Loader2, Download, Printer } from 'lucide-react';
 import * as docx from 'docx';
 import { jsPDF } from "jspdf";
 import { TestData } from '../../types';
 import { cleanMathText } from '../../utils/text';
+import { ChartRenderer } from './ChartRenderer';
 
 // Cache font buffer at module level to avoid re-fetching
 let cachedFontBuffer: ArrayBuffer | null = null;
@@ -42,6 +42,7 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
                         children: [new docx.TextRun({ text: `${index + 1}. ${cleanMathText(q.question)}`, bold: true, size: 24 })],
                         spacing: { before: 200, after: 100 }
                     }),
+                    // Note: Charts are omitted in simple Word export for now
                     ...(q.options ? q.options.map(opt => 
                         new docx.Paragraph({
                             children: [new docx.TextRun({ text: cleanMathText(opt), size: 24 })],
@@ -102,7 +103,6 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
             let binary = '';
             const bytes = new Uint8Array(cachedFontBuffer as ArrayBuffer);
             const len = bytes.byteLength;
-            // Batch string creation for better performance on large fonts
             for (let i = 0; i < len; i++) {
                 binary += String.fromCharCode(bytes[i]);
             }
@@ -132,6 +132,17 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
             const splitQ = doc.splitTextToSize(questionText, 170);
             doc.text(splitQ, 20, y);
             y += splitQ.length * 7;
+            
+            if (q.chartData) {
+                // Placeholder for Chart in PDF (since converting HTML chart to image is complex)
+                doc.setFontSize(10);
+                doc.setTextColor(150);
+                doc.text("[Графика - виж онлайн версията]", 25, y);
+                doc.setTextColor(0);
+                doc.setFontSize(12);
+                y += 10;
+            }
+
             if (q.options) {
                q.options.forEach(opt => {
                   if (y > 270) { doc.addPage(); y = 20; }
@@ -189,6 +200,7 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
                 .footer-signatures { display: flex; justify-content: space-between; margin-top: 60px; page-break-inside: avoid; }
                 .grade-field { margin-top: 30px; font-weight: bold; font-size: 18px; page-break-inside: avoid; }
                 .key { margin-top: 50px; page-break-before: always; }
+                .chart-placeholder { border: 1px dashed #ccc; padding: 20px; text-align: center; color: #999; font-size: 12px; margin: 10px 0; }
                 @media print {
                    @page { margin: 2cm; }
                 }
@@ -204,6 +216,7 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
             ${data.questions.map((q, i) => `
                 <div class="question">
                     <div class="q-text">${i + 1}. ${cleanMathText(q.question)}</div>
+                    ${q.chartData ? `<div class="chart-placeholder">[Графика: ${q.chartData.title || 'Данни'}]</div>` : ''}
                     ${q.options 
                         ? q.options.map(o => `<div class="option">${cleanMathText(o)}</div>`).join('') 
                         : `<div class="open-lines"></div><div class="open-lines"></div>`}
@@ -261,14 +274,24 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
             </button>
         </div>
 
-        <div className="space-y-4 max-h-80 overflow-y-auto custom-scrollbar p-2 bg-white/50 dark:bg-black/20 rounded-xl border border-indigo-500/5">
+        <div className="space-y-4 max-h-[60vh] overflow-y-auto custom-scrollbar p-2 bg-white/50 dark:bg-black/20 rounded-xl border border-indigo-500/5">
             {data.questions.map((q, i) => (
-                <div key={i} className="p-3 bg-white dark:bg-zinc-800 rounded-lg shadow-sm border border-gray-100 dark:border-white/5">
-                    <p className="font-bold text-sm mb-2">{i + 1}. {cleanMathText(q.question)}</p>
+                <div key={i} className="p-4 bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-gray-100 dark:border-white/5">
+                    <p className="font-bold text-sm mb-3 flex gap-2"><span className="text-indigo-500">{i + 1}.</span> {cleanMathText(q.question)}</p>
+                    
+                    {q.chartData && (
+                        <div className="mb-4 h-56 w-full border border-gray-100 dark:border-white/5 rounded-xl overflow-hidden bg-white/50 dark:bg-black/20">
+                            <ChartRenderer data={q.chartData} forceVisible={true} />
+                        </div>
+                    )}
+
                     {q.options && (
-                        <div className="space-y-1 ml-2">
+                        <div className="space-y-2 ml-2">
                             {q.options.map((opt, idx) => (
-                                <p key={idx} className="text-xs text-gray-600 dark:text-gray-300">{cleanMathText(opt)}</p>
+                                <div key={idx} className="flex items-center gap-3">
+                                    <div className="w-4 h-4 rounded-full border border-gray-300 dark:border-white/20"></div>
+                                    <p className="text-sm text-gray-700 dark:text-gray-300">{cleanMathText(opt)}</p>
+                                </div>
                             ))}
                         </div>
                     )}
