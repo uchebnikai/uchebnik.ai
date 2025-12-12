@@ -1,5 +1,3 @@
-
-
 import { AppMode, SubjectId, Slide, ChartData, GeometryData, Message, TestData } from "../types";
 import { SYSTEM_PROMPTS, SUBJECTS } from "../constants";
 
@@ -125,9 +123,17 @@ export const generateResponse = async (
   let forceJson = false;
 
   if (isImageRequest) {
-      systemInstruction = `You are an AI that helps with art concepts. 
+      systemInstruction = `You are an AI that helps with art concepts and geometry. 
       IMPORTANT: You CANNOT generate pixel/raster images (PNG/JPG). 
       If the user asks for a drawing, you MUST generate an SVG code block using the json:geometry format.
+      
+      GEOMETRY GUIDELINES:
+      - Use <path> commands to draw arcs for angles.
+      - Label angles clearly with degrees (e.g. 45°) using <text>.
+      - Ensure text labels do not overlap lines.
+      - Use font-size 14-16 for labels.
+      - Use stroke-width="2" for main lines.
+      
       Format: \`\`\`json:geometry { "title": "...", "svg": "..." } \`\`\``;
   } else if (mode === AppMode.LEARN) {
       systemInstruction = SYSTEM_PROMPTS.LEARN;
