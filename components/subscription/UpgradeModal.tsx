@@ -90,7 +90,7 @@ export const UpgradeModal = ({
                  <div className="space-y-4 flex-1 mb-8">
                     <div className="flex items-center gap-3 text-sm font-bold text-zinc-800 dark:text-white"><CheckCircle size={18} className="text-indigo-500 shrink-0"/> 12 изображения на ден</div>
                     <div className="flex items-center gap-3 text-sm font-bold text-zinc-800 dark:text-white"><CheckCircle size={18} className="text-indigo-500 shrink-0"/> По-бърза скорост</div>
-                    <div className="flex items-center gap-3 text-sm font-bold text-zinc-800 dark:text-white"><CheckCircle size={18} className="text-indigo-500 shrink-0"/> Smarter AI (Qwen)</div>
+                    <div className="flex items-center gap-3 text-sm font-bold text-zinc-800 dark:text-white"><CheckCircle size={18} className="text-indigo-500 shrink-0"/> Smarter AI (Qwen Pro)</div>
                  </div>
                  <button 
                     onClick={() => { if(userPlan !== 'plus') setTargetPlan('plus'); }} 
@@ -109,7 +109,7 @@ export const UpgradeModal = ({
                  <div className="space-y-4 flex-1 mb-8">
                     <div className="flex items-center gap-3 text-sm font-medium text-zinc-700 dark:text-zinc-200"><CheckCircle size={18} className="text-amber-500 shrink-0"/> Неограничени изображения</div>
                     <div className="flex items-center gap-3 text-sm font-medium text-zinc-700 dark:text-zinc-200"><CheckCircle size={18} className="text-amber-500 shrink-0"/> Най-бърза скорост</div>
-                    <div className="flex items-center gap-3 text-sm font-medium text-zinc-700 dark:text-zinc-200"><CheckCircle size={18} className="text-amber-500 shrink-0"/> Pro-level AI (Qwen)</div>
+                    <div className="flex items-center gap-3 text-sm font-medium text-zinc-700 dark:text-zinc-200"><CheckCircle size={18} className="text-amber-500 shrink-0"/> Pro-level AI (Qwen Pro)</div>
                  </div>
                  <button 
                     onClick={() => { if(userPlan !== 'pro') setTargetPlan('pro'); }}

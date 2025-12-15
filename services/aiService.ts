@@ -2,7 +2,6 @@ import { AppMode, SubjectId, Slide, ChartData, GeometryData, Message, TestData }
 import { SYSTEM_PROMPTS, SUBJECTS } from "../constants";
 
 const API_URL = "https://openrouter.ai/api/v1/chat/completions";
-const MODEL_ID = "qwen/qwen3-235b-a22b:free";
 
 // Helper for delay
 const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -22,7 +21,7 @@ async function withRetry<T>(fn: () => Promise<T>, retries = 3, delay = 2000): Pr
   }
 }
 
-// Vision Analysis using Qwen (forcing the specific model as requested, though usually requires VL)
+// Vision Analysis using Qwen (Non-streaming for now as it's a pre-step)
 async function analyzeImages(apiKey: string, images: string[]): Promise<string> {
     const res = await fetch(API_URL, {
         method: "POST",
@@ -33,7 +32,7 @@ async function analyzeImages(apiKey: string, images: string[]): Promise<string> 
             "X-Title": "Uchebnik AI"
         },
         body: JSON.stringify({
-            model: MODEL_ID, 
+            model: "qwen/qwen3-235b-a22b:free", 
             messages: [{
                 role: "user",
                 content: [
@@ -79,15 +78,13 @@ export const generateResponse = async (
   onStreamUpdate?: (text: string, reasoning: string) => void
 ): Promise<Message> => {
   
-  // Access key from VITE_OPENROUTER_API_KEY as strictly requested
-  // Using (import.meta as any) to bypass TS strict checks if types aren't set up
-  const apiKey = (import.meta as any).env?.VITE_OPENROUTER_API_KEY || "";
+  const apiKey = process.env.OPENROUTER_API_KEY || "";
 
   if (!apiKey) {
       return {
           id: Date.now().toString(),
           role: 'model',
-          text: "Грешка: Не е намерен OpenRouter API ключ. Моля, проверете настройките на Vercel (VITE_OPENROUTER_API_KEY).",
+          text: "Грешка: Не е намерен OpenRouter API ключ.",
           isError: true,
           timestamp: Date.now()
       };
@@ -114,8 +111,10 @@ export const generateResponse = async (
       }
   }
 
-  // FORCE model ID as per instructions
-  const modelName = MODEL_ID;
+  let modelName = 'qwen/qwen3-235b-a22b:free'; 
+  if (preferredModel !== 'auto' && preferredModel) {
+      modelName = preferredModel;
+  }
 
   const imageKeywords = /(draw|paint|generate image|create a picture|make an image|нарисувай|рисувай|генерирай изображение|генерирай снимка|направи снимка|изображение на)/i;
   const isImageRequest = (subjectId === SubjectId.ART && mode === AppMode.DRAW) || imageKeywords.test(promptText);
@@ -191,7 +190,7 @@ export const generateResponse = async (
       model: modelName,
       messages: messages,
       include_reasoning: true,
-      stream: true
+      stream: true // Enable streaming
   };
 
   try {
@@ -208,8 +207,7 @@ export const generateResponse = async (
 
       if (!response.ok) {
           const errText = await response.text();
-          console.error(`OpenRouter API Error (${response.status}): ${errText}`);
-          throw new Error(`API Error: ${response.status}`);
+          throw new Error(`API Error: ${response.status} ${errText}`);
       }
 
       if (!response.body) throw new Error("No response body");
@@ -221,6 +219,9 @@ export const generateResponse = async (
       let finalReasoning = "";
       let rawAccumulator = "";
 
+      // Logic to parse <think> tags from content if not provided in 'reasoning' field
+      // We will parse the accumulated raw content on each step to split it.
+      
       while (true) {
           const { done, value } = await reader.read();
           if (done) break;
@@ -238,20 +239,29 @@ export const generateResponse = async (
                       const delta = data.choices?.[0]?.delta;
                       
                       if (delta) {
+                          // Handle Reasoning Field (Standard for R1-like models on OpenRouter)
                           if (delta.reasoning) {
                               finalReasoning += delta.reasoning;
                           }
                           
+                          // Handle Content Field
                           if (delta.content) {
                               rawAccumulator += delta.content;
                           }
 
+                          // If no explicit reasoning field, parse from content
                           let displayContent = rawAccumulator;
                           let displayReasoning = finalReasoning;
 
                           const thinkMatch = rawAccumulator.match(/<think>([\s\S]*?)(?:<\/think>|$)/i);
                           if (thinkMatch) {
+                              // If we found a think tag, extract it to reasoning
+                              // If the tag is closed, match[1] is the reasoning.
+                              // If not closed yet, match[1] is partial reasoning.
                               displayReasoning = (finalReasoning + thinkMatch[1]).trim();
+                              
+                              // Remove the <think> block from content for display
+                              // We use a regex that captures everything before and after
                               displayContent = rawAccumulator.replace(/<think>[\s\S]*?(?:<\/think>|$)/gi, "").trim();
                           }
 
@@ -266,8 +276,12 @@ export const generateResponse = async (
           }
       }
 
+      // Final processing after stream ends
+      // Re-run extraction one last time to be sure
       let processedText = rawAccumulator;
       
+      // If we gathered reasoning from explicit field, great. 
+      // If not, we extract it from the text now.
       const thinkMatch = processedText.match(/<think>([\s\S]*?)(?:<\/think>|$)/i);
       if (thinkMatch) {
           if (!finalReasoning) {
@@ -277,6 +291,8 @@ export const generateResponse = async (
           processedText = processedText.replace(/<think>/g, "").replace(/<\/think>/g, "");
       }
 
+      // Handle JSON Modes (Presentation / Test)
+      // These usually don't support streaming well for the JSON part, so we process at the end.
       if (mode === AppMode.PRESENTATION) {
          try {
              const jsonStr = extractJson(processedText);
@@ -315,6 +331,7 @@ export const generateResponse = async (
           } catch (e) { console.error("Test JSON parse error", e); }
       }
 
+      // Handle Charts/Geometry
       let chartData: ChartData | undefined;
       let geometryData: GeometryData | undefined;
 
@@ -351,7 +368,7 @@ export const generateResponse = async (
       return {
           id: Date.now().toString(),
           role: 'model',
-          text: "Възникна грешка при връзката с Qwen (OpenRouter). Моля, опитайте отново.",
+          text: "Възникна грешка при връзката с Qwen. Моля, опитайте отново.",
           isError: true,
           timestamp: Date.now()
       };
