@@ -1,8 +1,7 @@
 import { SubjectId, AppMode, SubjectConfig } from './types';
 
 export const AI_MODELS = [
-  { id: 'auto', name: 'Автоматичен', description: 'Избира най-добрия модел (Chimera R1).' },
-  { id: 'tngtech/deepseek-r1t2-chimera:free', name: 'DeepSeek Chimera', description: 'Мощен модел за сложни задачи.' }
+  { id: 'google/gemini-2.0-flash-exp:free', name: 'Gemini 2.0 Flash', description: 'Най-новият и бърз модел на Google.' }
 ];
 
 export const GRADE_PROMPTS = {

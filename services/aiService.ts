@@ -74,7 +74,7 @@ export const generateResponse = async (
   promptText: string,
   imagesBase64?: string[],
   history: Message[] = [],
-  preferredModel: string = 'auto',
+  preferredModel: string = 'google/gemini-2.0-flash-exp:free',
   onStreamUpdate?: (text: string, reasoning: string) => void
 ): Promise<Message> => {
   
@@ -111,8 +111,8 @@ export const generateResponse = async (
       }
   }
 
-  let modelName = 'tngtech/deepseek-r1t2-chimera:free'; 
-  if (preferredModel !== 'auto' && preferredModel) {
+  let modelName = 'google/gemini-2.0-flash-exp:free'; 
+  if (preferredModel && preferredModel !== 'auto') {
       modelName = preferredModel;
   }
 
@@ -239,7 +239,7 @@ export const generateResponse = async (
                       const delta = data.choices?.[0]?.delta;
                       
                       if (delta) {
-                          // Handle Reasoning Field (DeepSeek/OpenAI standard)
+                          // Handle Reasoning Field
                           if (delta.reasoning) {
                               finalReasoning += delta.reasoning;
                           }
@@ -364,11 +364,11 @@ export const generateResponse = async (
       };
 
   } catch (error: any) {
-      console.error("DeepSeek API Error:", error);
+      console.error("Gemini API Error:", error);
       return {
           id: Date.now().toString(),
           role: 'model',
-          text: "Възникна грешка при връзката с DeepSeek. Моля, опитайте отново.",
+          text: "Възникна грешка при връзката с Gemini. Моля, опитайте отново.",
           isError: true,
           timestamp: Date.now()
       };

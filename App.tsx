@@ -114,7 +114,7 @@ export const App = () => {
     responseLength: 'concise', 
     creativity: 'balanced', 
     languageLevel: 'standard', 
-    preferredModel: 'auto',
+    preferredModel: 'google/gemini-2.0-flash-exp:free',
     themeColor: '#6366f1',
     customBackground: null
   });
@@ -556,7 +556,7 @@ export const App = () => {
                             responseLength: 'concise', 
                             creativity: 'balanced', 
                             languageLevel: 'standard', 
-                            preferredModel: 'auto',
+                            preferredModel: 'google/gemini-2.0-flash-exp:free',
                             themeColor: '#6366f1',
                             customBackground: null
                         });
@@ -982,8 +982,8 @@ export const App = () => {
       const historyForAI = [...sessionMessages, newUserMsg];
 
       let preferredModel = userSettings.preferredModel;
-      if (preferredModel === 'auto') {
-          preferredModel = 'tngtech/deepseek-r1t2-chimera:free';
+      if (!preferredModel) {
+          preferredModel = 'google/gemini-2.0-flash-exp:free';
       }
 
       // We remove the loading spinner immediately because we are showing the stream
@@ -1362,7 +1362,7 @@ export const App = () => {
        const newPlan = targetPlan || result.plan || 'pro';
        setUserPlan(newPlan);
        if (newPlan !== 'free') {
-            setUserSettings(prev => ({ ...prev, preferredModel: 'tngtech/deepseek-r1t2-chimera:free' }));
+            setUserSettings(prev => ({ ...prev, preferredModel: 'google/gemini-2.0-flash-exp:free' }));
        }
        setShowUnlockModal(false);
        setUnlockKeyInput('');

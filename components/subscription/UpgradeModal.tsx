@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { X, ArrowLeft, Zap, Crown, CheckCircle } from 'lucide-react';
 import { Button } from '../ui/Button';
@@ -76,7 +75,7 @@ export const UpgradeModal = ({
                  <div className="space-y-4 flex-1 mb-8">
                     <div className="flex items-center gap-3 text-sm font-medium text-gray-600 dark:text-gray-300"><CheckCircle size={18} className="text-gray-400 shrink-0"/> 4 изображения на ден</div>
                     <div className="flex items-center gap-3 text-sm font-medium text-gray-600 dark:text-gray-300"><CheckCircle size={18} className="text-gray-400 shrink-0"/> Стандартна скорост</div>
-                    <div className="flex items-center gap-3 text-sm font-medium text-gray-600 dark:text-gray-300"><CheckCircle size={18} className="text-gray-400 shrink-0"/> Basic AI (DeepSeek Free)</div>
+                    <div className="flex items-center gap-3 text-sm font-medium text-gray-600 dark:text-gray-300"><CheckCircle size={18} className="text-gray-400 shrink-0"/> Basic AI (Gemini 2.0)</div>
                  </div>
                  <button disabled={true} className="w-full py-3 rounded-xl font-bold bg-gray-100 dark:bg-white/5 text-gray-400 cursor-default">
                     {userPlan === 'free' ? 'Текущ план' : 'Стандартен'}
@@ -91,7 +90,7 @@ export const UpgradeModal = ({
                  <div className="space-y-4 flex-1 mb-8">
                     <div className="flex items-center gap-3 text-sm font-bold text-zinc-800 dark:text-white"><CheckCircle size={18} className="text-indigo-500 shrink-0"/> 12 изображения на ден</div>
                     <div className="flex items-center gap-3 text-sm font-bold text-zinc-800 dark:text-white"><CheckCircle size={18} className="text-indigo-500 shrink-0"/> По-бърза скорост</div>
-                    <div className="flex items-center gap-3 text-sm font-bold text-zinc-800 dark:text-white"><CheckCircle size={18} className="text-indigo-500 shrink-0"/> Smarter AI (DeepSeek Pro)</div>
+                    <div className="flex items-center gap-3 text-sm font-bold text-zinc-800 dark:text-white"><CheckCircle size={18} className="text-indigo-500 shrink-0"/> Smarter AI (Gemini 2.0)</div>
                  </div>
                  <button 
                     onClick={() => { if(userPlan !== 'plus') setTargetPlan('plus'); }} 
@@ -110,7 +109,7 @@ export const UpgradeModal = ({
                  <div className="space-y-4 flex-1 mb-8">
                     <div className="flex items-center gap-3 text-sm font-medium text-zinc-700 dark:text-zinc-200"><CheckCircle size={18} className="text-amber-500 shrink-0"/> Неограничени изображения</div>
                     <div className="flex items-center gap-3 text-sm font-medium text-zinc-700 dark:text-zinc-200"><CheckCircle size={18} className="text-amber-500 shrink-0"/> Най-бърза скорост</div>
-                    <div className="flex items-center gap-3 text-sm font-medium text-zinc-700 dark:text-zinc-200"><CheckCircle size={18} className="text-amber-500 shrink-0"/> Pro-level AI (DeepSeek Pro)</div>
+                    <div className="flex items-center gap-3 text-sm font-medium text-zinc-700 dark:text-zinc-200"><CheckCircle size={18} className="text-amber-500 shrink-0"/> Pro-level AI (Gemini 2.0)</div>
                  </div>
                  <button 
                     onClick={() => { if(userPlan !== 'pro') setTargetPlan('pro'); }}
