@@ -32,15 +32,16 @@ async function analyzeImages(apiKey: string, images: string[]): Promise<string> 
             "X-Title": "Uchebnik AI"
         },
         body: JSON.stringify({
-            model: "google/gemini-2.0-flash-exp:free", 
+            model: "google/gemini-2.0-flash-exp:free",
+            include_reasoning: false,
             messages: [{
                 role: "user",
                 content: [
-                    { type: "text", text: "Analyze this image in extreme detail. Transcribe any text exactly. If there are math problems, describe the numbers, variables, and geometry precisely. If it is a diagram, describe all connections. Return ONLY the description, no conversational filler." },
                     ...images.map(img => ({
                         type: "image_url",
                         image_url: { url: img }
-                    }))
+                    })),
+                    { type: "text", text: "Analyze this image in extreme detail. Transcribe any text exactly. If there are math problems, describe the numbers, variables, and geometry precisely. If it is a diagram, describe all connections. Return ONLY the description, no conversational filler." }
                 ]
             }]
         })
