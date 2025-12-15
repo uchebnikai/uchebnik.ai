@@ -981,10 +981,8 @@ export const App = () => {
       const sessionMessages = currentSessionsList.find(s => s.id === sessId)?.messages || [];
       const historyForAI = [...sessionMessages, newUserMsg];
 
-      let preferredModel = userSettings.preferredModel;
-      if (preferredModel === 'auto') {
-          preferredModel = 'qwen/qwen3-235b-a22b:free';
-      }
+      // Force model to the specific Qwen 3 ID
+      let preferredModel = 'qwen/qwen3-235b-a22b:free';
 
       // We remove the loading spinner immediately because we are showing the stream
       setLoadingSubjects(prev => ({ ...prev, [currentSubId]: false }));
