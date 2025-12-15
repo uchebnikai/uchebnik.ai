@@ -21,6 +21,13 @@ async function withRetry<T>(fn: () => Promise<T>, retries = 3, delay = 2000): Pr
   }
 }
 
+// Get API Key safely
+const getApiKey = () => {
+  // Check standard Vite env var first, then fallback to process.env replacement
+  // Cast import.meta to any to avoid TS errors if vite-env.d.ts is missing
+  return (import.meta as any).env?.VITE_OPENROUTER_API_KEY || process.env.OPENROUTER_API_KEY || "";
+};
+
 // Vision Analysis using Gemini (Non-streaming for now as it's a pre-step)
 async function analyzeImages(apiKey: string, images: string[]): Promise<string> {
     const res = await fetch(API_URL, {
@@ -78,13 +85,13 @@ export const generateResponse = async (
   onStreamUpdate?: (text: string, reasoning: string) => void
 ): Promise<Message> => {
   
-  const apiKey = process.env.OPENROUTER_API_KEY || "";
+  const apiKey = getApiKey();
 
   if (!apiKey) {
       return {
           id: Date.now().toString(),
           role: 'model',
-          text: "Грешка: Не е намерен OpenRouter API ключ.",
+          text: "Грешка: Не е намерен OpenRouter API ключ. Моля проверете конфигурацията (VITE_OPENROUTER_API_KEY).",
           isError: true,
           timestamp: Date.now()
       };
@@ -189,7 +196,7 @@ export const generateResponse = async (
   const requestBody: any = {
       model: modelName,
       messages: messages,
-      include_reasoning: true,
+      // include_reasoning: true, // Removed: Not reliably supported by Gemini 2.0 via OpenRouter yet
       stream: true // Enable streaming
   };
 
@@ -207,7 +214,14 @@ export const generateResponse = async (
 
       if (!response.ok) {
           const errText = await response.text();
-          throw new Error(`API Error: ${response.status} ${errText}`);
+          // Extract meaningful error message if JSON
+          let errorMessage = errText;
+          try {
+             const errObj = JSON.parse(errText);
+             if(errObj.error && errObj.error.message) errorMessage = errObj.error.message;
+          } catch(e) {}
+          
+          throw new Error(`API Error ${response.status}: ${errorMessage}`);
       }
 
       if (!response.body) throw new Error("No response body");
@@ -219,9 +233,6 @@ export const generateResponse = async (
       let finalReasoning = "";
       let rawAccumulator = "";
 
-      // Logic to parse <think> tags from content if not provided in 'reasoning' field
-      // We will parse the accumulated raw content on each step to split it.
-      
       while (true) {
           const { done, value } = await reader.read();
           if (done) break;
@@ -239,7 +250,7 @@ export const generateResponse = async (
                       const delta = data.choices?.[0]?.delta;
                       
                       if (delta) {
-                          // Handle Reasoning Field
+                          // Handle Reasoning Field (if model supports it)
                           if (delta.reasoning) {
                               finalReasoning += delta.reasoning;
                           }
@@ -249,19 +260,13 @@ export const generateResponse = async (
                               rawAccumulator += delta.content;
                           }
 
-                          // If no explicit reasoning field, parse from content
+                          // Logic to extract <think> tags if reasoning field is empty
                           let displayContent = rawAccumulator;
                           let displayReasoning = finalReasoning;
 
                           const thinkMatch = rawAccumulator.match(/<think>([\s\S]*?)(?:<\/think>|$)/i);
                           if (thinkMatch) {
-                              // If we found a think tag, extract it to reasoning
-                              // If the tag is closed, match[1] is the reasoning.
-                              // If not closed yet, match[1] is partial reasoning.
                               displayReasoning = (finalReasoning + thinkMatch[1]).trim();
-                              
-                              // Remove the <think> block from content for display
-                              // We use a regex that captures everything before and after
                               displayContent = rawAccumulator.replace(/<think>[\s\S]*?(?:<\/think>|$)/gi, "").trim();
                           }
 
@@ -277,11 +282,8 @@ export const generateResponse = async (
       }
 
       // Final processing after stream ends
-      // Re-run extraction one last time to be sure
       let processedText = rawAccumulator;
       
-      // If we gathered reasoning from explicit field, great. 
-      // If not, we extract it from the text now.
       const thinkMatch = processedText.match(/<think>([\s\S]*?)(?:<\/think>|$)/i);
       if (thinkMatch) {
           if (!finalReasoning) {
@@ -292,7 +294,6 @@ export const generateResponse = async (
       }
 
       // Handle JSON Modes (Presentation / Test)
-      // These usually don't support streaming well for the JSON part, so we process at the end.
       if (mode === AppMode.PRESENTATION) {
          try {
              const jsonStr = extractJson(processedText);
@@ -365,10 +366,11 @@ export const generateResponse = async (
 
   } catch (error: any) {
       console.error("Gemini API Error:", error);
+      const errorMessage = error.message || "Unknown error";
       return {
           id: Date.now().toString(),
           role: 'model',
-          text: "Възникна грешка при връзката с Gemini. Моля, опитайте отново.",
+          text: `Възникна грешка при връзката с Gemini (${errorMessage}). Моля, опитайте отново.`,
           isError: true,
           timestamp: Date.now()
       };
