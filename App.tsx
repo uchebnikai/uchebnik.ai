@@ -262,8 +262,8 @@ export const App = () => {
                       const merged = { ...restSettings, themeColor: profileData.theme_color, customBackground: profileData.custom_background };
                       setUserSettings(prev => ({ ...prev, ...merged }));
 
-                      // 2. Plan (Ensure fallback)
-                      setUserPlan(plan || 'free');
+                      // 2. Plan
+                      if (plan) setUserPlan(plan);
 
                       // 3. Stats (Streak & Usage)
                       if (stats) {
@@ -368,8 +368,8 @@ export const App = () => {
                       customBackground: remoteData.custom_background 
                   }));
 
-                  // Update Plan (Robust check)
-                  if (plan !== undefined) setUserPlan(plan);
+                  // Update Plan
+                  if (plan) setUserPlan(plan);
 
                   // Update Stats
                   if (stats) {
@@ -440,6 +440,21 @@ export const App = () => {
       if (missingDbTables) return;
 
       if (isIncomingUpdateRef.current) {
+          // Note: Since sessions and settings might update separately, 
+          // we should technically have separate flags, but for simplicity 
+          // we use one. If high conflict rate, split them.
+          // For now, allow fall-through if it wasn't a session update that triggered this.
+          // However, useEffects fire specifically on dep change. 
+          // If we received a profile update, setUserSettings fired, triggering this.
+          // We must block it.
+          // Since we consume the flag in the sessions effect often, we need to be careful.
+          // Let's rely on the flag being true immediately after update.
+          // But wait, the flag is reset in the Sessions effect if sessions changed.
+          // If ONLY settings changed, Sessions effect wont run, flag stays true? 
+          // No, react batches.
+          
+          // Better approach: Just save. The DB handles concurrency reasonably well for this scale.
+          // But to avoid "bounce back" (saving what we just received), we check.
           isIncomingUpdateRef.current = false;
           return;
       }
@@ -933,10 +948,7 @@ export const App = () => {
        text: "",
        timestamp: Date.now(),
        reasoning: "",
-       isStreaming: true,
-       // Set specific type during generation for UI handling
-       type: currentMode === AppMode.TEACHER_TEST ? 'test_generated' : 
-             currentMode === AppMode.PRESENTATION ? 'slides' : 'text'
+       isStreaming: true
     };
 
     setSessions(prev => prev.map(s => {
@@ -992,12 +1004,7 @@ export const App = () => {
                           ...s,
                           messages: s.messages.map(m => {
                               if (m.id === tempAiMsgId) {
-                                  return { 
-                                      ...m, 
-                                      text: textChunk, 
-                                      reasoning: reasoningChunk, 
-                                      isStreaming: true 
-                                  };
+                                  return { ...m, text: textChunk, reasoning: reasoningChunk, isStreaming: true };
                               }
                               return m;
                           })
@@ -1154,8 +1161,7 @@ export const App = () => {
         }
         setConfirmModal(null);
         addToast('Чатът е изтрит', 'success');
-      },
-      onCancel: () => setConfirmModal(null)
+      }
     });
   };
 
@@ -1189,8 +1195,7 @@ export const App = () => {
                 addToast('Паметта е изчистена', 'success');
               }
              setConfirmModal(null);
-        },
-        onCancel: () => setConfirmModal(null)
+        }
     });
   };
 
@@ -1363,7 +1368,7 @@ export const App = () => {
        setUnlockKeyInput('');
        addToast(`Успешно активирахте план ${newPlan.toUpperCase()}!`, 'success');
        
-       // Sync to Supabase if logged in
+       // Sync to Supabase if logged in (for metadata backup, though now managed via profiles)
        if (session) {
            await supabase.auth.updateUser({
                data: { plan: newPlan }
@@ -1525,141 +1530,137 @@ export const App = () => {
             isOpen={!!confirmModal}
             title={confirmModal?.title || ''}
             message={confirmModal?.message || ''}
-            onConfirm={() => {
-              if (confirmModal?.onConfirm) confirmModal.onConfirm();
-              setConfirmModal(null);
-            }}
+            onConfirm={confirmModal?.onConfirm || (() => {})}
             onCancel={() => setConfirmModal(null)}
         />
 
-        {/* View Routing Logic */}
-        {(() => {
-            if (['terms', 'privacy', 'cookies', 'about', 'contact'].includes(homeView)) {
-                 if (homeView === 'terms') return <TermsOfService onBack={() => setHomeView('landing')} userSettings={userSettings}/>;
-                 if (homeView === 'privacy') return <PrivacyPolicy onBack={() => setHomeView('landing')} userSettings={userSettings}/>;
-                 if (homeView === 'cookies') return <CookiePolicy onBack={() => setHomeView('landing')} userSettings={userSettings}/>;
-                 if (homeView === 'about') return <About onBack={() => setHomeView('landing')} userSettings={userSettings}/>;
-                 if (homeView === 'contact') return <Contact onBack={() => setHomeView('landing')} userSettings={userSettings}/>;
-            }
-            
-            if (!activeSubject) {
-                // Welcome / Home Screens
-                return (
-                   <WelcomeScreen 
-                      homeView={homeView}
-                      userMeta={userMeta}
-                      userSettings={userSettings}
-                      handleSubjectChange={handleSubjectChange}
-                      setHomeView={setHomeView}
-                      setUserRole={setUserRole}
-                      setShowAdminAuth={setShowAdminAuth}
-                   />
-                );
-            }
-
-            // Active Subject (Chat or Dashboard)
-            return (
-               <>
-                  <ChatHeader 
-                     setSidebarOpen={setSidebarOpen}
-                     activeSubject={activeSubject}
-                     userRole={userRole}
-                     activeMode={activeMode}
-                     startVoiceCall={startVoiceCall}
-                     createNewSession={createNewSession}
-                     setHistoryDrawerOpen={setHistoryDrawerOpen}
-                     userSettings={userSettings}
-                     setFocusMode={setFocusMode}
-                  />
-                  
-                  {showSubjectDashboard ? (
-                      <SubjectDashboard 
-                         activeSubject={activeSubject}
-                         setActiveSubject={setActiveSubject}
-                         setHomeView={setHomeView}
-                         userRole={userRole}
-                         userSettings={userSettings}
-                         handleStartMode={handleStartMode}
-                      />
-                  ) : (
-                      <div className="flex-1 flex flex-col relative overflow-hidden">
-                         <MessageList 
-                            currentMessages={currentMessages}
-                            userSettings={userSettings}
-                            setZoomedImage={setZoomedImage}
-                            handleRate={handleRate}
-                            handleReply={handleReply}
-                            handleSpeak={handleSpeak}
-                            speakingMessageId={speakingMessageId}
-                            handleCopy={handleCopy}
-                            copiedId={copiedId}
-                            handleShare={handleShare}
-                            loadingSubject={loadingSubjects[activeSubject.id] || false}
-                            activeSubject={activeSubject}
-                            messagesEndRef={messagesEndRef}
-                         />
-                         
-                         <ChatInputArea 
-                            replyingTo={replyingTo}
-                            setReplyingTo={setReplyingTo}
-                            userSettings={userSettings}
-                            fileInputRef={fileInputRef}
-                            loadingSubject={loadingSubjects[activeSubject.id] || false}
-                            handleImageUpload={handleImageUpload}
-                            toggleListening={toggleListening}
-                            isListening={isListening}
-                            inputValue={inputValue}
-                            setInputValue={setInputValue}
-                            handleSend={() => handleSend()}
-                            selectedImages={selectedImages}
-                            handleRemoveImage={handleRemoveImage}
-                            onCameraCapture={(userPlan === 'plus' || userPlan === 'pro') ? handleCameraCapture : undefined}
-                         />
-                      </div>
-                  )}
-               </>
-            );
-        })()}
-
-        <HistoryDrawer 
-           historyDrawerOpen={historyDrawerOpen}
-           setHistoryDrawerOpen={setHistoryDrawerOpen}
-           sessions={sessions}
-           activeSessionId={activeSessionId}
-           setActiveSessionId={setActiveSessionId}
-           renameSessionId={renameSessionId}
-           setRenameSessionId={setRenameSessionId}
-           renameValue={renameValue}
-           setRenameValue={setRenameValue}
-           renameSession={renameSession}
-           deleteSession={deleteSession}
-           activeSubject={activeSubject}
-           setActiveSubject={setActiveSubject}
-        />
-        
-        <VoiceCallOverlay 
-           isVoiceCallActive={isVoiceCallActive}
-           voiceCallStatus={voiceCallStatus}
-           voiceMuted={voiceMuted}
-           setVoiceMuted={setVoiceMuted}
-           endVoiceCall={endVoiceCall}
-           activeSubject={activeSubject}
-        />
-
-        {/* Toast Container */}
-        <div className="fixed bottom-6 right-6 z-[110] flex flex-col gap-2 pointer-events-none">
-            {toasts.map(t => (
-                <div key={t.id} className={`${TOAST_CONTAINER} ${t.type === 'error' ? TOAST_ERROR : t.type === 'success' ? TOAST_SUCCESS : TOAST_INFO}`}>
-                    {t.type === 'error' && <AlertCircle size={18}/>}
-                    {t.type === 'success' && <CheckCircle size={18}/>}
-                    {t.type === 'info' && <Info size={18}/>}
-                    <span className="text-sm font-medium">{t.message}</span>
-                    <button onClick={() => setToasts(prev => prev.filter(toast => toast.id !== t.id))} className="ml-2 hover:opacity-70"><X size={14}/></button>
+        {/* Sync Error Modal */}
+        {(syncStatus === 'error' && syncErrorDetails) || missingDbTables ? (
+            <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[100] animate-in slide-in-from-bottom-2 fade-in">
+                <div className={`backdrop-blur-md text-white px-4 py-3 rounded-xl shadow-lg flex items-center gap-3 max-w-md border ${missingDbTables ? 'bg-amber-600/90 border-amber-500/50' : 'bg-red-500/90 border-red-400/50'}`}>
+                    {missingDbTables ? <Database size={20} className="shrink-0"/> : <AlertCircle size={20} className="shrink-0"/>}
+                    <div className="flex-1 text-xs">
+                        <span className="font-bold block mb-0.5">{missingDbTables ? 'Database Setup Required' : 'Sync Error'}</span>
+                        <span className="opacity-90">
+                            {missingDbTables 
+                                ? 'Tables missing. Please run the SQL setup script in Supabase.' 
+                                : syncErrorDetails || 'Could not save to cloud.'}
+                        </span>
+                    </div>
+                    {!missingDbTables && <button onClick={() => setSyncStatus('synced')} className="p-1 hover:bg-white/20 rounded-lg transition-colors"><X size={16}/></button>}
                 </div>
-            ))}
-        </div>
+            </div>
+        ) : null}
 
+        {/* Dynamic View Rendering */}
+        {!activeSubject ? (
+            homeView === 'terms' ? <TermsOfService onBack={() => setHomeView('landing')} userSettings={userSettings} /> :
+            homeView === 'privacy' ? <PrivacyPolicy onBack={() => setHomeView('landing')} userSettings={userSettings} /> :
+            homeView === 'cookies' ? <CookiePolicy onBack={() => setHomeView('landing')} userSettings={userSettings} /> :
+            homeView === 'about' ? <About onBack={() => setHomeView('landing')} userSettings={userSettings} /> :
+            homeView === 'contact' ? <Contact onBack={() => setHomeView('landing')} userSettings={userSettings} /> :
+            <WelcomeScreen 
+                homeView={homeView}
+                userMeta={userMeta}
+                userSettings={userSettings}
+                handleSubjectChange={(s) => handleSubjectChange(s)}
+                setHomeView={setHomeView}
+                setUserRole={setUserRole}
+                setShowAdminAuth={setShowAdminAuth}
+            />
+        ) : showSubjectDashboard ? (
+            <SubjectDashboard 
+                activeSubject={activeSubject}
+                setActiveSubject={setActiveSubject}
+                setHomeView={setHomeView}
+                userRole={userRole}
+                userSettings={userSettings}
+                handleStartMode={handleStartMode}
+            />
+        ) : (
+            <div className={`flex-1 flex flex-col relative h-full bg-transparent`}>
+                {!focusMode && (
+                    <ChatHeader 
+                        setSidebarOpen={setSidebarOpen}
+                        activeSubject={activeSubject}
+                        userRole={userRole}
+                        activeMode={activeMode}
+                        startVoiceCall={startVoiceCall}
+                        createNewSession={createNewSession}
+                        setHistoryDrawerOpen={setHistoryDrawerOpen}
+                        userSettings={userSettings}
+                        setFocusMode={setFocusMode}
+                    />
+                )}
+                
+                <HistoryDrawer 
+                    historyDrawerOpen={historyDrawerOpen}
+                    setHistoryDrawerOpen={setHistoryDrawerOpen}
+                    sessions={sessions}
+                    activeSessionId={activeSessionId}
+                    setActiveSessionId={setActiveSessionId}
+                    renameSessionId={renameSessionId}
+                    setRenameSessionId={setRenameSessionId}
+                    renameValue={renameValue}
+                    setRenameValue={setRenameValue}
+                    renameSession={renameSession}
+                    deleteSession={deleteSession}
+                    activeSubject={activeSubject}
+                    setActiveSubject={setActiveSubject}
+                />
+                <VoiceCallOverlay 
+                    isVoiceCallActive={isVoiceCallActive}
+                    voiceCallStatus={voiceCallStatus}
+                    voiceMuted={voiceMuted}
+                    setVoiceMuted={setVoiceMuted}
+                    endVoiceCall={endVoiceCall}
+                    activeSubject={activeSubject}
+                />
+
+                <MessageList 
+                    currentMessages={currentMessages}
+                    userSettings={userSettings}
+                    setZoomedImage={setZoomedImage}
+                    handleRate={handleRate}
+                    handleReply={handleReply}
+                    handleSpeak={handleSpeak}
+                    speakingMessageId={speakingMessageId}
+                    handleCopy={handleCopy}
+                    copiedId={copiedId}
+                    handleShare={handleShare}
+                    loadingSubject={!!loadingSubjects[activeSubject.id]}
+                    activeSubject={activeSubject}
+                    messagesEndRef={messagesEndRef}
+                />
+
+                <ChatInputArea 
+                    replyingTo={replyingTo}
+                    setReplyingTo={setReplyingTo}
+                    userSettings={userSettings}
+                    fileInputRef={fileInputRef}
+                    loadingSubject={!!loadingSubjects[activeSubject.id]}
+                    handleImageUpload={handleImageUpload}
+                    toggleListening={toggleListening}
+                    isListening={isListening}
+                    inputValue={inputValue}
+                    setInputValue={setInputValue}
+                    handleSend={() => handleSend()}
+                    selectedImages={selectedImages}
+                    handleRemoveImage={handleRemoveImage}
+                    onCameraCapture={handleCameraCapture}
+                />
+            </div>
+        )}
       </main>
+
+      <div className="fixed top-4 right-4 z-[100] flex flex-col gap-2 pointer-events-none">
+        {toasts.map(t => (
+          <div key={t.id} className={`${TOAST_CONTAINER} ${t.type === 'error' ? TOAST_ERROR : t.type === 'success' ? TOAST_SUCCESS : TOAST_INFO}`}>
+             {t.type === 'error' ? <AlertCircle size={18}/> : t.type === 'success' ? <CheckCircle size={18}/> : <Info size={18}/>}
+             <span className="font-medium text-sm">{t.message}</span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 };

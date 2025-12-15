@@ -11,7 +11,7 @@ interface PageProps {
 }
 
 // Reusable Layout for all static pages to ensure design consistency
-const PageLayout = ({ title, children, onBack, userSettings }: { title: string, children: React.ReactNode, onBack: () => void, userSettings: UserSettings }) => {
+const PageLayout = ({ title, children, onBack, userSettings }: { title: string, children?: React.ReactNode, onBack: () => void, userSettings: UserSettings }) => {
   return (
     <div className={`flex-1 overflow-y-auto custom-scrollbar p-4 md:p-8 flex flex-col items-center relative overflow-x-hidden w-full ${FADE_IN} bg-transparent`}>
       

@@ -39,7 +39,7 @@ async function analyzeImages(apiKey: string, images: string[]): Promise<string> 
                     { type: "text", text: "Analyze this image in extreme detail. Transcribe any text exactly. If there are math problems, describe the numbers, variables, and geometry precisely. If it is a diagram, describe all connections. Return ONLY the description, no conversational filler." },
                     ...images.map(img => ({
                         type: "image_url",
-                        image_url: { url: img, detail: "auto" }
+                        image_url: { url: img }
                     }))
                 ]
             }]

@@ -3,7 +3,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import remarkGfm from 'remark-gfm';
-import { Projector, Download, Check, ThumbsUp, ThumbsDown, Reply, Volume2, Square, Copy, Share2, Sparkles, Brain, ChevronDown, ChevronUp, Lightbulb, Loader2 } from 'lucide-react';
+import { Projector, Download, Check, ThumbsUp, ThumbsDown, Reply, Volume2, Square, Copy, Share2, Sparkles, Brain, ChevronDown, ChevronUp, Lightbulb, Loader2, FileJson, Presentation } from 'lucide-react';
 import { Message, UserSettings, SubjectConfig } from '../../types';
 import { handleDownloadPPTX } from '../../utils/exportUtils';
 import { CodeBlock } from '../ui/CodeBlock';
@@ -67,6 +67,9 @@ export const MessageList = ({
          <div className="max-w-4xl mx-auto space-y-8 lg:space-y-12 pb-40 pt-2 lg:pt-4">
             {currentMessages.map((msg, index) => {
                const isStreaming = msg.isStreaming;
+               // Identify specific streaming modes to hide raw JSON
+               const isStreamingTest = isStreaming && msg.type === 'test_generated';
+               const isStreamingSlides = isStreaming && msg.type === 'slides';
 
                return (
                <div key={msg.id} id={msg.id} className={`group flex flex-col gap-2 ${SLIDE_UP} duration-700 ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
@@ -128,6 +131,7 @@ export const MessageList = ({
                         </div>
                      )}
 
+                     {/* Finished Slides */}
                      {msg.type === 'slides' && msg.slidesData && (
                         <div className="space-y-4">
                            <div className="flex justify-between items-center pb-4 border-b border-indigo-500/20"><span className="font-bold flex gap-2 items-center text-sm"><Projector size={18} className="text-indigo-500"/> Генерирана Презентация</span><button onClick={() => handleDownloadPPTX(msg.slidesData!, activeSubject, userSettings)} className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-xl text-xs font-bold flex gap-2 transition-colors shadow-lg shadow-emerald-500/20"><Download size={14}/> Изтегли PPTX</button></div>
@@ -135,11 +139,12 @@ export const MessageList = ({
                         </div>
                      )}
 
+                     {/* Finished Test */}
                      {msg.type === 'test_generated' && msg.testData && (
                         <TestRenderer data={msg.testData} />
                      )}
 
-                     {/* Initializing State */}
+                     {/* Initializing State (Empty text & no reasoning yet) */}
                      {isStreaming && !msg.text && !msg.reasoning && (
                         <div className="flex items-center gap-3 text-sm text-gray-500 italic py-2 animate-pulse">
                            <Loader2 className="animate-spin text-indigo-500" size={18}/>
@@ -147,7 +152,42 @@ export const MessageList = ({
                         </div>
                      )}
 
-                     {msg.text && (
+                     {/* Streaming Test Indicator */}
+                     {isStreamingTest && (
+                        <div className="w-full p-6 bg-white/50 dark:bg-zinc-800/50 rounded-2xl border border-indigo-500/20 shadow-sm backdrop-blur-sm animate-pulse flex flex-col items-center justify-center text-center gap-3 my-2">
+                            <div className="p-3 bg-indigo-500/10 rounded-full text-indigo-500 shadow-sm">
+                                <Loader2 size={24} className="animate-spin"/>
+                            </div>
+                            <div>
+                                <span className="font-bold text-zinc-800 dark:text-zinc-200 block text-sm mb-1">Генериране на тест...</span>
+                                <span className="text-xs text-zinc-500 dark:text-zinc-400 font-mono bg-white/50 dark:bg-black/20 px-2 py-1 rounded-md">
+                                    {(msg.text.match(/"question"\s*:/g) || []).length > 0 
+                                        ? `Въпроси готови: ${(msg.text.match(/"question"\s*:/g) || []).length}` 
+                                        : 'Структуриране на данни...'}
+                                </span>
+                            </div>
+                        </div>
+                     )}
+
+                     {/* Streaming Slides Indicator */}
+                     {isStreamingSlides && (
+                        <div className="w-full p-6 bg-white/50 dark:bg-zinc-800/50 rounded-2xl border border-pink-500/20 shadow-sm backdrop-blur-sm animate-pulse flex flex-col items-center justify-center text-center gap-3 my-2">
+                            <div className="p-3 bg-pink-500/10 rounded-full text-pink-500 shadow-sm">
+                                <Loader2 size={24} className="animate-spin"/>
+                            </div>
+                            <div>
+                                <span className="font-bold text-zinc-800 dark:text-zinc-200 block text-sm mb-1">Създаване на презентация...</span>
+                                <span className="text-xs text-zinc-500 dark:text-zinc-400 font-mono bg-white/50 dark:bg-black/20 px-2 py-1 rounded-md">
+                                    {(msg.text.match(/"title"\s*:/g) || []).length > 0 
+                                        ? `Слайдове: ${(msg.text.match(/"title"\s*:/g) || []).length}` 
+                                        : 'Подготовка на съдържание...'}
+                                </span>
+                            </div>
+                        </div>
+                     )}
+
+                     {/* Standard Text Content (Only if NOT streaming structured data) */}
+                     {msg.text && !isStreamingTest && !isStreamingSlides && (
                          <div className="markdown-content w-full break-words overflow-hidden">
                              <ReactMarkdown remarkPlugins={[remarkMath, remarkGfm]} rehypePlugins={[rehypeKatex]} components={{code: CodeBlock}}>
                                  {msg.text}
@@ -165,8 +205,8 @@ export const MessageList = ({
                      </div>
                   </div>
 
+                  {/* Action Buttons */}
                   <div className={`flex gap-1 px-4 transition-all duration-300 ${msg.role === 'user' ? 'opacity-0 group-hover:opacity-100' : 'opacity-100'}`}>
-                     {/* Action Buttons */}
                      <div className="flex bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border border-indigo-500/20 rounded-full p-1.5 shadow-sm mt-1">
                         {msg.role === 'model' && (
                            <>
