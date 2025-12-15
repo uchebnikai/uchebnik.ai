@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Shield, X, Copy, CheckCircle, Key } from 'lucide-react';
 import { Button } from '../ui/Button';
@@ -62,7 +61,7 @@ export const AdminPanel = ({
              </div>
              
              <div className="space-y-4">
-                <p className="text-sm text-gray-500">Генерирай нов Premium ключ за достъп до Gemini 3.0 Pro.</p>
+                <p className="text-sm text-gray-500">Генерирай нов Premium ключ за достъп до Qwen 3 Pro.</p>
                 <Button onClick={generateKey} className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 shadow-emerald-500/20" icon={Key}>Генерирай Ключ</Button>
              </div>
 

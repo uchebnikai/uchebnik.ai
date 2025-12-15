@@ -21,7 +21,7 @@ async function withRetry<T>(fn: () => Promise<T>, retries = 3, delay = 2000): Pr
   }
 }
 
-// Vision Analysis using Gemini (Non-streaming for now as it's a pre-step)
+// Vision Analysis using Qwen (Non-streaming for now as it's a pre-step)
 async function analyzeImages(apiKey: string, images: string[]): Promise<string> {
     const res = await fetch(API_URL, {
         method: "POST",
@@ -32,7 +32,7 @@ async function analyzeImages(apiKey: string, images: string[]): Promise<string> 
             "X-Title": "Uchebnik AI"
         },
         body: JSON.stringify({
-            model: "google/gemini-2.0-flash-exp:free", 
+            model: "qwen/qwen3-235b-a22b:free", 
             messages: [{
                 role: "user",
                 content: [
@@ -111,7 +111,7 @@ export const generateResponse = async (
       }
   }
 
-  let modelName = 'tngtech/deepseek-r1t2-chimera:free'; 
+  let modelName = 'qwen/qwen3-235b-a22b:free'; 
   if (preferredModel !== 'auto' && preferredModel) {
       modelName = preferredModel;
   }
@@ -189,7 +189,6 @@ export const generateResponse = async (
   const requestBody: any = {
       model: modelName,
       messages: messages,
-      include_reasoning: true,
       stream: true // Enable streaming
   };
 

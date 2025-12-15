@@ -983,7 +983,7 @@ export const App = () => {
 
       let preferredModel = userSettings.preferredModel;
       if (preferredModel === 'auto') {
-          preferredModel = 'tngtech/deepseek-r1t2-chimera:free';
+          preferredModel = 'qwen/qwen3-235b-a22b:free';
       }
 
       // We remove the loading spinner immediately because we are showing the stream
@@ -1362,7 +1362,7 @@ export const App = () => {
        const newPlan = targetPlan || result.plan || 'pro';
        setUserPlan(newPlan);
        if (newPlan !== 'free') {
-            setUserSettings(prev => ({ ...prev, preferredModel: 'tngtech/deepseek-r1t2-chimera:free' }));
+            setUserSettings(prev => ({ ...prev, preferredModel: 'qwen/qwen3-235b-a22b:free' }));
        }
        setShowUnlockModal(false);
        setUnlockKeyInput('');

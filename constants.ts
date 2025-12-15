@@ -1,8 +1,8 @@
 import { SubjectId, AppMode, SubjectConfig } from './types';
 
 export const AI_MODELS = [
-  { id: 'auto', name: 'Автоматичен', description: 'Избира най-добрия модел (Chimera R1).' },
-  { id: 'tngtech/deepseek-r1t2-chimera:free', name: 'DeepSeek Chimera', description: 'Мощен модел за сложни задачи.' }
+  { id: 'auto', name: 'Автоматичен', description: 'Избира най-добрия модел (Qwen 3).' },
+  { id: 'qwen/qwen3-235b-a22b:free', name: 'Qwen 3 (235B)', description: 'Мощен модел за сложни задачи.' }
 ];
 
 export const GRADE_PROMPTS = {
