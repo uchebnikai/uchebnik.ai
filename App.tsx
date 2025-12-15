@@ -983,7 +983,7 @@ export const App = () => {
 
       let preferredModel = userSettings.preferredModel;
       if (preferredModel === 'auto') {
-          preferredModel = 'google/gemini-2.0-flash-exp:free';
+          preferredModel = 'tngtech/deepseek-r1t2-chimera:free';
       }
 
       // We remove the loading spinner immediately because we are showing the stream
@@ -1362,7 +1362,7 @@ export const App = () => {
        const newPlan = targetPlan || result.plan || 'pro';
        setUserPlan(newPlan);
        if (newPlan !== 'free') {
-            setUserSettings(prev => ({ ...prev, preferredModel: 'google/gemini-2.0-flash-exp:free' }));
+            setUserSettings(prev => ({ ...prev, preferredModel: 'tngtech/deepseek-r1t2-chimera:free' }));
        }
        setShowUnlockModal(false);
        setUnlockKeyInput('');

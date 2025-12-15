@@ -130,7 +130,7 @@ export interface UserSettings {
   responseLength: 'concise' | 'detailed';
   creativity: 'strict' | 'balanced' | 'creative';
   languageLevel: 'simple' | 'standard' | 'advanced';
-  preferredModel: 'auto' | 'google/gemini-2.0-flash-exp:free';
+  preferredModel: 'auto' | 'tngtech/deepseek-r1t2-chimera:free';
   // New Personalization Settings
   themeColor: string; // Hex code
   customBackground: string | null; // Base64 image

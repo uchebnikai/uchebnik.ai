@@ -32,16 +32,15 @@ async function analyzeImages(apiKey: string, images: string[]): Promise<string> 
             "X-Title": "Uchebnik AI"
         },
         body: JSON.stringify({
-            model: "google/gemini-2.0-flash-exp:free",
-            include_reasoning: false,
+            model: "google/gemini-2.0-flash-exp:free", 
             messages: [{
                 role: "user",
                 content: [
+                    { type: "text", text: "Analyze this image in extreme detail. Transcribe any text exactly. If there are math problems, describe the numbers, variables, and geometry precisely. If it is a diagram, describe all connections. Return ONLY the description, no conversational filler." },
                     ...images.map(img => ({
                         type: "image_url",
-                        image_url: { url: img }
-                    })),
-                    { type: "text", text: "Analyze this image in extreme detail. Transcribe any text exactly. If there are math problems, describe the numbers, variables, and geometry precisely. If it is a diagram, describe all connections. Return ONLY the description, no conversational filler." }
+                        image_url: { url: img, detail: "auto" }
+                    }))
                 ]
             }]
         })
@@ -112,8 +111,7 @@ export const generateResponse = async (
       }
   }
 
-  // Use Gemini Flash 2.0 Exp Free for everything
-  let modelName = 'google/gemini-2.0-flash-exp:free'; 
+  let modelName = 'tngtech/deepseek-r1t2-chimera:free'; 
   if (preferredModel !== 'auto' && preferredModel) {
       modelName = preferredModel;
   }
@@ -157,7 +155,6 @@ export const generateResponse = async (
       systemInstruction += "\n\nIMPORTANT: YOU MUST RETURN VALID JSON ONLY. NO MARKDOWN BLOCK WRAPPING THE JSON (IF POSSIBLE), JUST THE JSON STRING.";
   }
 
-  // Gemini doesn't officially support 'reasoning' field in response, but we can ask for <think> tags.
   systemInstruction += "\n\nIMPORTANT: Show your reasoning process enclosed in <think> tags before your final answer.";
   systemInstruction = `CURRENT SUBJECT CONTEXT: ${subjectName}. All responses must relate to ${subjectName}.\n\n${systemInstruction}`;
 
@@ -192,8 +189,8 @@ export const generateResponse = async (
   const requestBody: any = {
       model: modelName,
       messages: messages,
-      // Removed include_reasoning as it might not be compatible with Gemini via OpenRouter or not needed
-      stream: true
+      include_reasoning: true,
+      stream: true // Enable streaming
   };
 
   try {
@@ -242,6 +239,11 @@ export const generateResponse = async (
                       const delta = data.choices?.[0]?.delta;
                       
                       if (delta) {
+                          // Handle Reasoning Field (DeepSeek/OpenAI standard)
+                          if (delta.reasoning) {
+                              finalReasoning += delta.reasoning;
+                          }
+                          
                           // Handle Content Field
                           if (delta.content) {
                               rawAccumulator += delta.content;
@@ -362,11 +364,11 @@ export const generateResponse = async (
       };
 
   } catch (error: any) {
-      console.error("AI API Error:", error);
+      console.error("DeepSeek API Error:", error);
       return {
           id: Date.now().toString(),
           role: 'model',
-          text: "Възникна грешка при връзката с AI. Моля, опитайте отново.",
+          text: "Възникна грешка при връзката с DeepSeek. Моля, опитайте отново.",
           isError: true,
           timestamp: Date.now()
       };
