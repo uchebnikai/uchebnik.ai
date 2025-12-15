@@ -78,13 +78,15 @@ export const generateResponse = async (
   onStreamUpdate?: (text: string, reasoning: string) => void
 ): Promise<Message> => {
   
-  const apiKey = process.env.OPENROUTER_API_KEY || "";
+  // Explicitly use import.meta.env as preferred by Vite for Vercel vars
+  // Fix: Cast import.meta to any to avoid TS error
+  const apiKey = (import.meta as any).env?.VITE_OPENROUTER_API_KEY || process.env.OPENROUTER_API_KEY || "";
 
   if (!apiKey) {
       return {
           id: Date.now().toString(),
           role: 'model',
-          text: "Грешка: Не е намерен OpenRouter API ключ.",
+          text: "Грешка: Не е намерен OpenRouter API ключ. Моля, проверете настройките на Vercel (VITE_OPENROUTER_API_KEY).",
           isError: true,
           timestamp: Date.now()
       };
@@ -112,9 +114,15 @@ export const generateResponse = async (
   }
 
   let modelName = 'qwen/qwen3-235b-a22b:free'; 
+  // Force use of this specific model regardless of user setting if 'auto' or even if another is passed, 
+  // as per strict instruction to only use this model.
   if (preferredModel !== 'auto' && preferredModel) {
       modelName = preferredModel;
   }
+  
+  // Ensure we stick to the required model if the preferred model is not valid or just to be safe based on "Update this project to use only the model"
+  // Forcing default to qwen/qwen3-235b-a22b:free
+  modelName = 'qwen/qwen3-235b-a22b:free';
 
   const imageKeywords = /(draw|paint|generate image|create a picture|make an image|нарисувай|рисувай|генерирай изображение|генерирай снимка|направи снимка|изображение на)/i;
   const isImageRequest = (subjectId === SubjectId.ART && mode === AppMode.DRAW) || imageKeywords.test(promptText);
@@ -207,7 +215,8 @@ export const generateResponse = async (
 
       if (!response.ok) {
           const errText = await response.text();
-          throw new Error(`API Error: ${response.status} ${errText}`);
+          console.error(`OpenRouter API Error (${response.status}): ${errText}`);
+          throw new Error(`API Error: ${response.status}`);
       }
 
       if (!response.body) throw new Error("No response body");
@@ -368,7 +377,7 @@ export const generateResponse = async (
       return {
           id: Date.now().toString(),
           role: 'model',
-          text: "Възникна грешка при връзката с Qwen. Моля, опитайте отново.",
+          text: "Възникна грешка при връзката с Qwen (OpenRouter). Моля, опитайте отново.",
           isError: true,
           timestamp: Date.now()
       };
