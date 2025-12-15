@@ -189,6 +189,7 @@ export const generateResponse = async (
   const requestBody: any = {
       model: modelName,
       messages: messages,
+      include_reasoning: true,
       stream: true // Enable streaming
   };
 
@@ -238,7 +239,7 @@ export const generateResponse = async (
                       const delta = data.choices?.[0]?.delta;
                       
                       if (delta) {
-                          // Handle Reasoning Field (DeepSeek/OpenAI standard)
+                          // Handle Reasoning Field (Standard for R1-like models on OpenRouter)
                           if (delta.reasoning) {
                               finalReasoning += delta.reasoning;
                           }
@@ -363,11 +364,11 @@ export const generateResponse = async (
       };
 
   } catch (error: any) {
-      console.error("DeepSeek API Error:", error);
+      console.error("Qwen API Error:", error);
       return {
           id: Date.now().toString(),
           role: 'model',
-          text: "Възникна грешка при връзката с DeepSeek. Моля, опитайте отново.",
+          text: "Възникна грешка при връзката с Qwen. Моля, опитайте отново.",
           isError: true,
           timestamp: Date.now()
       };

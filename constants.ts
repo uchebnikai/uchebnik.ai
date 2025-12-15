@@ -1,7 +1,7 @@
 import { SubjectId, AppMode, SubjectConfig } from './types';
 
 export const AI_MODELS = [
-  { id: 'auto', name: 'Автоматичен', description: 'Избира най-добрия модел (Qwen 3).' },
+  { id: 'auto', name: 'Автоматичен', description: 'Избира най-добрия модел (Qwen).' },
   { id: 'qwen/qwen3-235b-a22b:free', name: 'Qwen 3 (235B)', description: 'Мощен модел за сложни задачи.' }
 ];
 
