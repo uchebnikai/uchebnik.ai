@@ -78,14 +78,18 @@ export const generateResponse = async (
   onStreamUpdate?: (text: string, reasoning: string) => void
 ): Promise<Message> => {
   
-  // Access key from VITE_OPENROUTER_API_KEY
-  const apiKey = (import.meta as any).env?.VITE_OPENROUTER_API_KEY || "";
+  // Access key from multiple sources to be robust
+  // @ts-ignore
+  let apiKey = typeof process !== 'undefined' && process.env ? process.env.OPENROUTER_API_KEY : "";
+  if (!apiKey) {
+      apiKey = (import.meta as any).env?.VITE_OPENROUTER_API_KEY || "";
+  }
 
   if (!apiKey) {
       return {
           id: Date.now().toString(),
           role: 'model',
-          text: "Грешка: Не е намерен OpenRouter API ключ. Моля, проверете настройките на Vercel (VITE_OPENROUTER_API_KEY).",
+          text: "Грешка: Не е намерен OpenRouter API ключ. Моля, проверете настройките на Vercel (VITE_OPENROUTER_API_KEY) или .env файла.",
           isError: true,
           timestamp: Date.now()
       };
@@ -108,7 +112,7 @@ export const generateResponse = async (
            return {
               id: Date.now().toString(),
               role: 'model',
-              text: "Не успях да разчета изображението. Моля, опитайте отново с по-ясна снимка.",
+              text: "Не успях да разчета изображението. Моля, опитайте отново с по-ясна снимка или проверете дали моделът поддържа изображения.",
               isError: true,
               timestamp: Date.now()
           };
@@ -207,7 +211,7 @@ export const generateResponse = async (
       if (!response.ok) {
           const errText = await response.text();
           console.error(`OpenRouter API Error (${response.status}): ${errText}`);
-          throw new Error(`API Error: ${response.status}`);
+          throw new Error(`API Error: ${response.status} - ${errText}`);
       }
 
       if (!response.body) throw new Error("No response body");
@@ -346,10 +350,11 @@ export const generateResponse = async (
 
   } catch (error: any) {
       console.error("AI API Error:", error);
+      const errorMessage = error.message || "Unknown error";
       return {
           id: Date.now().toString(),
           role: 'model',
-          text: "Възникна грешка при връзката с AI (Google Gemma). Моля, опитайте отново.",
+          text: `Възникна грешка при връзката с AI (Google Gemma): ${errorMessage}. Моля, опитайте отново или проверете ключа.`,
           isError: true,
           timestamp: Date.now()
       };
