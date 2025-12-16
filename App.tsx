@@ -667,8 +667,6 @@ export const App = () => {
     }
   }, [activeSubject, activeSessionId, pendingHomeMessage]);
 
-  useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [sessions, activeSessionId, isImageProcessing, showSubjectDashboard]);
-
   useEffect(() => {
     voiceMutedRef.current = voiceMuted;
     if (isVoiceCallActive) {

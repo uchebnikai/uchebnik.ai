@@ -45,6 +45,8 @@ export const MessageList = ({
   messagesEndRef
 }: MessageListProps) => {
 
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const lastMessageIdRef = useRef<string | null>(null);
   const [expandedReasoning, setExpandedReasoning] = useState<Record<string, boolean>>({});
 
   const toggleReasoning = (id: string) => {
@@ -62,8 +64,31 @@ export const MessageList = ({
       }
   }, [currentMessages, expandedReasoning]);
 
+  // Smart Auto-Scroll Logic
+  useEffect(() => {
+      const container = scrollContainerRef.current;
+      if (!container) return;
+
+      const lastMsg = currentMessages[currentMessages.length - 1];
+      const lastMsgId = lastMsg?.id;
+      
+      // Check if a new message has been added (different ID)
+      const isNewMessage = lastMsgId !== lastMessageIdRef.current;
+      
+      // Check if user is near the bottom (allow manual scroll up)
+      // 150px threshold to be generous
+      const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 150;
+
+      // Force scroll only if it's a new message OR if user is already sticking to bottom
+      if (isNewMessage || isNearBottom) {
+          messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }
+      
+      lastMessageIdRef.current = lastMsgId || null;
+  }, [currentMessages, messagesEndRef]);
+
   return (
-      <div className={`flex-1 overflow-y-auto px-2 lg:px-8 py-4 lg:py-8 custom-scrollbar scroll-smooth ${userSettings.textSize === 'large' ? 'text-lg' : userSettings.textSize === 'small' ? 'text-sm' : 'text-base'}`}>
+      <div ref={scrollContainerRef} className={`flex-1 overflow-y-auto px-2 lg:px-8 py-4 lg:py-8 custom-scrollbar scroll-smooth ${userSettings.textSize === 'large' ? 'text-lg' : userSettings.textSize === 'small' ? 'text-sm' : 'text-base'}`}>
          <div className="max-w-4xl mx-auto space-y-8 lg:space-y-12 pb-40 pt-2 lg:pt-4">
             {currentMessages.map((msg, index) => {
                const isStreaming = msg.isStreaming;
