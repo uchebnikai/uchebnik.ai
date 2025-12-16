@@ -22,7 +22,7 @@ interface SettingsModalProps {
   isDarkMode: boolean;
   setIsDarkMode: (val: boolean) => void;
   handleBackgroundUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  handleClearMemory: () => void;
+  handleDeleteAllChats: () => void;
 }
 
 export const SettingsModal = ({
@@ -39,7 +39,7 @@ export const SettingsModal = ({
   isDarkMode,
   setIsDarkMode,
   handleBackgroundUpload,
-  handleClearMemory
+  handleDeleteAllChats
 }: SettingsModalProps) => {
     
   const avatarInputRef = useRef<HTMLInputElement>(null);
@@ -253,12 +253,12 @@ export const SettingsModal = ({
              </div>
              
              <div className="bg-white/30 dark:bg-white/5 rounded-2xl border border-white/20 dark:border-white/5 divide-y divide-gray-100 dark:divide-white/5 overflow-hidden">
-                 <button onClick={handleClearMemory} className="w-full flex items-center justify-between p-4 hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors group text-left">
+                 <button onClick={handleDeleteAllChats} className="w-full flex items-center justify-between p-4 hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors group text-left">
                      <div className="flex items-center gap-4">
                          <div className="p-2.5 bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400 rounded-xl"><Trash2 size={18}/></div>
                          <div>
-                             <div className="text-sm font-bold text-red-600 dark:text-red-400">Изчисти паметта</div>
-                             <div className="text-xs text-red-400/70">Изтрий всички съобщения в текущия чат</div>
+                             <div className="text-sm font-bold text-red-600 dark:text-red-400">Изтрий всички чатове</div>
+                             <div className="text-xs text-red-400/70">Изтрий цялата история на разговорите</div>
                          </div>
                      </div>
                      <ArrowRight size={18} className="text-red-300 group-hover:text-red-500 transition-colors"/>

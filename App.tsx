@@ -846,23 +846,21 @@ export const App = () => {
 
   const renameSession = (sId: string, title: string) => { setSessions(prev => prev.map(s => s.id === sId ? { ...s, title } : s)); setRenameSessionId(null); };
   
-  const handleClearMemory = () => {
+  const handleDeleteAllChats = () => {
     setConfirmModal({
-        isOpen: true, title: 'Изчистване на паметта', message: 'Сигурни ли сте? Това ще изтрие историята на текущия чат.',
+        isOpen: true, 
+        title: 'Изтриване на всички чатове', 
+        message: 'Сигурни ли сте, че искате да изтриете всички чатове? Това ще изтрие цялата ви история завинаги. Това действие е необратимо.',
         onConfirm: () => {
-             if (activeSessionIdRef.current && activeSubjectRef.current) {
-                setSessions(prev => prev.map(s => {
-                   if (s.id === activeSessionIdRef.current) {
-                     const greetingName = userSettings.userName ? `, ${userSettings.userName}` : '';
-                     let welcomeText = "";
-                     const subjectName = SUBJECTS.find(sub=>sub.id === s.subjectId)?.name;
-                     if(s.subjectId === SubjectId.GENERAL) { welcomeText = `Здравей${greetingName}! Аз съм Uchebnik AI. Попитай ме каквото и да е!`; } else { if(s.role === 'teacher') { welcomeText = `Здравейте, колега! Аз съм Вашият AI асистент по **${subjectName}**. Как мога да Ви съдействам?`; } else { welcomeText = `Здравей${greetingName}! Аз съм твоят помощник по **${subjectName}**.`; } }
-                     return { ...s, messages: [{ id: 'reset-'+Date.now(), role: 'model', text: welcomeText, timestamp: Date.now() }] };
-                   }
-                   return s;
-                }));
-                addToast('Паметта е изчистена', 'success');
-              }
+             setSessions([]);
+             setActiveSessionId(null);
+             
+             if (activeSubjectRef.current?.id === SubjectId.GENERAL) {
+                 createNewSession(SubjectId.GENERAL); 
+             } else {
+                 setShowSubjectDashboard(true);
+             }
+             addToast('Всички чатове са изтрити', 'success');
              setConfirmModal(null);
         }
     });
@@ -1086,7 +1084,7 @@ export const App = () => {
             isDarkMode={isDarkMode}
             setIsDarkMode={setIsDarkMode}
             handleBackgroundUpload={handleBackgroundUpload}
-            handleClearMemory={handleClearMemory}
+            handleDeleteAllChats={handleDeleteAllChats}
         />
         <Lightbox image={zoomedImage} onClose={() => setZoomedImage(null)} />
         
