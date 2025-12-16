@@ -57,7 +57,10 @@ export const App = () => {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [inputValue, setInputValue] = useState('');
-  const [pendingHomeMessage, setPendingHomeMessage] = useState<string | null>(null);
+  
+  // Updated pending input state to include images
+  const [pendingHomeInput, setPendingHomeInput] = useState<{text: string, images: string[]} | null>(null);
+  
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
   const [isImageProcessing, setIsImageProcessing] = useState(false);
   const [loadingSubjects, setLoadingSubjects] = useState<Record<string, boolean>>({});
@@ -169,9 +172,8 @@ export const App = () => {
 
   // --- Effects ---
 
-  // Auth Effect
+  // Auth Effect (Same as before...)
   useEffect(() => {
-    // Check for errors in the URL hash from OAuth redirects
     const handleHashError = () => {
         const hash = window.location.hash;
         if (hash && hash.includes('error=')) {
@@ -179,7 +181,6 @@ export const App = () => {
             const errorDescription = params.get('error_description');
             if (errorDescription) {
                 addToast(`Грешка при вход: ${decodeURIComponent(errorDescription)}`, 'error');
-                // Clean URL
                 window.history.replaceState(null, '', window.location.pathname);
             }
         }
@@ -191,9 +192,7 @@ export const App = () => {
         setAuthLoading(false);
         if (session) {
             setShowAuthModal(false);
-            // We do NOT sync plan from metadata here anymore, as the "Truth" is now in the profiles table
         } else {
-            // Logout cleanup
             setSessions([]);
             setSyncStatus('synced');
             setIsRemoteDataLoaded(false);
@@ -201,16 +200,22 @@ export const App = () => {
 
         if (session?.user?.user_metadata) {
             const meta = session.user.user_metadata;
-            const firstName = meta.first_name || '';
-            const lastName = meta.last_name || '';
-            const avatar = meta.avatar_url || '';
-            const email = session.user.email || '';
-            
-            setUserMeta({ firstName, lastName, avatar });
-            setEditProfile({ firstName, lastName, avatar, email, password: '', currentPassword: '' });
+            setUserMeta({ 
+                firstName: meta.first_name || '', 
+                lastName: meta.last_name || '', 
+                avatar: meta.avatar_url || '' 
+            });
+            setEditProfile({ 
+                firstName: meta.first_name || '', 
+                lastName: meta.last_name || '', 
+                avatar: meta.avatar_url || '', 
+                email: session.user.email || '', 
+                password: '', 
+                currentPassword: '' 
+            });
 
             setUserSettings(prev => {
-                const fullName = meta.full_name || `${firstName} ${lastName}`.trim();
+                const fullName = meta.full_name || `${meta.first_name || ''} ${meta.last_name || ''}`.trim();
                 if (!prev.userName && fullName) return { ...prev, userName: fullName };
                 return prev;
             });
@@ -226,7 +231,7 @@ export const App = () => {
     return () => subscription.unsubscribe();
   }, []);
   
-  // Cloud Sync: Load Data on Login
+  // Cloud Sync Effects (Same as before...)
   useEffect(() => {
       if (!session?.user?.id) {
           setIsRemoteDataLoaded(false);
@@ -241,7 +246,6 @@ export const App = () => {
           setMissingDbTables(false);
           
           try {
-              // Load Settings, Plan, and Stats from 'profiles'
               const { data: profileData, error: profileError } = await supabase
                   .from('profiles')
                   .select('settings, theme_color, custom_background')
@@ -254,18 +258,11 @@ export const App = () => {
               }
 
               if (profileData) {
-                  // 1. Settings (Merge)
                   if (profileData.settings) {
-                      // Extract special fields that are stored in settings
                       const { plan, stats, ...restSettings } = profileData.settings;
-                      
                       const merged = { ...restSettings, themeColor: profileData.theme_color, customBackground: profileData.custom_background };
                       setUserSettings(prev => ({ ...prev, ...merged }));
-
-                      // 2. Plan
                       if (plan) setUserPlan(plan);
-
-                      // 3. Stats (Streak & Usage)
                       if (stats) {
                           setStreak(stats.streak || 0);
                           const today = new Date().toDateString();
@@ -276,13 +273,11 @@ export const App = () => {
                           }
                       }
                   } else {
-                      // No settings found (legacy row?), apply theme at least
                       if (profileData.theme_color) setUserSettings(prev => ({...prev, themeColor: profileData.theme_color}));
                       if (profileData.custom_background) setUserSettings(prev => ({...prev, customBackground: profileData.custom_background}));
                   }
               }
 
-              // Load Sessions
               const { data: sessionData, error: sessionError } = await supabase
                   .from('user_data')
                   .select('data')
@@ -290,15 +285,14 @@ export const App = () => {
                   .single();
               
               if (sessionError) {
-                  if (sessionError.code === '42P01') { // undefined_table
+                  if (sessionError.code === '42P01') {
                       setMissingDbTables(true);
-                  } else if (sessionError.code !== 'PGRST116') { // not found is ok
+                  } else if (sessionError.code !== 'PGRST116') {
                       console.warn("Session load error:", sessionError);
                   }
               }
                   
               if (sessionData && sessionData.data) {
-                  // Mark as incoming to prevent immediate save loop
                   isIncomingUpdateRef.current = true;
                   setSessions(sessionData.data);
               }
@@ -314,22 +308,15 @@ export const App = () => {
       loadRemoteData();
   }, [session?.user?.id]);
 
-  // Cloud Sync: Realtime Subscription (Sessions)
+  // Subscriptions (Same as before...)
   useEffect(() => {
       if (!session?.user?.id || missingDbTables) return;
-
       const channel = supabase.channel(`sync-sessions:${session.user.id}`)
-          .on('postgres_changes', { 
-              event: 'UPDATE', 
-              schema: 'public', 
-              table: 'user_data', 
-              filter: `user_id=eq.${session.user.id}` 
-          }, (payload) => {
+          .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'user_data', filter: `user_id=eq.${session.user.id}` }, (payload) => {
               const remoteSessions = (payload.new as any).data;
               if (remoteSessions) {
                   const currentJson = JSON.stringify(sessionsRef.current.map(s => ({...s, messages: s.messages.map(m => ({...m, images: []}))})));
                   const remoteJson = JSON.stringify(remoteSessions.map((s: Session) => ({...s, messages: s.messages.map((m: Message) => ({...m, images: []}))})));
-                  
                   if (currentJson !== remoteJson) {
                       isIncomingUpdateRef.current = true; 
                       setSessions(remoteSessions);
@@ -338,40 +325,19 @@ export const App = () => {
               }
           })
           .subscribe();
-
       return () => { supabase.removeChannel(channel); };
   }, [session?.user?.id, missingDbTables]);
 
-  // Cloud Sync: Realtime Subscription (Profiles - Settings/Plan/Stats)
   useEffect(() => {
       if (!session?.user?.id || missingDbTables) return;
-
       const channel = supabase.channel(`sync-profiles:${session.user.id}`)
-          .on('postgres_changes', { 
-              event: 'UPDATE', 
-              schema: 'public', 
-              table: 'profiles', 
-              filter: `id=eq.${session.user.id}` 
-          }, (payload) => {
+          .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${session.user.id}` }, (payload) => {
               const remoteData = payload.new as any;
               if (remoteData && remoteData.settings) {
-                  console.log("Received profile update", remoteData);
-                  isIncomingUpdateRef.current = true; // Block save trigger
-
+                  isIncomingUpdateRef.current = true;
                   const { plan, stats, ...settingsRest } = remoteData.settings;
-                  
-                  // Update Settings
-                  setUserSettings(prev => ({ 
-                      ...prev, 
-                      ...settingsRest, 
-                      themeColor: remoteData.theme_color, 
-                      customBackground: remoteData.custom_background 
-                  }));
-
-                  // Update Plan
+                  setUserSettings(prev => ({ ...prev, ...settingsRest, themeColor: remoteData.theme_color, customBackground: remoteData.custom_background }));
                   if (plan) setUserPlan(plan);
-
-                  // Update Stats
                   if (stats) {
                       setStreak(stats.streak || 0);
                       const today = new Date().toDateString();
@@ -381,118 +347,62 @@ export const App = () => {
                           setDailyImageCount(0);
                       }
                   }
-                  
                   addToast('Настройките са синхронизирани', 'info');
               }
           })
           .subscribe();
-
       return () => { supabase.removeChannel(channel); };
   }, [session?.user?.id, missingDbTables]);
 
-
-  // Cloud Sync: Save Sessions on Change
+  // Saving Effects (Same as before...)
   useEffect(() => {
       if (!session?.user?.id || !isRemoteDataLoaded) return;
       if (missingDbTables) return; 
-      
-      if (isIncomingUpdateRef.current) {
-          isIncomingUpdateRef.current = false;
-          return;
-      }
-      
+      if (isIncomingUpdateRef.current) { isIncomingUpdateRef.current = false; return; }
       setSyncStatus('syncing');
       setSyncErrorDetails(null);
-
       if (syncSessionsTimer.current) clearTimeout(syncSessionsTimer.current);
-      
       syncSessionsTimer.current = setTimeout(async () => {
           const sanitizedSessions = sessions.map(s => ({
-              ...s,
-              messages: s.messages.map(m => ({
-                  ...m,
-                  images: m.images ? [] : undefined 
-              }))
+              ...s, messages: s.messages.map(m => ({ ...m, images: m.images ? [] : undefined }))
           }));
-
           const { error } = await supabase.from('user_data').upsert({
-              user_id: session.user.id,
-              data: sanitizedSessions,
-              updated_at: new Date().toISOString()
+              user_id: session.user.id, data: sanitizedSessions, updated_at: new Date().toISOString()
           });
-          
-          if (error) {
-             console.error("Sync Error:", error);
-             setSyncStatus('error');
-             setSyncErrorDetails(error.message || "Unknown error");
-             if (error.code === '42P01') setMissingDbTables(true);
-          } else {
-             setSyncStatus('synced');
-          }
+          if (error) { setSyncStatus('error'); setSyncErrorDetails(error.message || "Unknown error"); if (error.code === '42P01') setMissingDbTables(true); } else { setSyncStatus('synced'); }
       }, 2000); 
-
       return () => { if(syncSessionsTimer.current) clearTimeout(syncSessionsTimer.current); };
   }, [sessions, session?.user?.id, isRemoteDataLoaded, missingDbTables]);
 
-  // Cloud Sync: Save Settings, Plan & Stats on Change
   useEffect(() => {
       if (!session?.user?.id || !isRemoteDataLoaded) return;
       if (missingDbTables) return;
-
-      if (isIncomingUpdateRef.current) {
-          isIncomingUpdateRef.current = false;
-          return;
-      }
-
+      if (isIncomingUpdateRef.current) { isIncomingUpdateRef.current = false; return; }
       if (syncSettingsTimer.current) clearTimeout(syncSettingsTimer.current);
-      
       syncSettingsTimer.current = setTimeout(async () => {
-          // Prepare consolidated settings object
           const fullSettingsPayload = {
-              ...userSettings,
-              plan: userPlan,
-              stats: {
-                  streak,
-                  dailyImageCount,
-                  lastImageDate: localStorage.getItem('uchebnik_image_date'),
-                  lastVisit: localStorage.getItem('uchebnik_last_visit')
-              }
+              ...userSettings, plan: userPlan,
+              stats: { streak, dailyImageCount, lastImageDate: localStorage.getItem('uchebnik_image_date'), lastVisit: localStorage.getItem('uchebnik_last_visit') }
           };
-
           const { error } = await supabase.from('profiles').upsert({
-              id: session.user.id,
-              settings: fullSettingsPayload,
-              theme_color: userSettings.themeColor,
-              custom_background: userSettings.customBackground,
-              updated_at: new Date().toISOString()
+              id: session.user.id, settings: fullSettingsPayload, theme_color: userSettings.themeColor, custom_background: userSettings.customBackground, updated_at: new Date().toISOString()
           });
-          if (error && error.code === '42P01') {
-              setMissingDbTables(true);
-          }
+          if (error && error.code === '42P01') { setMissingDbTables(true); }
       }, 1000);
-
       return () => { if(syncSettingsTimer.current) clearTimeout(syncSettingsTimer.current); };
   }, [userSettings, userPlan, streak, dailyImageCount, session?.user?.id, isRemoteDataLoaded, missingDbTables]);
 
-
-  // Window Resize Listener
+  // Window Resize
   useEffect(() => {
     const handleResize = () => {
-       if (window.innerWidth >= 1024) {
-           setSidebarOpen(true);
-       } else {
-           setSidebarOpen(false);
-       }
+       if (window.innerWidth >= 1024) { setSidebarOpen(true); } else { setSidebarOpen(false); }
     };
-    
-    // Initial check
     if (window.innerWidth >= 1024) setSidebarOpen(true);
-    
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Data Loading Effect (IndexedDB)
+  // Initialization Data Loading (Same as before...)
   useEffect(() => {
     const initData = async () => {
         const userId = session?.user?.id;
@@ -503,10 +413,7 @@ export const App = () => {
         const lastVisitKey = userId ? `uchebnik_last_visit_${userId}` : 'uchebnik_last_visit';
 
         try {
-            // Load Sessions
             const loadedSessions = await getSessionsFromStorage(sessionsKey);
-            
-            // Only use local if remote hasn't loaded (Offline Mode or Initial Load)
             if (!isRemoteDataLoadedRef.current) {
                 if (loadedSessions && loadedSessions.length > 0) setSessions(loadedSessions);
                 else {
@@ -520,8 +427,6 @@ export const App = () => {
                     }
                 }
             }
-
-            // Load Settings
             const loadedSettings = await getSettingsFromStorage(settingsKey);
             if (!isRemoteDataLoadedRef.current) {
                 if (loadedSettings) setUserSettings(loadedSettings);
@@ -529,35 +434,18 @@ export const App = () => {
                      const lsSettings = localStorage.getItem(settingsKey);
                      if (lsSettings) setUserSettings(JSON.parse(lsSettings));
                      else if (userId) {
-                        // Default settings
                         setUserSettings({
-                            userName: session?.user?.user_metadata?.full_name || '', 
-                            gradeLevel: '8-12', 
-                            textSize: 'normal', 
-                            haptics: true, 
-                            notifications: true, 
-                            sound: true, 
-                            reduceMotion: false, 
-                            responseLength: 'concise', 
-                            creativity: 'balanced', 
-                            languageLevel: 'standard', 
-                            preferredModel: 'auto',
-                            themeColor: '#6366f1',
-                            customBackground: null
+                            userName: session?.user?.user_metadata?.full_name || '', gradeLevel: '8-12', textSize: 'normal', haptics: true, notifications: true, sound: true, reduceMotion: false, responseLength: 'concise', creativity: 'balanced', languageLevel: 'standard', preferredModel: 'auto', themeColor: '#6366f1', customBackground: null
                         });
                      }
                 }
             }
-        } catch (err) {
-            console.error("Initialization Error", err);
-        }
+        } catch (err) { console.error("Initialization Error", err); }
 
-        // Plan & Streak (From LocalStorage fallbacks, or if offline)
         if (!isRemoteDataLoadedRef.current) {
             const savedPlan = localStorage.getItem(planKey);
             if (savedPlan) setUserPlan(savedPlan as UserPlan);
             else {
-                // Legacy Guest Pro check
                if (!userId) {
                    const oldPro = localStorage.getItem('uchebnik_pro_status');
                    if (oldPro === 'unlocked') {
@@ -567,16 +455,13 @@ export const App = () => {
                }
             }
         }
-
         const savedAdminKeys = localStorage.getItem('uchebnik_admin_keys');
         if (savedAdminKeys) setGeneratedKeys(JSON.parse(savedAdminKeys));
 
         const today = new Date().toDateString();
-        
         if (!isRemoteDataLoadedRef.current) {
             const lastUsageDate = localStorage.getItem('uchebnik_image_date');
             const lastUsageCount = localStorage.getItem('uchebnik_image_count');
-
             if (lastUsageDate !== today) {
                 setDailyImageCount(0);
                 localStorage.setItem('uchebnik_image_date', today);
@@ -584,15 +469,11 @@ export const App = () => {
             } else {
                 setDailyImageCount(parseInt(lastUsageCount || '0'));
             }
-
-            // Streak Logic
             const lastVisit = localStorage.getItem(lastVisitKey);
             const savedStreak = parseInt(localStorage.getItem(streakKey) || '0', 10);
-            
             if (lastVisit !== today) {
                 const yesterday = new Date();
                 yesterday.setDate(yesterday.getDate() - 1);
-                
                 if (lastVisit === yesterday.toDateString()) {
                     const newStreak = savedStreak + 1;
                     setStreak(newStreak);
@@ -607,34 +488,16 @@ export const App = () => {
             }
         }
     };
-
     initData();
-
     const loadVoices = () => { if (typeof window !== 'undefined' && window.speechSynthesis) window.speechSynthesis.getVoices(); };
     if (typeof window !== 'undefined' && window.speechSynthesis) { loadVoices(); window.speechSynthesis.onvoiceschanged = loadVoices; }
   }, [session, isRemoteDataLoaded]);
 
-  // Persist Data (IndexedDB)
-  useEffect(() => { 
-      const userId = session?.user?.id;
-      const key = userId ? `uchebnik_sessions_${userId}` : 'uchebnik_sessions';
-      saveSessionsToStorage(key, sessions);
-  }, [sessions, session]);
-
-  useEffect(() => { 
-      const userId = session?.user?.id;
-      const key = userId ? `uchebnik_settings_${userId}` : 'uchebnik_settings';
-      saveSettingsToStorage(key, userSettings);
-  }, [userSettings, session]);
-
-  useEffect(() => {
-      const userId = session?.user?.id;
-      const key = userId ? `uchebnik_plan_${userId}` : 'uchebnik_user_plan';
-      try { localStorage.setItem(key, userPlan); } catch(e) {}
-  }, [userPlan, session]);
-
+  // Persist Data (Same as before...)
+  useEffect(() => { const userId = session?.user?.id; const key = userId ? `uchebnik_sessions_${userId}` : 'uchebnik_sessions'; saveSessionsToStorage(key, sessions); }, [sessions, session]);
+  useEffect(() => { const userId = session?.user?.id; const key = userId ? `uchebnik_settings_${userId}` : 'uchebnik_settings'; saveSettingsToStorage(key, userSettings); }, [userSettings, session]);
+  useEffect(() => { const userId = session?.user?.id; const key = userId ? `uchebnik_plan_${userId}` : 'uchebnik_user_plan'; try { localStorage.setItem(key, userPlan); } catch(e) {} }, [userPlan, session]);
   useEffect(() => { document.documentElement.classList.toggle('dark', isDarkMode); }, [isDarkMode]);
-  
   useEffect(() => { activeSubjectRef.current = activeSubject; if(activeSubject && isVoiceCallActive) endVoiceCall(); }, [activeSubject]);
   useEffect(() => { sessionsRef.current = sessions; }, [sessions]);
   useEffect(() => { activeSessionIdRef.current = activeSessionId; }, [activeSessionId]);
@@ -643,56 +506,34 @@ export const App = () => {
   useEffect(() => { voiceCallStatusRef.current = voiceCallStatus; }, [voiceCallStatus]);
   useEffect(() => { loadingSubjectsRef.current = loadingSubjects; }, [loadingSubjects]);
 
+  // Updated Effect to handle pending input with potential images
   useEffect(() => {
-    if (pendingHomeMessage && activeSubject?.id === SubjectId.GENERAL && activeSessionId) {
-       handleSend(pendingHomeMessage);
-       setPendingHomeMessage(null);
+    if (pendingHomeInput && activeSubject?.id === SubjectId.GENERAL && activeSessionId) {
+       handleSend(pendingHomeInput.text, pendingHomeInput.images);
+       setPendingHomeInput(null);
     }
-  }, [activeSubject, activeSessionId, pendingHomeMessage]);
+  }, [activeSubject, activeSessionId, pendingHomeInput]);
 
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); 
-  }, [sessions, activeSessionId, isImageProcessing, showSubjectDashboard]);
+  useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [sessions, activeSessionId, isImageProcessing, showSubjectDashboard]);
 
+  // Voice Effects (Same as before...)
   useEffect(() => {
     voiceMutedRef.current = voiceMuted;
     if (isVoiceCallActive) {
-      if (voiceMuted) {
-         if (voiceCallStatus === 'listening') {
-             voiceCallRecognitionRef.current?.stop();
-         }
-      } else {
-         if (voiceCallStatus === 'listening' || voiceCallStatus === 'idle') {
-             startVoiceRecognition();
-         }
-      }
+      if (voiceMuted) { if (voiceCallStatus === 'listening') { voiceCallRecognitionRef.current?.stop(); } } 
+      else { if (voiceCallStatus === 'listening' || voiceCallStatus === 'idle') { startVoiceRecognition(); } }
     }
   }, [voiceMuted, isVoiceCallActive]);
 
-  useEffect(() => {
-    if (isVoiceCallActive) {
-      setVoiceCallStatus('listening');
-      startVoiceRecognition();
-    }
-  }, [isVoiceCallActive]);
+  useEffect(() => { if (isVoiceCallActive) { setVoiceCallStatus('listening'); startVoiceRecognition(); } }, [isVoiceCallActive]);
+  useEffect(() => { return () => { window.speechSynthesis.cancel(); if(audioRef.current) audioRef.current.pause(); } }, []);
 
-  useEffect(() => {
-    return () => {
-        window.speechSynthesis.cancel();
-        if(audioRef.current) audioRef.current.pause();
-    }
-  }, []);
-
-  // --- Logic Helpers ---
+  // --- Logic Helpers --- (Same as before...)
   const checkImageLimit = (count = 1): boolean => {
       let limit = 4;
       if (userPlan === 'plus') limit = 12;
       if (userPlan === 'pro') limit = 9999;
-
-      if (dailyImageCount + count > limit) {
-          addToast(`Достигнахте лимита за изображения за деня (${limit}). Ъпгрейднете плана си за повече.`, 'error');
-          return false;
-      }
+      if (dailyImageCount + count > limit) { addToast(`Достигнахте лимита за изображения за деня (${limit}). Ъпгрейднете плана си за повече.`, 'error'); return false; }
       return true;
   };
 
@@ -708,125 +549,58 @@ export const App = () => {
     const greetingName = userSettings.userName ? `, ${userSettings.userName}` : '';
     let welcomeText = "";
     const subjectName = SUBJECTS.find(s => s.id === subjectId)?.name;
-
     const getModeName = (m: AppMode) => {
         switch(m) {
-            case AppMode.SOLVE: return "Решаване";
-            case AppMode.LEARN: return "Учене";
-            case AppMode.TEACHER_TEST: return "Тест";
-            case AppMode.TEACHER_PLAN: return "План";
-            case AppMode.TEACHER_RESOURCES: return "Ресурси";
-            case AppMode.DRAW: return "Рисуване";
-            case AppMode.PRESENTATION: return "Презентация";
-            case AppMode.CHAT: return "Чат";
-            default: return "Чат";
+            case AppMode.SOLVE: return "Решаване"; case AppMode.LEARN: return "Учене"; case AppMode.TEACHER_TEST: return "Тест"; case AppMode.TEACHER_PLAN: return "План"; case AppMode.TEACHER_RESOURCES: return "Ресурси"; case AppMode.DRAW: return "Рисуване"; case AppMode.PRESENTATION: return "Презентация"; case AppMode.CHAT: return "Чат"; default: return "Чат";
         }
     };
-
     let sessionBaseName = subjectName;
-    if (initialMode) {
-        sessionBaseName = getModeName(initialMode);
-    }
-    
+    if (initialMode) { sessionBaseName = getModeName(initialMode); }
     const existingCount = sessions.filter(s => s.subjectId === subjectId && s.role === (role || userRole || undefined) && s.mode === initialMode).length;
-    
-    const sessionTitle = subjectId === SubjectId.GENERAL 
-        ? `Общ Чат #${existingCount + 1}`
-        : `${sessionBaseName} #${existingCount + 1}`;
-
+    const sessionTitle = subjectId === SubjectId.GENERAL ? `Общ Чат #${existingCount + 1}` : `${sessionBaseName} #${existingCount + 1}`;
     const newSession: Session = {
-      id: crypto.randomUUID(), 
-      subjectId, 
-      title: sessionTitle, 
-      createdAt: Date.now(), 
-      lastModified: Date.now(), 
-      preview: 'Начало', 
-      messages: [], 
-      role: role || userRole || undefined,
-      mode: initialMode
+      id: crypto.randomUUID(), subjectId, title: sessionTitle, createdAt: Date.now(), lastModified: Date.now(), preview: 'Начало', messages: [], role: role || userRole || undefined, mode: initialMode
     };
-
-    if (subjectId === SubjectId.GENERAL) {
-        welcomeText = `Здравей${greetingName}! Аз съм Uchebnik AI. Попитай ме каквото и да е!`;
-    } else {
-        if (role === 'teacher') {
-             welcomeText = `Здравейте, колега! Аз съм Вашият AI асистент по **${subjectName}**. Как мога да Ви съдействам?`;
-        } else {
-             welcomeText = `Здравей${greetingName}! Аз съм твоят помощник по **${subjectName}**.`;
-        }
+    if (subjectId === SubjectId.GENERAL) { welcomeText = `Здравей${greetingName}! Аз съм Uchebnik AI. Попитай ме каквото и да е!`; } 
+    else {
+        if (role === 'teacher') { welcomeText = `Здравейте, колега! Аз съм Вашият AI асистент по **${subjectName}**. Как мога да Ви съдействам?`; } 
+        else { welcomeText = `Здравей${greetingName}! Аз съм твоят помощник по **${subjectName}**.`; }
     }
-
-    newSession.messages.push({
-        id: 'welcome-' + Date.now(), role: 'model', timestamp: Date.now(),
-        text: welcomeText
-    });
+    newSession.messages.push({ id: 'welcome-' + Date.now(), role: 'model', timestamp: Date.now(), text: welcomeText });
     setSessions(prev => [newSession, ...prev]);
     setActiveSessionId(newSession.id);
     return newSession;
   };
 
-  const handleLogout = async () => {
-      await supabase.auth.signOut();
-  };
+  const handleLogout = async () => { await supabase.auth.signOut(); };
 
   const handleUpdateAccount = async () => {
       try {
-          const updates: any = {
-              data: {
-                  first_name: editProfile.firstName,
-                  last_name: editProfile.lastName,
-                  full_name: `${editProfile.firstName} ${editProfile.lastName}`.trim(),
-                  avatar_url: editProfile.avatar
-              }
-          };
-
+          const updates: any = { data: { first_name: editProfile.firstName, last_name: editProfile.lastName, full_name: `${editProfile.firstName} ${editProfile.lastName}`.trim(), avatar_url: editProfile.avatar } };
           const isEmailChange = editProfile.email !== session?.user?.email;
           const isPasswordChange = !!editProfile.password;
-
           if (isEmailChange || isPasswordChange) {
-              if (!editProfile.currentPassword) {
-                  addToast('Моля, въведете текущата си парола, за да запазите промените по акаунта.', 'error');
-                  return;
-              }
-              const { error: signInError } = await supabase.auth.signInWithPassword({
-                  email: session?.user?.email || '',
-                  password: editProfile.currentPassword
-              });
-              if (signInError) {
-                  addToast('Грешна текуща парола.', 'error');
-                  return;
-              }
+              if (!editProfile.currentPassword) { addToast('Моля, въведете текущата си парола, за да запазите промените по акаунта.', 'error'); return; }
+              const { error: signInError } = await supabase.auth.signInWithPassword({ email: session?.user?.email || '', password: editProfile.currentPassword });
+              if (signInError) { addToast('Грешна текуща парола.', 'error'); return; }
           }
-
           if (isEmailChange) { updates.email = editProfile.email; }
           if (isPasswordChange) { updates.password = editProfile.password; }
-
           const { error } = await supabase.auth.updateUser(updates, { emailRedirectTo: window.location.origin });
           if (error) throw error;
-
           setUserMeta({ firstName: editProfile.firstName, lastName: editProfile.lastName, avatar: editProfile.avatar });
           setUserSettings(prev => ({...prev, userName: updates.data.full_name}));
-          
           let successMessage = 'Профилът е обновен успешно!';
           if (isEmailChange) { successMessage += ' Моля, проверете имейла си за потвърждение на промяната.'; }
-          
           setEditProfile(prev => ({ ...prev, password: '', currentPassword: '' }));
           addToast(successMessage, 'success');
-      } catch (error: any) {
-          addToast(error.message || 'Грешка при обновяване на профила.', 'error');
-      }
+      } catch (error: any) { addToast(error.message || 'Грешка при обновяване на профила.', 'error'); }
   };
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (file) {
-          try {
-              // Smaller size for avatars to save space
-              const resized = await resizeImage(file, 300, 0.7);
-              setEditProfile(prev => ({ ...prev, avatar: resized }));
-          } catch (err) {
-              addToast('Грешка при качване на снимка', 'error');
-          }
+          try { const resized = await resizeImage(file, 300, 0.7); setEditProfile(prev => ({ ...prev, avatar: resized })); } catch (err) { addToast('Грешка при качване на снимка', 'error'); }
       }
   };
 
@@ -836,188 +610,88 @@ export const App = () => {
         if (window.innerWidth < 1024) setSidebarOpen(false); 
         return; 
     }
-
-    if (unreadSubjects.has(subject.id)) { 
-        const newUnread = new Set(unreadSubjects); newUnread.delete(subject.id); setUnreadSubjects(newUnread); 
-    }
-    
+    if (unreadSubjects.has(subject.id)) { const newUnread = new Set(unreadSubjects); newUnread.delete(subject.id); setUnreadSubjects(newUnread); }
     if (role) setUserRole(role);
-
     if (subject.id === SubjectId.GENERAL) {
-        setActiveSubject(subject);
-        setActiveMode(AppMode.CHAT);
-        setShowSubjectDashboard(false);
-        setUserRole(null);
+        setActiveSubject(subject); setActiveMode(AppMode.CHAT); setShowSubjectDashboard(false); setUserRole(null);
     } else {
-        setActiveSubject(subject);
-        setShowSubjectDashboard(true);
+        setActiveSubject(subject); setShowSubjectDashboard(true);
     }
-    
-    setInputValue(''); 
-    setSelectedImages([]); 
-    setIsImageProcessing(false); 
-    setReplyingTo(null);
+    setInputValue(''); setSelectedImages([]); setIsImageProcessing(false); setReplyingTo(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
-
     if (subject.id === SubjectId.GENERAL) {
         const subSessions = sessions.filter(s => s.subjectId === subject.id).sort((a, b) => b.lastModified - a.lastModified);
         if (subSessions.length > 0) setActiveSessionId(subSessions[0].id); else createNewSession(subject.id);
-    } else {
-        setActiveSessionId(null);
-    }
-
+    } else { setActiveSessionId(null); }
     if (window.innerWidth < 1024) setSidebarOpen(false);
   };
 
   const handleStartMode = (mode: AppMode) => {
       if (!activeSubject) return;
-      setActiveMode(mode);
-      setShowSubjectDashboard(false);
-      
+      setActiveMode(mode); setShowSubjectDashboard(false);
       const relevantSessions = sessions.filter(s => s.subjectId === activeSubject.id && s.role === userRole && s.mode === mode).sort((a, b) => b.lastModified - a.lastModified);
-      if (relevantSessions.length > 0) {
-          setActiveSessionId(relevantSessions[0].id);
-      } else {
-          createNewSession(activeSubject.id, userRole || undefined, mode);
-      }
+      if (relevantSessions.length > 0) { setActiveSessionId(relevantSessions[0].id); } else { createNewSession(activeSubject.id, userRole || undefined, mode); }
   };
 
-  const handleReply = (msg: Message) => {
-    setReplyingTo(msg);
-  };
+  const handleReply = (msg: Message) => { setReplyingTo(msg); };
 
   const handleSend = async (overrideText?: string, overrideImages?: string[]) => {
-    if (!session) {
-        setShowAuthModal(true);
-        return;
-    }
-
+    if (!session) { setShowAuthModal(true); return; }
     const currentSubject = activeSubjectRef.current;
     const currentSessionId = activeSessionIdRef.current;
     const currentMode = activeModeRef.current;
     const currentSessionsList = sessionsRef.current;
     const currentLoading = loadingSubjectsRef.current;
-
     const textToSend = overrideText || inputValue;
-    
     if ((!textToSend.trim() && selectedImages.length === 0 && (!overrideImages || overrideImages.length === 0)) || !currentSubject || !currentSessionId) return;
-    
     if (currentLoading[currentSubject.id]) return;
-
     if (isListening) { recognitionRef.current?.stop(); setIsListening(false); }
-
     const currentSubId = currentSubject.id;
     const currentImgs = overrideImages || [...selectedImages];
     const sessId = currentSessionId;
-
-    if (currentImgs.length > 0 && !checkImageLimit(currentImgs.length)) {
-        return;
-    }
-
-    const replyContext = replyingTo;
-    setReplyingTo(null);
-
-    const newUserMsg: Message = { 
-        id: Date.now().toString(), 
-        role: 'user', 
-        text: textToSend, 
-        images: currentImgs, 
-        timestamp: Date.now(),
-        replyToId: replyContext?.id
-    };
-
+    if (currentImgs.length > 0 && !checkImageLimit(currentImgs.length)) { return; }
+    const replyContext = replyingTo; setReplyingTo(null);
+    const newUserMsg: Message = { id: Date.now().toString(), role: 'user', text: textToSend, images: currentImgs, timestamp: Date.now(), replyToId: replyContext?.id };
     const tempAiMsgId = (Date.now() + 1).toString();
-    const tempAiMsg: Message = {
-       id: tempAiMsgId,
-       role: 'model',
-       text: "",
-       timestamp: Date.now(),
-       reasoning: "",
-       isStreaming: true
-    };
-
+    const tempAiMsg: Message = { id: tempAiMsgId, role: 'model', text: "", timestamp: Date.now(), reasoning: "", isStreaming: true };
     setSessions(prev => prev.map(s => {
-        if (s.id === sessId) {
-            return { 
-                ...s, 
-                messages: [...s.messages, newUserMsg, tempAiMsg], 
-                lastModified: Date.now(), 
-                preview: textToSend.substring(0, 50), 
-                role: userRole || undefined 
-            };
-        }
+        if (s.id === sessId) { return { ...s, messages: [...s.messages, newUserMsg, tempAiMsg], lastModified: Date.now(), preview: textToSend.substring(0, 50), role: userRole || undefined }; }
         return s;
     }));
-
     setInputValue(''); setSelectedImages([]); if(fileInputRef.current) fileInputRef.current.value = '';
     setLoadingSubjects(prev => ({ ...prev, [currentSubId]: true }));
-
     let finalPrompt = textToSend;
     if (replyContext) {
         const snippet = replyContext.text.substring(0, 300) + (replyContext.text.length > 300 ? '...' : '');
         const roleName = replyContext.role === 'user' ? 'User' : 'Assistant';
         finalPrompt = `[Replying to ${roleName}'s message: "${snippet}"]\n\n${textToSend}`;
     }
-
     if (userSettings.responseLength === 'concise') finalPrompt += " (Short answer)"; else finalPrompt += " (Detailed answer)";
     if (userSettings.creativity === 'strict') finalPrompt += " (Strict)"; else if (userSettings.creativity === 'creative') finalPrompt += " (Creative)";
-    
     try {
       const sessionMessages = currentSessionsList.find(s => s.id === sessId)?.messages || [];
       const historyForAI = [...sessionMessages, newUserMsg];
-
       let preferredModel = 'google/gemma-3-4b-it:free';
       if (userPlan === 'plus') preferredModel = 'google/gemma-3-12b-it:free';
       if (userPlan === 'pro') preferredModel = 'google/gemma-3-27b-it:free';
-
       setLoadingSubjects(prev => ({ ...prev, [currentSubId]: false }));
-
-      const response = await generateResponse(
-          currentSubId, 
-          currentMode, 
-          finalPrompt, 
-          currentImgs, 
-          historyForAI, 
-          preferredModel,
-          (textChunk, reasoningChunk) => {
+      const response = await generateResponse(currentSubId, currentMode, finalPrompt, currentImgs, historyForAI, preferredModel, (textChunk, reasoningChunk) => {
               setSessions(prev => prev.map(s => {
                   if (s.id === sessId) {
-                      return {
-                          ...s,
-                          messages: s.messages.map(m => {
-                              if (m.id === tempAiMsgId) {
-                                  return { ...m, text: textChunk, reasoning: reasoningChunk, isStreaming: true };
-                              }
+                      return { ...s, messages: s.messages.map(m => {
+                              if (m.id === tempAiMsgId) { return { ...m, text: textChunk, reasoning: reasoningChunk, isStreaming: true }; }
                               return m;
-                          })
-                      };
+                          }) };
                   }
                   return s;
               }));
-          }
-      );
-      
-      if (currentImgs.length > 0) {
-          incrementImageCount(currentImgs.length);
-      }
-
+      });
+      if (currentImgs.length > 0) { incrementImageCount(currentImgs.length); }
       setSessions(prev => prev.map(s => {
           if (s.id === sessId) {
               const updatedMessages = s.messages.map(m => {
                   if (m.id === tempAiMsgId) {
-                      return {
-                          ...m,
-                          text: response.text,
-                          reasoning: response.reasoning,
-                          isError: response.isError,
-                          type: response.type,
-                          slidesData: response.slidesData,
-                          testData: response.testData,
-                          chartData: response.chartData,
-                          geometryData: response.geometryData,
-                          imageAnalysis: response.imageAnalysis,
-                          isStreaming: false
-                      };
+                      return { ...m, text: response.text, reasoning: response.reasoning, isError: response.isError, type: response.type, slidesData: response.slidesData, testData: response.testData, chartData: response.chartData, geometryData: response.geometryData, imageAnalysis: response.imageAnalysis, isStreaming: false };
                   }
                   return m;
               });
@@ -1025,68 +699,33 @@ export const App = () => {
           }
           return s;
       }));
-
       if (activeSubjectRef.current?.id !== currentSubId) {
          setUnreadSubjects(prev => new Set(prev).add(currentSubId));
-         if (userSettings.notifications) { 
-             setNotification({ message: `Нов отговор: ${SUBJECTS.find(s => s.id === currentSubId)?.name}`, subjectId: currentSubId }); 
-             setTimeout(() => setNotification(null), 4000); 
-         }
-      } else if (userSettings.notifications && userSettings.sound) {
-         new Audio('https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3').play().catch(()=>{});
-      }
+         if (userSettings.notifications) { setNotification({ message: `Нов отговор: ${SUBJECTS.find(s => s.id === currentSubId)?.name}`, subjectId: currentSubId }); setTimeout(() => setNotification(null), 4000); }
+      } else if (userSettings.notifications && userSettings.sound) { new Audio('https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3').play().catch(()=>{}); }
       return response.text;
     } catch (error) {
        console.error("HandleSend Error:", error);
        setLoadingSubjects(prev => ({ ...prev, [currentSubId]: false }));
        const errorMsg: Message = { id: Date.now().toString(), role: 'model', text: "Възникна грешка. Моля опитайте отново.", isError: true, timestamp: Date.now(), isStreaming: false };
-       setSessions(prev => prev.map(s => {
-           if (s.id === sessId) {
-               return { 
-                   ...s, 
-                   messages: s.messages.map(m => m.id === tempAiMsgId ? errorMsg : m) 
-               };
-           }
-           return s;
-       }));
+       setSessions(prev => prev.map(s => { if (s.id === sessId) { return { ...s, messages: s.messages.map(m => m.id === tempAiMsgId ? errorMsg : m) }; } return s; }));
        return "Възникна грешка.";
     }
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!session) {
-        setShowAuthModal(true);
-        e.target.value = '';
-        return;
-    }
+    if (!session) { setShowAuthModal(true); e.target.value = ''; return; }
     const files = e.target.files;
     if (files && files.length > 0) {
-      if (!checkImageLimit(files.length)) {
-          e.target.value = '';
-          return;
-      }
-      
+      if (!checkImageLimit(files.length)) { e.target.value = ''; return; }
       setIsImageProcessing(true);
-      try {
-        const processedImages = await Promise.all(
-          Array.from(files).map(file => resizeImage(file as File, 800, 0.6))
-        );
-        setSelectedImages(prev => [...prev, ...processedImages]);
-      } catch (err) {
-        console.error("Image processing error", err);
-        addToast("Грешка при обработката на изображението.", "error");
-      } finally {
-        setIsImageProcessing(false);
-      }
+      try { const processedImages = await Promise.all(Array.from(files).map(file => resizeImage(file as File, 800, 0.6))); setSelectedImages(prev => [...prev, ...processedImages]); } catch (err) { console.error("Image processing error", err); addToast("Грешка при обработката на изображението.", "error"); } finally { setIsImageProcessing(false); }
       e.target.value = '';
     }
   };
 
   const handleCameraCapture = (base64Image: string) => {
-    if (!session) {
-        setShowAuthModal(true);
-        return;
-    }
+    if (!session) { setShowAuthModal(true); return; }
     if (!checkImageLimit(1)) return;
     setSelectedImages(prev => [...prev, base64Image]);
   };
@@ -1096,25 +735,11 @@ export const App = () => {
     if (file) {
       try {
         let finalImage: string;
-        
         if (file.type === 'image/gif') {
-            // Convert GIF to base64 directly to preserve animation
-            finalImage = await new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = () => resolve(reader.result as string);
-                reader.onerror = reject;
-                reader.readAsDataURL(file);
-            });
-        } else {
-            // Larger size for backgrounds (up to 4096px) and higher quality (0.95)
-            finalImage = await resizeImage(file, 4096, 0.95);
-        }
-        
+            finalImage = await new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(reader.result as string); reader.onerror = reject; reader.readAsDataURL(file); });
+        } else { finalImage = await resizeImage(file, 4096, 0.95); }
         setUserSettings(prev => ({ ...prev, customBackground: finalImage }));
-      } catch (err) {
-        console.error("Background processing error", err);
-        addToast("Грешка при обработката на фона.", "error");
-      }
+      } catch (err) { console.error("Background processing error", err); addToast("Грешка при обработката на фона.", "error"); }
     }
     e.target.value = '';
   };
@@ -1123,37 +748,22 @@ export const App = () => {
   const handleDeleteMessage = (mId: string) => activeSessionId && setSessions(prev => prev.map(s => s.id === activeSessionId ? { ...s, messages: s.messages.filter(m => m.id !== mId) } : s));
   
   const handleShare = async (text: string) => {
-    if (navigator.share) {
-        try {
-            await navigator.share({ text });
-        } catch (err) {
-            console.error("Error sharing:", err);
-        }
-    } else {
-        handleCopy(text, 'share-fallback');
-        addToast('Текстът е копиран!', 'success');
-    }
+    if (navigator.share) { try { await navigator.share({ text }); } catch (err) { console.error("Error sharing:", err); } } else { handleCopy(text, 'share-fallback'); addToast('Текстът е копиран!', 'success'); }
   };
 
   const deleteSession = (sId: string) => { 
     setConfirmModal({
-      isOpen: true,
-      title: 'Изтриване на чат',
-      message: 'Сигурни ли сте, че искате да изтриете този чат? Това действие е необратимо.',
+      isOpen: true, title: 'Изтриване на чат', message: 'Сигурни ли сте, че искате да изтриете този чат? Това действие е необратимо.',
       onConfirm: () => {
         const nextSessions = sessionsRef.current.filter(s => s.id !== sId);
         setSessions(nextSessions); 
         if(sId === activeSessionIdRef.current) {
           const nextInSubject = nextSessions.find(s => s.subjectId === activeSubjectRef.current?.id);
           if(nextInSubject) setActiveSessionId(nextInSubject.id);
-          else if (activeSubjectRef.current) {
-               setActiveSessionId(null);
-               setShowSubjectDashboard(true);
-          }
+          else if (activeSubjectRef.current) { setActiveSessionId(null); setShowSubjectDashboard(true); }
           else setActiveSessionId(null);
         }
-        setConfirmModal(null);
-        addToast('Чатът е изтрит', 'success');
+        setConfirmModal(null); addToast('Чатът е изтрит', 'success');
       }
     });
   };
@@ -1162,9 +772,7 @@ export const App = () => {
   
   const handleClearMemory = () => {
     setConfirmModal({
-        isOpen: true,
-        title: 'Изчистване на паметта',
-        message: 'Сигурни ли сте? Това ще изтрие историята на текущия чат.',
+        isOpen: true, title: 'Изчистване на паметта', message: 'Сигурни ли сте? Това ще изтрие историята на текущия чат.',
         onConfirm: () => {
              if (activeSessionIdRef.current && activeSubjectRef.current) {
                 setSessions(prev => prev.map(s => {
@@ -1172,15 +780,7 @@ export const App = () => {
                      const greetingName = userSettings.userName ? `, ${userSettings.userName}` : '';
                      let welcomeText = "";
                      const subjectName = SUBJECTS.find(sub=>sub.id === s.subjectId)?.name;
-                     if(s.subjectId === SubjectId.GENERAL) {
-                         welcomeText = `Здравей${greetingName}! Аз съм Uchebnik AI. Попитай ме каквото и да е!`;
-                     } else {
-                         if(s.role === 'teacher') {
-                             welcomeText = `Здравейте, колега! Аз съм Вашият AI асистент по **${subjectName}**. Как мога да Ви съдействам?`;
-                         } else {
-                             welcomeText = `Здравей${greetingName}! Аз съм твоят помощник по **${subjectName}**.`;
-                         }
-                     }
+                     if(s.subjectId === SubjectId.GENERAL) { welcomeText = `Здравей${greetingName}! Аз съм Uchebnik AI. Попитай ме каквото и да е!`; } else { if(s.role === 'teacher') { welcomeText = `Здравейте, колега! Аз съм Вашият AI асистент по **${subjectName}**. Как мога да Ви съдействам?`; } else { welcomeText = `Здравей${greetingName}! Аз съм твоят помощник по **${subjectName}**.`; } }
                      return { ...s, messages: [{ id: 'reset-'+Date.now(), role: 'model', text: welcomeText, timestamp: Date.now() }] };
                    }
                    return s;
@@ -1196,127 +796,52 @@ export const App = () => {
     window.speechSynthesis.cancel(); 
     if(audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
     if(speakingTimeoutRef.current) { clearTimeout(speakingTimeoutRef.current); speakingTimeoutRef.current = null; }
-
     let hasEnded = false;
-    const safeOnEnd = () => {
-        if(hasEnded) return;
-        hasEnded = true;
-        if(speakingTimeoutRef.current) { clearTimeout(speakingTimeoutRef.current); speakingTimeoutRef.current = null; }
-        utteranceRef.current = null;
-        if(onEnd) onEnd();
-    };
-
+    const safeOnEnd = () => { if(hasEnded) return; hasEnded = true; if(speakingTimeoutRef.current) { clearTimeout(speakingTimeoutRef.current); speakingTimeoutRef.current = null; } utteranceRef.current = null; if(onEnd) onEnd(); };
     const estimatedDuration = Math.max(3000, (text.length / 10) * 1000 + 2000); 
-    speakingTimeoutRef.current = setTimeout(() => {
-        // Force stop if taking too long (race condition fix)
-        safeOnEnd();
-    }, estimatedDuration);
-
+    speakingTimeoutRef.current = setTimeout(() => { safeOnEnd(); }, estimatedDuration);
     const clean = text.replace(/[*#`_\[\]]/g, '').replace(/\$\$.*?\$\$/g, 'формула').replace(/http\S+/g, '');
     let lang = activeSubjectRef.current?.id === SubjectId.ENGLISH ? 'en-US' : activeSubjectRef.current?.id === SubjectId.FRENCH ? 'fr-FR' : 'bg-BG';
     const voices = window.speechSynthesis.getVoices();
     const v = voices.find(v => v.lang === lang) || voices.find(v => v.lang.startsWith(lang.split('-')[0]));
-    
     if ((!v && lang.startsWith('bg')) || !window.speechSynthesis) {
         const a = new Audio(`https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&q=${encodeURIComponent(clean)}&tl=${lang.split('-')[0]}`);
-        audioRef.current = a; 
-        a.onended = safeOnEnd;
-        a.onerror = (e) => { console.error("Audio error", e); safeOnEnd(); };
-        a.play().catch((e) => { console.error("Audio play error", e); safeOnEnd(); });
+        audioRef.current = a; a.onended = safeOnEnd; a.onerror = (e) => { console.error("Audio error", e); safeOnEnd(); }; a.play().catch((e) => { console.error("Audio play error", e); safeOnEnd(); });
     } else {
-        const u = new SpeechSynthesisUtterance(clean); 
-        u.lang = lang; 
-        if(v) u.voice = v; 
-        utteranceRef.current = u;
-        u.onend = safeOnEnd;
-        u.onerror = (e) => { console.error("Speech Synthesis Error", e); utteranceRef.current = null; safeOnEnd(); }
+        const u = new SpeechSynthesisUtterance(clean); u.lang = lang; if(v) u.voice = v; utteranceRef.current = u; u.onend = safeOnEnd; u.onerror = (e) => { console.error("Speech Synthesis Error", e); utteranceRef.current = null; safeOnEnd(); }
         window.speechSynthesis.speak(u);
     }
   };
   const handleSpeak = (txt: string, id: string) => { if(speakingMessageId === id) { window.speechSynthesis.cancel(); if(audioRef.current) audioRef.current.pause(); setSpeakingMessageId(null); return; } setSpeakingMessageId(id); speakText(txt, () => setSpeakingMessageId(null)); };
 
-  const startVoiceCall = () => { 
-    if (!session) {
-        setShowAuthModal(true);
-        return;
-    }
-    setIsVoiceCallActive(true); 
-  };
-  
-  const endVoiceCall = () => { 
-      setIsVoiceCallActive(false); 
-      setVoiceCallStatus('idle'); 
-      voiceCallRecognitionRef.current?.stop(); 
-      window.speechSynthesis.cancel(); 
-      utteranceRef.current = null;
-      if(speakingTimeoutRef.current) { clearTimeout(speakingTimeoutRef.current); speakingTimeoutRef.current = null; }
-  };
+  const startVoiceCall = () => { if (!session) { setShowAuthModal(true); return; } setIsVoiceCallActive(true); };
+  const endVoiceCall = () => { setIsVoiceCallActive(false); setVoiceCallStatus('idle'); voiceCallRecognitionRef.current?.stop(); window.speechSynthesis.cancel(); utteranceRef.current = null; if(speakingTimeoutRef.current) { clearTimeout(speakingTimeoutRef.current); speakingTimeoutRef.current = null; } };
 
   const startVoiceRecognition = () => {
-     if (voiceMutedRef.current) {
-        setVoiceCallStatus('idle');
-        voiceCallStatusRef.current = 'idle';
-        return;
-     }
-
+     if (voiceMutedRef.current) { setVoiceCallStatus('idle'); voiceCallStatusRef.current = 'idle'; return; }
      const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
      if(!SR) { addToast('Гласовото разпознаване не се поддържа.', 'error'); endVoiceCall(); return; }
-     
      try { voiceCallRecognitionRef.current?.stop(); } catch(e) {}
-
      const rec = new SR();
      rec.lang = activeSubjectRef.current?.id === SubjectId.ENGLISH ? 'en-US' : activeSubjectRef.current?.id === SubjectId.FRENCH ? 'fr-FR' : 'bg-BG';
-     rec.continuous = false;
-     rec.interimResults = false;
-     
-     rec.onstart = () => { 
-         if(voiceMutedRef.current) { rec.stop(); return; }
-         setVoiceCallStatus('listening');
-         voiceCallStatusRef.current = 'listening';
-     };
-     
+     rec.continuous = false; rec.interimResults = false;
+     rec.onstart = () => { if(voiceMutedRef.current) { rec.stop(); return; } setVoiceCallStatus('listening'); voiceCallStatusRef.current = 'listening'; };
      rec.onresult = async (e: any) => {
         if(voiceMutedRef.current) return;
-
         const t = e.results[0][0].transcript;
         if(t.trim()) {
-           setVoiceCallStatus('processing'); 
-           voiceCallStatusRef.current = 'processing';
-           
+           setVoiceCallStatus('processing'); voiceCallStatusRef.current = 'processing';
            const res = await handleSend(t);
-           
-           if(res) { 
-               setVoiceCallStatus('speaking'); 
-               voiceCallStatusRef.current = 'speaking';
-               speakText(res, () => { 
-                   if(isVoiceCallActiveRef.current) { startVoiceRecognition(); } 
-               }); 
-           } else { 
-               if(isVoiceCallActiveRef.current) { startVoiceRecognition(); } 
-           }
+           if(res) { setVoiceCallStatus('speaking'); voiceCallStatusRef.current = 'speaking'; speakText(res, () => { if(isVoiceCallActiveRef.current) { startVoiceRecognition(); } }); } else { if(isVoiceCallActiveRef.current) { startVoiceRecognition(); } }
         }
      };
-     
-     rec.onend = () => { 
-         if(isVoiceCallActiveRef.current && voiceCallStatusRef.current === 'listening' && !voiceMutedRef.current) {
-             try { rec.start(); } catch(e){} 
-         } 
-     };
-     rec.onerror = (e: any) => {
-        if(e.error === 'no-speech' && isVoiceCallActiveRef.current && voiceCallStatusRef.current === 'listening' && !voiceMutedRef.current) {
-            try { rec.start(); } catch(e){} 
-        } else { console.log("Recognition error", e.error); }
-     }
-
-     voiceCallRecognitionRef.current = rec; 
-     try { rec.start(); } catch(e) { console.error(e); }
+     rec.onend = () => { if(isVoiceCallActiveRef.current && voiceCallStatusRef.current === 'listening' && !voiceMutedRef.current) { try { rec.start(); } catch(e){} } };
+     rec.onerror = (e: any) => { if(e.error === 'no-speech' && isVoiceCallActiveRef.current && voiceCallStatusRef.current === 'listening' && !voiceMutedRef.current) { try { rec.start(); } catch(e){} } else { console.log("Recognition error", e.error); } }
+     voiceCallRecognitionRef.current = rec; try { rec.start(); } catch(e) { console.error(e); }
   };
 
   const toggleListening = () => {
-    if (!session) {
-        setShowAuthModal(true);
-        return;
-    }
+    if (!session) { setShowAuthModal(true); return; }
     if(isListening) { recognitionRef.current?.stop(); setIsListening(false); return; }
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if(!SR) { addToast('Няма поддръжка.', 'error'); return; }
@@ -1334,69 +859,38 @@ export const App = () => {
     recognitionRef.current = rec; rec.start();
   };
 
-  const handleRate = (messageId: string, rating: 'up' | 'down') => {
-    if (!activeSessionId) return;
-    setSessions(prev => prev.map(s => {
-      if (s.id === activeSessionId) { return { ...s, messages: s.messages.map(m => m.id === messageId ? { ...m, rating } : m) }; }
-      return s;
-    }));
-  };
-
+  const handleRate = (messageId: string, rating: 'up' | 'down') => { if (!activeSessionId) return; setSessions(prev => prev.map(s => { if (s.id === activeSessionId) { return { ...s, messages: s.messages.map(m => m.id === messageId ? { ...m, rating } : m) }; } return s; })); };
   const handleRemoveImage = (index: number) => { setSelectedImages(prev => prev.filter((_, i) => i !== index)); };
   
   const handleUnlockSubmit = async () => {
-    setUnlockLoading(true);
-    const key = unlockKeyInput.trim();
-    
-    // Use async validation which checks DB
+    setUnlockLoading(true); const key = unlockKeyInput.trim();
     const result = await redeemKey(key, session?.user?.id);
-    
     if (result.valid) {
        const newPlan = targetPlan || result.plan || 'pro';
        setUserPlan(newPlan);
-       if (newPlan !== 'free') {
-            setUserSettings(prev => ({ ...prev, preferredModel: 'auto' }));
-       }
-       setShowUnlockModal(false);
-       setUnlockKeyInput('');
+       if (newPlan !== 'free') { setUserSettings(prev => ({ ...prev, preferredModel: 'auto' })); }
+       setShowUnlockModal(false); setUnlockKeyInput('');
        addToast(`Успешно активирахте план ${newPlan.toUpperCase()}!`, 'success');
-       
-       // Sync to Supabase if logged in (for metadata backup, though now managed via profiles)
-       if (session) {
-           await supabase.auth.updateUser({
-               data: { plan: newPlan }
-           });
-       }
-    } else {
-       addToast(result.error || "Невалиден ключ.", 'error');
-    }
+       if (session) { await supabase.auth.updateUser({ data: { plan: newPlan } }); }
+    } else { addToast(result.error || "Невалиден ключ.", 'error'); }
     setUnlockLoading(false);
   };
 
-  const handleAdminLogin = async () => {
-    const isValid = await verifyAdminPassword(adminPasswordInput);
-    if (isValid) {
-      setShowAdminAuth(false);
-      setShowAdminPanel(true);
-      setAdminPasswordInput('');
-      addToast("Успешен вход в админ панела", 'success');
-    } else {
-      addToast("Грешна парола!", 'error');
-    }
-  };
+  const handleAdminLogin = async () => { const isValid = await verifyAdminPassword(adminPasswordInput); if (isValid) { setShowAdminAuth(false); setShowAdminPanel(true); setAdminPasswordInput(''); addToast("Успешен вход в админ панела", 'success'); } else { addToast("Грешна парола!", 'error'); } };
 
   const generateKey = async () => {
-    const randomCore = Math.random().toString(36).substring(2, 8).toUpperCase(); // 6 chars
-    const checksum = generateChecksum(randomCore);
-    const newKeyCode = `UCH-${randomCore}-${checksum}`;
-    
-    // Register in DB for tracking
+    const randomCore = Math.random().toString(36).substring(2, 8).toUpperCase(); const checksum = generateChecksum(randomCore); const newKeyCode = `UCH-${randomCore}-${checksum}`;
     await registerKeyInDb(newKeyCode, 'pro');
-
     const newKeyObj: GeneratedKey = { code: newKeyCode, isUsed: false };
     const updatedKeys = [newKeyObj, ...generatedKeys];
     setGeneratedKeys(updatedKeys);
     localStorage.setItem('uchebnik_admin_keys', JSON.stringify(updatedKeys));
+  };
+  
+  // Updated Quick Start Handler
+  const handleQuickStart = (message: string, images: string[] = []) => {
+      setPendingHomeInput({ text: message, images });
+      handleSubjectChange(SUBJECTS[0]); // General Chat
   };
 
   if (authLoading) {
@@ -1560,6 +1054,7 @@ export const App = () => {
                 setHomeView={setHomeView}
                 setUserRole={setUserRole}
                 setShowAdminAuth={setShowAdminAuth}
+                onQuickStart={handleQuickStart}
             />
         ) : showSubjectDashboard ? (
             <SubjectDashboard 

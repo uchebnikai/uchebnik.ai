@@ -1,11 +1,12 @@
-
-import React from 'react';
-import { Shield, Sparkles, MessageSquare, ArrowRight, School, GraduationCap, Briefcase, ArrowLeft } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { Shield, MessageSquare, ArrowRight, School, GraduationCap, Briefcase, ArrowLeft, ArrowUpRight, Search, ImageIcon, Camera, Mic, MicOff, X } from 'lucide-react';
 import { SubjectConfig, UserRole, UserSettings, HomeViewType, SubjectId } from '../../types';
 import { SUBJECTS } from '../../constants';
 import { DynamicIcon } from '../ui/DynamicIcon';
 import { ZOOM_IN, SLIDE_UP, FADE_IN } from '../../animations/transitions';
 import { getStaggeredDelay } from '../../animations/utils';
+import { CameraModal } from '../ui/CameraModal';
+import { resizeImage } from '../../utils/image';
 
 interface WelcomeScreenProps {
   homeView: HomeViewType;
@@ -15,6 +16,7 @@ interface WelcomeScreenProps {
   setHomeView: (view: HomeViewType) => void;
   setUserRole: (role: UserRole) => void;
   setShowAdminAuth: (val: boolean) => void;
+  onQuickStart: (message: string, images?: string[]) => void;
 }
 
 export const WelcomeScreen = ({
@@ -24,12 +26,96 @@ export const WelcomeScreen = ({
   handleSubjectChange,
   setHomeView,
   setUserRole,
-  setShowAdminAuth
+  setShowAdminAuth,
+  onQuickStart
 }: WelcomeScreenProps) => {
+
+    const [inputValue, setInputValue] = useState('');
+    const [selectedImages, setSelectedImages] = useState<string[]>([]);
+    const [showCamera, setShowCamera] = useState(false);
+    const [isListening, setIsListening] = useState(false);
+    const recognitionRef = useRef<any>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const startingTextRef = useRef('');
+
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            if(inputValue.trim() || selectedImages.length > 0) {
+                onQuickStart(inputValue, selectedImages);
+            }
+        }
+    };
+
+    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = e.target.files;
+        if (files && files.length > 0) {
+            try {
+                const processedImages = await Promise.all(
+                    Array.from(files).map(file => resizeImage(file as File, 800, 0.6))
+                );
+                setSelectedImages(prev => [...prev, ...processedImages]);
+            } catch (err) {
+                console.error("Image processing error", err);
+            }
+            e.target.value = '';
+        }
+    };
+
+    const handleCameraCapture = (base64Image: string) => {
+        setSelectedImages(prev => [...prev, base64Image]);
+        setShowCamera(false);
+    };
+
+    const handleRemoveImage = (index: number) => {
+        setSelectedImages(prev => prev.filter((_, i) => i !== index));
+    };
+
+    const toggleListening = () => {
+        if (isListening) {
+            recognitionRef.current?.stop();
+            setIsListening(false);
+            return;
+        }
+        
+        const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+        if (!SR) {
+            alert('Гласовото разпознаване не се поддържа от този браузър.');
+            return;
+        }
+
+        const rec = new SR();
+        rec.lang = 'bg-BG'; // Default to Bulgarian for welcome screen
+        rec.interimResults = true;
+        rec.continuous = true;
+        startingTextRef.current = inputValue;
+
+        rec.onresult = (e: any) => {
+            let f = '', inter = '';
+            for(let i = e.resultIndex; i < e.results.length; ++i) {
+                e.results[i].isFinal ? f += e.results[i][0].transcript : inter += e.results[i][0].transcript;
+            }
+            setInputValue((startingTextRef.current + ' ' + f + inter).trim());
+        };
+
+        rec.onstart = () => setIsListening(true);
+        rec.onend = () => setIsListening(false);
+        rec.onerror = () => setIsListening(false);
+        
+        recognitionRef.current = rec;
+        rec.start();
+    };
 
     return (
     <div className={`flex-1 overflow-y-auto custom-scrollbar p-4 md:p-8 flex flex-col items-center relative overflow-x-hidden bg-transparent`}>
       
+      {showCamera && (
+          <CameraModal 
+              onClose={() => setShowCamera(false)}
+              onCapture={handleCameraCapture}
+          />
+      )}
+
       {homeView === 'landing' && (
         <div className={`max-w-5xl w-full flex flex-col items-center justify-center min-h-[80vh] relative z-10 ${ZOOM_IN} duration-700`}>
           
@@ -37,7 +123,7 @@ export const WelcomeScreen = ({
               <Shield size={16} />
           </button>
 
-          <div className="text-center mb-10 md:mb-16 space-y-4 md:space-y-6 px-2">
+          <div className="text-center mb-10 md:mb-12 space-y-4 md:space-y-6 px-2 w-full">
              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/40 dark:bg-white/5 border border-indigo-500/20 text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 md:mb-6 backdrop-blur-xl shadow-lg">
                 <img src="https://i.ibb.co/LDgTCm9N/6151f23e-b922-4c62-930f-853884bf4c89.png" className="w-4 h-4 object-contain rounded-md" alt="Logo" />
                 <span>AI Учебен Асистент 2.0</span>
@@ -48,7 +134,7 @@ export const WelcomeScreen = ({
             <p className="text-lg md:text-2xl text-zinc-500 dark:text-zinc-400 font-medium max-w-2xl mx-auto leading-relaxed px-4">Твоят интелигентен помощник за училище. Какво ще учим днес?</p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6 w-full px-4 md:px-12 max-w-4xl">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6 w-full px-4 md:px-12 max-w-4xl mb-12">
             {/* General Chat */}
             <button onClick={() => handleSubjectChange(SUBJECTS[0])} className="group relative h-64 md:h-80 rounded-[32px] md:rounded-[40px] p-6 md:p-10 text-left bg-zinc-900/80 dark:bg-black/60 backdrop-blur-xl text-white shadow-2xl hover:scale-[1.02] active:scale-[0.98] transition-all duration-500 ease-out overflow-hidden ring-1 ring-white/10 hover:ring-indigo-500/30">
                <div className="relative z-10 flex flex-col h-full justify-between">
@@ -67,6 +153,58 @@ export const WelcomeScreen = ({
                   <div className="flex items-center gap-2 md:gap-3 font-bold text-xs md:text-sm text-zinc-600 dark:text-zinc-300 bg-black/5 dark:bg-white/5 w-fit px-4 md:px-6 py-2 md:py-3 rounded-full group-hover:bg-black/10 dark:group-hover:bg-white/10 transition-colors">Влез <ArrowRight size={14} className="md:w-4 md:h-4" /></div>
                </div>
             </button>
+          </div>
+
+          <div className="w-full max-w-2xl px-4 relative z-20 mb-16">
+             {selectedImages.length > 0 && (
+                <div className="flex gap-2 mb-3 overflow-x-auto pb-1">
+                    {selectedImages.map((img, i) => ( 
+                        <div key={i} className={`relative group shrink-0 ${ZOOM_IN}`}>
+                            <img src={img} className="h-16 w-16 rounded-xl object-cover border-2 border-white dark:border-zinc-700 shadow-lg"/>
+                            <button onClick={() => handleRemoveImage(i)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-md hover:scale-110 transition-transform"><X size={10}/></button>
+                        </div>
+                    ))}
+                </div>
+             )}
+
+             <div className="relative backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-2xl rounded-[28px] transition-all duration-300 focus-within:ring-2 focus-within:ring-indigo-500/30 bg-white/60 dark:bg-black/40 p-2 flex items-center gap-2">
+                {/* Buttons Group */}
+                <div className="flex items-center gap-1 pl-1">
+                    <button onClick={() => fileInputRef.current?.click()} className="p-2 text-gray-500 hover:text-indigo-600 hover:bg-white/50 dark:hover:bg-white/10 rounded-full transition-colors" title="Добави снимка">
+                        <ImageIcon size={20} strokeWidth={2}/>
+                    </button>
+                    <input type="file" ref={fileInputRef} onChange={handleImageUpload} className="hidden" accept="image/*" multiple />
+                    
+                    <button onClick={() => setShowCamera(true)} className="p-2 text-gray-500 hover:text-indigo-600 hover:bg-white/50 dark:hover:bg-white/10 rounded-full transition-colors" title="Сканирай">
+                        <Camera size={20} strokeWidth={2}/>
+                    </button>
+                    
+                    <button onClick={toggleListening} className={`p-2 rounded-full transition-all ${isListening ? 'bg-red-500 text-white animate-pulse' : 'text-gray-500 hover:text-indigo-600 hover:bg-white/50 dark:hover:bg-white/10'}`} title="Гласово въвеждане">
+                        {isListening ? <MicOff size={20}/> : <Mic size={20} strokeWidth={2}/>}
+                    </button>
+                </div>
+
+                <div className="w-px h-6 bg-gray-300 dark:bg-white/10 mx-1"></div>
+
+                <input 
+                    type="text"
+                    value={inputValue}
+                    onChange={(e) => setInputValue(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    placeholder="Попитай Uchebnik AI..."
+                    className="flex-1 bg-transparent border-none outline-none px-2 py-3 text-base text-zinc-900 dark:text-white placeholder-gray-500"
+                    autoFocus
+                />
+                
+                <button 
+                    onClick={() => (inputValue.trim() || selectedImages.length > 0) && onQuickStart(inputValue, selectedImages)}
+                    disabled={!inputValue.trim() && selectedImages.length === 0}
+                    className="flex-none w-10 h-10 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white flex items-center justify-center shadow-lg shadow-indigo-600/30 disabled:opacity-50 disabled:shadow-none transition-all active:scale-95"
+                >
+                    <ArrowUpRight size={22} strokeWidth={2.5}/>
+                </button>
+             </div>
+             <p className="text-center text-[10px] text-gray-400 mt-3 font-medium opacity-60">AI може да допуска грешки.</p>
           </div>
 
           <footer className="w-full py-12 mt-auto text-center">
