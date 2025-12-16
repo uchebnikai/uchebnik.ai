@@ -25,6 +25,8 @@ export const resizeImage = (file: File, maxDim = 800, quality = 0.6): Promise<st
         canvas.height = height;
         const ctx = canvas.getContext('2d');
         if (ctx) {
+           ctx.imageSmoothingEnabled = true;
+           ctx.imageSmoothingQuality = 'high';
            ctx.drawImage(img, 0, 0, width, height);
            // Compress to JPEG with specified quality
            resolve(canvas.toDataURL('image/jpeg', quality));

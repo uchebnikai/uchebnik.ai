@@ -1095,8 +1095,8 @@ export const App = () => {
     const file = e.target.files?.[0];
     if (file) {
       try {
-        // Larger size for backgrounds (up to 2560px) and higher quality (0.85)
-        const resized = await resizeImage(file, 2560, 0.85);
+        // Larger size for backgrounds (up to 4096px) and higher quality (0.95)
+        const resized = await resizeImage(file, 4096, 0.95);
         setUserSettings(prev => ({ ...prev, customBackground: resized }));
       } catch (err) {
         console.error("Background processing error", err);
