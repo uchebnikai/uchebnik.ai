@@ -3,6 +3,8 @@ export enum SubjectId {
   ENGLISH = 'english',
   BULGARIAN = 'bulgarian',
   FRENCH = 'french',
+  SPANISH = 'spanish',
+  JAPANESE = 'japanese',
   CHEMISTRY = 'chemistry',
   PHYSICS = 'physics',
   BIOLOGY = 'biology',

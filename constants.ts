@@ -195,6 +195,22 @@ export const SUBJECTS: SubjectConfig[] = [
     description: 'Превод и упражнения.'
   },
   {
+    id: SubjectId.SPANISH,
+    name: 'Испански език',
+    icon: 'Languages',
+    color: 'bg-orange-500',
+    modes: [AppMode.SOLVE, AppMode.LEARN, AppMode.CHAT],
+    description: 'Граматика и разговори.'
+  },
+  {
+    id: SubjectId.JAPANESE,
+    name: 'Японски език',
+    icon: 'Languages',
+    color: 'bg-red-400',
+    modes: [AppMode.SOLVE, AppMode.LEARN, AppMode.CHAT],
+    description: 'Кандзи и култура.'
+  },
+  {
     id: SubjectId.IT,
     name: 'Информатика',
     icon: 'Cpu',
