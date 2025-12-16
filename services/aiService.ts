@@ -12,6 +12,10 @@ async function withRetry<T>(fn: () => Promise<T>, retries = 3, delay = 2000): Pr
     return await fn();
   } catch (error: any) {
     const msg = error.toString().toLowerCase();
+    // Don't retry if it's a daily quota limit (free-models-per-day)
+    if (msg.includes('free-models-per-day')) {
+        throw error;
+    }
     if ((msg.includes('429') || msg.includes('503')) && retries > 0) {
       console.warn(`API Busy. Retrying... Attempts left: ${retries}. Waiting ${delay}ms.`);
       await wait(delay);
@@ -350,11 +354,22 @@ export const generateResponse = async (
 
   } catch (error: any) {
       console.error("AI API Error:", error);
-      const errorMessage = error.message || "Unknown error";
+      let errorMessage = error.message || "Unknown error";
+      let displayMessage = `Възникна грешка при връзката с AI: ${errorMessage}`;
+
+      // Customize user-friendly error messages based on status codes
+      if (errorMessage.includes("429") || errorMessage.includes("free-models-per-day")) {
+          displayMessage = "⚠️ Достигнат е дневният лимит за безплатни заявки към AI. Моля, опитайте отново утре. (Error 429)";
+      } else if (errorMessage.includes("401")) {
+          displayMessage = "⚠️ Невалиден API ключ. Моля, проверете настройките си.";
+      } else if (errorMessage.includes("503") || errorMessage.includes("502")) {
+          displayMessage = "⚠️ Сървърът на AI е временно недостъпен. Моля, опитайте след малко.";
+      }
+
       return {
           id: Date.now().toString(),
           role: 'model',
-          text: `Възникна грешка при връзката с AI (Google Gemma): ${errorMessage}. Моля, опитайте отново или проверете ключа.`,
+          text: displayMessage,
           isError: true,
           timestamp: Date.now()
       };
