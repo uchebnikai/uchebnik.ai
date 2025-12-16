@@ -130,7 +130,7 @@ export interface UserSettings {
   responseLength: 'concise' | 'detailed';
   creativity: 'strict' | 'balanced' | 'creative';
   languageLevel: 'simple' | 'standard' | 'advanced';
-  preferredModel: 'auto' | 'qwen/qwen3-235b-a22b:free';
+  preferredModel: 'auto' | 'google/gemma-3-4b-it:free' | 'google/gemma-3-12b-it:free' | 'google/gemma-3-27b-it:free';
   // New Personalization Settings
   themeColor: string; // Hex code
   customBackground: string | null; // Base64 image

@@ -981,10 +981,10 @@ export const App = () => {
       const sessionMessages = currentSessionsList.find(s => s.id === sessId)?.messages || [];
       const historyForAI = [...sessionMessages, newUserMsg];
 
-      let preferredModel = userSettings.preferredModel;
-      if (preferredModel === 'auto') {
-          preferredModel = 'qwen/qwen3-235b-a22b:free';
-      }
+      // Select model strictly based on plan
+      let preferredModel = 'google/gemma-3-4b-it:free'; // Default Free
+      if (userPlan === 'plus') preferredModel = 'google/gemma-3-12b-it:free';
+      if (userPlan === 'pro') preferredModel = 'google/gemma-3-27b-it:free';
 
       // We remove the loading spinner immediately because we are showing the stream
       setLoadingSubjects(prev => ({ ...prev, [currentSubId]: false }));
@@ -1362,7 +1362,7 @@ export const App = () => {
        const newPlan = targetPlan || result.plan || 'pro';
        setUserPlan(newPlan);
        if (newPlan !== 'free') {
-            setUserSettings(prev => ({ ...prev, preferredModel: 'qwen/qwen3-235b-a22b:free' }));
+            setUserSettings(prev => ({ ...prev, preferredModel: 'auto' }));
        }
        setShowUnlockModal(false);
        setUnlockKeyInput('');
