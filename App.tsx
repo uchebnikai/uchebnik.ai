@@ -440,21 +440,6 @@ export const App = () => {
       if (missingDbTables) return;
 
       if (isIncomingUpdateRef.current) {
-          // Note: Since sessions and settings might update separately, 
-          // we should technically have separate flags, but for simplicity 
-          // we use one. If high conflict rate, split them.
-          // For now, allow fall-through if it wasn't a session update that triggered this.
-          // However, useEffects fire specifically on dep change. 
-          // If we received a profile update, setUserSettings fired, triggering this.
-          // We must block it.
-          // Since we consume the flag in the sessions effect often, we need to be careful.
-          // Let's rely on the flag being true immediately after update.
-          // But wait, the flag is reset in the Sessions effect if sessions changed.
-          // If ONLY settings changed, Sessions effect wont run, flag stays true? 
-          // No, react batches.
-          
-          // Better approach: Just save. The DB handles concurrency reasonably well for this scale.
-          // But to avoid "bounce back" (saving what we just received), we check.
           isIncomingUpdateRef.current = false;
           return;
       }
@@ -587,8 +572,6 @@ export const App = () => {
         if (savedAdminKeys) setGeneratedKeys(JSON.parse(savedAdminKeys));
 
         const today = new Date().toDateString();
-        // Note: dailyImageCount and streak are handled via remote sync preferentially now
-        // But we still maintain local logic for offline support / responsiveness
         
         if (!isRemoteDataLoadedRef.current) {
             const lastUsageDate = localStorage.getItem('uchebnik_image_date');
@@ -629,7 +612,7 @@ export const App = () => {
 
     const loadVoices = () => { if (typeof window !== 'undefined' && window.speechSynthesis) window.speechSynthesis.getVoices(); };
     if (typeof window !== 'undefined' && window.speechSynthesis) { loadVoices(); window.speechSynthesis.onvoiceschanged = loadVoices; }
-  }, [session, isRemoteDataLoaded]); // Depend on isRemoteDataLoaded to avoid overwriting remote data with local stale data
+  }, [session, isRemoteDataLoaded]);
 
   // Persist Data (IndexedDB)
   useEffect(() => { 
@@ -668,6 +651,10 @@ export const App = () => {
   }, [activeSubject, activeSessionId, pendingHomeMessage]);
 
   useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); 
+  }, [sessions, activeSessionId, isImageProcessing, showSubjectDashboard]);
+
+  useEffect(() => {
     voiceMutedRef.current = voiceMuted;
     if (isVoiceCallActive) {
       if (voiceMuted) {
@@ -689,7 +676,6 @@ export const App = () => {
     }
   }, [isVoiceCallActive]);
 
-  // Clean up speech on unmount
   useEffect(() => {
     return () => {
         window.speechSynthesis.cancel();
@@ -835,7 +821,8 @@ export const App = () => {
       const file = e.target.files?.[0];
       if (file) {
           try {
-              const resized = await resizeImage(file);
+              // Smaller size for avatars to save space
+              const resized = await resizeImage(file, 300, 0.7);
               setEditProfile(prev => ({ ...prev, avatar: resized }));
           } catch (err) {
               addToast('Грешка при качване на снимка', 'error');
@@ -979,12 +966,10 @@ export const App = () => {
       const sessionMessages = currentSessionsList.find(s => s.id === sessId)?.messages || [];
       const historyForAI = [...sessionMessages, newUserMsg];
 
-      // Select model strictly based on plan
-      let preferredModel = 'google/gemma-3-4b-it:free'; // Default Free
+      let preferredModel = 'google/gemma-3-4b-it:free';
       if (userPlan === 'plus') preferredModel = 'google/gemma-3-12b-it:free';
       if (userPlan === 'pro') preferredModel = 'google/gemma-3-27b-it:free';
 
-      // We remove the loading spinner immediately because we are showing the stream
       setLoadingSubjects(prev => ({ ...prev, [currentSubId]: false }));
 
       const response = await generateResponse(
@@ -995,7 +980,6 @@ export const App = () => {
           historyForAI, 
           preferredModel,
           (textChunk, reasoningChunk) => {
-              // Real-time update
               setSessions(prev => prev.map(s => {
                   if (s.id === sessId) {
                       return {
@@ -1017,7 +1001,6 @@ export const App = () => {
           incrementImageCount(currentImgs.length);
       }
 
-      // Final update with complete response object (which might include slides/tests data)
       setSessions(prev => prev.map(s => {
           if (s.id === sessId) {
               const updatedMessages = s.messages.map(m => {
@@ -1057,8 +1040,6 @@ export const App = () => {
        console.error("HandleSend Error:", error);
        setLoadingSubjects(prev => ({ ...prev, [currentSubId]: false }));
        const errorMsg: Message = { id: Date.now().toString(), role: 'model', text: "Възникна грешка. Моля опитайте отново.", isError: true, timestamp: Date.now(), isStreaming: false };
-       // Replace the temp message with error or append error?
-       // Let's replace the temp message if it exists, or append if not found (though it should exist)
        setSessions(prev => prev.map(s => {
            if (s.id === sessId) {
                return { 
@@ -1088,7 +1069,7 @@ export const App = () => {
       setIsImageProcessing(true);
       try {
         const processedImages = await Promise.all(
-          Array.from(files).map(file => resizeImage(file as File))
+          Array.from(files).map(file => resizeImage(file as File, 800, 0.6))
         );
         setSelectedImages(prev => [...prev, ...processedImages]);
       } catch (err) {
@@ -1114,7 +1095,8 @@ export const App = () => {
     const file = e.target.files?.[0];
     if (file) {
       try {
-        const resized = await resizeImage(file);
+        // Larger size for backgrounds (up to 2560px) and higher quality (0.85)
+        const resized = await resizeImage(file, 2560, 0.85);
         setUserSettings(prev => ({ ...prev, customBackground: resized }));
       } catch (err) {
         console.error("Background processing error", err);
