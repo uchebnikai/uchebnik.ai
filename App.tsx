@@ -1095,9 +1095,22 @@ export const App = () => {
     const file = e.target.files?.[0];
     if (file) {
       try {
-        // Larger size for backgrounds (up to 4096px) and higher quality (0.95)
-        const resized = await resizeImage(file, 4096, 0.95);
-        setUserSettings(prev => ({ ...prev, customBackground: resized }));
+        let finalImage: string;
+        
+        if (file.type === 'image/gif') {
+            // Convert GIF to base64 directly to preserve animation
+            finalImage = await new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result as string);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        } else {
+            // Larger size for backgrounds (up to 4096px) and higher quality (0.95)
+            finalImage = await resizeImage(file, 4096, 0.95);
+        }
+        
+        setUserSettings(prev => ({ ...prev, customBackground: finalImage }));
       } catch (err) {
         console.error("Background processing error", err);
         addToast("Грешка при обработката на фона.", "error");
