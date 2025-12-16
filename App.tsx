@@ -1045,6 +1045,7 @@ export const App = () => {
             userRole={userRole}
             streak={streak}
             syncStatus={syncStatus}
+            homeView={homeView}
           />
       )}
       

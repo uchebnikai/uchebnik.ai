@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect, useState } from 'react';
 import { Reply, X, ImageIcon, Mic, MicOff, ArrowUpRight, Calculator, Camera } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
@@ -104,7 +105,7 @@ export const ChatInputArea = ({
         )}
 
         <div className="absolute bottom-0 left-0 right-0 px-2 lg:px-4 pointer-events-none z-40 flex justify-center pb-safe">
-            <div className="w-full max-w-3xl pointer-events-auto mb-4 lg:mb-6">
+            <div className="w-full max-w-3xl pointer-events-auto mb-2 lg:mb-4">
                 
                 {/* Live Math Preview */}
                 {hasMath && inputValue.trim() && (
@@ -129,18 +130,18 @@ export const ChatInputArea = ({
 
                 {/* Reply Banner */}
                 {replyingTo && (
-                <div className={`mb-2 mx-4 bg-white/90 dark:bg-zinc-800/90 backdrop-blur-md border border-indigo-500/20 p-3 rounded-2xl flex items-center justify-between shadow-lg ${SLIDE_UP} ${FADE_IN}`}>
+                <div className={`mb-2 mx-4 bg-white/90 dark:bg-zinc-800/90 backdrop-blur-md border border-indigo-500/20 p-2 rounded-2xl flex items-center justify-between shadow-lg ${SLIDE_UP} ${FADE_IN}`}>
                     <div className="flex items-center gap-3 overflow-hidden">
-                        <div className="p-2 bg-indigo-100 dark:bg-indigo-500/20 rounded-full text-indigo-600 dark:text-indigo-400 shrink-0">
-                            <Reply size={16}/>
+                        <div className="p-1.5 bg-indigo-100 dark:bg-indigo-500/20 rounded-full text-indigo-600 dark:text-indigo-400 shrink-0">
+                            <Reply size={14}/>
                         </div>
                         <div className="flex flex-col overflow-hidden">
                             <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Отговор на {replyingTo.role === 'user' ? 'теб' : 'uchebnik.ai'}</span>
-                            <span className="text-sm font-medium truncate text-zinc-800 dark:text-zinc-200">{replyingTo.text || "Изображение"}</span>
+                            <span className="text-xs font-medium truncate text-zinc-800 dark:text-zinc-200">{replyingTo.text || "Изображение"}</span>
                         </div>
                     </div>
-                    <button onClick={() => setReplyingTo(null)} className="p-2 hover:bg-gray-200 dark:hover:bg-white/10 rounded-full text-gray-500 transition-colors">
-                        <X size={16}/>
+                    <button onClick={() => setReplyingTo(null)} className="p-1.5 hover:bg-gray-200 dark:hover:bg-white/10 rounded-full text-gray-500 transition-colors">
+                        <X size={14}/>
                     </button>
                 </div>
                 )}
@@ -179,14 +180,14 @@ export const ChatInputArea = ({
                         onKeyDown={e => {if(e.key === 'Enter' && !e.shiftKey && !loadingSubject){e.preventDefault(); handleSend();}}} 
                         placeholder={replyingTo ? "Напиши отговор..." : "Напиши съобщение..."}
                         disabled={loadingSubject}
-                        className="w-full bg-transparent border-none focus:ring-0 p-0 text-base text-zinc-900 dark:text-zinc-100 placeholder-gray-400 resize-none max-h-32 min-h-[24px] leading-6"
+                        className="w-full bg-transparent border-none focus:ring-0 p-0 text-base text-zinc-900 dark:text-zinc-100 placeholder-gray-400 resize-none max-h-24 min-h-[24px] leading-6"
                         rows={1}
                     />
                 </div>
 
                 {/* Send Button */}
                 <button onClick={handleSend} disabled={(!inputValue.trim() && !selectedImages.length) || loadingSubject} className="flex-none w-10 h-10 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white flex items-center justify-center shadow-lg shadow-indigo-600/30 disabled:opacity-50 disabled:shadow-none transition-all active:scale-95">
-                    <ArrowUpRight size={22} strokeWidth={2.5} />
+                    <ArrowUpRight size={20} strokeWidth={2.5} />
                 </button>
 
                 {/* Image Preview Overlay */}
@@ -201,7 +202,6 @@ export const ChatInputArea = ({
                     </div>
                 )}
                 </div>
-                <p className="text-center text-[10px] text-gray-400 mt-2 font-medium opacity-60">AI може да допуска грешки.</p>
             </div>
         </div>
       </>
