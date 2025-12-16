@@ -60,6 +60,8 @@ export const App = () => {
   
   // Updated pending input state to include images
   const [pendingHomeInput, setPendingHomeInput] = useState<{text: string, images: string[]} | null>(null);
+  // Pending chat input for when auth is triggered during chat
+  const [pendingChatInput, setPendingChatInput] = useState<{text: string, images: string[], subjectId: SubjectId, mode: AppMode} | null>(null);
   
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
   const [isImageProcessing, setIsImageProcessing] = useState(false);
@@ -193,6 +195,9 @@ export const App = () => {
         if (session) {
             setShowAuthModal(false);
         } else {
+            // Only clear sessions on logout, not on initial load if unauthenticated (handled by storage load)
+            // But if we explicitly sign out, we want to clear.
+            // This is tricky. For now, rely on session check.
             setSessions([]);
             setSyncStatus('synced');
             setIsRemoteDataLoaded(false);
@@ -231,7 +236,7 @@ export const App = () => {
     return () => subscription.unsubscribe();
   }, []);
   
-  // Cloud Sync Effects (Same as before...)
+  // Cloud Sync Effects
   useEffect(() => {
       if (!session?.user?.id) {
           setIsRemoteDataLoaded(false);
@@ -294,7 +299,12 @@ export const App = () => {
                   
               if (sessionData && sessionData.data) {
                   isIncomingUpdateRef.current = true;
-                  setSessions(sessionData.data);
+                  const remoteSessions = sessionData.data;
+                  // Merge remote sessions with existing local sessions (e.g. created while anonymous)
+                  setSessions(prev => {
+                      const localOnly = prev.filter(p => !remoteSessions.find((r: Session) => r.id === p.id));
+                      return [...localOnly, ...remoteSessions].sort((a: Session, b: Session) => b.lastModified - a.lastModified);
+                  });
               }
               setSyncStatus('synced');
           } catch (err) {
@@ -308,7 +318,7 @@ export const App = () => {
       loadRemoteData();
   }, [session?.user?.id]);
 
-  // Subscriptions (Same as before...)
+  // Subscriptions
   useEffect(() => {
       if (!session?.user?.id || missingDbTables) return;
       const channel = supabase.channel(`sync-sessions:${session.user.id}`)
@@ -317,9 +327,29 @@ export const App = () => {
               if (remoteSessions) {
                   const currentJson = JSON.stringify(sessionsRef.current.map(s => ({...s, messages: s.messages.map(m => ({...m, images: []}))})));
                   const remoteJson = JSON.stringify(remoteSessions.map((s: Session) => ({...s, messages: s.messages.map((m: Message) => ({...m, images: []}))})));
+                  
                   if (currentJson !== remoteJson) {
                       isIncomingUpdateRef.current = true; 
-                      setSessions(remoteSessions);
+                      // Smart Merge to preserve local images
+                      setSessions(prev => {
+                          const merged = remoteSessions.map((rSession: Session) => {
+                              const lSession = prev.find(s => s.id === rSession.id);
+                              if (!lSession) return rSession;
+                              return {
+                                  ...rSession,
+                                  messages: rSession.messages.map((rMsg: Message) => {
+                                      const lMsg = lSession.messages.find(m => m.id === rMsg.id);
+                                      if (lMsg?.images?.length && (!rMsg.images || rMsg.images.length === 0)) {
+                                          return { ...rMsg, images: lMsg.images };
+                                      }
+                                      return rMsg;
+                                  })
+                              };
+                          });
+                          // Also append sessions that are local-only (if any, though rare in this flow)
+                          const localOnly = prev.filter(p => !remoteSessions.find((r: Session) => r.id === p.id));
+                          return [...localOnly, ...merged].sort((a: Session, b: Session) => b.lastModified - a.lastModified);
+                      });
                       addToast('Чатовете са синхронизирани', 'info');
                   }
               }
@@ -514,6 +544,35 @@ export const App = () => {
     }
   }, [activeSubject, activeSessionId, pendingHomeInput]);
 
+  // Effect to handle pending chat input after login
+  useEffect(() => {
+    if (session && isRemoteDataLoaded && pendingChatInput) {
+        // Ensure we are in the correct subject context
+        const subject = SUBJECTS.find(s => s.id === pendingChatInput.subjectId);
+        if (subject && activeSubjectRef.current?.id !== subject.id) {
+             setActiveSubject(subject);
+             setActiveMode(pendingChatInput.mode);
+        }
+        
+        // Find existing session or create new one to resume chat
+        const relevantSessions = sessions.filter(s => s.subjectId === pendingChatInput.subjectId).sort((a,b) => b.lastModified - a.lastModified);
+        let targetSessionId = relevantSessions[0]?.id;
+        
+        if (!targetSessionId) {
+            const newSession = createNewSession(pendingChatInput.subjectId, undefined, pendingChatInput.mode);
+            targetSessionId = newSession.id;
+        } else {
+            setActiveSessionId(targetSessionId);
+        }
+
+        // Wait briefly for state to settle then send
+        setTimeout(() => {
+            handleSend(pendingChatInput.text, pendingChatInput.images);
+            setPendingChatInput(null);
+        }, 300);
+    }
+  }, [session, isRemoteDataLoaded, pendingChatInput, sessions]);
+
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [sessions, activeSessionId, isImageProcessing, showSubjectDashboard]);
 
   // Voice Effects (Same as before...)
@@ -636,7 +695,23 @@ export const App = () => {
   const handleReply = (msg: Message) => { setReplyingTo(msg); };
 
   const handleSend = async (overrideText?: string, overrideImages?: string[]) => {
-    if (!session) { setShowAuthModal(true); return; }
+    // Auth Check with Pending State Logic
+    if (!session) { 
+        const currentSubId = activeSubjectRef.current?.id || SubjectId.GENERAL;
+        const currentMode = activeModeRef.current || AppMode.CHAT;
+        const textToSend = overrideText || inputValue;
+        const currentImgs = overrideImages || [...selectedImages];
+        
+        setPendingChatInput({ 
+            text: textToSend, 
+            images: currentImgs,
+            subjectId: currentSubId,
+            mode: currentMode
+        });
+        setShowAuthModal(true); 
+        return; 
+    }
+
     const currentSubject = activeSubjectRef.current;
     const currentSessionId = activeSessionIdRef.current;
     const currentMode = activeModeRef.current;
@@ -714,6 +789,7 @@ export const App = () => {
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Image upload also requires auth now to prevent data loss
     if (!session) { setShowAuthModal(true); e.target.value = ''; return; }
     const files = e.target.files;
     if (files && files.length > 0) {
