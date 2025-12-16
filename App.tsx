@@ -422,7 +422,15 @@ export const App = () => {
       return () => { if(syncSettingsTimer.current) clearTimeout(syncSettingsTimer.current); };
   }, [userSettings, userPlan, streak, dailyImageCount, session?.user?.id, isRemoteDataLoaded, missingDbTables]);
 
-  // Window Resize removed - Sidebar handles desktop behavior internally
+  // Window Resize
+  useEffect(() => {
+    const handleResize = () => {
+       if (window.innerWidth >= 1024) { setSidebarOpen(true); } else { setSidebarOpen(false); }
+    };
+    if (window.innerWidth >= 1024) setSidebarOpen(true);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Initialization Data Loading (Same as before...)
   useEffect(() => {
