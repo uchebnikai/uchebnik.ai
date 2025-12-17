@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { MessageSquare, Trash2, Plus, School, GraduationCap, Briefcase, ChevronDown, User, Settings, CreditCard, HelpCircle, LogOut, ArrowRight, ChevronUp, FileText, Flame, CloudOff, RefreshCw, Cloud, PanelLeftClose, PanelLeftOpen, LayoutDashboard } from 'lucide-react';
 import { DynamicIcon } from '../ui/DynamicIcon';
@@ -92,7 +93,7 @@ export const Sidebar = ({
           <div className={`p-4 pb-2 flex items-center ${collapsed ? 'justify-center flex-col gap-4' : 'justify-between'}`}>
             <button onClick={() => { setActiveSubject(null); setHomeView('landing'); setUserRole(null); if(isMobile) setSidebarOpen(false); }} className={`flex items-center gap-3 group ${collapsed ? 'justify-center' : ''}`}>
                <img 
-                  src="/logo.png" 
+                  src="https://i.ibb.co/LDgTCm9N/6151f23e-b922-4c62-930f-853884bf4c89.png" 
                   alt="Uchebnik AI Logo" 
                   className={`rounded-2xl object-contain drop-shadow-md group-hover:scale-110 transition-transform duration-300 ${collapsed ? 'w-10 h-10' : 'w-10 h-10'}`} 
                />

@@ -117,7 +117,7 @@ export const Auth = ({ isModal = false, onSuccess }: AuthProps) => {
 
       <div className={`w-full max-w-md p-8 ${GLASS_PANEL} ${ZOOM_IN} duration-500 relative z-10 ${isModal ? '' : 'mx-4'}`}>
         <div className="flex flex-col items-center mb-8">
-            <img src="/logo.png" alt="Uchebnik AI Logo" className="w-24 h-24 mb-6 rounded-[2rem] object-contain drop-shadow-2xl animate-in zoom-in-50 duration-500" />
+            <img src="https://i.ibb.co/LDgTCm9N/6151f23e-b922-4c62-930f-853884bf4c89.png" alt="Logo" className="w-24 h-24 mb-6 rounded-[2rem] object-contain drop-shadow-2xl animate-in zoom-in-50 duration-500" />
           <h1 className="text-3xl font-bold text-center tracking-tight text-foreground font-display">
              Uchebnik AI
           </h1>
