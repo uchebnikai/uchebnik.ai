@@ -48,7 +48,7 @@ export const SettingsModal = ({
   if (!showSettings) return null;
 
   return (
-  <div className="fixed inset-0 z-[90] bg-black/60 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-300">
+  <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-300">
     <div className={`bg-white/70 dark:bg-black/70 backdrop-blur-2xl w-full max-w-2xl h-[85vh] rounded-[32px] border border-white/20 shadow-2xl overflow-hidden flex flex-col ${MODAL_ENTER}`}>
       
       {/* Header */}

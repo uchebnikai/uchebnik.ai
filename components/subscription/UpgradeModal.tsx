@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { X, ArrowLeft, Zap, Crown, CheckCircle } from 'lucide-react';
 import { Button } from '../ui/Button';
@@ -28,7 +29,7 @@ export const UpgradeModal = ({
     if (!showUnlockModal) return null;
     if (targetPlan) {
         return (
-            <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in">
+            <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in">
                 <div className="bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl w-full max-w-sm p-8 rounded-3xl border border-indigo-500/20 shadow-2xl space-y-6 relative animate-in zoom-in-95 duration-300">
                     <button onClick={() => {setTargetPlan(null); setShowUnlockModal(false);}} className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors"><X size={20}/></button>
                     <button onClick={() => setTargetPlan(null)} className="absolute top-4 left-4 text-gray-400 hover:text-white transition-colors flex items-center gap-1 text-xs"><ArrowLeft size={14}/> Назад</button>
@@ -57,7 +58,7 @@ export const UpgradeModal = ({
         );
     }
     return (
-      <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in overflow-y-auto">
+      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in overflow-y-auto">
         <div className="w-full max-w-5xl space-y-8 animate-in zoom-in-95 duration-300">
            <div className="flex justify-end">
              <button onClick={() => setShowUnlockModal(false)} className="p-2 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors"><X size={24}/></button>

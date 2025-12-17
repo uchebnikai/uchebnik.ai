@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { X, Mic, MicOff, PhoneOff, Volume2, Loader2 } from 'lucide-react';
 import { SubjectConfig } from '../../types';
@@ -22,7 +23,7 @@ export const VoiceCallOverlay = ({
     
     if (!isVoiceCallActive) return null;
     return (
-      <div className="fixed inset-0 z-[70] bg-black/95 flex flex-col items-center justify-center p-8 animate-in fade-in duration-500 overflow-hidden">
+      <div className="fixed inset-0 z-[130] bg-black/95 flex flex-col items-center justify-center p-8 animate-in fade-in duration-500 overflow-hidden">
         
         {/* Controls Header */}
         <div className="absolute top-6 right-6 z-20">

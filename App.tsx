@@ -1037,7 +1037,7 @@ export const App = () => {
       )}
 
       {focusMode && (
-          <div className="fixed top-4 right-4 z-50 animate-in fade-in">
+          <div className="fixed top-4 right-4 z-[150] animate-in fade-in">
               <button onClick={() => setFocusMode(false)} className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-full text-white transition-colors border border-white/10">
                   <Minimize size={18}/> Exit Focus
               </button>
@@ -1078,71 +1078,6 @@ export const App = () => {
       )}
       
       <main className="flex-1 flex flex-col relative w-full h-full overflow-hidden transition-all duration-300 z-10">
-        <AdminPanel 
-            showAdminAuth={showAdminAuth}
-            setShowAdminAuth={setShowAdminAuth}
-            showAdminPanel={showAdminPanel}
-            setShowAdminPanel={setShowAdminPanel}
-            adminPasswordInput={adminPasswordInput}
-            setAdminPasswordInput={setAdminPasswordInput}
-            handleAdminLogin={handleAdminLogin}
-            generateKey={generateKey}
-            generatedKeys={generatedKeys}
-            addToast={addToast}
-        />
-        <UpgradeModal 
-            showUnlockModal={showUnlockModal}
-            setShowUnlockModal={setShowUnlockModal}
-            targetPlan={targetPlan}
-            setTargetPlan={setTargetPlan}
-            unlockKeyInput={unlockKeyInput}
-            setUnlockKeyInput={setUnlockKeyInput}
-            handleUnlockSubmit={handleUnlockSubmit}
-            userPlan={userPlan}
-        />
-        <SettingsModal 
-            showSettings={showSettings}
-            setShowSettings={setShowSettings}
-            userMeta={userMeta}
-            editProfile={editProfile}
-            setEditProfile={setEditProfile}
-            handleUpdateAccount={handleUpdateAccount}
-            handleAvatarUpload={handleAvatarUpload}
-            userSettings={userSettings}
-            setUserSettings={setUserSettings}
-            isPremium={isPremium}
-            isDarkMode={isDarkMode}
-            setIsDarkMode={setIsDarkMode}
-            handleBackgroundUpload={handleBackgroundUpload}
-            handleDeleteAllChats={handleDeleteAllChats}
-        />
-        <Lightbox image={zoomedImage} onClose={() => setZoomedImage(null)} />
-        
-        <ConfirmModal 
-            isOpen={!!confirmModal}
-            title={confirmModal?.title || ''}
-            message={confirmModal?.message || ''}
-            onConfirm={confirmModal?.onConfirm || (() => {})}
-            onCancel={() => setConfirmModal(null)}
-        />
-
-        {(syncStatus === 'error' && syncErrorDetails) || missingDbTables ? (
-            <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[100] animate-in slide-in-from-bottom-2 fade-in">
-                <div className={`backdrop-blur-md text-white px-4 py-3 rounded-xl shadow-lg flex items-center gap-3 max-w-md border ${missingDbTables ? 'bg-amber-600/90 border-amber-500/50' : 'bg-red-500/90 border-red-400/50'}`}>
-                    {missingDbTables ? <Database size={20} className="shrink-0"/> : <AlertCircle size={20} className="shrink-0"/>}
-                    <div className="flex-1 text-xs">
-                        <span className="font-bold block mb-0.5">{missingDbTables ? 'Database Setup Required' : 'Sync Error'}</span>
-                        <span className="opacity-90">
-                            {missingDbTables 
-                                ? 'Tables missing. Please run the SQL setup script in Supabase.' 
-                                : syncErrorDetails || 'Could not save to cloud.'}
-                        </span>
-                    </div>
-                    {!missingDbTables && <button onClick={() => setSyncStatus('synced')} className="p-1 hover:bg-white/20 rounded-lg transition-colors"><X size={16}/></button>}
-                </div>
-            </div>
-        ) : null}
-
         {!activeSubject ? (
             homeView === 'terms' ? <TermsOfService onBack={() => setHomeView('landing')} userSettings={userSettings} /> :
             homeView === 'privacy' ? <PrivacyPolicy onBack={() => setHomeView('landing')} userSettings={userSettings} /> :
@@ -1200,14 +1135,6 @@ export const App = () => {
                     activeSubject={activeSubject}
                     setActiveSubject={setActiveSubject}
                 />
-                <VoiceCallOverlay 
-                    isVoiceCallActive={isVoiceCallActive}
-                    voiceCallStatus={voiceCallStatus}
-                    voiceMuted={voiceMuted}
-                    setVoiceMuted={setVoiceMuted}
-                    endVoiceCall={endVoiceCall}
-                    activeSubject={activeSubject}
-                />
 
                 <MessageList 
                     currentMessages={currentMessages}
@@ -1245,7 +1172,82 @@ export const App = () => {
         )}
       </main>
 
-      <div className="fixed top-4 right-4 z-[100] flex flex-col gap-2 pointer-events-none">
+      {/* Global Overlays & Modals (Standardized high z-index) */}
+      <AdminPanel 
+          showAdminAuth={showAdminAuth}
+          setShowAdminAuth={setShowAdminAuth}
+          showAdminPanel={showAdminPanel}
+          setShowAdminPanel={setShowAdminPanel}
+          adminPasswordInput={adminPasswordInput}
+          setAdminPasswordInput={setAdminPasswordInput}
+          handleAdminLogin={handleAdminLogin}
+          generateKey={generateKey}
+          generatedKeys={generatedKeys}
+          addToast={addToast}
+      />
+      <UpgradeModal 
+          showUnlockModal={showUnlockModal}
+          setShowUnlockModal={setShowUnlockModal}
+          targetPlan={targetPlan}
+          setTargetPlan={setTargetPlan}
+          unlockKeyInput={unlockKeyInput}
+          setUnlockKeyInput={setUnlockKeyInput}
+          handleUnlockSubmit={handleUnlockSubmit}
+          userPlan={userPlan}
+      />
+      <SettingsModal 
+          showSettings={showSettings}
+          setShowSettings={setShowSettings}
+          userMeta={userMeta}
+          editProfile={editProfile}
+          setEditProfile={setEditProfile}
+          handleUpdateAccount={handleUpdateAccount}
+          handleAvatarUpload={handleAvatarUpload}
+          userSettings={userSettings}
+          setUserSettings={setUserSettings}
+          isPremium={isPremium}
+          isDarkMode={isDarkMode}
+          setIsDarkMode={setIsDarkMode}
+          handleBackgroundUpload={handleBackgroundUpload}
+          handleDeleteAllChats={handleDeleteAllChats}
+      />
+      <Lightbox image={zoomedImage} onClose={() => setZoomedImage(null)} />
+      
+      <ConfirmModal 
+          isOpen={!!confirmModal}
+          title={confirmModal?.title || ''}
+          message={confirmModal?.message || ''}
+          onConfirm={confirmModal?.onConfirm || (() => {})}
+          onCancel={() => setConfirmModal(null)}
+      />
+
+      <VoiceCallOverlay 
+          isVoiceCallActive={isVoiceCallActive}
+          voiceCallStatus={voiceCallStatus}
+          voiceMuted={voiceMuted}
+          setVoiceMuted={setVoiceMuted}
+          endVoiceCall={endVoiceCall}
+          activeSubject={activeSubject}
+      />
+
+      {(syncStatus === 'error' && syncErrorDetails) || missingDbTables ? (
+          <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[160] animate-in slide-in-from-bottom-2 fade-in">
+              <div className={`backdrop-blur-md text-white px-4 py-3 rounded-xl shadow-lg flex items-center gap-3 max-w-md border ${missingDbTables ? 'bg-amber-600/90 border-amber-500/50' : 'bg-red-500/90 border-red-400/50'}`}>
+                  {missingDbTables ? <Database size={20} className="shrink-0"/> : <AlertCircle size={20} className="shrink-0"/>}
+                  <div className="flex-1 text-xs">
+                      <span className="font-bold block mb-0.5">{missingDbTables ? 'Database Setup Required' : 'Sync Error'}</span>
+                      <span className="opacity-90">
+                          {missingDbTables 
+                              ? 'Tables missing. Please run the SQL setup script in Supabase.' 
+                              : syncErrorDetails || 'Could not save to cloud.'}
+                      </span>
+                  </div>
+                  {!missingDbTables && <button onClick={() => setSyncStatus('synced')} className="p-1 hover:bg-white/20 rounded-lg transition-colors"><X size={16}/></button>}
+              </div>
+          </div>
+      ) : null}
+
+      <div className="fixed top-4 right-4 z-[200] flex flex-col gap-2 pointer-events-none">
         {toasts.map(t => (
           <div key={t.id} className={`${TOAST_CONTAINER} ${t.type === 'error' ? TOAST_ERROR : t.type === 'success' ? TOAST_SUCCESS : TOAST_INFO}`}>
              {t.type === 'error' ? <AlertCircle size={18}/> : t.type === 'success' ? <CheckCircle size={18}/> : <Info size={18}/>}

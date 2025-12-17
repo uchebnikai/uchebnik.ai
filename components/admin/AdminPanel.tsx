@@ -31,7 +31,7 @@ export const AdminPanel = ({
     
     if (showAdminAuth) {
       return (
-        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in">
           <div className="bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl w-full max-w-sm p-8 rounded-3xl border border-indigo-500/20 shadow-2xl space-y-6 relative">
              <button onClick={() => setShowAdminAuth(false)} className="absolute top-4 right-4 text-gray-400 hover:text-white"><X size={20}/></button>
              <div className="flex flex-col items-center gap-4">
@@ -54,7 +54,7 @@ export const AdminPanel = ({
 
     if (showAdminPanel) {
       return (
-        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in">
            <div className="bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl w-full max-w-lg p-8 rounded-3xl border border-indigo-500/20 shadow-2xl space-y-6 relative flex flex-col max-h-[80vh]">
              <div className="flex justify-between items-center pb-4 border-b border-indigo-500/10">
                 <h2 className="text-xl font-bold flex items-center gap-2"><Shield size={20} className="text-indigo-500"/> Админ Панел</h2>
