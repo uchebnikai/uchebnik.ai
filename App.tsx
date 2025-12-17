@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from './supabaseClient';
 import { 
@@ -164,10 +163,11 @@ export const App = () => {
   };
 
   const addToast = (msg: string, type: 'success' | 'error' | 'info') => {
-    // В реално приложение тук бихте показали UI компонент за известие
     console.log(`[${type.toUpperCase()}] ${msg}`);
-    // Може да добавите прост alert за важни съобщения в демото
-    if (type === 'success') alert(msg);
+    // Вече показваме alert и за грешки, за да види потребителят какво се случва
+    if (type === 'success' || type === 'error') {
+      alert(msg);
+    }
   };
 
   const createNewSession = (subjectId: SubjectId, role?: UserRole, initialMode?: AppMode) => {
@@ -232,7 +232,7 @@ export const App = () => {
     setLoadingSubject(true);
 
     try {
-      const currentSession = sessions.find(s => s.id === activeSessionId);
+      const currentSession = sessions.find(s => s.id === activeSessionId || s.id === sessId);
       const history = currentSession?.messages || [];
       const model = userSettings.preferredModel === 'auto' 
         ? (userPlan === 'pro' ? 'google/gemma-3-27b-it:free' : userPlan === 'plus' ? 'google/gemma-3-12b-it:free' : 'google/gemma-3-4b-it:free')
@@ -247,7 +247,7 @@ export const App = () => {
         model
       );
 
-      setSessions(prev => prev.map(s => s.id === activeSessionId ? {
+      setSessions(prev => prev.map(s => s.id === (activeSessionId || sessId) ? {
           ...s,
           messages: [...s.messages, aiResponse],
           lastModified: Date.now(),
@@ -266,17 +266,33 @@ export const App = () => {
       return;
     }
     
+    // Тези ID-та трябва да съвпадат с продуктите във вашия Stripe Dashboard
     const priceId = plan === 'plus' ? 'price_1SfPSpE0C0vexh9Cg2YUGPah' : 'price_1SfPTEE0C0vexh9C9RZMvkHB';
     
     try {
+      console.log(`Иницииране на плащане за план: ${plan}, Price ID: ${priceId}`);
+      
       const { data, error } = await supabase.functions.invoke('create-checkout-session', {
-        body: { priceId, userId: session.user.id, email: session.user.email }
+        body: { 
+          priceId, 
+          userId: session.user.id, 
+          email: session.user.email 
+        }
       });
       
-      if (error) throw error;
-      if (data?.url) window.location.href = data.url;
+      if (error) {
+        console.error('Supabase Function Error:', error);
+        throw error;
+      }
+      
+      if (data?.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error('Функцията не върна URL за плащане. Проверете логовете на Supabase.');
+      }
     } catch (err: any) {
-      addToast(err.message || 'Грешка при плащане.', 'error');
+      console.error('Checkout Error:', err);
+      addToast(err.message || 'Грешка при иницииране на плащането. Моля, опитайте отново.', 'error');
     }
   };
 
@@ -289,7 +305,7 @@ export const App = () => {
       if (error) throw error;
       if (data?.url) window.location.href = data.url;
     } catch (err: any) {
-      addToast(err.message || 'Грешка при отваряне на портала.', 'error');
+      addToast(err.message || 'Грешка при отваряне на портала за управление.', 'error');
     }
   };
 
