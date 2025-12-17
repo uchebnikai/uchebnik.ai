@@ -156,7 +156,7 @@ export const WelcomeScreen = ({
 
             <div className="text-center mb-6 md:mb-10 space-y-3 px-2 w-full mt-4 md:mt-0 shrink-0">
                 <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/40 dark:bg-white/5 border border-indigo-500/20 text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 backdrop-blur-xl shadow-lg">
-                    <img src="https://i.ibb.co/LDgTCm9N/6151f23e-b922-4c62-930f-853884bf4c89.png" className="w-4 h-4 object-contain rounded-md" alt="Logo" />
+                    <img src="/logo.png" className="w-5 h-5 object-contain rounded-md" alt="Logo" />
                     <span>AI Учебен Асистент 2.0</span>
                 </div>
                 <h1 className="text-4xl md:text-6xl lg:text-8xl font-black text-transparent bg-clip-text bg-gradient-to-br from-zinc-900 to-zinc-500 dark:from-white dark:to-zinc-500 tracking-tighter leading-[1.1] md:leading-[1] font-display">

@@ -1,6 +1,7 @@
 {
   "name": "Uchebnik AI",
   "description": "Твоят интелигентен училищен помощник. Решения, тестове, уроци и поддръжка за ученици.",
+  "logo": "/logo.png",
   "requestFramePermissions": [
     "camera",
     "microphone"
