@@ -1,6 +1,6 @@
 
 import React, { useRef } from 'react';
-import { X, User, Upload, Lock, Check, Palette, Plus, Moon, Sun, ImageIcon, Edit2, Cpu, ChevronDown, Database, Trash2, ArrowRight, Settings } from 'lucide-react';
+import { X, User, Upload, Lock, Check, Palette, Plus, Moon, Sun, ImageIcon, Edit2, Cpu, ChevronDown, Database, Trash2, ArrowRight, Settings, CreditCard } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { UserSettings } from '../../types';
 import { AI_MODELS } from '../../constants';
@@ -23,6 +23,7 @@ interface SettingsModalProps {
   setIsDarkMode: (val: boolean) => void;
   handleBackgroundUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleDeleteAllChats: () => void;
+  handleManageBilling?: () => void;
 }
 
 export const SettingsModal = ({
@@ -39,7 +40,8 @@ export const SettingsModal = ({
   isDarkMode,
   setIsDarkMode,
   handleBackgroundUpload,
-  handleDeleteAllChats
+  handleDeleteAllChats,
+  handleManageBilling
 }: SettingsModalProps) => {
     
   const avatarInputRef = useRef<HTMLInputElement>(null);
@@ -125,6 +127,23 @@ export const SettingsModal = ({
                  <Button onClick={handleUpdateAccount} className="px-8 py-3 rounded-xl shadow-lg shadow-indigo-500/20" icon={Check}>Запази Промените</Button>
              </div>
           </section>
+
+          {/* Subscription Management */}
+          {isPremium && (
+            <section className="space-y-6">
+               <div className="flex items-center gap-3 pb-2 border-b border-gray-100 dark:border-white/5">
+                  <CreditCard size={18} className="text-indigo-500"/>
+                  <h3 className="text-sm font-bold text-gray-500 uppercase tracking-widest">Абонамент</h3>
+               </div>
+               <div className="bg-indigo-500/5 border border-indigo-500/20 rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between gap-4">
+                   <div>
+                       <h4 className="font-bold text-zinc-900 dark:text-white">Управление на плащанията</h4>
+                       <p className="text-sm text-gray-500">Промени своя план или актуализирай данните за картата си.</p>
+                   </div>
+                   <Button onClick={handleManageBilling} variant="secondary" className="whitespace-nowrap px-6" icon={ArrowRight}>Stripe Portal</Button>
+               </div>
+            </section>
+          )}
 
           {/* Personalization */}
           <section className="space-y-6 relative">
