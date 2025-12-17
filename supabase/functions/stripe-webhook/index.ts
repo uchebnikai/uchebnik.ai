@@ -1,11 +1,12 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 import Stripe from "https://esm.sh/stripe@11.1.0?target=deno"
 
 serve(async (req) => {
   const signature = req.headers.get('stripe-signature')
-  const stripeKey = (Deno as any).env.get('STRIPE_SECRET_KEY') || ''
+  const rawKey = (Deno as any).env.get('STRIPE_SECRET_KEY') || ''
+  const stripeKey = rawKey.trim()
+  
   const stripe = new Stripe(stripeKey, {
     apiVersion: '2022-11-15',
     httpClient: Stripe.createFetchHttpClient(),
