@@ -1145,6 +1145,7 @@ export const App = () => {
                 setUserRole={setUserRole}
                 setShowAdminAuth={setShowAdminAuth}
                 onQuickStart={handleQuickStart}
+                setSidebarOpen={setSidebarOpen}
             />
         ) : showSubjectDashboard ? (
             <SubjectDashboard 

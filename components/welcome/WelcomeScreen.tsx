@@ -1,6 +1,6 @@
 
 import React, { useState, useRef } from 'react';
-import { Shield, MessageSquare, ArrowRight, School, GraduationCap, Briefcase, ArrowLeft, ArrowUpRight, Search, ImageIcon, Camera, Mic, MicOff, X } from 'lucide-react';
+import { Shield, MessageSquare, ArrowRight, School, GraduationCap, Briefcase, ArrowLeft, ArrowUpRight, Search, ImageIcon, Camera, Mic, MicOff, X, Menu } from 'lucide-react';
 import { SubjectConfig, UserRole, UserSettings, HomeViewType, SubjectId } from '../../types';
 import { SUBJECTS } from '../../constants';
 import { DynamicIcon } from '../ui/DynamicIcon';
@@ -18,6 +18,7 @@ interface WelcomeScreenProps {
   setUserRole: (role: UserRole) => void;
   setShowAdminAuth: (val: boolean) => void;
   onQuickStart: (message: string, images?: string[]) => void;
+  setSidebarOpen: (val: boolean) => void;
 }
 
 export const WelcomeScreen = ({
@@ -28,7 +29,8 @@ export const WelcomeScreen = ({
   setHomeView,
   setUserRole,
   setShowAdminAuth,
-  onQuickStart
+  onQuickStart,
+  setSidebarOpen
 }: WelcomeScreenProps) => {
 
     const [inputValue, setInputValue] = useState('');
@@ -121,6 +123,14 @@ export const WelcomeScreen = ({
         <div className="w-full h-full overflow-y-auto custom-scrollbar p-4 md:p-8 flex flex-col items-center">
             <div className={`w-full max-w-5xl flex-1 flex flex-col items-center justify-center relative z-10 ${ZOOM_IN} duration-700 min-h-min py-8`}>
             
+            {/* Sidebar Toggle for Mobile */}
+            <button 
+                onClick={() => setSidebarOpen(true)} 
+                className="lg:hidden absolute top-0 left-0 p-2 text-zinc-500 hover:text-indigo-500 transition-colors z-50 bg-white/20 dark:bg-black/20 rounded-xl backdrop-blur-md border border-white/10"
+            >
+                <Menu size={20} />
+            </button>
+
             <button onClick={() => setShowAdminAuth(true)} className="absolute top-0 right-0 p-2 text-gray-300 hover:text-indigo-500 transition-colors z-50">
                 <Shield size={16} />
             </button>
