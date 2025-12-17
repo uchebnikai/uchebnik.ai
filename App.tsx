@@ -175,7 +175,7 @@ export const App = () => {
 
   // --- Effects ---
 
-  // Auth Effect (Same as before...)
+  // Auth Effect
   useEffect(() => {
     const handleHashError = () => {
         const hash = window.location.hash;
@@ -196,9 +196,6 @@ export const App = () => {
         if (session) {
             setShowAuthModal(false);
         } else {
-            // Only clear sessions on logout, not on initial load if unauthenticated (handled by storage load)
-            // But if we explicitly sign out, we want to clear.
-            // This is tricky. For now, rely on session check.
             setSessions([]);
             setSyncStatus('synced');
             setIsRemoteDataLoaded(false);
@@ -301,7 +298,6 @@ export const App = () => {
               if (sessionData && sessionData.data) {
                   isIncomingUpdateRef.current = true;
                   const remoteSessions = sessionData.data;
-                  // Merge remote sessions with existing local sessions (e.g. created while anonymous)
                   setSessions(prev => {
                       const localOnly = prev.filter(p => !remoteSessions.find((r: Session) => r.id === p.id));
                       return [...localOnly, ...remoteSessions].sort((a: Session, b: Session) => b.lastModified - a.lastModified);
@@ -331,7 +327,6 @@ export const App = () => {
                   
                   if (currentJson !== remoteJson) {
                       isIncomingUpdateRef.current = true; 
-                      // Smart Merge to preserve local images
                       setSessions(prev => {
                           const merged = remoteSessions.map((rSession: Session) => {
                               const lSession = prev.find(s => s.id === rSession.id);
@@ -347,7 +342,6 @@ export const App = () => {
                                   })
                               };
                           });
-                          // Also append sessions that are local-only (if any, though rare in this flow)
                           const localOnly = prev.filter(p => !remoteSessions.find((r: Session) => r.id === p.id));
                           return [...localOnly, ...merged].sort((a: Session, b: Session) => b.lastModified - a.lastModified);
                       });
@@ -385,7 +379,7 @@ export const App = () => {
       return () => { supabase.removeChannel(channel); };
   }, [session?.user?.id, missingDbTables]);
 
-  // Saving Effects (Same as before...)
+  // Saving Effects
   useEffect(() => {
       if (!session?.user?.id || !isRemoteDataLoaded) return;
       if (missingDbTables) return; 
@@ -433,7 +427,7 @@ export const App = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Initialization Data Loading (Same as before...)
+  // Initialization Data Loading
   useEffect(() => {
     const initData = async () => {
         const userId = session?.user?.id;
@@ -524,7 +518,7 @@ export const App = () => {
     if (typeof window !== 'undefined' && window.speechSynthesis) { loadVoices(); window.speechSynthesis.onvoiceschanged = loadVoices; }
   }, [session, isRemoteDataLoaded]);
 
-  // Persist Data (Same as before...)
+  // Persist Data
   useEffect(() => { const userId = session?.user?.id; const key = userId ? `uchebnik_sessions_${userId}` : 'uchebnik_sessions'; saveSessionsToStorage(key, sessions); }, [sessions, session]);
   useEffect(() => { const userId = session?.user?.id; const key = userId ? `uchebnik_settings_${userId}` : 'uchebnik_settings'; saveSettingsToStorage(key, userSettings); }, [userSettings, session]);
   useEffect(() => { const userId = session?.user?.id; const key = userId ? `uchebnik_plan_${userId}` : 'uchebnik_user_plan'; try { localStorage.setItem(key, userPlan); } catch(e) {} }, [userPlan, session]);
@@ -548,14 +542,12 @@ export const App = () => {
   // Effect to handle pending chat input after login
   useEffect(() => {
     if (session && isRemoteDataLoaded && pendingChatInput) {
-        // Ensure we are in the correct subject context
         const subject = SUBJECTS.find(s => s.id === pendingChatInput.subjectId);
         if (subject && activeSubjectRef.current?.id !== subject.id) {
              setActiveSubject(subject);
              setActiveMode(pendingChatInput.mode);
         }
         
-        // Find existing session or create new one to resume chat
         const relevantSessions = sessions.filter(s => s.subjectId === pendingChatInput.subjectId).sort((a,b) => b.lastModified - a.lastModified);
         let targetSessionId = relevantSessions[0]?.id;
         
@@ -566,7 +558,6 @@ export const App = () => {
             setActiveSessionId(targetSessionId);
         }
 
-        // Wait briefly for state to settle then send
         setTimeout(() => {
             handleSend(pendingChatInput.text, pendingChatInput.images);
             setPendingChatInput(null);
@@ -576,7 +567,7 @@ export const App = () => {
 
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [sessions, activeSessionId, isImageProcessing, showSubjectDashboard]);
 
-  // Voice Effects (Same as before...)
+  // Voice Effects
   useEffect(() => {
     voiceMutedRef.current = voiceMuted;
     if (isVoiceCallActive) {
@@ -585,10 +576,9 @@ export const App = () => {
     }
   }, [voiceMuted, isVoiceCallActive]);
 
-  useEffect(() => { if (isVoiceCallActive) { setVoiceCallStatus('listening'); startVoiceRecognition(); } }, [isVoiceCallActive]);
   useEffect(() => { return () => { window.speechSynthesis.cancel(); if(audioRef.current) audioRef.current.pause(); } }, []);
 
-  // --- Logic Helpers --- (Same as before...)
+  // --- Logic Helpers ---
   const checkImageLimit = (count = 1): boolean => {
       let limit = 4;
       if (userPlan === 'plus') limit = 12;
@@ -696,7 +686,6 @@ export const App = () => {
   const handleReply = (msg: Message) => { setReplyingTo(msg); };
 
   const handleSend = async (overrideText?: string, overrideImages?: string[]) => {
-    // Auth Check with Pending State Logic
     if (!session) { 
         const currentSubId = activeSubjectRef.current?.id || SubjectId.GENERAL;
         const currentMode = activeModeRef.current || AppMode.CHAT;
@@ -721,7 +710,13 @@ export const App = () => {
     const textToSend = overrideText || inputValue;
     if ((!textToSend.trim() && selectedImages.length === 0 && (!overrideImages || overrideImages.length === 0)) || !currentSubject || !currentSessionId) return;
     if (currentLoading[currentSubject.id]) return;
-    if (isListening) { recognitionRef.current?.stop(); setIsListening(false); }
+    if (isListening) { 
+        if (recognitionRef.current) {
+            recognitionRef.current.onend = null;
+            recognitionRef.current.stop();
+        }
+        setIsListening(false); 
+    }
     const currentSubId = currentSubject.id;
     const currentImgs = overrideImages || [...selectedImages];
     const sessId = currentSessionId;
@@ -790,7 +785,6 @@ export const App = () => {
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Image upload also requires auth now to prevent data loss
     if (!session) { setShowAuthModal(true); e.target.value = ''; return; }
     const files = e.target.files;
     if (files && files.length > 0) {
@@ -855,12 +849,7 @@ export const App = () => {
         onConfirm: () => {
              setSessions([]);
              setActiveSessionId(null);
-             
-             if (activeSubjectRef.current?.id === SubjectId.GENERAL) {
-                 createNewSession(SubjectId.GENERAL); 
-             } else {
-                 setShowSubjectDashboard(true);
-             }
+             if (activeSubjectRef.current?.id === SubjectId.GENERAL) { createNewSession(SubjectId.GENERAL); } else { setShowSubjectDashboard(true); }
              addToast('Всички чатове са изтрити', 'success');
              setConfirmModal(null);
         }
@@ -889,14 +878,22 @@ export const App = () => {
   };
   const handleSpeak = (txt: string, id: string) => { if(speakingMessageId === id) { window.speechSynthesis.cancel(); if(audioRef.current) audioRef.current.pause(); setSpeakingMessageId(null); return; } setSpeakingMessageId(id); speakText(txt, () => setSpeakingMessageId(null)); };
 
-  const startVoiceCall = () => { if (!session) { setShowAuthModal(true); return; } setIsVoiceCallActive(true); };
-  const endVoiceCall = () => { setIsVoiceCallActive(false); setVoiceCallStatus('idle'); voiceCallRecognitionRef.current?.stop(); window.speechSynthesis.cancel(); utteranceRef.current = null; if(speakingTimeoutRef.current) { clearTimeout(speakingTimeoutRef.current); speakingTimeoutRef.current = null; } };
+  const startVoiceCall = () => { 
+    if (!session) { setShowAuthModal(true); return; } 
+    setIsVoiceCallActive(true); 
+    // Start directly for iOS context
+    startVoiceRecognition();
+  };
+  
+  const endVoiceCall = () => { setIsVoiceCallActive(false); setVoiceCallStatus('idle'); if(voiceCallRecognitionRef.current) { voiceCallRecognitionRef.current.onend = null; voiceCallRecognitionRef.current.stop(); } window.speechSynthesis.cancel(); utteranceRef.current = null; if(speakingTimeoutRef.current) { clearTimeout(speakingTimeoutRef.current); speakingTimeoutRef.current = null; } };
 
   const startVoiceRecognition = () => {
      if (voiceMutedRef.current) { setVoiceCallStatus('idle'); voiceCallStatusRef.current = 'idle'; return; }
      const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
      if(!SR) { addToast('Гласовото разпознаване не се поддържа.', 'error'); endVoiceCall(); return; }
-     try { voiceCallRecognitionRef.current?.stop(); } catch(e) {}
+     
+     try { if(voiceCallRecognitionRef.current) { voiceCallRecognitionRef.current.onend = null; voiceCallRecognitionRef.current.stop(); } } catch(e) {}
+     
      const rec = new SR();
      rec.lang = activeSubjectRef.current?.id === SubjectId.ENGLISH ? 'en-US' : activeSubjectRef.current?.id === SubjectId.FRENCH ? 'fr-FR' : 'bg-BG';
      rec.continuous = false; rec.interimResults = false;
@@ -911,41 +908,73 @@ export const App = () => {
         }
      };
      rec.onend = () => { if(isVoiceCallActiveRef.current && voiceCallStatusRef.current === 'listening' && !voiceMutedRef.current) { try { rec.start(); } catch(e){} } };
-     rec.onerror = (e: any) => { if(e.error === 'no-speech' && isVoiceCallActiveRef.current && voiceCallStatusRef.current === 'listening' && !voiceMutedRef.current) { try { rec.start(); } catch(e){} } else { console.log("Recognition error", e.error); } }
-     voiceCallRecognitionRef.current = rec; try { rec.start(); } catch(e) { console.error(e); }
+     rec.onerror = (e: any) => { 
+        console.error("Voice Recognition Error:", e.error);
+        if(e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+            addToast('Гласовата услуга е временно блокирана. Проверете разрешенията за микрофон.', 'error');
+            endVoiceCall();
+        } else if(e.error === 'no-speech' && isVoiceCallActiveRef.current && voiceCallStatusRef.current === 'listening' && !voiceMutedRef.current) { 
+            try { rec.start(); } catch(e){} 
+        } 
+     }
+     voiceCallRecognitionRef.current = rec; 
+     try { rec.start(); } catch(e) { console.error(e); }
   };
 
-  const toggleListening = async () => {
+  const toggleListening = () => {
     if (!session) { setShowAuthModal(true); return; }
-    if(isListening) { recognitionRef.current?.stop(); setIsListening(false); return; }
-    
-    // Fix for iOS Safari - explicitly request mic before starting recognition
-    try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        stream.getTracks().forEach(track => track.stop()); // Just to ensure permissions are granted
-    } catch (e) {
-        addToast('Моля, разрешете достъп до микрофона в настройките на браузъра.', 'error');
-        return;
+    if(isListening) { 
+        if (recognitionRef.current) {
+            recognitionRef.current.onend = null;
+            recognitionRef.current.stop();
+        }
+        setIsListening(false); 
+        return; 
     }
-
+    
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if(!SR) { addToast('Гласовата услуга не се поддържа от този браузър.', 'error'); return; }
     
+    // Warm up Audio system for iOS Safari
+    if (window.speechSynthesis) window.speechSynthesis.getVoices();
+
+    // Clean up existing
+    if (recognitionRef.current) {
+        recognitionRef.current.onend = null;
+        try { recognitionRef.current.stop(); } catch(e) {}
+    }
+
     const rec = new SR();
     rec.lang = activeSubject?.id === SubjectId.ENGLISH ? 'en-US' : activeSubject?.id === SubjectId.FRENCH ? 'fr-FR' : 'bg-BG';
-    rec.interimResults = true; rec.continuous = true;
+    rec.interimResults = true; 
+    rec.continuous = true;
     startingTextRef.current = inputValue;
+
     rec.onresult = (e: any) => {
         let f = '', inter = '';
         for(let i=e.resultIndex; i<e.results.length; ++i) e.results[i].isFinal ? f+=e.results[i][0].transcript : inter+=e.results[i][0].transcript;
         setInputValue((startingTextRef.current + ' ' + f + inter).trim());
     };
-    rec.onstart = () => setIsListening(true); rec.onend = () => setIsListening(false);
+    
+    rec.onstart = () => setIsListening(true); 
+    rec.onend = () => setIsListening(false);
     rec.onerror = (e: any) => { 
-        if(e.error === 'service-not-allowed') addToast('Гласовата услуга е блокирана. Проверете разрешенията.', 'error'); 
+        console.error("Mic error:", e.error);
+        if(e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+            addToast('Гласовата услуга е блокирана или заета. Моля, проверете разрешенията в настройките на iPhone.', 'error');
+        } else {
+            addToast('Проблем с микрофона. Моля, опитайте отново.', 'info');
+        }
         setIsListening(false); 
     };
-    recognitionRef.current = rec; rec.start();
+
+    recognitionRef.current = rec; 
+    try {
+        rec.start();
+    } catch (err) {
+        console.error("Start speech failed:", err);
+        setIsListening(false);
+    }
   };
 
   const handleRate = (messageId: string, rating: 'up' | 'down') => { if (!activeSessionId) return; setSessions(prev => prev.map(s => { if (s.id === activeSessionId) { return { ...s, messages: s.messages.map(m => m.id === messageId ? { ...m, rating } : m) }; } return s; })); };
@@ -976,10 +1005,9 @@ export const App = () => {
     localStorage.setItem('uchebnik_admin_keys', JSON.stringify(updatedKeys));
   };
   
-  // Updated Quick Start Handler
   const handleQuickStart = (message: string, images: string[] = []) => {
       setPendingHomeInput({ text: message, images });
-      handleSubjectChange(SUBJECTS[0]); // General Chat
+      handleSubjectChange(SUBJECTS[0]); 
   };
 
   if (authLoading) {
@@ -994,7 +1022,6 @@ export const App = () => {
 
   return (
     <div className="flex h-full w-full relative overflow-hidden text-foreground">
-      {/* Background Image Layer */}
       {userSettings.customBackground && (
          <div 
            className={`fixed inset-0 z-0 bg-cover bg-center pointer-events-none transition-all duration-500 ${focusMode ? 'brightness-[0.2] grayscale' : ''}`}
@@ -1002,7 +1029,6 @@ export const App = () => {
          />
       )}
 
-      {/* Global Aurora Background (Visible when no custom background) */}
       {!userSettings.customBackground && (
         <>
             <div className={`fixed inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-indigo-200/20 via-background to-background dark:from-indigo-900/20 dark:via-background dark:to-background pointer-events-none z-0 transition-all duration-500 ${focusMode ? 'brightness-[0.4]' : ''}`}></div>
@@ -1020,7 +1046,6 @@ export const App = () => {
         </div>
       )}
 
-      {/* Exit Focus Mode Button */}
       {focusMode && (
           <div className="fixed top-4 right-4 z-50 animate-in fade-in">
               <button onClick={() => setFocusMode(false)} className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-full text-white transition-colors border border-white/10">
@@ -1129,7 +1154,6 @@ export const App = () => {
             </div>
         ) : null}
 
-        {/* Dynamic View Rendering */}
         {!activeSubject ? (
             homeView === 'terms' ? <TermsOfService onBack={() => setHomeView('landing')} userSettings={userSettings} /> :
             homeView === 'privacy' ? <PrivacyPolicy onBack={() => setHomeView('landing')} userSettings={userSettings} /> :

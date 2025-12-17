@@ -76,7 +76,10 @@ export const WelcomeScreen = ({
 
     const toggleListening = () => {
         if (isListening) {
-            recognitionRef.current?.stop();
+            if (recognitionRef.current) {
+                recognitionRef.current.onend = null;
+                recognitionRef.current.stop();
+            }
             setIsListening(false);
             return;
         }
@@ -87,8 +90,11 @@ export const WelcomeScreen = ({
             return;
         }
 
+        // Warm up Audio system for iOS Safari
+        if (window.speechSynthesis) window.speechSynthesis.getVoices();
+
         const rec = new SR();
-        rec.lang = 'bg-BG'; // Default to Bulgarian for welcome screen
+        rec.lang = 'bg-BG'; 
         rec.interimResults = true;
         rec.continuous = true;
         startingTextRef.current = inputValue;
@@ -103,10 +109,21 @@ export const WelcomeScreen = ({
 
         rec.onstart = () => setIsListening(true);
         rec.onend = () => setIsListening(false);
-        rec.onerror = () => setIsListening(false);
+        rec.onerror = (e: any) => {
+            console.error("Mic error:", e.error);
+            if(e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+                alert('Гласовата услуга е временно недостъпна или блокирана. Моля, проверете разрешенията за микрофон в настройките на iPhone.');
+            }
+            setIsListening(false);
+        };
         
         recognitionRef.current = rec;
-        rec.start();
+        try {
+            rec.start();
+        } catch (err) {
+            console.error("Speech recognition start error:", err);
+            setIsListening(false);
+        }
     };
 
     return (
@@ -123,7 +140,6 @@ export const WelcomeScreen = ({
         <div className="w-full h-full overflow-y-auto custom-scrollbar p-4 md:p-8 flex flex-col items-center">
             <div className={`w-full max-w-5xl flex-1 flex flex-col items-center justify-center relative z-10 ${ZOOM_IN} duration-700 min-h-min py-8`}>
             
-            {/* Sidebar Toggle for Mobile */}
             <button 
                 onClick={() => setSidebarOpen(true)} 
                 className="lg:hidden absolute top-0 left-0 p-2 text-zinc-500 hover:text-indigo-500 transition-colors z-50 bg-white/20 dark:bg-black/20 rounded-xl backdrop-blur-md border border-white/10"
@@ -146,9 +162,7 @@ export const WelcomeScreen = ({
                 <p className="text-base md:text-2xl text-zinc-500 dark:text-zinc-400 font-medium max-w-2xl mx-auto leading-relaxed px-4">Твоят интелигентен помощник за училище.</p>
             </div>
 
-            {/* Grid Container - No internal scroll on mobile */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full px-2 md:px-12 max-w-4xl mb-6 md:mb-10 shrink-0">
-                {/* General Chat */}
                 <button onClick={() => handleSubjectChange(SUBJECTS[0])} className="group relative h-48 sm:h-64 md:h-80 rounded-[28px] md:rounded-[40px] p-6 md:p-10 text-left bg-zinc-900/80 dark:bg-black/60 backdrop-blur-xl text-white shadow-2xl hover:scale-[1.02] active:scale-[0.98] transition-all duration-500 ease-out overflow-hidden ring-1 ring-white/10 hover:ring-indigo-500/30 flex flex-col justify-between shrink-0">
                 <div className="relative z-10 flex flex-col h-full justify-between">
                     <div className="bg-white/10 w-10 h-10 md:w-16 md:h-16 rounded-xl md:rounded-3xl flex items-center justify-center backdrop-blur-md"><MessageSquare size={20} className="md:w-8 md:h-8" /></div>
@@ -158,7 +172,6 @@ export const WelcomeScreen = ({
                 <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-indigo-500 to-accent-500 blur-[120px] opacity-20 group-hover:opacity-40 transition-opacity duration-500" />
                 </button>
 
-                {/* School Menu Entry */}
                 <button onClick={() => setHomeView('school_select')} className="group relative h-48 sm:h-64 md:h-80 rounded-[28px] md:rounded-[40px] p-6 md:p-10 text-left bg-white/60 dark:bg-black/40 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-xl hover:shadow-2xl hover:border-indigo-500/30 transition-all duration-500 ease-out hover:scale-[1.02] active:scale-[0.98] flex flex-col justify-between shrink-0">
                 <div className="relative z-10 flex flex-col h-full justify-between">
                     <div className="bg-indigo-500/10 w-10 h-10 md:w-16 md:h-16 rounded-xl md:rounded-3xl flex items-center justify-center text-indigo-600 dark:text-indigo-400"><School size={20} className="md:w-8 md:h-8" /></div>
@@ -181,7 +194,6 @@ export const WelcomeScreen = ({
                 )}
 
                 <div className="relative backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-2xl rounded-[28px] transition-all duration-300 focus-within:ring-2 focus-within:ring-indigo-500/30 bg-white/60 dark:bg-black/40 p-1.5 md:p-2 flex items-center gap-1 md:gap-2">
-                    {/* Buttons Group */}
                     <div className="flex items-center gap-0.5 pl-1 shrink-0">
                         <button onClick={() => fileInputRef.current?.click()} className="p-2 text-gray-500 hover:text-indigo-600 hover:bg-white/50 dark:hover:bg-white/10 rounded-full transition-colors" title="Добави снимка">
                             <ImageIcon size={18} className="md:w-5 md:h-5" strokeWidth={2}/>
@@ -234,14 +246,12 @@ export const WelcomeScreen = ({
         </div>
       )}
 
-      {/* School Selection View */}
       {homeView === 'school_select' && (
         <div className={`max-w-5xl w-full flex-1 flex flex-col items-center justify-center relative z-10 ${SLIDE_UP} duration-500 overflow-y-auto custom-scrollbar p-4 md:p-8`}>
              <button onClick={() => setHomeView('landing')} className="absolute top-0 left-0 flex items-center gap-2 text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors font-bold z-20 m-4 md:m-8"><ArrowLeft size={20}/> Назад</button>
              <h2 className="text-4xl md:text-5xl font-black text-zinc-900 dark:text-white mb-8 md:mb-12 tracking-tight mt-16 md:mt-0">Избери Роля</h2>
              
              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full px-2 md:px-12">
-                 {/* Student */}
                  <button onClick={() => { setHomeView('student_subjects'); setUserRole('student'); }} className="group relative h-64 md:h-72 rounded-[40px] p-8 text-left bg-indigo-600/90 backdrop-blur-xl text-white shadow-2xl hover:scale-[1.02] active:scale-[0.98] transition-all border border-white/10">
                      <div className="relative z-10 flex flex-col h-full justify-between">
                          <div className="p-4 bg-white/20 rounded-3xl w-fit backdrop-blur-md"><GraduationCap size={40}/></div>
@@ -250,7 +260,6 @@ export const WelcomeScreen = ({
                      <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 to-blue-600 opacity-50 rounded-[40px]"/>
                  </button>
 
-                 {/* Teacher */}
                  <button onClick={() => { setHomeView('teacher_subjects'); setUserRole('teacher'); }} className="group relative h-64 md:h-72 rounded-[40px] p-8 text-left bg-white/60 dark:bg-black/40 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-2xl hover:scale-[1.02] active:scale-[0.98] transition-all">
                      <div className="relative z-10 flex flex-col h-full justify-between">
                          <div className="p-4 bg-gray-100 dark:bg-white/5 text-indigo-600 dark:text-indigo-400 rounded-3xl w-fit"><Briefcase size={40}/></div>
@@ -261,7 +270,6 @@ export const WelcomeScreen = ({
         </div>
       )}
 
-      {/* Subjects Grid (Shared for Student/Teacher) */}
       {(homeView === 'student_subjects' || homeView === 'teacher_subjects') && (
         <div className={`max-w-7xl w-full py-4 md:py-12 px-2 md:px-4 ${SLIDE_UP} fade-in duration-500 relative z-10 overflow-y-auto custom-scrollbar flex-1`}>
            <button onClick={() => setHomeView('school_select')} className="mb-6 md:mb-10 flex items-center gap-3 text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors font-semibold group sticky top-0 bg-background/50 backdrop-blur-md py-2 z-20 w-fit rounded-full pr-4"><div className="p-2 md:p-3 bg-white/50 dark:bg-black/50 backdrop-blur-md rounded-full border border-indigo-500/10 shadow-sm group-hover:-translate-x-1 transition-transform"><ArrowLeft size={18} /></div> Назад към роли</button>
