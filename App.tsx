@@ -164,7 +164,6 @@ export const App = () => {
 
   const addToast = (msg: string, type: 'success' | 'error' | 'info') => {
     console.log(`[${type.toUpperCase()}] ${msg}`);
-    // Вече показваме alert и за грешки, за да види потребителят какво се случва
     if (type === 'success' || type === 'error') {
       alert(msg);
     }
@@ -266,7 +265,6 @@ export const App = () => {
       return;
     }
     
-    // Тези ID-та трябва да съвпадат с продуктите във вашия Stripe Dashboard
     const priceId = plan === 'plus' ? 'price_1SfPSpE0C0vexh9Cg2YUGPah' : 'price_1SfPTEE0C0vexh9C9RZMvkHB';
     
     try {
@@ -281,18 +279,24 @@ export const App = () => {
       });
       
       if (error) {
-        console.error('Supabase Function Error:', error);
-        throw error;
+        // Показване на тялото на грешката, за да се разбере какво се случва
+        console.error('Full Supabase Error:', error);
+        let msg = 'Грешка в Edge функцията.';
+        try {
+           const details = await error.context.json();
+           msg += ` Детайли: ${details.error || JSON.stringify(details)}`;
+        } catch(e) {}
+        throw new Error(msg);
       }
       
       if (data?.url) {
         window.location.href = data.url;
       } else {
-        throw new Error('Функцията не върна URL за плащане. Проверете логовете на Supabase.');
+        throw new Error('Функцията не върна URL за плащане. Проверете дали STRIPE_SECRET_KEY е добавен в Supabase Secrets.');
       }
     } catch (err: any) {
-      console.error('Checkout Error:', err);
-      addToast(err.message || 'Грешка при иницииране на плащането. Моля, опитайте отново.', 'error');
+      console.error('Checkout Implementation Error:', err);
+      addToast(err.message || 'Грешка при плащането. Моля, проверете Supabase logs.', 'error');
     }
   };
 
