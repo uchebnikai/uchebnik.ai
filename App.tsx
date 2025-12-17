@@ -164,23 +164,6 @@ export const App = () => {
 
   // --- Effects ---
 
-  // Stripe Success Handler
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('payment') === 'success') {
-      addToast("Плащането бе успешно! Вашият план ще бъде активиран до минути.", "success");
-      // Clean URL
-      window.history.replaceState(null, '', window.location.pathname);
-      // Force refresh data
-      if (session) {
-         isIncomingUpdateRef.current = false; // allow reload
-      }
-    } else if (params.get('payment') === 'cancel') {
-      addToast("Плащането беше отказано.", "info");
-      window.history.replaceState(null, '', window.location.pathname);
-    }
-  }, [session]);
-
   // Auth Effect
   useEffect(() => {
     const handleHashError = () => {
@@ -257,7 +240,7 @@ export const App = () => {
           try {
               const { data: profileData, error: profileError } = await supabase
                   .from('profiles')
-                  .select('settings, theme_color, custom_background, plan')
+                  .select('settings, theme_color, custom_background')
                   .eq('id', session.user.id)
                   .single();
               
@@ -267,17 +250,11 @@ export const App = () => {
               }
 
               if (profileData) {
-                  // Direct plan from column has priority for Stripe updates
-                  if (profileData.plan) setUserPlan(profileData.plan);
-
                   if (profileData.settings) {
                       const { plan, stats, ...restSettings } = profileData.settings;
                       const merged = { ...restSettings, themeColor: profileData.theme_color, customBackground: profileData.custom_background };
                       setUserSettings(prev => ({ ...prev, ...merged }));
-                      
-                      // If column plan is missing, use JSON plan
-                      if (!profileData.plan && plan) setUserPlan(plan);
-
+                      if (plan) setUserPlan(plan);
                       if (stats) {
                           setStreak(stats.streak || 0);
                           const today = new Date().toDateString();
@@ -370,25 +347,21 @@ export const App = () => {
       const channel = supabase.channel(`sync-profiles:${session.user.id}`)
           .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${session.user.id}` }, (payload) => {
               const remoteData = payload.new as any;
-              if (remoteData) {
+              if (remoteData && remoteData.settings) {
                   isIncomingUpdateRef.current = true;
-                  if (remoteData.plan) setUserPlan(remoteData.plan);
-                  
-                  if (remoteData.settings) {
-                      const { plan, stats, ...settingsRest } = remoteData.settings;
-                      setUserSettings(prev => ({ ...prev, ...settingsRest, themeColor: remoteData.theme_color, custom_background: remoteData.custom_background }));
-                      if (!remoteData.plan && plan) setUserPlan(plan);
-                      if (stats) {
-                          setStreak(stats.streak || 0);
-                          const today = new Date().toDateString();
-                          if (stats.lastImageDate === today) {
-                              setDailyImageCount(stats.dailyImageCount || 0);
-                          } else {
-                              setDailyImageCount(0);
-                          }
+                  const { plan, stats, ...settingsRest } = remoteData.settings;
+                  setUserSettings(prev => ({ ...prev, ...settingsRest, themeColor: remoteData.theme_color, custom_background: remoteData.custom_background }));
+                  if (plan) setUserPlan(plan);
+                  if (stats) {
+                      setStreak(stats.streak || 0);
+                      const today = new Date().toDateString();
+                      if (stats.lastImageDate === today) {
+                          setDailyImageCount(stats.dailyImageCount || 0);
+                      } else {
+                          setDailyImageCount(0);
                       }
                   }
-                  addToast('Статусът е обновен', 'info');
+                  addToast('Настройките са синхронизирани', 'info');
               }
           })
           .subscribe();
@@ -426,12 +399,7 @@ export const App = () => {
               stats: { streak, dailyImageCount, lastImageDate: localStorage.getItem('uchebnik_image_date'), lastVisit: localStorage.getItem('uchebnik_last_visit') }
           };
           const { error } = await supabase.from('profiles').upsert({
-              id: session.user.id, 
-              settings: fullSettingsPayload, 
-              theme_color: userSettings.themeColor, 
-              custom_background: userSettings.customBackground, 
-              plan: userPlan,
-              updated_at: new Date().toISOString()
+              id: session.user.id, settings: fullSettingsPayload, theme_color: userSettings.themeColor, custom_background: userSettings.customBackground, updated_at: new Date().toISOString()
           });
           if (error && error.code === '42P01') { setMissingDbTables(true); }
       }, 1000);
@@ -1226,8 +1194,6 @@ export const App = () => {
           setUnlockKeyInput={setUnlockKeyInput}
           handleUnlockSubmit={handleUnlockSubmit}
           userPlan={userPlan}
-          session={session}
-          addToast={addToast}
       />
       <SettingsModal 
           showSettings={showSettings}
