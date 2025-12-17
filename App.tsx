@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { SubjectConfig, SubjectId, AppMode, Message, Slide, UserSettings, Session, UserPlan, UserRole, HomeViewType } from './types';
 import { SUBJECTS } from './constants';
@@ -366,7 +367,7 @@ export const App = () => {
               if (remoteData && remoteData.settings) {
                   isIncomingUpdateRef.current = true;
                   const { plan, stats, ...settingsRest } = remoteData.settings;
-                  setUserSettings(prev => ({ ...prev, ...settingsRest, themeColor: remoteData.theme_color, customBackground: remoteData.custom_background }));
+                  setUserSettings(prev => ({ ...prev, ...settingsRest, themeColor: remoteData.theme_color, custom_background: remoteData.custom_background }));
                   if (plan) setUserPlan(plan);
                   if (stats) {
                       setStreak(stats.streak || 0);
@@ -914,11 +915,22 @@ export const App = () => {
      voiceCallRecognitionRef.current = rec; try { rec.start(); } catch(e) { console.error(e); }
   };
 
-  const toggleListening = () => {
+  const toggleListening = async () => {
     if (!session) { setShowAuthModal(true); return; }
     if(isListening) { recognitionRef.current?.stop(); setIsListening(false); return; }
+    
+    // Fix for iOS Safari - explicitly request mic before starting recognition
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        stream.getTracks().forEach(track => track.stop()); // Just to ensure permissions are granted
+    } catch (e) {
+        addToast('Моля, разрешете достъп до микрофона в настройките на браузъра.', 'error');
+        return;
+    }
+
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if(!SR) { addToast('Няма поддръжка.', 'error'); return; }
+    if(!SR) { addToast('Гласовата услуга не се поддържа от този браузър.', 'error'); return; }
+    
     const rec = new SR();
     rec.lang = activeSubject?.id === SubjectId.ENGLISH ? 'en-US' : activeSubject?.id === SubjectId.FRENCH ? 'fr-FR' : 'bg-BG';
     rec.interimResults = true; rec.continuous = true;
@@ -929,7 +941,10 @@ export const App = () => {
         setInputValue((startingTextRef.current + ' ' + f + inter).trim());
     };
     rec.onstart = () => setIsListening(true); rec.onend = () => setIsListening(false);
-    rec.onerror = (e: any) => { if(e.error === 'service-not-allowed') addToast('Гласовата услуга е недостъпна.', 'error'); setIsListening(false); };
+    rec.onerror = (e: any) => { 
+        if(e.error === 'service-not-allowed') addToast('Гласовата услуга е блокирана. Проверете разрешенията.', 'error'); 
+        setIsListening(false); 
+    };
     recognitionRef.current = rec; rec.start();
   };
 

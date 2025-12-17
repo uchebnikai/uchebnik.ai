@@ -150,7 +150,7 @@ export const Sidebar = ({
                  <div className="mt-4 flex flex-col items-center gap-4 w-full animate-in fade-in">
                      {/* School Home */}
                      <button 
-                        onClick={() => { setActiveSubject(null); setHomeView('school_select'); }}
+                        onClick={() => { setActiveSubject(null); setHomeView('school_select'); setUserRole(null); }}
                         className={`p-3 rounded-xl transition-all ${homeView === 'school_select' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30' : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10 hover:text-indigo-500'}`}
                         title="Училище (Меню)"
                      >
@@ -159,19 +159,19 @@ export const Sidebar = ({
 
                      <div className="w-8 h-px bg-gray-200 dark:bg-white/10" />
 
-                     {/* Student */}
+                     {/* Student Redirect */}
                      <button 
                         onClick={() => { setActiveSubject(null); setHomeView('student_subjects'); setUserRole('student'); }}
-                        className={`p-3 rounded-xl transition-all ${userRole === 'student' && homeView === 'student_subjects' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30' : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10 hover:text-indigo-500'}`}
+                        className={`p-3 rounded-xl transition-all ${userRole === 'student' && !activeSubject ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30' : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10 hover:text-indigo-500'}`}
                         title="Ученик"
                      >
                         <GraduationCap size={20} />
                      </button>
 
-                     {/* Teacher */}
+                     {/* Teacher Redirect */}
                      <button 
                         onClick={() => { setActiveSubject(null); setHomeView('teacher_subjects'); setUserRole('teacher'); }}
-                        className={`p-3 rounded-xl transition-all ${userRole === 'teacher' && homeView === 'teacher_subjects' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30' : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10 hover:text-indigo-500'}`}
+                        className={`p-3 rounded-xl transition-all ${userRole === 'teacher' && !activeSubject ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30' : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10 hover:text-indigo-500'}`}
                         title="Учител"
                      >
                         <Briefcase size={20} />
@@ -179,7 +179,7 @@ export const Sidebar = ({
                  </div>
              ) : (
                  <div className="mt-2">
-                     <button onClick={() => setSchoolFolderOpen(!schoolFolderOpen)} className="w-full flex items-center justify-between px-2 py-3 text-gray-400 dark:text-zinc-500 hover:text-indigo-500 transition-colors">
+                     <button onClick={() => { setActiveSubject(null); setHomeView('school_select'); setUserRole(null); setSchoolFolderOpen(!schoolFolderOpen); }} className="w-full flex items-center justify-between px-2 py-3 text-gray-400 dark:text-zinc-500 hover:text-indigo-500 transition-colors">
                          <div className="flex items-center gap-2">
                              <School size={18} />
                              <span className="text-xs font-bold uppercase tracking-widest">Училище</span>
