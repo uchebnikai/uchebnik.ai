@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { MessageSquare, Trash2, Plus, School, GraduationCap, Briefcase, ChevronDown, User, Settings, CreditCard, HelpCircle, LogOut, ArrowRight, ChevronUp, FileText, Flame, CloudOff, RefreshCw, Cloud, PanelLeftClose, PanelLeftOpen, LayoutDashboard } from 'lucide-react';
 import { DynamicIcon } from '../ui/DynamicIcon';
@@ -95,7 +94,7 @@ export const Sidebar = ({
                <img 
                   src="/logo.png" 
                   alt="Uchebnik AI Logo" 
-                  className={`w-10 h-10 rounded-2xl object-contain drop-shadow-md group-hover:scale-110 transition-transform duration-300`} 
+                  className={`rounded-2xl object-contain drop-shadow-md group-hover:scale-110 transition-transform duration-300 ${collapsed ? 'w-10 h-10' : 'w-10 h-10'}`} 
                />
                {!collapsed && (
                    <div className="text-left">
