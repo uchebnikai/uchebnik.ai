@@ -59,9 +59,7 @@ export const App = () => {
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [inputValue, setInputValue] = useState('');
   
-  // Updated pending input state to include images
   const [pendingHomeInput, setPendingHomeInput] = useState<{text: string, images: string[]} | null>(null);
-  // Pending chat input for when auth is triggered during chat
   const [pendingChatInput, setPendingChatInput] = useState<{text: string, images: string[], subjectId: SubjectId, mode: AppMode} | null>(null);
   
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
@@ -70,24 +68,20 @@ export const App = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   
   const [historyDrawerOpen, setHistoryDrawerOpen] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(true); // Default Dark Mode
+  const [isDarkMode, setIsDarkMode] = useState(true); 
   const [showSettings, setShowSettings] = useState(false);
   const [speakingMessageId, setSpeakingMessageId] = useState<string | null>(null);
   
-  // Revised Home Views
   const [homeView, setHomeView] = useState<HomeViewType>('landing');
 
   const [renameSessionId, setRenameSessionId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
   
-  // Profile State
   const [userMeta, setUserMeta] = useState({ firstName: '', lastName: '', avatar: '' });
   const [editProfile, setEditProfile] = useState({ firstName: '', lastName: '', avatar: '', email: '', password: '', currentPassword: '' });
 
-  // Reply State
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   
-  // Plans & Limits
   const [userPlan, setUserPlan] = useState<UserPlan>('free');
   const [dailyImageCount, setDailyImageCount] = useState(0);
   const [streak, setStreak] = useState(0);
@@ -97,7 +91,6 @@ export const App = () => {
   const [adminPasswordInput, setAdminPasswordInput] = useState('');
   const [generatedKeys, setGeneratedKeys] = useState<GeneratedKey[]>([]);
   
-  // Key Unlock Modal
   const [showUnlockModal, setShowUnlockModal] = useState(false);
   const [unlockKeyInput, setUnlockKeyInput] = useState('');
   const [targetPlan, setTargetPlan] = useState<UserPlan | null>(null);
@@ -129,10 +122,8 @@ export const App = () => {
   const [isListening, setIsListening] = useState(false);
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
   
-  // Focus Mode
   const [focusMode, setFocusMode] = useState(false);
 
-  // --- Toast & Confirm State ---
   const [toasts, setToasts] = useState<{id: string, message: string, type: 'success'|'error'|'info'}[]>([]);
   const [confirmModal, setConfirmModal] = useState<{isOpen: boolean, title: string, message: string, onConfirm: () => void} | null>(null);
 
@@ -162,11 +153,9 @@ export const App = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
-  // Sync debounce timers
   const syncSessionsTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const syncSettingsTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   
-  // Flag to prevent save loops when receiving data from cloud
   const isIncomingUpdateRef = useRef(false);
   const isRemoteDataLoadedRef = useRef(false);
 
@@ -839,7 +828,7 @@ export const App = () => {
     });
   };
 
-  const renameSession = (sId: string, title: string) => { setSessions(prev => prev.map(s => s.id === sId ? { ...s, title } : s)); setRenameSessionId(null); };
+  const renameSession = (sId: string, title: string) => { setSessions(prev => prev.map(s => { if (s.id === sId) return { ...s, title }; return s; })); setRenameSessionId(null); };
   
   const handleDeleteAllChats = () => {
     setConfirmModal({
@@ -881,7 +870,6 @@ export const App = () => {
   const startVoiceCall = () => { 
     if (!session) { setShowAuthModal(true); return; } 
     setIsVoiceCallActive(true); 
-    // Start directly for iOS context
     startVoiceRecognition();
   };
   
@@ -894,9 +882,14 @@ export const App = () => {
      
      try { if(voiceCallRecognitionRef.current) { voiceCallRecognitionRef.current.onend = null; voiceCallRecognitionRef.current.stop(); } } catch(e) {}
      
+     // Warmup audio for Safari
+     const context = new (window.AudioContext || (window as any).webkitAudioContext)();
+     if (context.state === 'suspended') context.resume();
+
      const rec = new SR();
      rec.lang = activeSubjectRef.current?.id === SubjectId.ENGLISH ? 'en-US' : activeSubjectRef.current?.id === SubjectId.FRENCH ? 'fr-FR' : 'bg-BG';
-     rec.continuous = false; rec.interimResults = false;
+     rec.continuous = false; // More robust for iOS
+     rec.interimResults = false;
      rec.onstart = () => { if(voiceMutedRef.current) { rec.stop(); return; } setVoiceCallStatus('listening'); voiceCallStatusRef.current = 'listening'; };
      rec.onresult = async (e: any) => {
         if(voiceMutedRef.current) return;
@@ -904,21 +897,27 @@ export const App = () => {
         if(t.trim()) {
            setVoiceCallStatus('processing'); voiceCallStatusRef.current = 'processing';
            const res = await handleSend(t);
-           if(res) { setVoiceCallStatus('speaking'); voiceCallStatusRef.current = 'speaking'; speakText(res, () => { if(isVoiceCallActiveRef.current) { startVoiceRecognition(); } }); } else { if(isVoiceCallActiveRef.current) { startVoiceRecognition(); } }
+           if(res) { setVoiceCallStatus('speaking'); voiceCallStatusRef.current = 'speaking'; speakText(res, () => { if(isVoiceCallActiveRef.current) { setTimeout(startVoiceRecognition, 100); } }); } else { if(isVoiceCallActiveRef.current) { setTimeout(startVoiceRecognition, 100); } }
         }
      };
-     rec.onend = () => { if(isVoiceCallActiveRef.current && voiceCallStatusRef.current === 'listening' && !voiceMutedRef.current) { try { rec.start(); } catch(e){} } };
+     rec.onend = () => { 
+        if(isVoiceCallActiveRef.current && voiceCallStatusRef.current === 'listening' && !voiceMutedRef.current) { 
+            setTimeout(() => { try { rec.start(); } catch(e){} }, 100);
+        } 
+     };
      rec.onerror = (e: any) => { 
         console.error("Voice Recognition Error:", e.error);
         if(e.error === 'not-allowed' || e.error === 'service-not-allowed') {
-            addToast('Гласовата услуга е временно блокирана. Проверете разрешенията за микрофон.', 'error');
+            addToast('Гласовата услуга е заета. Моля, опитайте след малко.', 'error');
             endVoiceCall();
         } else if(e.error === 'no-speech' && isVoiceCallActiveRef.current && voiceCallStatusRef.current === 'listening' && !voiceMutedRef.current) { 
-            try { rec.start(); } catch(e){} 
+            setTimeout(() => { try { rec.start(); } catch(e){} }, 100);
         } 
      }
      voiceCallRecognitionRef.current = rec; 
-     try { rec.start(); } catch(e) { console.error(e); }
+     try {
+         setTimeout(() => { rec.start(); }, 50);
+     } catch (e) { console.error(e); }
   };
 
   const toggleListening = () => {
@@ -935,10 +934,15 @@ export const App = () => {
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if(!SR) { addToast('Гласовата услуга не се поддържа от този браузър.', 'error'); return; }
     
-    // Warm up Audio system for iOS Safari
-    if (window.speechSynthesis) window.speechSynthesis.getVoices();
+    // Unstoppable Warmup for Safari
+    const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    if (window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+        window.speechSynthesis.getVoices();
+    }
 
-    // Clean up existing
+    // Clean up
     if (recognitionRef.current) {
         recognitionRef.current.onend = null;
         try { recognitionRef.current.stop(); } catch(e) {}
@@ -947,7 +951,7 @@ export const App = () => {
     const rec = new SR();
     rec.lang = activeSubject?.id === SubjectId.ENGLISH ? 'en-US' : activeSubject?.id === SubjectId.FRENCH ? 'fr-FR' : 'bg-BG';
     rec.interimResults = true; 
-    rec.continuous = true;
+    rec.continuous = false; // iOS Safari hates continuous = true
     startingTextRef.current = inputValue;
 
     rec.onresult = (e: any) => {
@@ -961,7 +965,7 @@ export const App = () => {
     rec.onerror = (e: any) => { 
         console.error("Mic error:", e.error);
         if(e.error === 'not-allowed' || e.error === 'service-not-allowed') {
-            addToast('Гласовата услуга е блокирана или заета. Моля, проверете разрешенията в настройките на iPhone.', 'error');
+            addToast('Микрофонът е зает. Моля, затворете други приложения или опреснете страницата.', 'error');
         } else {
             addToast('Проблем с микрофона. Моля, опитайте отново.', 'info');
         }
@@ -970,7 +974,8 @@ export const App = () => {
 
     recognitionRef.current = rec; 
     try {
-        rec.start();
+        // Small delay inside click handler to ensure Safari registers the gesture context correctly
+        setTimeout(() => { rec.start(); }, 100);
     } catch (err) {
         console.error("Start speech failed:", err);
         setIsListening(false);
@@ -1136,7 +1141,6 @@ export const App = () => {
             onCancel={() => setConfirmModal(null)}
         />
 
-        {/* Sync Error Modal */}
         {(syncStatus === 'error' && syncErrorDetails) || missingDbTables ? (
             <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[100] animate-in slide-in-from-bottom-2 fade-in">
                 <div className={`backdrop-blur-md text-white px-4 py-3 rounded-xl shadow-lg flex items-center gap-3 max-w-md border ${missingDbTables ? 'bg-amber-600/90 border-amber-500/50' : 'bg-red-500/90 border-red-400/50'}`}>

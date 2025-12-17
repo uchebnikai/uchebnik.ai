@@ -90,13 +90,18 @@ export const WelcomeScreen = ({
             return;
         }
 
-        // Warm up Audio system for iOS Safari
-        if (window.speechSynthesis) window.speechSynthesis.getVoices();
+        // Unstoppable Warmup for Safari
+        const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        if (window.speechSynthesis) {
+            window.speechSynthesis.cancel();
+            window.speechSynthesis.getVoices();
+        }
 
         const rec = new SR();
         rec.lang = 'bg-BG'; 
         rec.interimResults = true;
-        rec.continuous = true;
+        rec.continuous = false; // iOS Safari prefers this
         startingTextRef.current = inputValue;
 
         rec.onresult = (e: any) => {
@@ -112,14 +117,15 @@ export const WelcomeScreen = ({
         rec.onerror = (e: any) => {
             console.error("Mic error:", e.error);
             if(e.error === 'not-allowed' || e.error === 'service-not-allowed') {
-                alert('Гласовата услуга е временно недостъпна или блокирана. Моля, проверете разрешенията за микрофон в настройките на iPhone.');
+                alert('Гласовата услуга е заета. Моля, затворете други приложения или опреснете страницата.');
             }
             setIsListening(false);
         };
         
         recognitionRef.current = rec;
         try {
-            rec.start();
+            // Small delay to ensure Safari interaction context is solid
+            setTimeout(() => { rec.start(); }, 100);
         } catch (err) {
             console.error("Speech recognition start error:", err);
             setIsListening(false);
