@@ -150,7 +150,7 @@ export const Sidebar = ({
                  <div className="mt-4 flex flex-col items-center gap-4 w-full animate-in fade-in">
                      {/* School Home */}
                      <button 
-                        onClick={() => { setHomeView('school_select'); }}
+                        onClick={() => { setActiveSubject(null); setHomeView('school_select'); }}
                         className={`p-3 rounded-xl transition-all ${homeView === 'school_select' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30' : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10 hover:text-indigo-500'}`}
                         title="Училище (Меню)"
                      >
@@ -161,7 +161,7 @@ export const Sidebar = ({
 
                      {/* Student */}
                      <button 
-                        onClick={() => { setHomeView('student_subjects'); setUserRole('student'); }}
+                        onClick={() => { setActiveSubject(null); setHomeView('student_subjects'); setUserRole('student'); }}
                         className={`p-3 rounded-xl transition-all ${userRole === 'student' && homeView === 'student_subjects' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30' : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10 hover:text-indigo-500'}`}
                         title="Ученик"
                      >
@@ -170,7 +170,7 @@ export const Sidebar = ({
 
                      {/* Teacher */}
                      <button 
-                        onClick={() => { setHomeView('teacher_subjects'); setUserRole('teacher'); }}
+                        onClick={() => { setActiveSubject(null); setHomeView('teacher_subjects'); setUserRole('teacher'); }}
                         className={`p-3 rounded-xl transition-all ${userRole === 'teacher' && homeView === 'teacher_subjects' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30' : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10 hover:text-indigo-500'}`}
                         title="Учител"
                      >
@@ -192,13 +192,18 @@ export const Sidebar = ({
                              
                              {/* Students Subfolder */}
                              <div className="border-l border-indigo-500/10 pl-2">
-                                 <button onClick={() => setStudentsFolderOpen(!studentsFolderOpen)} className="w-full flex items-center justify-between px-2 py-2 text-gray-500 dark:text-zinc-400 hover:text-indigo-500 transition-colors">
-                                    <div className="flex items-center gap-2">
+                                 <div className="flex items-center justify-between w-full px-2 py-2 group">
+                                     <button 
+                                        onClick={() => { setActiveSubject(null); setHomeView('student_subjects'); setUserRole('student'); if(isMobile) setSidebarOpen(false); }}
+                                        className="flex items-center gap-2 text-gray-500 dark:text-zinc-400 hover:text-indigo-500 transition-colors flex-1 text-left"
+                                     >
                                         <GraduationCap size={14} />
                                         <span className="text-[11px] font-bold uppercase tracking-wider">Ученици</span>
-                                    </div>
-                                    <ChevronDown size={12} className={`transition-transform duration-300 ${studentsFolderOpen ? 'rotate-180' : ''}`}/>
-                                 </button>
+                                     </button>
+                                     <button onClick={() => setStudentsFolderOpen(!studentsFolderOpen)} className="p-1 text-gray-400 hover:text-indigo-500 rounded-full hover:bg-gray-100 dark:hover:bg-white/5 transition-colors">
+                                        <ChevronDown size={12} className={`transition-transform duration-300 ${studentsFolderOpen ? 'rotate-180' : ''}`}/>
+                                     </button>
+                                 </div>
                                  
                                  {studentsFolderOpen && (
                                      <div className="space-y-0.5 mt-1 animate-in slide-in-from-top-1">
@@ -239,13 +244,18 @@ export const Sidebar = ({
 
                              {/* Teachers Subfolder */}
                              <div className="border-l border-indigo-500/10 pl-2 mt-2">
-                                <button onClick={() => setTeachersFolderOpen(!teachersFolderOpen)} className="w-full flex items-center justify-between px-2 py-2 text-gray-500 dark:text-zinc-400 hover:text-indigo-500 transition-colors">
-                                    <div className="flex items-center gap-2">
+                                <div className="flex items-center justify-between w-full px-2 py-2 group">
+                                     <button 
+                                        onClick={() => { setActiveSubject(null); setHomeView('teacher_subjects'); setUserRole('teacher'); if(isMobile) setSidebarOpen(false); }}
+                                        className="flex items-center gap-2 text-gray-500 dark:text-zinc-400 hover:text-indigo-500 transition-colors flex-1 text-left"
+                                     >
                                         <Briefcase size={14} />
                                         <span className="text-[11px] font-bold uppercase tracking-wider">Учители</span>
-                                    </div>
-                                    <ChevronDown size={12} className={`transition-transform duration-300 ${teachersFolderOpen ? 'rotate-180' : ''}`}/>
-                                </button>
+                                     </button>
+                                     <button onClick={() => setTeachersFolderOpen(!teachersFolderOpen)} className="p-1 text-gray-400 hover:text-indigo-500 rounded-full hover:bg-gray-100 dark:hover:bg-white/5 transition-colors">
+                                        <ChevronDown size={12} className={`transition-transform duration-300 ${teachersFolderOpen ? 'rotate-180' : ''}`}/>
+                                     </button>
+                                 </div>
                                 
                                 {teachersFolderOpen && (
                                     <div className="space-y-0.5 mt-1 animate-in slide-in-from-top-1">
