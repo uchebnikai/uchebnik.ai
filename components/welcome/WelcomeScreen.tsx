@@ -90,18 +90,16 @@ export const WelcomeScreen = ({
             return;
         }
 
-        // Unstoppable Warmup for Safari
-        const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-        if (audioCtx.state === 'suspended') audioCtx.resume();
-        if (window.speechSynthesis) {
-            window.speechSynthesis.cancel();
-            window.speechSynthesis.getVoices();
+        // Clean up any existing instance
+        if (recognitionRef.current) {
+            recognitionRef.current.onend = null;
+            try { recognitionRef.current.stop(); } catch(e){}
         }
 
         const rec = new SR();
         rec.lang = 'bg-BG'; 
         rec.interimResults = true;
-        rec.continuous = false; // iOS Safari prefers this
+        rec.continuous = false; // Important for mobile browsers
         startingTextRef.current = inputValue;
 
         rec.onresult = (e: any) => {
@@ -117,15 +115,14 @@ export const WelcomeScreen = ({
         rec.onerror = (e: any) => {
             console.error("Mic error:", e.error);
             if(e.error === 'not-allowed' || e.error === 'service-not-allowed') {
-                alert('Гласовата услуга е заета. Моля, затворете други приложения или опреснете страницата.');
+                alert('Не мога да започна запис. Моля, уверете се, че сте позволили достъп до микрофона в настройките.');
             }
             setIsListening(false);
         };
         
         recognitionRef.current = rec;
         try {
-            // Small delay to ensure Safari interaction context is solid
-            setTimeout(() => { rec.start(); }, 100);
+            rec.start();
         } catch (err) {
             console.error("Speech recognition start error:", err);
             setIsListening(false);
@@ -192,7 +189,7 @@ export const WelcomeScreen = ({
                     <div className="flex gap-2 mb-3 overflow-x-auto pb-1">
                         {selectedImages.map((img, i) => ( 
                             <div key={i} className={`relative group shrink-0 ${ZOOM_IN}`}>
-                                <img src={img} className="h-12 w-12 md:h-16 md:w-16 rounded-xl object-cover border-2 border-white dark:border-zinc-700 shadow-lg"/>
+                                <img src={img} className="h-16 w-16 rounded-xl object-cover border-2 border-white dark:border-zinc-700 shadow-lg"/>
                                 <button onClick={() => handleRemoveImage(i)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-md hover:scale-110 transition-transform"><X size={10}/></button>
                             </div>
                         ))}

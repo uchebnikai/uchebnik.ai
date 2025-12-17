@@ -520,7 +520,6 @@ export const App = () => {
   useEffect(() => { voiceCallStatusRef.current = voiceCallStatus; }, [voiceCallStatus]);
   useEffect(() => { loadingSubjectsRef.current = loadingSubjects; }, [loadingSubjects]);
 
-  // Updated Effect to handle pending input with potential images
   useEffect(() => {
     if (pendingHomeInput && activeSubject?.id === SubjectId.GENERAL && activeSessionId) {
        handleSend(pendingHomeInput.text, pendingHomeInput.images);
@@ -528,7 +527,6 @@ export const App = () => {
     }
   }, [activeSubject, activeSessionId, pendingHomeInput]);
 
-  // Effect to handle pending chat input after login
   useEffect(() => {
     if (session && isRemoteDataLoaded && pendingChatInput) {
         const subject = SUBJECTS.find(s => s.id === pendingChatInput.subjectId);
@@ -882,13 +880,9 @@ export const App = () => {
      
      try { if(voiceCallRecognitionRef.current) { voiceCallRecognitionRef.current.onend = null; voiceCallRecognitionRef.current.stop(); } } catch(e) {}
      
-     // Warmup audio for Safari
-     const context = new (window.AudioContext || (window as any).webkitAudioContext)();
-     if (context.state === 'suspended') context.resume();
-
      const rec = new SR();
      rec.lang = activeSubjectRef.current?.id === SubjectId.ENGLISH ? 'en-US' : activeSubjectRef.current?.id === SubjectId.FRENCH ? 'fr-FR' : 'bg-BG';
-     rec.continuous = false; // More robust for iOS
+     rec.continuous = false; 
      rec.interimResults = false;
      rec.onstart = () => { if(voiceMutedRef.current) { rec.stop(); return; } setVoiceCallStatus('listening'); voiceCallStatusRef.current = 'listening'; };
      rec.onresult = async (e: any) => {
@@ -897,12 +891,12 @@ export const App = () => {
         if(t.trim()) {
            setVoiceCallStatus('processing'); voiceCallStatusRef.current = 'processing';
            const res = await handleSend(t);
-           if(res) { setVoiceCallStatus('speaking'); voiceCallStatusRef.current = 'speaking'; speakText(res, () => { if(isVoiceCallActiveRef.current) { setTimeout(startVoiceRecognition, 100); } }); } else { if(isVoiceCallActiveRef.current) { setTimeout(startVoiceRecognition, 100); } }
+           if(res) { setVoiceCallStatus('speaking'); voiceCallStatusRef.current = 'speaking'; speakText(res, () => { if(isVoiceCallActiveRef.current) { startVoiceRecognition(); } }); } else { if(isVoiceCallActiveRef.current) { startVoiceRecognition(); } }
         }
      };
      rec.onend = () => { 
         if(isVoiceCallActiveRef.current && voiceCallStatusRef.current === 'listening' && !voiceMutedRef.current) { 
-            setTimeout(() => { try { rec.start(); } catch(e){} }, 100);
+            try { rec.start(); } catch(e){}
         } 
      };
      rec.onerror = (e: any) => { 
@@ -911,12 +905,12 @@ export const App = () => {
             addToast('Гласовата услуга е заета. Моля, опитайте след малко.', 'error');
             endVoiceCall();
         } else if(e.error === 'no-speech' && isVoiceCallActiveRef.current && voiceCallStatusRef.current === 'listening' && !voiceMutedRef.current) { 
-            setTimeout(() => { try { rec.start(); } catch(e){} }, 100);
+            try { rec.start(); } catch(e){}
         } 
      }
      voiceCallRecognitionRef.current = rec; 
      try {
-         setTimeout(() => { rec.start(); }, 50);
+         rec.start();
      } catch (e) { console.error(e); }
   };
 
@@ -934,14 +928,6 @@ export const App = () => {
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if(!SR) { addToast('Гласовата услуга не се поддържа от този браузър.', 'error'); return; }
     
-    // Unstoppable Warmup for Safari
-    const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-    if (audioCtx.state === 'suspended') audioCtx.resume();
-    if (window.speechSynthesis) {
-        window.speechSynthesis.cancel();
-        window.speechSynthesis.getVoices();
-    }
-
     // Clean up
     if (recognitionRef.current) {
         recognitionRef.current.onend = null;
@@ -965,7 +951,7 @@ export const App = () => {
     rec.onerror = (e: any) => { 
         console.error("Mic error:", e.error);
         if(e.error === 'not-allowed' || e.error === 'service-not-allowed') {
-            addToast('Микрофонът е зает. Моля, затворете други приложения или опреснете страницата.', 'error');
+            addToast('Не мога да започна запис. Моля, уверете се, че сте позволили достъп до микрофона.', 'error');
         } else {
             addToast('Проблем с микрофона. Моля, опитайте отново.', 'info');
         }
@@ -974,8 +960,7 @@ export const App = () => {
 
     recognitionRef.current = rec; 
     try {
-        // Small delay inside click handler to ensure Safari registers the gesture context correctly
-        setTimeout(() => { rec.start(); }, 100);
+        rec.start();
     } catch (err) {
         console.error("Start speech failed:", err);
         setIsListening(false);
