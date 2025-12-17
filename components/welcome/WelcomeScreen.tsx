@@ -207,7 +207,7 @@ export const WelcomeScreen = ({
              <p className="text-center text-[10px] text-gray-400 mt-2 font-medium opacity-60">AI може да допуска грешки.</p>
           </div>
 
-          <footer className="w-full py-4 text-center hidden md:block mt-auto">
+          <footer className="w-full py-4 text-center mt-auto pb-8 md:pb-4">
               <div className="flex flex-wrap justify-center gap-6 mb-2 text-sm font-medium text-zinc-500 dark:text-zinc-400">
                   <button onClick={() => setHomeView('about')} className="hover:text-indigo-500 transition-colors">За нас</button>
                   <button onClick={() => setHomeView('contact')} className="hover:text-indigo-500 transition-colors">Контакти</button>
