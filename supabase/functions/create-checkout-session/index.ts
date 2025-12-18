@@ -33,7 +33,14 @@ serve(async (req) => {
 
     const { priceId, returnUrl } = await req.json()
 
-    const { data: profile } = await supabaseClient
+    // Service Role Client for Admin Updates
+    const supabaseAdmin = createClient(
+        Deno.env.get('SUPABASE_URL') ?? '',
+        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    )
+
+    // Check existing mapping
+    const { data: profile } = await supabaseAdmin
       .from('profiles')
       .select('stripe_customer_id')
       .eq('id', user.id)
@@ -42,11 +49,25 @@ serve(async (req) => {
     let customerId = profile?.stripe_customer_id
 
     if (customerId) {
-        // Ensure existing customer has metadata
-        await stripe.customers.update(customerId, {
-            metadata: { supabase_user_id: user.id }
-        });
-    } else {
+        // Verify customer exists in Stripe, otherwise create new
+        try {
+            const existingCustomer = await stripe.customers.retrieve(customerId);
+            if (existingCustomer.deleted) {
+                customerId = null;
+            } else {
+                // Update metadata to ensure link
+                await stripe.customers.update(customerId, {
+                    metadata: { supabase_user_id: user.id },
+                    email: user.email 
+                });
+            }
+        } catch (e) {
+            console.warn("Could not retrieve existing customer, creating new one.", e);
+            customerId = null;
+        }
+    }
+
+    if (!customerId) {
       console.log(`Creating new Stripe customer for user ${user.id}`)
       const customer = await stripe.customers.create({
         email: user.email,
@@ -56,12 +77,7 @@ serve(async (req) => {
       })
       customerId = customer.id
 
-      // Use Admin Client to bypass RLS for profile update
-      const supabaseAdmin = createClient(
-        Deno.env.get('SUPABASE_URL') ?? '',
-        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-      )
-      
+      // Save to Supabase immediately
       await supabaseAdmin
         .from('profiles')
         .update({ stripe_customer_id: customerId })
@@ -81,7 +97,7 @@ serve(async (req) => {
       mode: 'subscription',
       success_url: `${returnUrl}?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${returnUrl}`,
-      client_reference_id: user.id, // Native Stripe field for tracking
+      client_reference_id: user.id, // CRITICAL: This ties the session to the user ID
       metadata: {
         supabase_user_id: user.id,
       },

@@ -26,9 +26,13 @@ serve(async (req) => {
     const body = await req.text()
     const endpointSecret = Deno.env.get('STRIPE_WEBHOOK_SIGNING_SECRET')
     
+    if (!endpointSecret) {
+        throw new Error('Missing STRIPE_WEBHOOK_SIGNING_SECRET');
+    }
+
     let event;
     try {
-        event = await stripe.webhooks.constructEventAsync(body, signature, endpointSecret!)
+        event = await stripe.webhooks.constructEventAsync(body, signature, endpointSecret)
     } catch (err: any) {
         console.error(`Webhook signature verification failed: ${err.message}`)
         return new Response(`Webhook Error: ${err.message}`, { status: 400 })
@@ -50,8 +54,8 @@ serve(async (req) => {
     const handleSubscriptionUpdate = async (subscription: any, customerId: string, explicitUserId?: string) => {
         let userId = explicitUserId || subscription.metadata?.supabase_user_id;
 
-        // Fallback: If metadata is missing on subscription, check the Customer object
-        if (!userId) {
+        // 1. Fallback: If metadata is missing on subscription, check the Customer object from Stripe
+        if (!userId && customerId) {
             console.log(`Metadata missing on subscription. Fetching customer ${customerId}...`)
             try {
                 const customer = await stripe.customers.retrieve(customerId);
@@ -64,8 +68,8 @@ serve(async (req) => {
             }
         }
 
-        // Final Fallback: DB Lookup
-        if (!userId) {
+        // 2. Fallback: Lookup by stripe_customer_id in Supabase
+        if (!userId && customerId) {
             console.log(`Looking up user by stripe_customer_id: ${customerId}`)
             const { data: profile } = await supabaseAdmin
                 .from('profiles')
@@ -76,21 +80,21 @@ serve(async (req) => {
         }
 
         if (!userId) {
-            console.error(`CRITICAL: User not found for customer ID: ${customerId}`)
+            console.error(`CRITICAL: User not found for customer ID: ${customerId}. Skipping update.`)
             return
         }
 
-        const priceId = subscription.items.data[0].price.id
+        const priceId = subscription.items?.data?.[0]?.price?.id;
         const status = subscription.status
         
         let plan = 'free'
-        // Treat incomplete (awaiting payment confirmation) as valid for the moment if we are in checkout flow
+        // Treat incomplete (awaiting payment) as valid during checkout flow to unlock features immediately
         if (status === 'active' || status === 'trialing' || status === 'incomplete') {
             if (priceId === PRICES.PLUS) plan = 'plus'
             else if (priceId === PRICES.PRO) plan = 'pro'
         }
 
-        console.log(`Processing User: ${userId} | Plan: ${plan} | Status: ${status}`)
+        console.log(`Processing Update -> User: ${userId} | Plan: ${plan} | Status: ${status} | Price: ${priceId}`)
 
         // Fetch current settings to preserve them
         const { data: currentProfile, error: fetchError } = await supabaseAdmin
@@ -103,10 +107,12 @@ serve(async (req) => {
             console.error("Error fetching profile settings:", fetchError);
         }
 
-        const currentSettings = currentProfile?.settings || {};
+        // Safe settings merge
+        const currentSettings = (currentProfile?.settings && typeof currentProfile.settings === 'object') 
+            ? currentProfile.settings 
+            : {};
         
-        // Prepare updates
-        const updates = {
+        const updatePayload = {
             plan: plan,
             stripe_subscription_id: subscription.id,
             stripe_customer_id: customerId,
@@ -119,25 +125,29 @@ serve(async (req) => {
 
         const { error, data } = await supabaseAdmin
             .from('profiles')
-            .update(updates)
+            .update(updatePayload)
             .eq('id', userId)
             .select();
 
         if (error) {
-            console.error('Error updating profile:', error)
+            console.error('Error updating profile in Supabase:', error)
         } else {
-            console.log(`SUCCESS: Updated user ${userId} to ${plan}. Rows: ${data?.length}`)
+            console.log(`SUCCESS: Updated user ${userId} to ${plan}. Rows affected: ${data?.length}`)
         }
     }
 
     if (event.type === 'checkout.session.completed') {
         const session = event.data.object
-        // Use client_reference_id as primary source of truth
+        // Use client_reference_id as primary source of truth for the user ID
         const userId = session.client_reference_id || session.metadata?.supabase_user_id
         
         if (session.subscription) {
-            const subscription = await stripe.subscriptions.retrieve(session.subscription as string)
-            await handleSubscriptionUpdate(subscription, session.customer as string, userId)
+            try {
+                const subscription = await stripe.subscriptions.retrieve(session.subscription as string)
+                await handleSubscriptionUpdate(subscription, session.customer as string, userId)
+            } catch (e) {
+                console.error("Error retrieving subscription in checkout.session.completed:", e);
+            }
         }
     } 
     else if (event.type === 'customer.subscription.created' || event.type === 'customer.subscription.updated') {
@@ -175,7 +185,7 @@ serve(async (req) => {
     })
 
   } catch (error: any) {
-    console.error(`Webhook handler failed: ${error.message}`)
+    console.error(`Webhook handler root error: ${error.message}`)
     return new Response(
       JSON.stringify({ error: error.message }),
       {
