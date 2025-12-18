@@ -3,7 +3,7 @@ import { SubjectId, AppMode, SubjectConfig } from './types';
 export const STRIPE_PRICES = {
   FREE: 'price_1SfPSOE0C0vexh9CQmjhJYYX',
   PLUS: 'price_1SfPSpE0C0vexh9Cg2YUGPah',
-  PRO:  'price_1SfPTEE0C0vexh9C9RZMvkHB'
+  PRO: 'price_1SfPTEE0C0vexh9C9RZMvkHB'
 };
 
 export const AI_MODELS = [

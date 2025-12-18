@@ -78,10 +78,14 @@ serve(async (req) => {
       customerId = customer.id
 
       // Save to Supabase immediately
-      await supabaseAdmin
-        .from('profiles')
-        .update({ stripe_customer_id: customerId })
-        .eq('id', user.id)
+      try {
+          await supabaseAdmin
+            .from('profiles')
+            .update({ stripe_customer_id: customerId })
+            .eq('id', user.id)
+      } catch (dbErr) {
+          console.error("Failed to save stripe_customer_id to profile (non-fatal):", dbErr);
+      }
     }
 
     console.log(`Creating checkout session for ${priceId} (User: ${user.id})`)
