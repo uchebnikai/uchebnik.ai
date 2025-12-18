@@ -2,8 +2,10 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 import Stripe from "https://esm.sh/stripe@12.0.0?target=deno"
 
-// Test Price IDs Mapping
-const STRIPE_PRICES = {
+declare const Deno: any;
+
+const TEST_PRICES = {
+  FREE: 'price_1SfhklE0C0vexh9CpxGIMsst',
   PLUS: 'price_1Sfhl3E0C0vexh9CQsMo20Hl',
   PRO: 'price_1SfhlFE0C0vexh9CFPbCNZDw'
 }
@@ -32,93 +34,82 @@ serve(async (req) => {
         return new Response(`Webhook Error: ${err.message}`, { status: 400 })
     }
 
-    // Initialize Admin Client (Bypass RLS)
+    // Initialize Admin Client (Service Role) - No Auth Headers needed for public webhook
     const supabaseAdmin = createClient(
       (Deno as any).env.get('SUPABASE_URL') ?? '',
       (Deno as any).env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    console.log(`Processing event: ${event.type}`)
+    console.log(`Received event: ${event.type}`)
 
-    // 1. Handle Checkout Completed (Initial Subscription)
-    if (event.type === 'checkout.session.completed') {
-      const session = event.data.object
-      const userId = session.metadata?.supabase_user_id
-      const customerId = session.customer
-      const subscriptionId = session.subscription
+    const handleSubscriptionUpdate = async (subscription: any, customerId: string, explicitUserId?: string) => {
+        let userId = explicitUserId;
 
-      if (userId && customerId) {
-         // Retrieve subscription to get exact price/plan
-         const subscription = await stripe.subscriptions.retrieve(subscriptionId as string)
-         const priceId = subscription.items.data[0].price.id
-         
-         let plan = 'free'
-         if (priceId === STRIPE_PRICES.PLUS) plan = 'plus'
-         if (priceId === STRIPE_PRICES.PRO) plan = 'pro'
+        // If user ID not provided (e.g. renewal event), look up by Stripe Customer ID
+        if (!userId) {
+            const { data: profile } = await supabaseAdmin
+                .from('profiles')
+                .select('id')
+                .eq('stripe_customer_id', customerId)
+                .single()
+            userId = profile?.id
+        }
 
-         await supabaseAdmin
-          .from('profiles')
-          .update({ 
-            stripe_customer_id: customerId,
-            stripe_subscription_id: subscriptionId,
-            plan: plan
-          })
-          .eq('id', userId)
-          
-         console.log(`[Checkout] User ${userId} upgraded to ${plan}`)
-      }
-    }
+        if (!userId) {
+            console.error(`User not found for customer ID: ${customerId}`)
+            return
+        }
 
-    // 2. Handle Subscription Updates (Upgrade/Downgrade/Renewal)
-    if (event.type === 'customer.subscription.updated' || event.type === 'customer.subscription.created') {
-        const subscription = event.data.object
-        const customerId = subscription.customer
         const priceId = subscription.items.data[0].price.id
         const status = subscription.status
-
-        let plan = 'free'
-        // Only grant access if active or trialing
-        if (status === 'active' || status === 'trialing') {
-            if (priceId === STRIPE_PRICES.PLUS) plan = 'plus'
-            if (priceId === STRIPE_PRICES.PRO) plan = 'pro'
-        }
         
-        // Update user based on stripe_customer_id
-        const { data: profile } = await supabaseAdmin
-            .from('profiles')
-            .select('id')
-            .eq('stripe_customer_id', customerId)
-            .single()
-            
-        if (profile) {
-            await supabaseAdmin
-                .from('profiles')
-                .update({ 
-                    plan: plan,
-                    stripe_subscription_id: subscription.id
-                })
-                .eq('id', profile.id)
-            console.log(`[Update] User ${profile.id} plan set to ${plan}`)
+        let plan = 'free'
+        // Map price to plan
+        if (status === 'active' || status === 'trialing') {
+            if (priceId === TEST_PRICES.PLUS) plan = 'plus'
+            if (priceId === TEST_PRICES.PRO) plan = 'pro'
         }
+
+        console.log(`Updating user ${userId}: Plan=${plan}, Status=${status}, Price=${priceId}`)
+
+        await supabaseAdmin.from('profiles').update({ 
+            plan: plan,
+            stripe_subscription_id: subscription.id,
+            stripe_customer_id: customerId 
+        }).eq('id', userId)
     }
 
-    // 3. Handle Cancellations
-    if (event.type === 'customer.subscription.deleted') {
-        const subscription = event.data.object
-        const customerId = subscription.customer
+    if (event.type === 'checkout.session.completed') {
+        const session = event.data.object
+        // Check both common metadata keys for user ID
+        const userId = session.metadata?.supabase_user_id || session.metadata?.user_id
         
-        const { data: profile } = await supabaseAdmin
-            .from('profiles')
-            .select('id')
-            .eq('stripe_customer_id', customerId)
-            .single()
-            
+        console.log(`Checkout completed. User: ${userId}, Customer: ${session.customer}`)
+
+        if (session.subscription) {
+            const subscription = await stripe.subscriptions.retrieve(session.subscription as string)
+            await handleSubscriptionUpdate(subscription, session.customer as string, userId)
+        }
+    } 
+    else if (event.type === 'customer.subscription.created' || event.type === 'customer.subscription.updated') {
+        const subscription = event.data.object
+        await handleSubscriptionUpdate(subscription, subscription.customer as string)
+    }
+    else if (event.type === 'customer.subscription.deleted') {
+        const subscription = event.data.object
+        const customerId = subscription.customer as string
+        
+        const { data: profile } = await supabaseAdmin.from('profiles').select('id').eq('stripe_customer_id', customerId).single()
         if (profile) {
-            await supabaseAdmin
-                .from('profiles')
-                .update({ plan: 'free', stripe_subscription_id: null })
-                .eq('id', profile.id)
-            console.log(`[Delete] User ${profile.id} downgraded to free`)
+            console.log(`Subscription deleted for user ${profile.id}. Downgrading to free.`)
+            await supabaseAdmin.from('profiles').update({ plan: 'free', stripe_subscription_id: null }).eq('id', profile.id)
+        }
+    }
+    else if (event.type === 'invoice.paid') {
+        const invoice = event.data.object
+        if (invoice.subscription) {
+            const subscription = await stripe.subscriptions.retrieve(invoice.subscription as string)
+            await handleSubscriptionUpdate(subscription, invoice.customer as string)
         }
     }
 
