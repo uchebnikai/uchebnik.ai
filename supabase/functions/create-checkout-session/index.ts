@@ -21,7 +21,7 @@ serve(async (req) => {
       { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
     )
 
-    const { data: { user }, error: authError } = await supabaseClient.auth.getUser()
+    const { data: { user } } = await supabaseClient.auth.getUser()
     if (!user) {
       throw new Error('Not authenticated')
     }
@@ -78,14 +78,10 @@ serve(async (req) => {
       customerId = customer.id
 
       // Save to Supabase immediately
-      try {
-          await supabaseAdmin
-            .from('profiles')
-            .update({ stripe_customer_id: customerId })
-            .eq('id', user.id)
-      } catch (dbErr) {
-          console.error("Failed to save stripe_customer_id to profile (non-fatal):", dbErr);
-      }
+      await supabaseAdmin
+        .from('profiles')
+        .update({ stripe_customer_id: customerId })
+        .eq('id', user.id)
     }
 
     console.log(`Creating checkout session for ${priceId} (User: ${user.id})`)
