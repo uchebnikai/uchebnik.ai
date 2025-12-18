@@ -131,11 +131,14 @@ serve(async (req) => {
             .eq('id', userId)
             .select();
 
-        // Attempt 2: Fallback (Settings Only) if schema error (e.g. 'plan' column missing in cache)
+        // Attempt 2: Fallback (Settings + IDs, Excluding 'plan' column)
+        // If the error is strictly about the 'plan' column not being found, we can still update other columns.
         if (error) {
-            console.warn(`Full update failed (${error.code}). Retrying with minimal settings update...`, error.message);
+            console.warn(`Full update failed (${error.code}). Retrying with safe update (excluding 'plan' column)...`, error.message);
             
             const fallbackPayload = {
+                stripe_subscription_id: subscription.id,
+                stripe_customer_id: customerId,
                 updated_at: new Date().toISOString(),
                 settings: {
                     ...currentSettings,

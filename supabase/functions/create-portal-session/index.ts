@@ -21,32 +21,62 @@ serve(async (req) => {
       { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
     )
 
-    const { data: { user } } = await supabaseClient.auth.getUser()
+    const { data: { user }, error: authError } = await supabaseClient.auth.getUser()
 
-    if (!user) {
+    if (authError || !user) {
       throw new Error('Not authenticated')
     }
 
     const { returnUrl } = await req.json()
 
+    // Use Admin client for robust DB access to bypass RLS policies if necessary
+    const supabaseAdmin = createClient(
+        Deno.env.get('SUPABASE_URL') ?? '',
+        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    )
+
     // Fetch stored Stripe Customer ID
-    const { data: profile } = await supabaseClient
+    const { data: profile } = await supabaseAdmin
       .from('profiles')
       .select('stripe_customer_id')
       .eq('id', user.id)
       .single()
-
-    if (!profile?.stripe_customer_id) {
-      throw new Error('No Stripe customer found for this user.')
-    }
 
     const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') ?? '', {
       apiVersion: '2022-11-15',
       httpClient: Stripe.createFetchHttpClient(),
     })
 
+    let customerId = profile?.stripe_customer_id
+
+    // Fallback: If not in DB, search in Stripe by email (Self-healing)
+    if (!customerId && user.email) {
+        console.log(`Customer ID missing in DB for user ${user.id}. Searching Stripe by email...`);
+        const customers = await stripe.customers.list({
+            email: user.email,
+            limit: 1
+        });
+        
+        if (customers.data.length > 0) {
+            customerId = customers.data[0].id;
+            console.log(`Found customer ${customerId} via email. Updating DB...`);
+            // Attempt to self-heal the DB record
+            await supabaseAdmin
+                .from('profiles')
+                .update({ stripe_customer_id: customerId })
+                .eq('id', user.id);
+        }
+    }
+
+    if (!customerId) {
+      console.error(`No Stripe customer found for user ${user.id} (email: ${user.email})`);
+      throw new Error('No Stripe customer record found. Please contact support.')
+    }
+
+    console.log(`Creating portal session for customer ${customerId}`);
+
     const session = await stripe.billingPortal.sessions.create({
-      customer: profile.stripe_customer_id,
+      customer: customerId,
       return_url: returnUrl,
     })
 
@@ -58,7 +88,7 @@ serve(async (req) => {
       }
     )
   } catch (error: any) {
-    console.error(error)
+    console.error("Create Portal Session Error:", error)
     return new Response(
       JSON.stringify({ error: error.message }),
       {
