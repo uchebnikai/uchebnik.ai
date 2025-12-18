@@ -142,7 +142,6 @@ export type FontFamily = 'inter' | 'dyslexic' | 'mono';
 
 export interface UserSettings {
   userName: string;
-  gradeLevel: GradeLevel;
   textSize: 'small' | 'normal' | 'large';
   haptics: boolean;
   notifications: boolean; 
@@ -158,7 +157,6 @@ export interface UserSettings {
   
   // New Enhanced Settings
   teachingStyle: TeachingStyle;
-  speechRate: number; // 0.5 to 2.0
   enterToSend: boolean;
   fontFamily: FontFamily;
 }

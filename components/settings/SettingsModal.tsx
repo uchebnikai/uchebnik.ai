@@ -178,6 +178,21 @@ export const SettingsModal = ({
                               <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">{t('email', userSettings.language)}</label>
                               <input value={editProfile.email} onChange={e => setEditProfile({...editProfile, email: e.target.value})} className="w-full bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 outline-none focus:border-indigo-500 transition-all font-medium"/>
                           </div>
+                          
+                          {/* Password Change Section */}
+                          <div className="col-span-1 md:col-span-2 pt-2 border-t border-gray-100 dark:border-white/5 mt-2">
+                              <h4 className="text-sm font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2"><Lock size={16} className="text-indigo-500"/> Смяна на парола</h4>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                  <div className="space-y-2">
+                                      <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">{t('current_password', userSettings.language)}</label>
+                                      <input type="password" value={editProfile.currentPassword} onChange={e => setEditProfile({...editProfile, currentPassword: e.target.value})} className="w-full bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 outline-none focus:border-indigo-500 transition-all font-medium" placeholder="••••••••"/>
+                                  </div>
+                                  <div className="space-y-2">
+                                      <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">{t('new_password', userSettings.language)}</label>
+                                      <input type="password" value={editProfile.password} onChange={e => setEditProfile({...editProfile, password: e.target.value})} className="w-full bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 outline-none focus:border-indigo-500 transition-all font-medium" placeholder="••••••••"/>
+                                  </div>
+                              </div>
+                          </div>
                       </div>
 
                       {isPremium && (
@@ -363,43 +378,7 @@ export const SettingsModal = ({
                           </div>
                       </section>
 
-                      {/* Speech Rate Slider - Kept for manual TTS customization */}
-                      <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl p-6 space-y-4">
-                          <label className="text-sm font-bold text-gray-900 dark:text-white flex justify-between">
-                              <span>Скорост на говорене (TTS)</span>
-                              <span className="text-indigo-500">{userSettings.speechRate}x</span>
-                          </label>
-                          <input 
-                              type="range" 
-                              min="0.5" 
-                              max="2.0" 
-                              step="0.25" 
-                              value={userSettings.speechRate} 
-                              onChange={(e) => setUserSettings({...userSettings, speechRate: parseFloat(e.target.value)})}
-                              className="w-full accent-indigo-500" 
-                          />
-                      </div>
-
                       <div className="grid grid-cols-1 gap-6">
-                          <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl p-6 space-y-4">
-                              <label className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                                  <GraduationCap size={18} className="text-indigo-500"/> {t('grade_level', userSettings.language)}
-                              </label>
-                              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                                  {['1-4', '5-7', '8-12', 'university'].map((level) => (
-                                      <button
-                                          key={level}
-                                          onClick={() => setUserSettings({...userSettings, gradeLevel: level})}
-                                          className={`py-3 px-2 rounded-xl text-sm font-bold transition-all border ${userSettings.gradeLevel === level 
-                                              ? 'bg-indigo-600 text-white border-indigo-600 shadow-lg shadow-indigo-500/20' 
-                                              : 'bg-gray-50 dark:bg-black/20 text-gray-600 dark:text-gray-300 border-transparent hover:bg-gray-100 dark:hover:bg-white/10'}`}
-                                      >
-                                          {level === 'university' ? 'Студент' : `${level} Клас`}
-                                      </button>
-                                  ))}
-                              </div>
-                          </div>
-
                           <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl p-6 space-y-4">
                               <label className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
                                   <Cpu size={18} className="text-emerald-500"/> {t('response_length', userSettings.language)}

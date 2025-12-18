@@ -105,7 +105,6 @@ export const App = () => {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [userSettings, setUserSettings] = useState<UserSettings>({
     userName: '', 
-    gradeLevel: '8-12', 
     textSize: 'normal', 
     haptics: true, 
     notifications: true, 
@@ -118,7 +117,6 @@ export const App = () => {
     customBackground: null,
     language: 'bg',
     teachingStyle: 'normal',
-    speechRate: 1.0,
     enterToSend: true,
     fontFamily: 'inter'
   });
@@ -278,7 +276,6 @@ export const App = () => {
                       // Ensure language is set
                       if (!merged.language) merged.language = 'bg';
                       if (!merged.teachingStyle) merged.teachingStyle = 'normal';
-                      if (!merged.speechRate) merged.speechRate = 1.0;
                       
                       setUserSettings(prev => ({ ...prev, ...merged }));
                       if (plan) setUserPlan(plan);
@@ -477,7 +474,6 @@ export const App = () => {
                      else if (userId) {
                         setUserSettings({
                             userName: session?.user?.user_metadata?.full_name || '', 
-                            gradeLevel: '8-12', 
                             textSize: 'normal', 
                             haptics: true, 
                             notifications: true, 
@@ -490,7 +486,6 @@ export const App = () => {
                             customBackground: null, 
                             language: 'bg',
                             teachingStyle: 'normal',
-                            speechRate: 1.0,
                             enterToSend: true,
                             fontFamily: 'inter'
                         });
@@ -972,8 +967,7 @@ export const App = () => {
         const u = new SpeechSynthesisUtterance(clean); 
         u.lang = lang; 
         if(v) u.voice = v; 
-        // Apply Speech Rate
-        u.rate = userSettings.speechRate || 1.0;
+        u.rate = 1.0;
         utteranceRef.current = u; 
         u.onend = safeOnEnd; 
         u.onerror = (e) => { console.error("Speech Synthesis Error", e); utteranceRef.current = null; safeOnEnd(); }
