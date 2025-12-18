@@ -3,6 +3,7 @@ import React from 'react';
 import { ArrowLeft, Zap, Book, CheckCircle, FileJson } from 'lucide-react';
 import { DynamicIcon } from '../ui/DynamicIcon';
 import { SubjectConfig, UserRole, UserSettings, AppMode, HomeViewType } from '../../types';
+import { t } from '../../utils/translations';
 
 interface SubjectDashboardProps {
   activeSubject: SubjectConfig | null;
@@ -38,8 +39,8 @@ export const SubjectDashboard = ({
              <div className={`w-24 h-24 mx-auto rounded-[32px] ${activeSubject.color} flex items-center justify-center text-white shadow-2xl shadow-indigo-500/30 rotate-3`}>
                  <DynamicIcon name={activeSubject.icon} className="w-12 h-12" />
              </div>
-             <h1 className="text-4xl md:text-5xl font-black text-zinc-900 dark:text-white font-display tracking-tight">{activeSubject.name}</h1>
-             <p className="text-xl text-gray-500 dark:text-gray-400">{isStudent ? 'Какво ще правим днес?' : 'Инструменти за преподавателя'}</p>
+             <h1 className="text-4xl md:text-5xl font-black text-zinc-900 dark:text-white font-display tracking-tight">{t(`subject_${activeSubject.id}`, userSettings.language)}</h1>
+             <p className="text-xl text-gray-500 dark:text-gray-400">{isStudent ? t('what_to_do', userSettings.language) : t('teacher_tools', userSettings.language)}</p>
              
              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
                  {isStudent ? (
@@ -48,15 +49,15 @@ export const SubjectDashboard = ({
                              <div className="p-3 bg-indigo-100/50 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 rounded-2xl w-fit mb-4 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
                                  <Zap size={24}/>
                              </div>
-                             <h3 className="text-2xl font-bold mb-2">За решаване</h3>
-                             <p className="text-gray-500 font-medium">Помощ със задачи и упражнения.</p>
+                             <h3 className="text-2xl font-bold mb-2">{t('mode_solve', userSettings.language)}</h3>
+                             <p className="text-gray-500 font-medium">{t('mode_solve_desc', userSettings.language)}</p>
                          </button>
                          <button onClick={() => handleStartMode(AppMode.LEARN)} className="group p-6 bg-white/60 dark:bg-black/40 backdrop-blur-xl border border-white/20 dark:border-white/10 rounded-3xl text-left hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl hover:shadow-2xl hover:border-emerald-500/30">
                              <div className="p-3 bg-emerald-100/50 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-2xl w-fit mb-4 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
                                  <Book size={24}/>
                              </div>
-                             <h3 className="text-2xl font-bold mb-2">За учене</h3>
-                             <p className="text-gray-500 font-medium">Обяснения на уроци и концепции.</p>
+                             <h3 className="text-2xl font-bold mb-2">{t('mode_learn', userSettings.language)}</h3>
+                             <p className="text-gray-500 font-medium">{t('mode_learn_desc', userSettings.language)}</p>
                          </button>
                      </>
                  ) : (
@@ -65,22 +66,22 @@ export const SubjectDashboard = ({
                              <div className="p-3 bg-indigo-100/50 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 rounded-2xl w-fit mb-4 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
                                  <CheckCircle size={24}/>
                              </div>
-                             <h3 className="text-2xl font-bold mb-2">Създай Тест</h3>
-                             <p className="text-gray-500 font-medium">Генерирай въпроси и отговори за проверка.</p>
+                             <h3 className="text-2xl font-bold mb-2">{t('mode_test', userSettings.language)}</h3>
+                             <p className="text-gray-500 font-medium">{t('mode_test_desc', userSettings.language)}</p>
                          </button>
                          <button onClick={() => handleStartMode(AppMode.TEACHER_PLAN)} className="group p-6 bg-white/60 dark:bg-black/40 backdrop-blur-xl border border-white/20 dark:border-white/10 rounded-3xl text-left hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl hover:shadow-2xl hover:border-amber-500/30">
                              <div className="p-3 bg-amber-100/50 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 rounded-2xl w-fit mb-4 group-hover:bg-amber-600 group-hover:text-white transition-colors">
                                  <FileJson size={24}/>
                              </div>
-                             <h3 className="text-2xl font-bold mb-2">План на урок</h3>
-                             <p className="text-gray-500 font-medium">Структурирай урока и целите.</p>
+                             <h3 className="text-2xl font-bold mb-2">{t('mode_plan', userSettings.language)}</h3>
+                             <p className="text-gray-500 font-medium">{t('mode_plan_desc', userSettings.language)}</p>
                          </button>
                          <button onClick={() => handleStartMode(AppMode.TEACHER_RESOURCES)} className="col-span-full group p-6 bg-white/60 dark:bg-black/40 backdrop-blur-xl border border-white/20 dark:border-white/10 rounded-3xl text-left hover:scale-[1.01] active:scale-[0.99] transition-all shadow-xl hover:shadow-2xl hover:border-pink-500/30">
                              <div className="p-3 bg-pink-100/50 dark:bg-pink-500/20 text-pink-600 dark:text-pink-400 rounded-2xl w-fit mb-4 group-hover:bg-pink-600 group-hover:text-white transition-colors">
                                  <LightbulbIcon size={24}/>
                              </div>
-                             <h3 className="text-2xl font-bold mb-2">Идеи и Ресурси</h3>
-                             <p className="text-gray-500 font-medium">Интерактивни задачи и материали.</p>
+                             <h3 className="text-2xl font-bold mb-2">{t('mode_resources', userSettings.language)}</h3>
+                             <p className="text-gray-500 font-medium">{t('mode_resources_desc', userSettings.language)}</p>
                          </button>
                      </>
                  )}

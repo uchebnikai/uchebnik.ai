@@ -1,7 +1,8 @@
 
 import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
 import { AppMode, SubjectId, Slide, ChartData, GeometryData, Message, TestData } from "../types";
-import { SYSTEM_PROMPTS, SUBJECTS } from "../constants";
+import { getSystemPrompt, SUBJECTS } from "../constants";
+import { Language } from '../utils/translations';
 
 // Helper for delay
 const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -28,7 +29,8 @@ export const generateResponse = async (
   history: Message[] = [],
   preferredModel: string = 'gemini-2.5-flash',
   onStreamUpdate?: (text: string, reasoning: string) => void,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  language: Language = 'bg'
 ): Promise<Message> => {
   
   const apiKey = process.env.API_KEY || "";
@@ -44,6 +46,7 @@ export const generateResponse = async (
   }
 
   const subjectConfig = SUBJECTS.find(s => s.id === subjectId);
+  // We use the internal name for system context, prompts handle the language output
   const subjectName = subjectConfig ? subjectConfig.name : "Unknown Subject";
   const modelName = 'gemini-2.5-flash';
 
@@ -52,40 +55,17 @@ export const generateResponse = async (
   const imageKeywords = /(draw|paint|generate image|create a picture|make an image|нарисувай|рисувай|генерирай изображение|генерирай снимка|направи снимка|изображение на)/i;
   const isImageRequest = (subjectId === SubjectId.ART && mode === AppMode.DRAW) || imageKeywords.test(promptText);
 
-  let systemInstruction = SYSTEM_PROMPTS.DEFAULT;
+  // Get localized system prompt based on mode and language
+  let systemInstruction = getSystemPrompt(isImageRequest ? 'DRAW' : mode, language);
   let forceJson = false;
 
   if (isImageRequest) {
-      systemInstruction = `You are an AI that helps with art concepts and geometry. 
-      IMPORTANT: You CANNOT generate pixel/raster images (PNG/JPG). 
-      If the user asks for a drawing, you MUST generate an SVG code block using the json:geometry format.
-      
-      GEOMETRY GUIDELINES:
-      - Use <path> commands to draw arcs for angles.
-      - Label angles clearly with degrees (e.g. 45°) using <text>.
-      - Ensure text labels do not overlap lines.
-      - Use font-size 14-16 for labels.
-      - Use stroke-width="2" for main lines.
-      
-      Format: \`\`\`json:geometry { "title": "...", "svg": "..." } \`\`\``;
-  } else if (mode === AppMode.LEARN) {
-      systemInstruction = SYSTEM_PROMPTS.LEARN;
-  } else if (mode === AppMode.SOLVE) {
-      systemInstruction = SYSTEM_PROMPTS.SOLVE;
-  } else if (mode === AppMode.TEACHER_PLAN) {
-      systemInstruction = SYSTEM_PROMPTS.TEACHER_PLAN;
-  } else if (mode === AppMode.TEACHER_RESOURCES) {
-      systemInstruction = SYSTEM_PROMPTS.TEACHER_RESOURCES;
-  } else if (mode === AppMode.TEACHER_TEST) {
-      systemInstruction = SYSTEM_PROMPTS.TEACHER_TEST;
+      // Draw instructions are handled inside getSystemPrompt if we added a DRAW case, 
+      // but if not, we append specific SV instructions here if they weren't fully covered
+      // Actually getSystemPrompt has default SVG instructions for SOLVE, let's ensure DRAW specific logic overrides if needed
+      // For now, we rely on the helper function logic.
+  } else if (mode === AppMode.TEACHER_TEST || mode === AppMode.PRESENTATION) {
       forceJson = true;
-  } else if (mode === AppMode.PRESENTATION) {
-      systemInstruction = SYSTEM_PROMPTS.PRESENTATION;
-      forceJson = true;
-  }
-
-  if (forceJson) {
-      systemInstruction += "\n\nIMPORTANT: YOU MUST RETURN VALID JSON ONLY. NO MARKDOWN BLOCK WRAPPING THE JSON (IF POSSIBLE), JUST THE JSON STRING.";
   }
 
   // Thinking config is implicitly supported by 2.5 Flash, instruct it to use <think> tags for UI

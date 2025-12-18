@@ -4,6 +4,7 @@ import { MessageSquare, Trash2, Plus, School, GraduationCap, Briefcase, ChevronD
 import { DynamicIcon } from '../ui/DynamicIcon';
 import { SUBJECTS } from '../../constants';
 import { SubjectId, AppMode, Session, UserRole, UserSettings, UserPlan, SubjectConfig, HomeViewType } from '../../types';
+import { t } from '../../utils/translations';
 
 interface SidebarProps {
   sidebarOpen: boolean;
@@ -126,7 +127,7 @@ export const Sidebar = ({
                 title="Общ Чат"
               >
                    <div className={`p-1.5 rounded-lg shrink-0 ${activeSubject?.id === SubjectId.GENERAL ? 'bg-white/20' : 'bg-gray-100 dark:bg-white/5 text-indigo-600 dark:text-indigo-400'}`}><MessageSquare size={18} /></div>
-                   {!collapsed && <span className="font-bold text-sm">Общ Чат</span>}
+                   {!collapsed && <span className="font-bold text-sm">{t('chat_general', userSettings.language)}</span>}
                    {unreadSubjects.has(SubjectId.GENERAL) && <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full animate-pulse" />}
               </button>
               
@@ -145,7 +146,7 @@ export const Sidebar = ({
                          </div>
                      ))}
                      <button onClick={() => { createNewSession(SubjectId.GENERAL); if(isMobile) setSidebarOpen(false); }} className="w-full text-left px-3 py-2 text-xs font-bold text-indigo-500 hover:text-indigo-600 flex items-center gap-1">
-                        <Plus size={12}/> Нов чат
+                        <Plus size={12}/> {t('new_chat', userSettings.language)}
                      </button>
                   </div>
               )}
@@ -158,7 +159,7 @@ export const Sidebar = ({
                      <button 
                         onClick={() => { setActiveSubject(null); setHomeView('school_select'); setUserRole(null); }}
                         className={`p-3 rounded-xl transition-all ${homeView === 'school_select' || homeView === 'student_subjects' || homeView === 'teacher_subjects' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30' : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10 hover:text-indigo-500'}`}
-                        title="Училище"
+                        title={t('school', userSettings.language)}
                      >
                         <School size={20} />
                      </button>
@@ -167,7 +168,7 @@ export const Sidebar = ({
                      <button 
                         onClick={() => { setActiveSubject(null); setHomeView('university_select'); setUserRole(null); }}
                         className={`p-3 rounded-xl transition-all ${homeView === 'university_select' || homeView === 'uni_student_subjects' || homeView === 'uni_teacher_subjects' ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-500/30' : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10 hover:text-emerald-500'}`}
-                        title="Университет"
+                        title={t('university', userSettings.language)}
                      >
                         <Landmark size={20} />
                      </button>
@@ -180,7 +181,7 @@ export const Sidebar = ({
                         <button onClick={() => { setActiveSubject(null); setHomeView('school_select'); setUserRole(null); setSchoolFolderOpen(!schoolFolderOpen); }} className="w-full flex items-center justify-between px-2 py-3 text-gray-400 dark:text-zinc-500 hover:text-indigo-500 transition-colors">
                             <div className="flex items-center gap-2">
                                 <School size={18} />
-                                <span className="text-xs font-bold uppercase tracking-widest">Училище</span>
+                                <span className="text-xs font-bold uppercase tracking-widest">{t('school', userSettings.language)}</span>
                             </div>
                             <ChevronDown size={14} className={`transition-transform duration-300 ${schoolFolderOpen ? 'rotate-180' : ''}`}/>
                         </button>
@@ -196,7 +197,7 @@ export const Sidebar = ({
                                             className="flex items-center gap-2 text-gray-500 dark:text-zinc-400 hover:text-indigo-500 transition-colors flex-1 text-left"
                                         >
                                             <GraduationCap size={14} />
-                                            <span className="text-[11px] font-bold uppercase tracking-wider">Ученици</span>
+                                            <span className="text-[11px] font-bold uppercase tracking-wider">{t('students', userSettings.language)}</span>
                                         </button>
                                         <button onClick={() => setStudentsFolderOpen(!studentsFolderOpen)} className="p-1 text-gray-400 hover:text-indigo-500 rounded-full hover:bg-gray-100 dark:hover:bg-white/5 transition-colors">
                                             <ChevronDown size={12} className={`transition-transform duration-300 ${studentsFolderOpen ? 'rotate-180' : ''}`}/>
@@ -212,7 +213,7 @@ export const Sidebar = ({
                                                         className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm transition-colors ${activeSubject?.id === s.id && userRole === 'student' ? 'bg-indigo-50 dark:bg-white/10 text-indigo-600 dark:text-indigo-300 font-bold' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5'}`}
                                                     >
                                                         <div className={`w-2 h-2 rounded-full ${s.color} shrink-0`}></div>
-                                                        <span className="truncate">{s.name}</span>
+                                                        <span className="truncate">{t(`subject_${s.id}`, userSettings.language)}</span>
                                                     </button>
                                                     
                                                     {/* Sessions List (Student) */}
@@ -230,7 +231,7 @@ export const Sidebar = ({
                                                                 </div>
                                                             ))}
                                                             <button onClick={() => { createNewSession(s.id, 'student', activeMode); if(isMobile) setSidebarOpen(false); setShowSubjectDashboard(false); }} className="w-full text-left px-2 py-1.5 text-[10px] font-bold text-indigo-500 hover:text-indigo-600 flex items-center gap-1">
-                                                                <Plus size={10}/> Нов чат
+                                                                <Plus size={10}/> {t('new_chat', userSettings.language)}
                                                             </button>
                                                         </div>
                                                     )}
@@ -248,7 +249,7 @@ export const Sidebar = ({
                                             className="flex items-center gap-2 text-gray-500 dark:text-zinc-400 hover:text-indigo-500 transition-colors flex-1 text-left"
                                         >
                                             <Briefcase size={14} />
-                                            <span className="text-[11px] font-bold uppercase tracking-wider">Учители</span>
+                                            <span className="text-[11px] font-bold uppercase tracking-wider">{t('teachers', userSettings.language)}</span>
                                         </button>
                                         <button onClick={() => setTeachersFolderOpen(!teachersFolderOpen)} className="p-1 text-gray-400 hover:text-indigo-500 rounded-full hover:bg-gray-100 dark:hover:bg-white/5 transition-colors">
                                             <ChevronDown size={12} className={`transition-transform duration-300 ${teachersFolderOpen ? 'rotate-180' : ''}`}/>
@@ -264,7 +265,7 @@ export const Sidebar = ({
                                                         className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm transition-colors ${activeSubject?.id === s.id && userRole === 'teacher' ? 'bg-indigo-50 dark:bg-white/10 text-indigo-600 dark:text-indigo-300 font-bold' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5'}`}
                                                     >
                                                         <div className={`w-1.5 h-1.5 rounded-full ${s.color}`}></div>
-                                                        <span className="truncate">{s.name}</span>
+                                                        <span className="truncate">{t(`subject_${s.id}`, userSettings.language)}</span>
                                                     </button>
 
                                                     {/* Sessions List (Teacher) */}
@@ -282,7 +283,7 @@ export const Sidebar = ({
                                                                 </div>
                                                             ))}
                                                             <button onClick={() => { createNewSession(s.id, 'teacher', activeMode); if(isMobile) setSidebarOpen(false); setShowSubjectDashboard(false); }} className="w-full text-left px-2 py-1.5 text-[10px] font-bold text-indigo-500 hover:text-indigo-600 flex items-center gap-1">
-                                                                <Plus size={10}/> Нов чат
+                                                                <Plus size={10}/> {t('new_chat', userSettings.language)}
                                                             </button>
                                                         </div>
                                                     )}
@@ -301,7 +302,7 @@ export const Sidebar = ({
                         <button onClick={() => { setActiveSubject(null); setHomeView('university_select'); setUserRole(null); setUniFolderOpen(!uniFolderOpen); }} className="w-full flex items-center justify-between px-2 py-3 text-gray-400 dark:text-zinc-500 hover:text-emerald-500 transition-colors">
                             <div className="flex items-center gap-2">
                                 <Landmark size={18} />
-                                <span className="text-xs font-bold uppercase tracking-widest">Университет</span>
+                                <span className="text-xs font-bold uppercase tracking-widest">{t('university', userSettings.language)}</span>
                             </div>
                             <ChevronDown size={14} className={`transition-transform duration-300 ${uniFolderOpen ? 'rotate-180' : ''}`}/>
                         </button>
@@ -317,7 +318,7 @@ export const Sidebar = ({
                                             className="flex items-center gap-2 text-gray-500 dark:text-zinc-400 hover:text-emerald-500 transition-colors flex-1 text-left"
                                         >
                                             <GraduationCap size={14} />
-                                            <span className="text-[11px] font-bold uppercase tracking-wider">Студенти</span>
+                                            <span className="text-[11px] font-bold uppercase tracking-wider">{t('uni_students', userSettings.language)}</span>
                                         </button>
                                         <button onClick={() => setUniStudentsFolderOpen(!uniStudentsFolderOpen)} className="p-1 text-gray-400 hover:text-emerald-500 rounded-full hover:bg-gray-100 dark:hover:bg-white/5 transition-colors">
                                             <ChevronDown size={12} className={`transition-transform duration-300 ${uniStudentsFolderOpen ? 'rotate-180' : ''}`}/>
@@ -333,7 +334,7 @@ export const Sidebar = ({
                                                         className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm transition-colors ${activeSubject?.id === s.id && userRole === 'uni_student' ? 'bg-emerald-50 dark:bg-white/10 text-emerald-600 dark:text-emerald-300 font-bold' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5'}`}
                                                     >
                                                         <div className={`w-2 h-2 rounded-full ${s.color} shrink-0`}></div>
-                                                        <span className="truncate">{s.name}</span>
+                                                        <span className="truncate">{t(`subject_${s.id}`, userSettings.language)}</span>
                                                     </button>
                                                     
                                                     {/* Sessions List (Uni Student) */}
@@ -351,7 +352,7 @@ export const Sidebar = ({
                                                                 </div>
                                                             ))}
                                                             <button onClick={() => { createNewSession(s.id, 'uni_student', activeMode); if(isMobile) setSidebarOpen(false); setShowSubjectDashboard(false); }} className="w-full text-left px-2 py-1.5 text-[10px] font-bold text-emerald-500 hover:text-emerald-600 flex items-center gap-1">
-                                                                <Plus size={10}/> Нов чат
+                                                                <Plus size={10}/> {t('new_chat', userSettings.language)}
                                                             </button>
                                                         </div>
                                                     )}
@@ -369,7 +370,7 @@ export const Sidebar = ({
                                             className="flex items-center gap-2 text-gray-500 dark:text-zinc-400 hover:text-emerald-500 transition-colors flex-1 text-left"
                                         >
                                             <Briefcase size={14} />
-                                            <span className="text-[11px] font-bold uppercase tracking-wider">Професори</span>
+                                            <span className="text-[11px] font-bold uppercase tracking-wider">{t('uni_professors', userSettings.language)}</span>
                                         </button>
                                         <button onClick={() => setUniTeachersFolderOpen(!uniTeachersFolderOpen)} className="p-1 text-gray-400 hover:text-emerald-500 rounded-full hover:bg-gray-100 dark:hover:bg-white/5 transition-colors">
                                             <ChevronDown size={12} className={`transition-transform duration-300 ${uniTeachersFolderOpen ? 'rotate-180' : ''}`}/>
@@ -385,7 +386,7 @@ export const Sidebar = ({
                                                         className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm transition-colors ${activeSubject?.id === s.id && userRole === 'uni_teacher' ? 'bg-emerald-50 dark:bg-white/10 text-emerald-600 dark:text-emerald-300 font-bold' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5'}`}
                                                     >
                                                         <div className={`w-1.5 h-1.5 rounded-full ${s.color}`}></div>
-                                                        <span className="truncate">{s.name}</span>
+                                                        <span className="truncate">{t(`subject_${s.id}`, userSettings.language)}</span>
                                                     </button>
 
                                                     {/* Sessions List (Uni Teacher) */}
@@ -403,7 +404,7 @@ export const Sidebar = ({
                                                                 </div>
                                                             ))}
                                                             <button onClick={() => { createNewSession(s.id, 'uni_teacher', activeMode); if(isMobile) setSidebarOpen(false); setShowSubjectDashboard(false); }} className="w-full text-left px-2 py-1.5 text-[10px] font-bold text-emerald-500 hover:text-emerald-600 flex items-center gap-1">
-                                                                <Plus size={10}/> Нов чат
+                                                                <Plus size={10}/> {t('new_chat', userSettings.language)}
                                                             </button>
                                                         </div>
                                                     )}
@@ -427,8 +428,8 @@ export const Sidebar = ({
                   <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20" />
                   <div className="relative z-10 flex items-center justify-between text-white">
                      <div>
-                        <h3 className="font-black text-lg tracking-tight">Upgrade Plan</h3>
-                        <p className="text-xs font-medium text-indigo-100 opacity-90">Отключи пълния потенциал</p>
+                        <h3 className="font-black text-lg tracking-tight">{t('upgrade_plan', userSettings.language)}</h3>
+                        <p className="text-xs font-medium text-indigo-100 opacity-90">{t('unlock_potential', userSettings.language)}</p>
                      </div>
                      <div className="w-8 h-8 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center border border-white/20">
                         <ArrowRight size={16} />
@@ -452,20 +453,20 @@ export const Sidebar = ({
                             <div className="fixed inset-0 z-30" onClick={() => setProfileMenuOpen(false)} />
                             <div className={`absolute bottom-full ${collapsed ? 'left-14 w-60' : 'left-0 w-full'} mb-2 bg-white dark:bg-zinc-900 border border-indigo-500/10 rounded-2xl shadow-xl overflow-hidden animate-in slide-in-from-bottom-2 fade-in z-40`}>
                                  <button onClick={() => {setShowSettings(true); setProfileMenuOpen(false)}} className="w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-white/5 text-sm font-medium flex items-center gap-3 transition-colors">
-                                    <Settings size={16} className="text-gray-500"/> Настройки
+                                    <Settings size={16} className="text-gray-500"/> {t('settings', userSettings.language)}
                                  </button>
                                  <button onClick={() => {setShowUnlockModal(true); setProfileMenuOpen(false)}} className="w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-white/5 text-sm font-medium flex items-center gap-3 transition-colors">
-                                    <CreditCard size={16} className="text-gray-500"/> Управление на плана
+                                    <CreditCard size={16} className="text-gray-500"/> {t('manage_plan', userSettings.language)}
                                  </button>
                                  <button onClick={() => {setActiveSubject(null); setHomeView('terms'); setProfileMenuOpen(false); if(isMobile) setSidebarOpen(false);}} className="w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-white/5 text-sm font-medium flex items-center gap-3 transition-colors">
-                                    <FileText size={16} className="text-gray-500"/> Общи условия
+                                    <FileText size={16} className="text-gray-500"/> {t('terms', userSettings.language)}
                                  </button>
                                   <button onClick={() => {addToast('Свържете се с нас в Discord за помощ.', 'info'); setProfileMenuOpen(false)}} className="w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-white/5 text-sm font-medium flex items-center gap-3 transition-colors">
-                                    <HelpCircle size={16} className="text-gray-500"/> Помощ
+                                    <HelpCircle size={16} className="text-gray-500"/> {t('help', userSettings.language)}
                                  </button>
                                  <div className="h-px bg-gray-100 dark:bg-white/5 mx-2" />
                                  <button onClick={handleLogout} className="w-full text-left px-4 py-3 hover:bg-red-50 dark:hover:bg-red-900/10 text-red-500 text-sm font-medium flex items-center gap-3 transition-colors">
-                                    <LogOut size={16}/> Изход
+                                    <LogOut size={16}/> {t('logout', userSettings.language)}
                                  </button>
                             </div>
                         </>
@@ -496,9 +497,9 @@ export const Sidebar = ({
                                         )}
                                     </div>
                                     <div className="text-[10px] uppercase font-bold tracking-widest flex items-center gap-1.5 opacity-60 mt-1">
-                                        {syncStatus === 'syncing' && <><RefreshCw size={10} className="animate-spin"/> Syncing...</>}
-                                        {syncStatus === 'synced' && <><Cloud size={10} className="text-emerald-500"/> Synced</>}
-                                        {syncStatus === 'error' && <><CloudOff size={10} className="text-red-500"/> Sync Error</>}
+                                        {syncStatus === 'syncing' && <><RefreshCw size={10} className="animate-spin"/> {t('syncing', userSettings.language)}</>}
+                                        {syncStatus === 'synced' && <><Cloud size={10} className="text-emerald-500"/> {t('synced', userSettings.language)}</>}
+                                        {syncStatus === 'error' && <><CloudOff size={10} className="text-red-500"/> {t('sync_error', userSettings.language)}</>}
                                     </div>
                                 </div>
                                 <ChevronUp size={16} className={`text-gray-400 transition-transform duration-300 ${profileMenuOpen ? 'rotate-180' : ''}`} />
@@ -511,7 +512,7 @@ export const Sidebar = ({
                      <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center border border-white/20 shrink-0"><User size={20}/></div>
                      {!collapsed && (
                          <div className="text-left">
-                             <div className="text-sm">Вход</div>
+                             <div className="text-sm">{t('login', userSettings.language)}</div>
                              <div className="text-[10px] opacity-80">Запази прогреса си</div>
                          </div>
                      )}

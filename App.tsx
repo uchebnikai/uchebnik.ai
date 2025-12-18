@@ -18,6 +18,7 @@ import { saveSessionsToStorage, getSessionsFromStorage, saveSettingsToStorage, g
 import { useTheme } from './hooks/useTheme';
 import { getBackgroundImageStyle } from './styles/utils';
 import { TOAST_CONTAINER, TOAST_ERROR, TOAST_SUCCESS, TOAST_INFO } from './styles/ui';
+import { t } from './utils/translations';
 
 // Components
 import { Lightbox } from './components/ui/Lightbox';
@@ -115,7 +116,8 @@ export const App = () => {
     languageLevel: 'standard', 
     preferredModel: 'auto',
     themeColor: '#6366f1',
-    customBackground: null
+    customBackground: null,
+    language: 'bg'
   });
   const [unreadSubjects, setUnreadSubjects] = useState<Set<string>>(new Set());
   const [notification, setNotification] = useState<{ message: string, subjectId: string } | null>(null);
@@ -256,6 +258,8 @@ export const App = () => {
                   if (profileData.settings) {
                       const { plan, stats, ...restSettings } = profileData.settings;
                       const merged = { ...restSettings, themeColor: profileData.theme_color, customBackground: profileData.custom_background };
+                      // Ensure language is set
+                      if (!merged.language) merged.language = 'bg';
                       setUserSettings(prev => ({ ...prev, ...merged }));
                       if (plan) setUserPlan(plan);
                       if (stats) {
@@ -337,13 +341,13 @@ export const App = () => {
                           const localOnly = prev.filter(p => !remoteSessions.find((r: Session) => r.id === p.id));
                           return [...localOnly, ...merged].sort((a: Session, b: Session) => b.lastModified - a.lastModified);
                       });
-                      addToast('Чатовете са синхронизирани', 'info');
+                      addToast(t('synced', userSettings.language), 'info');
                   }
               }
           })
           .subscribe();
       return () => { supabase.removeChannel(channel); };
-  }, [session?.user?.id, missingDbTables]);
+  }, [session?.user?.id, missingDbTables, userSettings.language]);
 
   useEffect(() => {
       if (!session?.user?.id || missingDbTables) return;
@@ -452,7 +456,7 @@ export const App = () => {
                      if (lsSettings) setUserSettings(JSON.parse(lsSettings));
                      else if (userId) {
                         setUserSettings({
-                            userName: session?.user?.user_metadata?.full_name || '', gradeLevel: '8-12', textSize: 'normal', haptics: true, notifications: true, sound: true, reduceMotion: false, responseLength: 'concise', creativity: 'balanced', languageLevel: 'standard', preferredModel: 'auto', themeColor: '#6366f1', customBackground: null
+                            userName: session?.user?.user_metadata?.full_name || '', gradeLevel: '8-12', textSize: 'normal', haptics: true, notifications: true, sound: true, reduceMotion: false, responseLength: 'concise', creativity: 'balanced', languageLevel: 'standard', preferredModel: 'auto', themeColor: '#6366f1', customBackground: null, language: 'bg'
                         });
                      }
                 }
@@ -588,23 +592,42 @@ export const App = () => {
   const createNewSession = (subjectId: SubjectId, role?: UserRole, initialMode?: AppMode) => {
     const greetingName = userSettings.userName ? `, ${userSettings.userName}` : '';
     let welcomeText = "";
-    const subjectName = SUBJECTS.find(s => s.id === subjectId)?.name;
+    
+    // We use t() but we need the raw name/desc for the session title initially. 
+    // Session titles are stored, so they will be in the language they were created in.
+    const subjectConfig = SUBJECTS.find(s => s.id === subjectId);
+    const subjectName = subjectConfig ? t(`subject_${subjectId}`, userSettings.language) : "Subject";
+    
     const getModeName = (m: AppMode) => {
+        // Translation keys for modes
         switch(m) {
-            case AppMode.SOLVE: return "Решаване"; case AppMode.LEARN: return "Учене"; case AppMode.TEACHER_TEST: return "Тест"; case AppMode.TEACHER_PLAN: return "План"; case AppMode.TEACHER_RESOURCES: return "Ресурси"; case AppMode.DRAW: return "Рисуване"; case AppMode.PRESENTATION: return "Презентация"; case AppMode.CHAT: return "Чат"; default: return "Чат";
+            case AppMode.SOLVE: return t('mode_solve', userSettings.language); 
+            case AppMode.LEARN: return t('mode_learn', userSettings.language);
+            case AppMode.TEACHER_TEST: return t('mode_test', userSettings.language);
+            case AppMode.TEACHER_PLAN: return t('mode_plan', userSettings.language);
+            case AppMode.TEACHER_RESOURCES: return t('mode_resources', userSettings.language);
+            default: return "Chat";
         }
     };
+    
     let sessionBaseName = subjectName;
-    if (initialMode) { sessionBaseName = getModeName(initialMode); }
+    if (initialMode && initialMode !== AppMode.CHAT) { sessionBaseName = getModeName(initialMode); }
+    
     const existingCount = sessions.filter(s => s.subjectId === subjectId && s.role === (role || userRole || undefined) && s.mode === initialMode).length;
-    const sessionTitle = subjectId === SubjectId.GENERAL ? `Общ Чат #${existingCount + 1}` : `${sessionBaseName} #${existingCount + 1}`;
+    const sessionTitle = subjectId === SubjectId.GENERAL ? `${t('chat_general', userSettings.language)} #${existingCount + 1}` : `${sessionBaseName} #${existingCount + 1}`;
+    
     const newSession: Session = {
-      id: crypto.randomUUID(), subjectId, title: sessionTitle, createdAt: Date.now(), lastModified: Date.now(), preview: 'Начало', messages: [], role: role || userRole || undefined, mode: initialMode
+      id: crypto.randomUUID(), subjectId, title: sessionTitle, createdAt: Date.now(), lastModified: Date.now(), preview: '...', messages: [], role: role || userRole || undefined, mode: initialMode
     };
-    if (subjectId === SubjectId.GENERAL) { welcomeText = `Здравей${greetingName}! Аз съм Uchebnik AI. Попитай ме каквото и да е!`; } 
-    else {
-        if (role === 'teacher') { welcomeText = `Здравейте, колега! Аз съм Вашият AI асистент по **${subjectName}**. Как мога да Ви съдействам?`; } 
-        else { welcomeText = `Здравей${greetingName}! Аз съм твоят помощник по **${subjectName}**.`; }
+
+    if (subjectId === SubjectId.GENERAL) { 
+        welcomeText = `${t('hello', userSettings.language)}${greetingName}! ${t('app_name', userSettings.language)}. ${t('ask_anything', userSettings.language)}`;
+    } else {
+        if (role === 'teacher' || role === 'uni_teacher') { 
+             welcomeText = `${t('hello', userSettings.language)}! ${t('subtitle', userSettings.language)} **${subjectName}**.`; 
+        } else { 
+             welcomeText = `${t('hello', userSettings.language)}${greetingName}! ${t('subtitle', userSettings.language)} **${subjectName}**.`; 
+        }
     }
     newSession.messages.push({ id: 'welcome-' + Date.now(), role: 'model', timestamp: Date.now(), text: welcomeText });
     setSessions(prev => [newSession, ...prev]);
@@ -761,9 +784,9 @@ export const App = () => {
     try {
       const sessionMessages = currentSessionsList.find(s => s.id === sessId)?.messages || [];
       const historyForAI = [...sessionMessages, newUserMsg];
-      let preferredModel = 'google/gemma-3-4b-it:free';
-      if (userPlan === 'plus') preferredModel = 'google/gemma-3-12b-it:free';
-      if (userPlan === 'pro') preferredModel = 'google/gemma-3-27b-it:free';
+      let preferredModel = 'gemini-2.5-flash';
+      if (userPlan === 'plus') preferredModel = 'gemini-2.5-flash';
+      if (userPlan === 'pro') preferredModel = 'gemini-2.5-flash';
       
       const response = await generateResponse(
           currentSubId, 
@@ -783,7 +806,8 @@ export const App = () => {
                   return s;
               }));
           },
-          controller.signal
+          controller.signal,
+          userSettings.language // Pass Language
       );
 
       if (currentImgs.length > 0) { incrementImageCount(currentImgs.length); }
@@ -801,16 +825,16 @@ export const App = () => {
       }));
       if (activeSubjectRef.current?.id !== currentSubId) {
          setUnreadSubjects(prev => new Set(prev).add(currentSubId));
-         if (userSettings.notifications) { setNotification({ message: `Нов отговор: ${SUBJECTS.find(s => s.id === currentSubId)?.name}`, subjectId: currentSubId }); setTimeout(() => setNotification(null), 4000); }
+         if (userSettings.notifications) { setNotification({ message: `Нов отговор: ${t(`subject_${currentSubId}`, userSettings.language)}`, subjectId: currentSubId }); setTimeout(() => setNotification(null), 4000); }
       } else if (userSettings.notifications && userSettings.sound) { new Audio('https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3').play().catch(()=>{}); }
       return response.text;
     } catch (error: any) {
        console.error("HandleSend Error:", error);
        // Only show error message if it wasn't an intentional abort
        if (error.name !== 'AbortError' && !controller.signal.aborted) {
-           const errorMsg: Message = { id: Date.now().toString(), role: 'model', text: "Възникна грешка. Моля опитайте отново.", isError: true, timestamp: Date.now(), isStreaming: false };
+           const errorMsg: Message = { id: Date.now().toString(), role: 'model', text: t('error', userSettings.language), isError: true, timestamp: Date.now(), isStreaming: false };
            setSessions(prev => prev.map(s => { if (s.id === sessId) { return { ...s, messages: s.messages.map(m => m.id === tempAiMsgId ? errorMsg : m) }; } return s; }));
-           return "Възникна грешка.";
+           return "Error.";
        }
        return "";
     } finally {
@@ -859,7 +883,7 @@ export const App = () => {
 
   const deleteSession = (sId: string) => { 
     setConfirmModal({
-      isOpen: true, title: 'Изтриване на чат', message: 'Сигурни ли сте, че искате да изтриете този чат? Това действие е необратимо.',
+      isOpen: true, title: t('delete', userSettings.language), message: 'Сигурни ли сте, че искате да изтриете този чат? Това действие е необратимо.',
       onConfirm: () => {
         const nextSessions = sessionsRef.current.filter(s => s.id !== sId);
         setSessions(nextSessions); 
@@ -879,7 +903,7 @@ export const App = () => {
   const handleDeleteAllChats = () => {
     setConfirmModal({
         isOpen: true, 
-        title: 'Изтриване на всички чатове', 
+        title: t('delete_all_chats', userSettings.language), 
         message: 'Сигурни ли сте, че искате да изтриете всички чатове? Това ще изтрие цялата ви история завинаги. Това действие е необратимо.',
         onConfirm: () => {
              setSessions([]);
@@ -900,7 +924,7 @@ export const App = () => {
     const estimatedDuration = Math.max(3000, (text.length / 10) * 1000 + 2000); 
     speakingTimeoutRef.current = setTimeout(() => { safeOnEnd(); }, estimatedDuration);
     const clean = text.replace(/[*#`_\[\]]/g, '').replace(/\$\$.*?\$\$/g, 'формула').replace(/http\S+/g, '');
-    let lang = activeSubjectRef.current?.id === SubjectId.ENGLISH ? 'en-US' : activeSubjectRef.current?.id === SubjectId.FRENCH ? 'fr-FR' : 'bg-BG';
+    let lang = activeSubjectRef.current?.id === SubjectId.ENGLISH ? 'en-US' : activeSubjectRef.current?.id === SubjectId.FRENCH ? 'fr-FR' : (userSettings.language === 'en' ? 'en-US' : 'bg-BG');
     const voices = window.speechSynthesis.getVoices();
     const v = voices.find(v => v.lang === lang) || voices.find(v => v.lang.startsWith(lang.split('-')[0]));
     if ((!v && lang.startsWith('bg')) || !window.speechSynthesis) {
@@ -929,7 +953,7 @@ export const App = () => {
      try { if(voiceCallRecognitionRef.current) { voiceCallRecognitionRef.current.onend = null; voiceCallRecognitionRef.current.stop(); } } catch(e) {}
      
      const rec = new SR();
-     rec.lang = activeSubjectRef.current?.id === SubjectId.ENGLISH ? 'en-US' : activeSubjectRef.current?.id === SubjectId.FRENCH ? 'fr-FR' : 'bg-BG';
+     rec.lang = activeSubjectRef.current?.id === SubjectId.ENGLISH ? 'en-US' : activeSubjectRef.current?.id === SubjectId.FRENCH ? 'fr-FR' : (userSettings.language === 'en' ? 'en-US' : 'bg-BG');
      rec.continuous = false; 
      rec.interimResults = false;
      rec.onstart = () => { if(voiceMutedRef.current) { rec.stop(); return; } setVoiceCallStatus('listening'); voiceCallStatusRef.current = 'listening'; };
@@ -983,7 +1007,7 @@ export const App = () => {
     }
 
     const rec = new SR();
-    rec.lang = activeSubject?.id === SubjectId.ENGLISH ? 'en-US' : activeSubject?.id === SubjectId.FRENCH ? 'fr-FR' : 'bg-BG';
+    rec.lang = activeSubject?.id === SubjectId.ENGLISH ? 'en-US' : activeSubject?.id === SubjectId.FRENCH ? 'fr-FR' : (userSettings.language === 'en' ? 'en-US' : 'bg-BG');
     rec.interimResults = true; 
     rec.continuous = false; // iOS Safari hates continuous = true
     startingTextRef.current = inputValue;
@@ -1131,11 +1155,11 @@ export const App = () => {
                 <div className={`backdrop-blur-md text-white px-4 py-3 rounded-xl shadow-lg flex items-center gap-3 max-w-md border ${missingDbTables ? 'bg-amber-600/90 border-amber-500/50' : 'bg-red-500/90 border-red-400/50'}`}>
                     {missingDbTables ? <Database size={20} className="shrink-0"/> : <AlertCircle size={20} className="shrink-0"/>}
                     <div className="flex-1 text-xs">
-                        <span className="font-bold block mb-0.5">{missingDbTables ? 'Database Setup Required' : 'Sync Error'}</span>
+                        <span className="font-bold block mb-0.5">{missingDbTables ? 'Database Setup Required' : t('sync_error', userSettings.language)}</span>
                         <span className="opacity-90">
                             {missingDbTables 
                                 ? 'Tables missing. Please run the SQL setup script in Supabase.' 
-                                : syncErrorDetails || 'Could not save to cloud.'}
+                                : syncErrorDetails || t('error', userSettings.language)}
                         </span>
                     </div>
                     {!missingDbTables && <button onClick={() => setSyncStatus('synced')} className="p-1 hover:bg-white/20 rounded-lg transition-colors"><X size={16}/></button>}

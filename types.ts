@@ -1,4 +1,6 @@
 
+import { Language } from './utils/translations';
+
 export enum SubjectId {
   GENERAL = 'general',
   ENGLISH = 'english',
@@ -50,11 +52,11 @@ export type SubjectCategory = 'school' | 'university';
 
 export interface SubjectConfig {
   id: SubjectId;
-  name: string;
+  name: string; // Internal name, use translation in UI
   icon: string;
   color: string;
   modes: AppMode[];
-  description: string;
+  description: string; // Internal desc, use translation in UI
   categories: SubjectCategory[];
 }
 
@@ -150,4 +152,5 @@ export interface UserSettings {
   // New Personalization Settings
   themeColor: string; // Hex code
   customBackground: string | null; // Base64 image
+  language: Language; // Added language
 }
