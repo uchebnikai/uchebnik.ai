@@ -1078,54 +1078,6 @@ export const App = () => {
       )}
       
       <main className="flex-1 flex flex-col relative w-full h-full overflow-hidden transition-all duration-300 z-10">
-        <AdminPanel 
-            showAdminAuth={showAdminAuth}
-            setShowAdminAuth={setShowAdminAuth}
-            showAdminPanel={showAdminPanel}
-            setShowAdminPanel={setShowAdminPanel}
-            adminPasswordInput={adminPasswordInput}
-            setAdminPasswordInput={setAdminPasswordInput}
-            handleAdminLogin={handleAdminLogin}
-            generateKey={generateKey}
-            generatedKeys={generatedKeys}
-            addToast={addToast}
-        />
-        <UpgradeModal 
-            showUnlockModal={showUnlockModal}
-            setShowUnlockModal={setShowUnlockModal}
-            targetPlan={targetPlan}
-            setTargetPlan={setTargetPlan}
-            unlockKeyInput={unlockKeyInput}
-            setUnlockKeyInput={setUnlockKeyInput}
-            handleUnlockSubmit={handleUnlockSubmit}
-            userPlan={userPlan}
-        />
-        <SettingsModal 
-            showSettings={showSettings}
-            setShowSettings={setShowSettings}
-            userMeta={userMeta}
-            editProfile={editProfile}
-            setEditProfile={setEditProfile}
-            handleUpdateAccount={handleUpdateAccount}
-            handleAvatarUpload={handleAvatarUpload}
-            userSettings={userSettings}
-            setUserSettings={setUserSettings}
-            isPremium={isPremium}
-            isDarkMode={isDarkMode}
-            setIsDarkMode={setIsDarkMode}
-            handleBackgroundUpload={handleBackgroundUpload}
-            handleDeleteAllChats={handleDeleteAllChats}
-        />
-        <Lightbox image={zoomedImage} onClose={() => setZoomedImage(null)} />
-        
-        <ConfirmModal 
-            isOpen={!!confirmModal}
-            title={confirmModal?.title || ''}
-            message={confirmModal?.message || ''}
-            onConfirm={confirmModal?.onConfirm || (() => {})}
-            onCancel={() => setConfirmModal(null)}
-        />
-
         {(syncStatus === 'error' && syncErrorDetails) || missingDbTables ? (
             <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[100] animate-in slide-in-from-bottom-2 fade-in">
                 <div className={`backdrop-blur-md text-white px-4 py-3 rounded-xl shadow-lg flex items-center gap-3 max-w-md border ${missingDbTables ? 'bg-amber-600/90 border-amber-500/50' : 'bg-red-500/90 border-red-400/50'}`}>
@@ -1244,6 +1196,55 @@ export const App = () => {
             </div>
         )}
       </main>
+
+        {/* Modals moved outside of main to properly overlay sidebar */}
+        <AdminPanel 
+            showAdminAuth={showAdminAuth}
+            setShowAdminAuth={setShowAdminAuth}
+            showAdminPanel={showAdminPanel}
+            setShowAdminPanel={setShowAdminPanel}
+            adminPasswordInput={adminPasswordInput}
+            setAdminPasswordInput={setAdminPasswordInput}
+            handleAdminLogin={handleAdminLogin}
+            generateKey={generateKey}
+            generatedKeys={generatedKeys}
+            addToast={addToast}
+        />
+        <UpgradeModal 
+            showUnlockModal={showUnlockModal}
+            setShowUnlockModal={setShowUnlockModal}
+            targetPlan={targetPlan}
+            setTargetPlan={setTargetPlan}
+            unlockKeyInput={unlockKeyInput}
+            setUnlockKeyInput={setUnlockKeyInput}
+            handleUnlockSubmit={handleUnlockSubmit}
+            userPlan={userPlan}
+        />
+        <SettingsModal 
+            showSettings={showSettings}
+            setShowSettings={setShowSettings}
+            userMeta={userMeta}
+            editProfile={editProfile}
+            setEditProfile={setEditProfile}
+            handleUpdateAccount={handleUpdateAccount}
+            handleAvatarUpload={handleAvatarUpload}
+            userSettings={userSettings}
+            setUserSettings={setUserSettings}
+            isPremium={isPremium}
+            isDarkMode={isDarkMode}
+            setIsDarkMode={setIsDarkMode}
+            handleBackgroundUpload={handleBackgroundUpload}
+            handleDeleteAllChats={handleDeleteAllChats}
+        />
+        <Lightbox image={zoomedImage} onClose={() => setZoomedImage(null)} />
+        
+        <ConfirmModal 
+            isOpen={!!confirmModal}
+            title={confirmModal?.title || ''}
+            message={confirmModal?.message || ''}
+            onConfirm={confirmModal?.onConfirm || (() => {})}
+            onCancel={() => setConfirmModal(null)}
+        />
 
       <div className="fixed top-4 right-4 z-[100] flex flex-col gap-2 pointer-events-none">
         {toasts.map(t => (

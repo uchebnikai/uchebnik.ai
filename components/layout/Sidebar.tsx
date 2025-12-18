@@ -84,7 +84,7 @@ export const Sidebar = ({
       <>
         {isMobile && sidebarOpen && <div className="fixed inset-0 bg-black/60 z-40 backdrop-blur-sm animate-in fade-in" onClick={() => setSidebarOpen(false)} />}
         <aside className={`fixed lg:relative inset-y-0 left-0 z-50 
-          bg-white/80 dark:bg-black/80 backdrop-blur-2xl border-r border-white/20 dark:border-white/10
+          bg-white/60 dark:bg-black/60 backdrop-blur-2xl border-r border-white/20 dark:border-white/10
           transition-all duration-300 cubic-bezier(0.19, 1, 0.22, 1) flex flex-col 
           ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'} 
           ${collapsed ? 'lg:w-[88px]' : 'lg:w-[320px]'} w-[280px]
