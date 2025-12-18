@@ -234,7 +234,7 @@ export const SettingsModal = ({
                               <label className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
                                   <Palette size={18} className="text-pink-500"/> {t('theme_color', userSettings.language)}
                               </label>
-                              {!isPremium && <span className="px-2 py-1 bg-gray-200 dark:bg-white/10 rounded text-[10px] font-bold text-gray-500 uppercase">Premium</span>}
+                              {!isPremium && <span className="px-2 py-1 bg-gray-200 dark:bg-white/10 rounded text-[10px] font-bold text-gray-500 uppercase">Plus / Pro required</span>}
                           </div>
                           <div className={`flex flex-wrap gap-4 ${!isPremium ? 'pointer-events-none' : ''}`}>
                               {['#6366f1', '#ec4899', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#14b8a6'].map(c => (
@@ -251,11 +251,14 @@ export const SettingsModal = ({
                       </section>
 
                       {/* Fonts */}
-                      <section className="space-y-4">
-                          <label className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                              <Type size={18} className="text-blue-500"/> Шрифт
-                          </label>
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <section className={`space-y-4 p-6 bg-gray-50/50 dark:bg-white/5 rounded-2xl border border-gray-200 dark:border-white/10 ${!isPremium ? 'opacity-70' : ''}`}>
+                          <div className="flex justify-between items-center mb-2">
+                              <label className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                                  <Type size={18} className="text-blue-500"/> Шрифт
+                              </label>
+                              {!isPremium && <span className="px-2 py-1 bg-gray-200 dark:bg-white/10 rounded text-[10px] font-bold text-gray-500 uppercase">Plus / Pro required</span>}
+                          </div>
+                          <div className={`grid grid-cols-1 md:grid-cols-3 gap-3 ${!isPremium ? 'pointer-events-none' : ''}`}>
                               <button onClick={() => setUserSettings({...userSettings, fontFamily: 'inter'})} className={`py-3 px-4 rounded-xl border font-sans font-medium transition-all ${userSettings.fontFamily === 'inter' ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400' : 'border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/5'}`}>
                                   Standard (Inter)
                               </button>
@@ -287,32 +290,13 @@ export const SettingsModal = ({
                           </button>
                       </section>
 
-                      {/* Reduce Motion */}
-                      <section className="flex items-center justify-between p-5 bg-white dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-2xl">
-                          <div className="flex items-center gap-3">
-                              <div className="p-2.5 rounded-xl bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300">
-                                  <Zap size={20}/>
-                              </div>
-                              <div>
-                                  <div className="font-bold text-sm text-gray-900 dark:text-white">Намали анимациите</div>
-                                  <div className="text-xs text-gray-500">За по-добра производителност.</div>
-                              </div>
-                          </div>
-                          <button 
-                            onClick={() => setUserSettings({...userSettings, reduceMotion: !userSettings.reduceMotion})} 
-                            className={`w-14 h-8 rounded-full transition-colors flex items-center px-1 ${userSettings.reduceMotion ? 'bg-indigo-600' : 'bg-gray-300'}`}
-                          >
-                              <div className={`w-6 h-6 rounded-full bg-white shadow-md transition-transform duration-300 ${userSettings.reduceMotion ? 'translate-x-6' : 'translate-x-0'}`} />
-                          </button>
-                      </section>
-
                       {/* Custom Background */}
                       <section className={`space-y-4 ${!isPremium ? 'opacity-70' : ''}`}>
                            <div className="flex justify-between items-center">
                               <label className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
                                   <ImageIcon size={18} className="text-emerald-500"/> {t('chat_bg', userSettings.language)}
                               </label>
-                              {!isPremium && <span className="px-2 py-1 bg-gray-200 dark:bg-white/10 rounded text-[10px] font-bold text-gray-500 uppercase">Premium</span>}
+                              {!isPremium && <span className="px-2 py-1 bg-gray-200 dark:bg-white/10 rounded text-[10px] font-bold text-gray-500 uppercase">Plus / Pro required</span>}
                            </div>
                            
                            <div className={`h-48 rounded-2xl border-2 border-dashed border-gray-300 dark:border-white/10 hover:border-indigo-500 dark:hover:border-indigo-500 transition-all cursor-pointer relative overflow-hidden group bg-gray-50 dark:bg-black/20 ${!isPremium ? 'pointer-events-none' : ''}`} onClick={() => isPremium && backgroundInputRef.current?.click()}>
@@ -379,43 +363,22 @@ export const SettingsModal = ({
                           </div>
                       </section>
 
-                      {/* Auto Speak */}
-                      <section className="flex items-center justify-between p-5 bg-white dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-2xl">
-                          <div className="flex items-center gap-3">
-                              <div className="p-2.5 rounded-xl bg-orange-100 dark:bg-orange-500/20 text-orange-600 dark:text-orange-400">
-                                  <Volume2 size={20}/>
-                              </div>
-                              <div>
-                                  <div className="font-bold text-sm text-gray-900 dark:text-white">Автоматично четене</div>
-                                  <div className="text-xs text-gray-500">Изчитай отговорите на глас веднага.</div>
-                              </div>
-                          </div>
-                          <button 
-                            onClick={() => setUserSettings({...userSettings, autoSpeak: !userSettings.autoSpeak})} 
-                            className={`w-14 h-8 rounded-full transition-colors flex items-center px-1 ${userSettings.autoSpeak ? 'bg-indigo-600' : 'bg-gray-300'}`}
-                          >
-                              <div className={`w-6 h-6 rounded-full bg-white shadow-md transition-transform duration-300 ${userSettings.autoSpeak ? 'translate-x-6' : 'translate-x-0'}`} />
-                          </button>
-                      </section>
-
-                      {/* Speech Rate Slider */}
-                      {userSettings.autoSpeak && (
-                          <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl p-6 space-y-4 animate-in fade-in">
-                              <label className="text-sm font-bold text-gray-900 dark:text-white flex justify-between">
-                                  <span>Скорост на говорене</span>
-                                  <span className="text-indigo-500">{userSettings.speechRate}x</span>
-                              </label>
-                              <input 
-                                  type="range" 
-                                  min="0.5" 
-                                  max="2.0" 
-                                  step="0.25" 
-                                  value={userSettings.speechRate} 
-                                  onChange={(e) => setUserSettings({...userSettings, speechRate: parseFloat(e.target.value)})}
-                                  className="w-full accent-indigo-500" 
-                              />
-                          </div>
-                      )}
+                      {/* Speech Rate Slider - Kept for manual TTS customization */}
+                      <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl p-6 space-y-4">
+                          <label className="text-sm font-bold text-gray-900 dark:text-white flex justify-between">
+                              <span>Скорост на говорене (TTS)</span>
+                              <span className="text-indigo-500">{userSettings.speechRate}x</span>
+                          </label>
+                          <input 
+                              type="range" 
+                              min="0.5" 
+                              max="2.0" 
+                              step="0.25" 
+                              value={userSettings.speechRate} 
+                              onChange={(e) => setUserSettings({...userSettings, speechRate: parseFloat(e.target.value)})}
+                              className="w-full accent-indigo-500" 
+                          />
+                      </div>
 
                       <div className="grid grid-cols-1 gap-6">
                           <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl p-6 space-y-4">

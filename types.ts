@@ -147,7 +147,6 @@ export interface UserSettings {
   haptics: boolean;
   notifications: boolean; 
   sound: boolean; 
-  reduceMotion: boolean;
   responseLength: 'concise' | 'detailed';
   creativity: 'strict' | 'balanced' | 'creative';
   languageLevel: 'simple' | 'standard' | 'advanced';
@@ -159,7 +158,6 @@ export interface UserSettings {
   
   // New Enhanced Settings
   teachingStyle: TeachingStyle;
-  autoSpeak: boolean;
   speechRate: number; // 0.5 to 2.0
   enterToSend: boolean;
   fontFamily: FontFamily;

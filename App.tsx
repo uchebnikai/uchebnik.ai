@@ -110,7 +110,6 @@ export const App = () => {
     haptics: true, 
     notifications: true, 
     sound: true, 
-    reduceMotion: false, 
     responseLength: 'concise', 
     creativity: 'balanced', 
     languageLevel: 'standard', 
@@ -119,7 +118,6 @@ export const App = () => {
     customBackground: null,
     language: 'bg',
     teachingStyle: 'normal',
-    autoSpeak: false,
     speechRate: 1.0,
     enterToSend: true,
     fontFamily: 'inter'
@@ -484,7 +482,6 @@ export const App = () => {
                             haptics: true, 
                             notifications: true, 
                             sound: true, 
-                            reduceMotion: false, 
                             responseLength: 'concise', 
                             creativity: 'balanced', 
                             languageLevel: 'standard', 
@@ -493,7 +490,6 @@ export const App = () => {
                             customBackground: null, 
                             language: 'bg',
                             teachingStyle: 'normal',
-                            autoSpeak: false,
                             speechRate: 1.0,
                             enterToSend: true,
                             fontFamily: 'inter'
@@ -865,11 +861,6 @@ export const App = () => {
           return s;
       }));
       
-      // Auto Speak Logic
-      if (userSettings.autoSpeak && response.text) {
-          speakText(response.text, () => {});
-      }
-
       if (activeSubjectRef.current?.id !== currentSubId) {
          setUnreadSubjects(prev => new Set(prev).add(currentSubId));
          if (userSettings.notifications) { setNotification({ message: `Нов отговор: ${t(`subject_${currentSubId}`, userSettings.language)}`, subjectId: currentSubId }); setTimeout(() => setNotification(null), 4000); }
