@@ -1,9 +1,9 @@
 import { SubjectId, AppMode, SubjectConfig } from './types';
 
 export const STRIPE_PRICES = {
-  FREE: 'price_1SfPSOE0C0vexh9CQmjhJYYX',
-  PLUS: 'price_1SfPSpE0C0vexh9Cg2YUGPah',
-  PRO: 'price_1SfPTEE0C0vexh9C9RZMvkHB'
+  FREE: 'price_1SfhklE0C0vexh9CpxGIMsst',
+  PLUS: 'price_1Sfhl3E0C0vexh9CQsMo20Hl',
+  PRO: 'price_1SfhlFE0C0vexh9CFPbCNZDw'
 };
 
 export const AI_MODELS = [
