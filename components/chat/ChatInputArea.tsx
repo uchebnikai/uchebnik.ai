@@ -92,6 +92,16 @@ export const ChatInputArea = ({
     }
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      if (e.key === 'Enter') {
+          if (userSettings.enterToSend && !e.shiftKey) {
+              e.preventDefault();
+              if (!loadingSubject) handleSend();
+          }
+          // If enterToSend is false, or shift+enter, it defaults to new line naturally
+      }
+  };
+
   const hasMath = /[\\^_{}]/.test(inputValue) || showMath;
 
   return (
@@ -179,7 +189,7 @@ export const ChatInputArea = ({
                         ref={textareaRef}
                         value={inputValue}
                         onChange={e => setInputValue(e.target.value)}
-                        onKeyDown={e => {if(e.key === 'Enter' && !e.shiftKey && !loadingSubject){e.preventDefault(); handleSend();}}} 
+                        onKeyDown={handleKeyDown}
                         placeholder={replyingTo ? "Напиши отговор..." : loadingSubject ? "AI генерира отговор..." : "Напиши съобщение..."}
                         disabled={loadingSubject}
                         className="w-full bg-transparent border-none focus:ring-0 p-0 text-base text-zinc-900 dark:text-zinc-100 placeholder-gray-400 resize-none max-h-24 min-h-[24px] leading-6 disabled:opacity-60 disabled:cursor-not-allowed"

@@ -1,6 +1,6 @@
 
 import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
-import { AppMode, SubjectId, Slide, ChartData, GeometryData, Message, TestData } from "../types";
+import { AppMode, SubjectId, Slide, ChartData, GeometryData, Message, TestData, TeachingStyle } from "../types";
 import { getSystemPrompt, SUBJECTS } from "../constants";
 import { Language } from '../utils/translations';
 
@@ -30,7 +30,8 @@ export const generateResponse = async (
   preferredModel: string = 'gemini-2.5-flash',
   onStreamUpdate?: (text: string, reasoning: string) => void,
   signal?: AbortSignal,
-  language: Language = 'bg'
+  language: Language = 'bg',
+  teachingStyle: TeachingStyle = 'normal'
 ): Promise<Message> => {
   
   const apiKey = process.env.API_KEY || "";
@@ -55,15 +56,12 @@ export const generateResponse = async (
   const imageKeywords = /(draw|paint|generate image|create a picture|make an image|нарисувай|рисувай|генерирай изображение|генерирай снимка|направи снимка|изображение на)/i;
   const isImageRequest = (subjectId === SubjectId.ART && mode === AppMode.DRAW) || imageKeywords.test(promptText);
 
-  // Get localized system prompt based on mode and language
-  let systemInstruction = getSystemPrompt(isImageRequest ? 'DRAW' : mode, language);
+  // Get localized system prompt based on mode, language, and teaching style
+  let systemInstruction = getSystemPrompt(isImageRequest ? 'DRAW' : mode, language, teachingStyle);
   let forceJson = false;
 
   if (isImageRequest) {
-      // Draw instructions are handled inside getSystemPrompt if we added a DRAW case, 
-      // but if not, we append specific SV instructions here if they weren't fully covered
-      // Actually getSystemPrompt has default SVG instructions for SOLVE, let's ensure DRAW specific logic overrides if needed
-      // For now, we rely on the helper function logic.
+      // Draw instructions handled
   } else if (mode === AppMode.TEACHER_TEST || mode === AppMode.PRESENTATION) {
       forceJson = true;
   }

@@ -117,7 +117,12 @@ export const App = () => {
     preferredModel: 'auto',
     themeColor: '#6366f1',
     customBackground: null,
-    language: 'bg'
+    language: 'bg',
+    teachingStyle: 'normal',
+    autoSpeak: false,
+    speechRate: 1.0,
+    enterToSend: true,
+    fontFamily: 'inter'
   });
   const [unreadSubjects, setUnreadSubjects] = useState<Set<string>>(new Set());
   const [notification, setNotification] = useState<{ message: string, subjectId: string } | null>(null);
@@ -168,6 +173,20 @@ export const App = () => {
   useTheme(userSettings);
 
   // --- Effects ---
+
+  // Font Application
+  useEffect(() => {
+      document.body.classList.remove('font-dyslexic', 'font-mono');
+      if (userSettings.fontFamily === 'dyslexic') {
+          // In a real app, you would import OpenDyslexic here. Simulating with Comic Sans / fallback for now or need to add CSS
+          document.body.style.fontFamily = '"Comic Sans MS", "Chalkboard SE", sans-serif'; 
+      } else if (userSettings.fontFamily === 'mono') {
+          document.body.classList.add('font-mono');
+          document.body.style.fontFamily = 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace';
+      } else {
+          document.body.style.fontFamily = '';
+      }
+  }, [userSettings.fontFamily]);
 
   // Auth Effect
   useEffect(() => {
@@ -260,6 +279,9 @@ export const App = () => {
                       const merged = { ...restSettings, themeColor: profileData.theme_color, customBackground: profileData.custom_background };
                       // Ensure language is set
                       if (!merged.language) merged.language = 'bg';
+                      if (!merged.teachingStyle) merged.teachingStyle = 'normal';
+                      if (!merged.speechRate) merged.speechRate = 1.0;
+                      
                       setUserSettings(prev => ({ ...prev, ...merged }));
                       if (plan) setUserPlan(plan);
                       if (stats) {
@@ -456,7 +478,25 @@ export const App = () => {
                      if (lsSettings) setUserSettings(JSON.parse(lsSettings));
                      else if (userId) {
                         setUserSettings({
-                            userName: session?.user?.user_metadata?.full_name || '', gradeLevel: '8-12', textSize: 'normal', haptics: true, notifications: true, sound: true, reduceMotion: false, responseLength: 'concise', creativity: 'balanced', languageLevel: 'standard', preferredModel: 'auto', themeColor: '#6366f1', customBackground: null, language: 'bg'
+                            userName: session?.user?.user_metadata?.full_name || '', 
+                            gradeLevel: '8-12', 
+                            textSize: 'normal', 
+                            haptics: true, 
+                            notifications: true, 
+                            sound: true, 
+                            reduceMotion: false, 
+                            responseLength: 'concise', 
+                            creativity: 'balanced', 
+                            languageLevel: 'standard', 
+                            preferredModel: 'auto', 
+                            themeColor: '#6366f1', 
+                            customBackground: null, 
+                            language: 'bg',
+                            teachingStyle: 'normal',
+                            autoSpeak: false,
+                            speechRate: 1.0,
+                            enterToSend: true,
+                            fontFamily: 'inter'
                         });
                      }
                 }
@@ -807,7 +847,8 @@ export const App = () => {
               }));
           },
           controller.signal,
-          userSettings.language // Pass Language
+          userSettings.language, // Pass Language
+          userSettings.teachingStyle // Pass Teaching Style
       );
 
       if (currentImgs.length > 0) { incrementImageCount(currentImgs.length); }
@@ -823,6 +864,12 @@ export const App = () => {
           }
           return s;
       }));
+      
+      // Auto Speak Logic
+      if (userSettings.autoSpeak && response.text) {
+          speakText(response.text, () => {});
+      }
+
       if (activeSubjectRef.current?.id !== currentSubId) {
          setUnreadSubjects(prev => new Set(prev).add(currentSubId));
          if (userSettings.notifications) { setNotification({ message: `Нов отговор: ${t(`subject_${currentSubId}`, userSettings.language)}`, subjectId: currentSubId }); setTimeout(() => setNotification(null), 4000); }
@@ -931,7 +978,14 @@ export const App = () => {
         const a = new Audio(`https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&q=${encodeURIComponent(clean)}&tl=${lang.split('-')[0]}`);
         audioRef.current = a; a.onended = safeOnEnd; a.onerror = (e) => { console.error("Audio error", e); safeOnEnd(); }; a.play().catch((e) => { console.error("Audio play error", e); safeOnEnd(); });
     } else {
-        const u = new SpeechSynthesisUtterance(clean); u.lang = lang; if(v) u.voice = v; utteranceRef.current = u; u.onend = safeOnEnd; u.onerror = (e) => { console.error("Speech Synthesis Error", e); utteranceRef.current = null; safeOnEnd(); }
+        const u = new SpeechSynthesisUtterance(clean); 
+        u.lang = lang; 
+        if(v) u.voice = v; 
+        // Apply Speech Rate
+        u.rate = userSettings.speechRate || 1.0;
+        utteranceRef.current = u; 
+        u.onend = safeOnEnd; 
+        u.onerror = (e) => { console.error("Speech Synthesis Error", e); utteranceRef.current = null; safeOnEnd(); }
         window.speechSynthesis.speak(u);
     }
   };

@@ -137,6 +137,9 @@ export type GradeLevel = '1-4' | '5-7' | '8-12' | 'university';
 
 export type UserPlan = 'free' | 'plus' | 'pro';
 
+export type TeachingStyle = 'normal' | 'socratic' | 'eli5' | 'academic' | 'motivational';
+export type FontFamily = 'inter' | 'dyslexic' | 'mono';
+
 export interface UserSettings {
   userName: string;
   gradeLevel: GradeLevel;
@@ -152,5 +155,12 @@ export interface UserSettings {
   // New Personalization Settings
   themeColor: string; // Hex code
   customBackground: string | null; // Base64 image
-  language: Language; // Added language
+  language: Language; 
+  
+  // New Enhanced Settings
+  teachingStyle: TeachingStyle;
+  autoSpeak: boolean;
+  speechRate: number; // 0.5 to 2.0
+  enterToSend: boolean;
+  fontFamily: FontFamily;
 }
