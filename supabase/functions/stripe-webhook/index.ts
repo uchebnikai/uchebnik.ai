@@ -112,6 +112,7 @@ serve(async (req) => {
             ? currentProfile.settings 
             : {};
         
+        // Prepare Full Update Payload
         const updatePayload = {
             plan: plan,
             stripe_subscription_id: subscription.id,
@@ -123,14 +124,37 @@ serve(async (req) => {
             }
         };
 
-        const { error, data } = await supabaseAdmin
+        // Attempt 1: Full Update
+        let { error, data } = await supabaseAdmin
             .from('profiles')
             .update(updatePayload)
             .eq('id', userId)
             .select();
 
+        // Attempt 2: Fallback (Settings Only) if schema error (e.g. 'plan' column missing in cache)
         if (error) {
-            console.error('Error updating profile in Supabase:', error)
+            console.warn(`Full update failed (${error.code}). Retrying with minimal settings update...`, error.message);
+            
+            const fallbackPayload = {
+                updated_at: new Date().toISOString(),
+                settings: {
+                    ...currentSettings,
+                    plan: plan
+                }
+            };
+            
+            const retryRes = await supabaseAdmin
+                .from('profiles')
+                .update(fallbackPayload)
+                .eq('id', userId)
+                .select();
+                
+            error = retryRes.error;
+            data = retryRes.data;
+        }
+
+        if (error) {
+            console.error('Final error updating profile in Supabase:', error)
         } else {
             console.log(`SUCCESS: Updated user ${userId} to ${plan}. Rows affected: ${data?.length}`)
         }
