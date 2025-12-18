@@ -1,4 +1,3 @@
-
 import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
 import { AppMode, SubjectId, Slide, ChartData, GeometryData, Message, TestData } from "../types";
 import { SYSTEM_PROMPTS, SUBJECTS } from "../constants";
@@ -39,35 +38,6 @@ function extractJson(text: string): string | null {
   return null;
 }
 
-// Analyze images using Gemini 2.5 Flash
-async function analyzeImages(apiKey: string, imagesBase64: string[]): Promise<string> {
-    const ai = new GoogleGenAI({ apiKey });
-    
-    // Construct parts: Images + Prompt
-    const parts: any[] = [];
-    
-    for (const base64 of imagesBase64) {
-        // Strip prefix if present (data:image/jpeg;base64,)
-        const data = base64.replace(/^data:image\/\w+;base64,/, "");
-        const mimeType = base64.match(/^data:(image\/\w+);base64,/)?.[1] || "image/jpeg";
-        parts.push({
-            inlineData: {
-                data: data,
-                mimeType: mimeType
-            }
-        });
-    }
-    
-    parts.push({ text: "Analyze this image in extreme detail. Transcribe any text exactly. If there are math problems, describe the numbers, variables, and geometry precisely. If it is a diagram, describe all connections. Return ONLY the description, no conversational filler." });
-
-    const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: { parts }
-    });
-
-    return response.text || "";
-}
-
 export const generateResponse = async (
   subjectId: SubjectId,
   mode: AppMode,
@@ -95,18 +65,7 @@ export const generateResponse = async (
   const modelName = 'gemini-2.5-flash';
 
   const hasImages = imagesBase64 && imagesBase64.length > 0;
-  let imageAnalysis = "";
-
-  // Strategy: Analyze images to get text context for history, but use actual images for current turn generation
-  if (hasImages) {
-      try {
-          imageAnalysis = await withRetry(() => analyzeImages(apiKey, imagesBase64));
-      } catch (error) {
-          console.error("Image analysis failed:", error);
-          // Non-fatal, we will still try to generate response with the images attached
-      }
-  }
-
+  
   const imageKeywords = /(draw|paint|generate image|create a picture|make an image|нарисувай|рисувай|генерирай изображение|генерирай снимка|направи снимка|изображение на)/i;
   const isImageRequest = (subjectId === SubjectId.ART && mode === AppMode.DRAW) || imageKeywords.test(promptText);
 
@@ -146,10 +105,7 @@ export const generateResponse = async (
       systemInstruction += "\n\nIMPORTANT: YOU MUST RETURN VALID JSON ONLY. NO MARKDOWN BLOCK WRAPPING THE JSON (IF POSSIBLE), JUST THE JSON STRING.";
   }
 
-  // Thinking config is enabled by default or auto in 2.5 Flash, but we can encourage reasoning in prompt or config
-  // systemInstruction += "\n\nIMPORTANT: Show your reasoning process enclosed in <think> tags before your final answer."; 
-  // Gemini 2.5 Flash with thinking might handle this natively or we simulate via prompt. 
-  // Since we want to parse <think> tags for UI, we instruct it.
+  // Thinking config is implicitly supported by 2.5 Flash, instruct it to use <think> tags for UI
   systemInstruction += "\n\nIMPORTANT: Before answering, explain your reasoning step-by-step enclosed in <think> tags.";
 
   systemInstruction = `CURRENT SUBJECT CONTEXT: ${subjectName}. All responses must relate to ${subjectName}.\n\n${systemInstruction}`;
@@ -157,13 +113,13 @@ export const generateResponse = async (
   try {
       const ai = new GoogleGenAI({ apiKey });
       
-      // Construct history
+      // Construct history contents (text only to save tokens/bandwidth)
       const historyContents: any[] = [];
       
       history.filter(msg => !msg.isError && msg.text && msg.type !== 'image_generated' && msg.type !== 'slides').forEach(msg => {
           let content = msg.text;
           if (msg.imageAnalysis) {
-              content += `\n\n[CONTEXT FROM ATTACHED IMAGE: ${msg.imageAnalysis}]`;
+              content += `\n\n[CONTEXT FROM PREVIOUS IMAGE: ${msg.imageAnalysis}]`;
           }
           historyContents.push({
               role: msg.role === 'model' ? 'model' : 'user',
@@ -175,8 +131,6 @@ export const generateResponse = async (
       const currentParts: any[] = [];
       
       let finalUserPrompt = promptText;
-      // If we have previous image analysis but no current images, it's already in history logic above? 
-      // No, `imageAnalysis` variable here refers to the *current* upload.
       
       if (mode === AppMode.TEACHER_TEST) {
           const prevTest = history.find(m => m.type === 'test_generated')?.testData;
@@ -204,21 +158,12 @@ export const generateResponse = async (
           model: modelName,
           config: {
               systemInstruction: systemInstruction,
-              // thinkingConfig: { thinkingBudget: 1024 } // Optional: enable if desired and supported
           },
           history: historyContents
       });
 
       // Stream response
-      // GoogleGenAI chat.sendMessageStream takes a string or parts. 
-      // Since we might have images in the *current* turn, we pass `currentParts`.
-      // Note: `chat.sendMessageStream` signature expects `string | Part[] | ...`
-      // But SDK guidelines say: "chat.sendMessageStream only accepts the message parameter".
-      // Correct usage: chat.sendMessageStream({ message: ... }) is for newer SDK, but standard is `chat.sendMessageStream(message)`.
-      // The guidelines say: "chat.sendMessageStream only accepts the message parameter, do not use contents."
-      // The `message` parameter can be a string or an array of parts.
-      
-      const result = await chat.sendMessageStream(currentParts);
+      const result = await chat.sendMessageStream({ message: currentParts });
       
       let finalContent = "";
       let finalReasoning = "";
@@ -230,10 +175,6 @@ export const generateResponse = async (
               fullText += chunkText;
               
               // Simple parsing for <think> tags during stream
-              // This is a basic implementation; robust parsing of streaming XML tags is complex.
-              // We'll update the UI with raw text and let the UI regex handle finalized tags, 
-              // or attempt to separate if possible.
-              
               const thinkMatch = fullText.match(/<think>([\s\S]*?)(?:<\/think>|$)/i);
               if (thinkMatch) {
                   finalReasoning = thinkMatch[1].trim();
@@ -271,7 +212,6 @@ export const generateResponse = async (
                      type: 'slides',
                      slidesData: slides,
                      timestamp: Date.now(),
-                     imageAnalysis: imageAnalysis,
                      reasoning: finalReasoning
                  };
              }
@@ -290,7 +230,6 @@ export const generateResponse = async (
                      type: 'test_generated',
                      testData: testData,
                      timestamp: Date.now(),
-                     imageAnalysis: imageAnalysis,
                      reasoning: finalReasoning
                  };
              }
@@ -324,7 +263,6 @@ export const generateResponse = async (
           chartData: chartData,
           geometryData: geometryData,
           timestamp: Date.now(),
-          imageAnalysis: imageAnalysis,
           reasoning: finalReasoning
       };
 
