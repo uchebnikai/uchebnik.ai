@@ -4,7 +4,7 @@ import Stripe from "https://esm.sh/stripe@12.0.0?target=deno"
 
 declare const Deno: any;
 
-// Price IDs
+// Price IDs (TEST MODE)
 const PRICES = {
   FREE: 'price_1SfhklE0C0vexh9CpxGIMsst',
   PLUS: 'price_1Sfhl3E0C0vexh9CQsMo20Hl',
@@ -25,13 +25,14 @@ serve(async (req) => {
     })
 
     // 1. Verify Request
+    // IMPORTANT: Use constructEventAsync to avoid "SubtleCryptoProvider cannot be used in a synchronous context"
     const body = await req.text()
     const endpointSecret = Deno.env.get('STRIPE_WEBHOOK_SIGNING_SECRET')
     
     let event;
     try {
-        event = stripe.webhooks.constructEvent(body, signature, endpointSecret!)
-    } catch (err) {
+        event = await stripe.webhooks.constructEventAsync(body, signature, endpointSecret!)
+    } catch (err: any) {
         console.error(`Webhook signature verification failed: ${err.message}`)
         return new Response(`Webhook Error: ${err.message}`, { status: 400 })
     }
@@ -48,7 +49,7 @@ serve(async (req) => {
     const handleSubscriptionUpdate = async (subscription: any, customerId: string, explicitUserId?: string) => {
         let userId = explicitUserId;
 
-        // If user ID not provided (e.g. renewal event), look up by Stripe Customer ID
+        // If user ID not provided (e.g. renewal/update event), look up by Stripe Customer ID
         if (!userId) {
             const { data: profile } = await supabaseAdmin
                 .from('profiles')
@@ -76,17 +77,26 @@ serve(async (req) => {
 
         console.log(`Processing update for User: ${userId} | Price: ${priceId} | Plan: ${plan} | Status: ${status}`)
 
-        // Update DB
+        // Update DB: Update specific fields while preserving others
+        // We assume 'settings' contains a 'plan' field, or there is a root 'plan' column.
+        // Adjust based on your specific schema. Here we try updating both common patterns.
+        
+        // Fetch current settings first to merge if needed
+        const { data: currentProfile } = await supabaseAdmin.from('profiles').select('settings').eq('id', userId).single();
+        const currentSettings = currentProfile?.settings || {};
+
         const { error } = await supabaseAdmin.from('profiles').update({ 
-            plan: plan,
+            plan: plan, // If you have a root column
             stripe_subscription_id: subscription.id,
             stripe_customer_id: customerId,
-            // We update specific settings but preserve others if needed. 
-            // Assuming your frontend relies on 'settings->plan' or a top-level 'plan' column.
-            // Based on previous code context, updating the top-level 'plan' column is safest.
+            settings: {
+                ...currentSettings,
+                plan: plan
+            }
         }).eq('id', userId)
 
         if (error) console.error('Error updating profile:', error)
+        else console.log(`Successfully updated user ${userId} to plan ${plan}`)
     }
 
     // 3. Handle Events
@@ -111,13 +121,18 @@ serve(async (req) => {
         
         console.log(`Subscription deleted for customer: ${customerId}`)
 
-        const { data: profile } = await supabaseAdmin.from('profiles').select('id').eq('stripe_customer_id', customerId).single()
+        const { data: profile } = await supabaseAdmin.from('profiles').select('id, settings').eq('stripe_customer_id', customerId).single()
         if (profile) {
-            await supabaseAdmin.from('profiles').update({ plan: 'free', stripe_subscription_id: null }).eq('id', profile.id)
+            const currentSettings = profile.settings || {};
+            await supabaseAdmin.from('profiles').update({ 
+                plan: 'free', 
+                stripe_subscription_id: null,
+                settings: { ...currentSettings, plan: 'free' }
+            }).eq('id', profile.id)
         }
     }
     else if (event.type === 'invoice.paid') {
-        // Optional: Good for ensuring status stays synced on renewal
+        // Good for ensuring status stays synced on renewal
         const invoice = event.data.object
         if (invoice.subscription) {
             const subscription = await stripe.subscriptions.retrieve(invoice.subscription as string)
@@ -130,7 +145,7 @@ serve(async (req) => {
       status: 200,
     })
 
-  } catch (error) {
+  } catch (error: any) {
     console.error(`Webhook handler failed: ${error.message}`)
     return new Response(
       JSON.stringify({ error: error.message }),

@@ -15,7 +15,7 @@ serve(async (req) => {
   }
 
   try {
-    // 1. Initialize Supabase (Client Context)
+    // 1. Initialize Supabase (Client Context to get User)
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -38,6 +38,7 @@ serve(async (req) => {
     const { priceId, returnUrl } = await req.json()
 
     // 5. Get or Create Stripe Customer
+    // We check the 'profiles' table for an existing stripe_customer_id
     const { data: profile } = await supabaseClient
       .from('profiles')
       .select('stripe_customer_id')
@@ -56,15 +57,21 @@ serve(async (req) => {
       })
       customerId = customer.id
 
-      // Save to Supabase
-      await supabaseClient
+      // Save to Supabase (Admin context needed if RLS blocks update, 
+      // but usually users can update their own profile. If not, upgrade to Service Role here.)
+      const supabaseAdmin = createClient(
+        Deno.env.get('SUPABASE_URL') ?? '',
+        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      )
+      
+      await supabaseAdmin
         .from('profiles')
         .update({ stripe_customer_id: customerId })
         .eq('id', user.id)
     }
 
     // 6. Create Checkout Session
-    console.log(`Creating checkout session for ${priceId}`)
+    console.log(`Creating checkout session for ${priceId} (Customer: ${customerId})`)
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       line_items: [
@@ -88,7 +95,7 @@ serve(async (req) => {
         status: 200,
       }
     )
-  } catch (error) {
+  } catch (error: any) {
     console.error(error)
     return new Response(
       JSON.stringify({ error: error.message }),
