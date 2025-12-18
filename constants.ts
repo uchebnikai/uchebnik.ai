@@ -177,6 +177,42 @@ export const SUBJECTS: SubjectConfig[] = [
     categories: ['school', 'university']
   },
   {
+    id: SubjectId.GERMAN,
+    name: 'Немски език',
+    icon: 'Languages',
+    color: 'bg-yellow-500',
+    modes: [AppMode.SOLVE, AppMode.LEARN, AppMode.CHAT],
+    description: 'Граматика и лексика.',
+    categories: ['school', 'university']
+  },
+  {
+    id: SubjectId.RUSSIAN,
+    name: 'Руски език',
+    icon: 'Languages',
+    color: 'bg-red-600',
+    modes: [AppMode.SOLVE, AppMode.LEARN, AppMode.CHAT],
+    description: 'Граматика и разговори.',
+    categories: ['school', 'university']
+  },
+  {
+    id: SubjectId.FRENCH,
+    name: 'Френски език',
+    icon: 'Languages',
+    color: 'bg-blue-600',
+    modes: [AppMode.SOLVE, AppMode.LEARN, AppMode.CHAT],
+    description: 'Превод и упражнения.',
+    categories: ['school', 'university']
+  },
+  {
+    id: SubjectId.SPANISH,
+    name: 'Испански език',
+    icon: 'Languages',
+    color: 'bg-orange-500',
+    modes: [AppMode.SOLVE, AppMode.LEARN, AppMode.CHAT],
+    description: 'Граматика и разговори.',
+    categories: ['school', 'university']
+  },
+  {
     id: SubjectId.PHYSICS,
     name: 'Физика',
     icon: 'Atom',
@@ -221,23 +257,14 @@ export const SUBJECTS: SubjectConfig[] = [
     description: 'Държави и карти.',
     categories: ['school']
   },
-   {
-    id: SubjectId.FRENCH,
-    name: 'Френски език',
-    icon: 'Languages',
-    color: 'bg-blue-600',
-    modes: [AppMode.SOLVE, AppMode.LEARN, AppMode.CHAT],
-    description: 'Превод и упражнения.',
-    categories: ['school', 'university']
-  },
   {
-    id: SubjectId.SPANISH,
-    name: 'Испански език',
-    icon: 'Languages',
-    color: 'bg-orange-500',
-    modes: [AppMode.SOLVE, AppMode.LEARN, AppMode.CHAT],
-    description: 'Граматика и разговори.',
-    categories: ['school', 'university']
+    id: SubjectId.MUSIC,
+    name: 'Музика',
+    icon: 'Music',
+    color: 'bg-pink-400',
+    modes: [AppMode.LEARN],
+    description: 'Теория и история.',
+    categories: ['school']
   },
   {
     id: SubjectId.JAPANESE,
@@ -258,6 +285,15 @@ export const SUBJECTS: SubjectConfig[] = [
     categories: ['school']
   },
   {
+    id: SubjectId.TECHNOLOGIES,
+    name: 'Технологии',
+    icon: 'Wrench',
+    color: 'bg-slate-500',
+    modes: [AppMode.LEARN],
+    description: 'Предприемачество и техника.',
+    categories: ['school']
+  },
+  {
     id: SubjectId.PHILOSOPHY,
     name: 'Философия',
     icon: 'Brain',
@@ -265,6 +301,24 @@ export const SUBJECTS: SubjectConfig[] = [
     modes: [AppMode.LEARN],
     description: 'Логика и етика.',
     categories: ['school', 'university']
+  },
+  {
+    id: SubjectId.CITIZENSHIP,
+    name: 'Гражданско Образование',
+    icon: 'Users',
+    color: 'bg-indigo-400',
+    modes: [AppMode.LEARN],
+    description: 'Права и общество.',
+    categories: ['school']
+  },
+  {
+    id: SubjectId.RELIGION,
+    name: 'Религия',
+    icon: 'Book',
+    color: 'bg-amber-700',
+    modes: [AppMode.LEARN],
+    description: 'Вяра и история.',
+    categories: ['school']
   },
   {
     id: SubjectId.ART,
@@ -314,6 +368,24 @@ export const SUBJECTS: SubjectConfig[] = [
     categories: ['university']
   },
   {
+    id: SubjectId.FINANCE,
+    name: 'Финанси',
+    icon: 'Banknote',
+    color: 'bg-emerald-600',
+    modes: [AppMode.SOLVE, AppMode.LEARN],
+    description: 'Банково дело, инвестиции.',
+    categories: ['university']
+  },
+  {
+    id: SubjectId.MANAGEMENT,
+    name: 'Мениджмънт',
+    icon: 'Briefcase',
+    color: 'bg-blue-800',
+    modes: [AppMode.LEARN, AppMode.TEACHER_PLAN],
+    description: 'Управление на бизнес.',
+    categories: ['university']
+  },
+  {
     id: SubjectId.LAW,
     name: 'Право',
     icon: 'Scale',
@@ -332,12 +404,48 @@ export const SUBJECTS: SubjectConfig[] = [
     categories: ['university']
   },
   {
+    id: SubjectId.DENTAL_MEDICINE,
+    name: 'Дентална Медицина',
+    icon: 'Smile',
+    color: 'bg-cyan-500',
+    modes: [AppMode.LEARN],
+    description: 'Стоматология и хирургия.',
+    categories: ['university']
+  },
+  {
+    id: SubjectId.PHARMACY,
+    name: 'Фармация',
+    icon: 'Pill',
+    color: 'bg-green-600',
+    modes: [AppMode.LEARN],
+    description: 'Лекарства и химия.',
+    categories: ['university']
+  },
+  {
+    id: SubjectId.VETERINARY_MEDICINE,
+    name: 'Ветеринарна Медицина',
+    icon: 'Heart',
+    color: 'bg-green-700',
+    modes: [AppMode.LEARN],
+    description: 'Лечение на животни.',
+    categories: ['university']
+  },
+  {
     id: SubjectId.ENGINEERING,
     name: 'Инженерство',
     icon: 'Wrench',
     color: 'bg-orange-700',
     modes: [AppMode.SOLVE, AppMode.LEARN],
     description: 'Механика, Електроника, Автоматизация.',
+    categories: ['university']
+  },
+  {
+    id: SubjectId.ARCHITECTURE,
+    name: 'Архитектура',
+    icon: 'Ruler',
+    color: 'bg-stone-500',
+    modes: [AppMode.DRAW, AppMode.LEARN],
+    description: 'Сгради и дизайн.',
     categories: ['university']
   },
   {
@@ -350,6 +458,15 @@ export const SUBJECTS: SubjectConfig[] = [
     categories: ['university']
   },
   {
+    id: SubjectId.PEDAGOGY,
+    name: 'Педагогика',
+    icon: 'BookOpen',
+    color: 'bg-rose-400',
+    modes: [AppMode.LEARN, AppMode.TEACHER_PLAN],
+    description: 'Методика на преподаване.',
+    categories: ['university']
+  },
+  {
     id: SubjectId.MARKETING,
     name: 'Маркетинг',
     icon: 'Megaphone',
@@ -359,12 +476,66 @@ export const SUBJECTS: SubjectConfig[] = [
     categories: ['university']
   },
   {
+    id: SubjectId.JOURNALISM,
+    name: 'Журналистика',
+    icon: 'Newspaper',
+    color: 'bg-zinc-600',
+    modes: [AppMode.LEARN],
+    description: 'Медии и комуникации.',
+    categories: ['university']
+  },
+  {
+    id: SubjectId.POLITICAL_SCIENCE,
+    name: 'Политология',
+    icon: 'Landmark',
+    color: 'bg-purple-700',
+    modes: [AppMode.LEARN],
+    description: 'Политика и управление.',
+    categories: ['university']
+  },
+  {
+    id: SubjectId.INT_RELATIONS,
+    name: 'Международни Отношения',
+    icon: 'Globe',
+    color: 'bg-sky-600',
+    modes: [AppMode.LEARN],
+    description: 'Дипломация и политика.',
+    categories: ['university']
+  },
+  {
+    id: SubjectId.SOCIOLOGY,
+    name: 'Социология',
+    icon: 'Users',
+    color: 'bg-orange-600',
+    modes: [AppMode.LEARN],
+    description: 'Общество и процеси.',
+    categories: ['university']
+  },
+  {
     id: SubjectId.STATISTICS,
     name: 'Статистика',
     icon: 'BarChart2',
     color: 'bg-cyan-700',
     modes: [AppMode.SOLVE, AppMode.LEARN],
     description: 'Вероятности, Анализ на данни.',
+    categories: ['university']
+  },
+  {
+    id: SubjectId.ECOLOGY,
+    name: 'Екология',
+    icon: 'Leaf',
+    color: 'bg-lime-600',
+    modes: [AppMode.LEARN],
+    description: 'Опазване на средата.',
+    categories: ['university']
+  },
+  {
+    id: SubjectId.TOURISM,
+    name: 'Туризъм',
+    icon: 'Map',
+    color: 'bg-orange-400',
+    modes: [AppMode.LEARN],
+    description: 'Хотелиерство и пътувания.',
     categories: ['university']
   }
 ];

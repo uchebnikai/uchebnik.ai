@@ -7,6 +7,8 @@ export enum SubjectId {
   BULGARIAN = 'bulgarian',
   FRENCH = 'french',
   SPANISH = 'spanish',
+  GERMAN = 'german', // New
+  RUSSIAN = 'russian', // New
   JAPANESE = 'japanese',
   CHEMISTRY = 'chemistry',
   PHYSICS = 'physics',
@@ -18,16 +20,34 @@ export enum SubjectId {
   IT = 'it',
   PE = 'pe',
   ART = 'art',
+  MUSIC = 'music', // New
+  TECHNOLOGIES = 'technologies', // New
+  CITIZENSHIP = 'citizenship', // New
+  RELIGION = 'religion', // New
+  
   // University Subjects
   HIGHER_MATH = 'higher_math',
   COMPUTER_SCIENCE = 'computer_science',
   ECONOMICS = 'economics',
   LAW = 'law',
   MEDICINE = 'medicine',
+  DENTAL_MEDICINE = 'dental_medicine', // New
+  PHARMACY = 'pharmacy', // New
+  VETERINARY_MEDICINE = 'veterinary_medicine', // New
   ENGINEERING = 'engineering',
+  ARCHITECTURE = 'architecture', // New
   MARKETING = 'marketing',
+  FINANCE = 'finance', // New
+  MANAGEMENT = 'management', // New
   PSYCHOLOGY = 'psychology',
-  STATISTICS = 'statistics'
+  STATISTICS = 'statistics',
+  PEDAGOGY = 'pedagogy', // New
+  POLITICAL_SCIENCE = 'political_science', // New
+  INT_RELATIONS = 'int_relations', // New
+  JOURNALISM = 'journalism', // New
+  SOCIOLOGY = 'sociology', // New
+  ECOLOGY = 'ecology', // New
+  TOURISM = 'tourism' // New
 }
 
 export enum AppMode {
