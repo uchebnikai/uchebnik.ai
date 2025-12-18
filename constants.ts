@@ -8,10 +8,7 @@ export const STRIPE_PRICES = {
 };
 
 export const AI_MODELS = [
-  { id: 'auto', name: 'Автоматичен (Според плана)', description: 'Избира най-добрия модел за твоя план.' },
-  { id: 'google/gemma-3-4b-it:free', name: 'Gemma 3 (4B)', description: 'Бърз и лек модел (Free).' },
-  { id: 'google/gemma-3-12b-it:free', name: 'Gemma 3 (12B)', description: 'Балансиран интелект (Plus).' },
-  { id: 'google/gemma-3-27b-it:free', name: 'Gemma 3 (27B)', description: 'Максимална мощност (Pro).' }
+  { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', description: 'Най-бързият и мощен модел на Google.' }
 ];
 
 export const GRADE_PROMPTS = {

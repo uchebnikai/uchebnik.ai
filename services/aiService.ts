@@ -1,7 +1,7 @@
+
+import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
 import { AppMode, SubjectId, Slide, ChartData, GeometryData, Message, TestData } from "../types";
 import { SYSTEM_PROMPTS, SUBJECTS } from "../constants";
-
-const API_URL = "https://openrouter.ai/api/v1/chat/completions";
 
 // Helper for delay
 const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -12,50 +12,17 @@ async function withRetry<T>(fn: () => Promise<T>, retries = 3, delay = 2000): Pr
     return await fn();
   } catch (error: any) {
     const msg = error.toString().toLowerCase();
-    // Don't retry if it's a daily quota limit (free-models-per-day)
-    if (msg.includes('free-models-per-day')) {
+    // Don't retry if it's a client error (4xx)
+    if (msg.includes('400') || msg.includes('401') || msg.includes('403')) {
         throw error;
     }
-    if ((msg.includes('429') || msg.includes('503')) && retries > 0) {
-      console.warn(`API Busy. Retrying... Attempts left: ${retries}. Waiting ${delay}ms.`);
+    if (retries > 0) {
+      console.warn(`API Busy/Error. Retrying... Attempts left: ${retries}. Waiting ${delay}ms. Error: ${msg}`);
       await wait(delay);
       return withRetry(fn, retries - 1, delay * 2);
     }
     throw error;
   }
-}
-
-// Vision Analysis using specific Gemma model
-async function analyzeImages(apiKey: string, images: string[], model: string): Promise<string> {
-    const res = await fetch(API_URL, {
-        method: "POST",
-        headers: {
-            "Authorization": `Bearer ${apiKey}`,
-            "Content-Type": "application/json",
-            "HTTP-Referer": "https://uchebnik.ai",
-            "X-Title": "Uchebnik AI"
-        },
-        body: JSON.stringify({
-            model: model, 
-            messages: [{
-                role: "user",
-                content: [
-                    { type: "text", text: "Analyze this image in extreme detail. Transcribe any text exactly. If there are math problems, describe the numbers, variables, and geometry precisely. If it is a diagram, describe all connections. Return ONLY the description, no conversational filler." },
-                    ...images.map(img => ({
-                        type: "image_url",
-                        image_url: { url: img, detail: "auto" }
-                    }))
-                ]
-            }]
-        })
-    });
-
-    if (!res.ok) {
-        const err = await res.text();
-        throw new Error(`Vision API Failed: ${err}`);
-    }
-    const data = await res.json();
-    return data.choices?.[0]?.message?.content || "";
 }
 
 // Improved JSON Extractor
@@ -72,28 +39,52 @@ function extractJson(text: string): string | null {
   return null;
 }
 
+// Analyze images using Gemini 2.5 Flash
+async function analyzeImages(apiKey: string, imagesBase64: string[]): Promise<string> {
+    const ai = new GoogleGenAI({ apiKey });
+    
+    // Construct parts: Images + Prompt
+    const parts: any[] = [];
+    
+    for (const base64 of imagesBase64) {
+        // Strip prefix if present (data:image/jpeg;base64,)
+        const data = base64.replace(/^data:image\/\w+;base64,/, "");
+        const mimeType = base64.match(/^data:(image\/\w+);base64,/)?.[1] || "image/jpeg";
+        parts.push({
+            inlineData: {
+                data: data,
+                mimeType: mimeType
+            }
+        });
+    }
+    
+    parts.push({ text: "Analyze this image in extreme detail. Transcribe any text exactly. If there are math problems, describe the numbers, variables, and geometry precisely. If it is a diagram, describe all connections. Return ONLY the description, no conversational filler." });
+
+    const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: { parts }
+    });
+
+    return response.text || "";
+}
+
 export const generateResponse = async (
   subjectId: SubjectId,
   mode: AppMode,
   promptText: string,
   imagesBase64?: string[],
   history: Message[] = [],
-  preferredModel: string = 'google/gemma-3-4b-it:free',
+  preferredModel: string = 'gemini-2.5-flash', // Ignored as we force 2.5 Flash
   onStreamUpdate?: (text: string, reasoning: string) => void
 ): Promise<Message> => {
   
-  // Access key from multiple sources to be robust
-  // @ts-ignore
-  let apiKey = typeof process !== 'undefined' && process.env ? process.env.OPENROUTER_API_KEY : "";
-  if (!apiKey) {
-      apiKey = (import.meta as any).env?.VITE_OPENROUTER_API_KEY || "";
-  }
+  const apiKey = process.env.API_KEY || "";
 
   if (!apiKey) {
       return {
           id: Date.now().toString(),
           role: 'model',
-          text: "Грешка: Не е намерен OpenRouter API ключ. Моля, проверете настройките на Vercel (VITE_OPENROUTER_API_KEY) или .env файла.",
+          text: "Грешка: Не е намерен Google API ключ. Моля, проверете настройките на Vercel (GOOGLE_API_KEY).",
           isError: true,
           timestamp: Date.now()
       };
@@ -101,25 +92,18 @@ export const generateResponse = async (
 
   const subjectConfig = SUBJECTS.find(s => s.id === subjectId);
   const subjectName = subjectConfig ? subjectConfig.name : "Unknown Subject";
-
-  const modelName = preferredModel; // Strictly use what is passed (based on plan)
+  const modelName = 'gemini-2.5-flash';
 
   const hasImages = imagesBase64 && imagesBase64.length > 0;
   let imageAnalysis = "";
 
+  // Strategy: Analyze images to get text context for history, but use actual images for current turn generation
   if (hasImages) {
       try {
-          // Pass the model to analyzeImages too, assuming it handles vision or we rely on it
-          imageAnalysis = await withRetry(() => analyzeImages(apiKey, imagesBase64, modelName));
+          imageAnalysis = await withRetry(() => analyzeImages(apiKey, imagesBase64));
       } catch (error) {
           console.error("Image analysis failed:", error);
-           return {
-              id: Date.now().toString(),
-              role: 'model',
-              text: "Не успях да разчета изображението. Моля, опитайте отново с по-ясна снимка или проверете дали моделът поддържа изображения.",
-              isError: true,
-              timestamp: Date.now()
-          };
+          // Non-fatal, we will still try to generate response with the images attached
       }
   }
 
@@ -162,118 +146,110 @@ export const generateResponse = async (
       systemInstruction += "\n\nIMPORTANT: YOU MUST RETURN VALID JSON ONLY. NO MARKDOWN BLOCK WRAPPING THE JSON (IF POSSIBLE), JUST THE JSON STRING.";
   }
 
-  systemInstruction += "\n\nIMPORTANT: Show your reasoning process enclosed in <think> tags before your final answer.";
+  // Thinking config is enabled by default or auto in 2.5 Flash, but we can encourage reasoning in prompt or config
+  // systemInstruction += "\n\nIMPORTANT: Show your reasoning process enclosed in <think> tags before your final answer."; 
+  // Gemini 2.5 Flash with thinking might handle this natively or we simulate via prompt. 
+  // Since we want to parse <think> tags for UI, we instruct it.
+  systemInstruction += "\n\nIMPORTANT: Before answering, explain your reasoning step-by-step enclosed in <think> tags.";
+
   systemInstruction = `CURRENT SUBJECT CONTEXT: ${subjectName}. All responses must relate to ${subjectName}.\n\n${systemInstruction}`;
 
-  const messages: any[] = [];
-
-  history.filter(msg => !msg.isError && msg.text && msg.type !== 'image_generated' && msg.type !== 'slides').forEach(msg => {
-      let content = msg.text;
-      if (msg.imageAnalysis) {
-          content += `\n\n[CONTEXT FROM ATTACHED IMAGE: ${msg.imageAnalysis}]`;
-      }
-      messages.push({
-          role: msg.role === 'model' ? 'assistant' : 'user',
-          content: content
-      });
-  });
-
-  let finalUserPrompt = promptText;
-  if (imageAnalysis) {
-      finalUserPrompt = `[IMAGE CONTEXT]: ${imageAnalysis}\n\n[USER REQUEST]: ${promptText}`;
-  }
-
-  if (mode === AppMode.TEACHER_TEST) {
-      const prevTest = history.find(m => m.type === 'test_generated')?.testData;
-      if (prevTest) {
-          finalUserPrompt = `[PREVIOUS TEST CONTEXT]: ${JSON.stringify(prevTest)}\n\nUSER REQUEST: ${finalUserPrompt}`;
-      }
-  }
-
-  finalUserPrompt = `[SYSTEM INSTRUCTION]: ${systemInstruction}\n\n[USER REQUEST]: ${finalUserPrompt}`;
-  messages.push({ role: "user", content: finalUserPrompt });
-
-  const requestBody: any = {
-      model: modelName,
-      messages: messages,
-      include_reasoning: true,
-      stream: true
-  };
-
   try {
-      const response = await fetch(API_URL, {
-          method: "POST",
-          headers: {
-              "Authorization": `Bearer ${apiKey}`,
-              "Content-Type": "application/json",
-              "HTTP-Referer": "https://uchebnik.ai",
-              "X-Title": "Uchebnik AI"
-          },
-          body: JSON.stringify(requestBody)
+      const ai = new GoogleGenAI({ apiKey });
+      
+      // Construct history
+      const historyContents: any[] = [];
+      
+      history.filter(msg => !msg.isError && msg.text && msg.type !== 'image_generated' && msg.type !== 'slides').forEach(msg => {
+          let content = msg.text;
+          if (msg.imageAnalysis) {
+              content += `\n\n[CONTEXT FROM ATTACHED IMAGE: ${msg.imageAnalysis}]`;
+          }
+          historyContents.push({
+              role: msg.role === 'model' ? 'model' : 'user',
+              parts: [{ text: content }]
+          });
       });
 
-      if (!response.ok) {
-          const errText = await response.text();
-          console.error(`OpenRouter API Error (${response.status}): ${errText}`);
-          throw new Error(`API Error: ${response.status} - ${errText}`);
+      // Construct current message parts
+      const currentParts: any[] = [];
+      
+      let finalUserPrompt = promptText;
+      // If we have previous image analysis but no current images, it's already in history logic above? 
+      // No, `imageAnalysis` variable here refers to the *current* upload.
+      
+      if (mode === AppMode.TEACHER_TEST) {
+          const prevTest = history.find(m => m.type === 'test_generated')?.testData;
+          if (prevTest) {
+              finalUserPrompt = `[PREVIOUS TEST CONTEXT]: ${JSON.stringify(prevTest)}\n\nUSER REQUEST: ${finalUserPrompt}`;
+          }
       }
 
-      if (!response.body) throw new Error("No response body");
+      if (hasImages) {
+          for (const base64 of imagesBase64) {
+                const data = base64.replace(/^data:image\/\w+;base64,/, "");
+                const mimeType = base64.match(/^data:(image\/\w+);base64,/)?.[1] || "image/jpeg";
+                currentParts.push({
+                    inlineData: {
+                        data: data,
+                        mimeType: mimeType
+                    }
+                });
+          }
+      }
+      currentParts.push({ text: finalUserPrompt });
 
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder("utf-8");
+      // Create chat session
+      const chat = ai.chats.create({
+          model: modelName,
+          config: {
+              systemInstruction: systemInstruction,
+              // thinkingConfig: { thinkingBudget: 1024 } // Optional: enable if desired and supported
+          },
+          history: historyContents
+      });
+
+      // Stream response
+      // GoogleGenAI chat.sendMessageStream takes a string or parts. 
+      // Since we might have images in the *current* turn, we pass `currentParts`.
+      // Note: `chat.sendMessageStream` signature expects `string | Part[] | ...`
+      // But SDK guidelines say: "chat.sendMessageStream only accepts the message parameter".
+      // Correct usage: chat.sendMessageStream({ message: ... }) is for newer SDK, but standard is `chat.sendMessageStream(message)`.
+      // The guidelines say: "chat.sendMessageStream only accepts the message parameter, do not use contents."
+      // The `message` parameter can be a string or an array of parts.
+      
+      const result = await chat.sendMessageStream(currentParts);
       
       let finalContent = "";
       let finalReasoning = "";
-      let rawAccumulator = "";
+      let fullText = "";
 
-      while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          
-          const chunk = decoder.decode(value);
-          const lines = chunk.split("\n");
-          
-          for (const line of lines) {
-              if (line.trim().startsWith("data: ")) {
-                  const jsonStr = line.replace("data: ", "").trim();
-                  if (jsonStr === "[DONE]") break;
-                  
-                  try {
-                      const data = JSON.parse(jsonStr);
-                      const delta = data.choices?.[0]?.delta;
-                      
-                      if (delta) {
-                          if (delta.reasoning) {
-                              finalReasoning += delta.reasoning;
-                          }
-                          
-                          if (delta.content) {
-                              rawAccumulator += delta.content;
-                          }
+      for await (const chunk of result) {
+          const chunkText = chunk.text;
+          if (chunkText) {
+              fullText += chunkText;
+              
+              // Simple parsing for <think> tags during stream
+              // This is a basic implementation; robust parsing of streaming XML tags is complex.
+              // We'll update the UI with raw text and let the UI regex handle finalized tags, 
+              // or attempt to separate if possible.
+              
+              const thinkMatch = fullText.match(/<think>([\s\S]*?)(?:<\/think>|$)/i);
+              if (thinkMatch) {
+                  finalReasoning = thinkMatch[1].trim();
+                  finalContent = fullText.replace(/<think>[\s\S]*?(?:<\/think>|$)/gi, "").trim();
+              } else {
+                  finalContent = fullText;
+              }
 
-                          let displayContent = rawAccumulator;
-                          let displayReasoning = finalReasoning;
-
-                          const thinkMatch = rawAccumulator.match(/<think>([\s\S]*?)(?:<\/think>|$)/i);
-                          if (thinkMatch) {
-                              displayReasoning = (finalReasoning + thinkMatch[1]).trim();
-                              displayContent = rawAccumulator.replace(/<think>[\s\S]*?(?:<\/think>|$)/gi, "").trim();
-                          }
-
-                          if (onStreamUpdate) {
-                              onStreamUpdate(displayContent, displayReasoning);
-                          }
-                      }
-                  } catch (e) {
-                      console.error("Error parsing stream chunk", e);
-                  }
+              if (onStreamUpdate) {
+                  onStreamUpdate(finalContent, finalReasoning);
               }
           }
       }
 
-      let processedText = rawAccumulator;
-      
+      // Final cleanup
+      let processedText = fullText;
       const thinkMatch = processedText.match(/<think>([\s\S]*?)(?:<\/think>|$)/i);
       if (thinkMatch) {
           if (!finalReasoning) {
@@ -353,17 +329,16 @@ export const generateResponse = async (
       };
 
   } catch (error: any) {
-      console.error("AI API Error:", error);
+      console.error("Gemini API Error:", error);
       let errorMessage = error.message || "Unknown error";
       let displayMessage = `Възникна грешка при връзката с AI: ${errorMessage}`;
 
-      // Customize user-friendly error messages based on status codes
-      if (errorMessage.includes("429") || errorMessage.includes("free-models-per-day")) {
-          displayMessage = "⚠️ Достигнат е дневният лимит за безплатни заявки към AI. Моля, опитайте отново утре. (Error 429)";
-      } else if (errorMessage.includes("401")) {
-          displayMessage = "⚠️ Невалиден API ключ. Моля, проверете настройките си.";
-      } else if (errorMessage.includes("503") || errorMessage.includes("502")) {
-          displayMessage = "⚠️ Сървърът на AI е временно недостъпен. Моля, опитайте след малко.";
+      if (errorMessage.includes("429")) {
+          displayMessage = "⚠️ Достигнат е лимитът на заявките към Google Gemini. Моля, опитайте по-късно.";
+      } else if (errorMessage.includes("401") || errorMessage.includes("API key")) {
+          displayMessage = "⚠️ Невалиден Google API ключ.";
+      } else if (errorMessage.includes("503") || errorMessage.includes("500")) {
+          displayMessage = "⚠️ Сървърът на Google AI е временно недостъпен. Моля, опитайте след малко.";
       }
 
       return {

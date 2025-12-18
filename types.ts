@@ -146,7 +146,7 @@ export interface UserSettings {
   responseLength: 'concise' | 'detailed';
   creativity: 'strict' | 'balanced' | 'creative';
   languageLevel: 'simple' | 'standard' | 'advanced';
-  preferredModel: 'auto' | 'google/gemma-3-4b-it:free' | 'google/gemma-3-12b-it:free' | 'google/gemma-3-27b-it:free';
+  preferredModel: string;
   // New Personalization Settings
   themeColor: string; // Hex code
   customBackground: string | null; // Base64 image

@@ -1,8 +1,8 @@
+
 import React, { useRef, useState } from 'react';
 import { X, User, Upload, Lock, Check, Palette, Plus, Moon, Sun, ImageIcon, Edit2, Cpu, ChevronDown, Database, Trash2, ArrowRight, Settings, CreditCard, Loader2 } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { UserSettings } from '../../types';
-import { AI_MODELS } from '../../constants';
 import { INPUT_SETTINGS } from '../../styles/ui';
 import { getDynamicColorStyle } from '../../styles/theme';
 import { MODAL_ENTER } from '../../animations/transitions';
@@ -260,17 +260,11 @@ export const SettingsModal = ({
                     </div>
                  ))}
                  
-                 <div className="space-y-1.5">
+                 <div className="space-y-1.5 opacity-60 pointer-events-none">
                     <label className="text-xs font-bold text-gray-500 ml-1">AI Модел</label>
                     <div className="relative">
-                        <select value={userSettings.preferredModel} onChange={e => setUserSettings({...userSettings, preferredModel: e.target.value as any})} className={INPUT_SETTINGS}>
-                           {AI_MODELS.map(m => (
-                               <option key={m.id} value={m.id}>
-                                   {m.name}
-                               </option>
-                           ))}
-                        </select>
-                        <ChevronDown size={16} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"/>
+                        <div className={INPUT_SETTINGS}>Gemini 2.5 Flash</div>
+                        <Lock size={14} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400"/>
                     </div>
                  </div>
              </div>
