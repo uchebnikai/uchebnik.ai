@@ -18,9 +18,27 @@ export const getSystemPrompt = (mode: string, lang: Language): string => {
     en: 'English',
     de: 'German',
     es: 'Spanish',
-    tr: 'Turkish'
+    tr: 'Turkish',
+    fr: 'French',
+    it: 'Italian',
+    pt: 'Portuguese',
+    ru: 'Russian',
+    zh: 'Chinese (Simplified)',
+    ja: 'Japanese',
+    ko: 'Korean',
+    ar: 'Arabic',
+    hi: 'Hindi',
+    nl: 'Dutch',
+    pl: 'Polish',
+    ro: 'Romanian',
+    el: 'Greek',
+    uk: 'Ukrainian',
+    cs: 'Czech',
+    sv: 'Swedish',
+    hu: 'Hungarian',
+    vi: 'Vietnamese'
   };
-  const targetLang = languageNames[lang];
+  const targetLang = languageNames[lang] || 'English';
 
   const baseInstructions = `You are a helpful AI assistant for students and teachers. Help with lessons, solve problems, and answer questions. Always be polite and encouraging. 
   IMPORTANT: You MUST reply in ${targetLang} language (unless the user specifically asks for another language or it is a language learning subject).`;
