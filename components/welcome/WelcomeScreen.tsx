@@ -242,7 +242,7 @@ export const WelcomeScreen = ({
                     <button onClick={() => setHomeView('privacy')} className="hover:text-indigo-500 transition-colors">Поверителност</button>
                 </div>
                 <p className="text-xs text-zinc-400 dark:text-zinc-600">
-                    &copy; {new Date().getFullYear()} Uchebnik AI. Created by <a href="https://www.instagram.com/vanyoy/" target="_blank" rel="noopener noreferrer" className="hover:text-indigo-500 transition-colors">Vanyo</a> & <a href="https://www.instagram.com/s_ivanov6/" target="_blank" rel="noopener noreferrer" className="hover:text-indigo-500 transition-colors">Svetlyo</a>.
+                    &copy; {new Date().getFullYear()} Uchebnik AI. Created by <a href="https://www.instagram.com/vanyoy/" target="_blank" rel="noopener noreferrer" className="hover:text-indigo-500 transition-colors">Vanyo</a>, <a href="https://www.instagram.com/s_ivanov6/" target="_blank" rel="noopener noreferrer" className="hover:text-indigo-500 transition-colors">Svetlyo</a> & <a href="https://www.tiktok.com/@22elaxz" target="_blank" rel="noopener noreferrer" className="hover:text-indigo-500 transition-colors">Bella</a>.
                 </p>
             </footer>
             </div>
