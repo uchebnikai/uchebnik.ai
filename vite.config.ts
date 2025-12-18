@@ -12,6 +12,7 @@ export default defineConfig(({ mode }) => {
   
   const adminHash = process.env.VITE_ADMIN_HASH || env.VITE_ADMIN_HASH || "9e38e8d688743e0d07d669a1fc981589e68b725679f297e788950390f7725913"; 
   const secretSalt = process.env.VITE_SECRET_SALT || env.VITE_SECRET_SALT || "UCH_2025_SECURE_SALT_VS";
+  const stripeKey = process.env.VITE_STRIPE_PUBLISHABLE_KEY || env.VITE_STRIPE_PUBLISHABLE_KEY || "pk_live_51SZCb6E0C0vexh9CWsLocB9FreA9l5F1XdYBa9e2RI47gwxamdLONR0Qm9bgqxkp83A6m04gxpdeSP1nRCfqkJud007WZm1OuE";
 
   return {
     plugins: [react()],
@@ -22,6 +23,7 @@ export default defineConfig(({ mode }) => {
       'process.env.OPENROUTER_API_KEY': JSON.stringify(apiKey),
       'process.env.ADMIN_HASH': JSON.stringify(adminHash),
       'process.env.SECRET_SALT': JSON.stringify(secretSalt),
+      'process.env.VITE_STRIPE_PUBLISHABLE_KEY': JSON.stringify(stripeKey),
     },
   };
 });

@@ -4,6 +4,7 @@ import { MessageSquare, Trash2, Plus, School, GraduationCap, Briefcase, ChevronD
 import { DynamicIcon } from '../ui/DynamicIcon';
 import { SUBJECTS } from '../../constants';
 import { SubjectId, AppMode, Session, UserRole, UserSettings, UserPlan, SubjectConfig, HomeViewType } from '../../types';
+import { createPortalSession } from '../../services/stripeService';
 
 interface SidebarProps {
   sidebarOpen: boolean;
@@ -73,11 +74,32 @@ export const Sidebar = ({
     const [teachersFolderOpen, setTeachersFolderOpen] = useState(false);
     const [profileMenuOpen, setProfileMenuOpen] = useState(false);
     const [collapsed, setCollapsed] = useState(false);
+    const [loadingPortal, setLoadingPortal] = useState(false);
     
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024;
 
     const toggleCollapse = () => {
         setCollapsed(!collapsed);
+    };
+
+    const handleManageSubscription = async () => {
+        if (userPlan === 'free') {
+            setShowUnlockModal(true);
+            setProfileMenuOpen(false);
+        } else {
+            setLoadingPortal(true);
+            try {
+                await createPortalSession();
+            } catch (err) {
+                console.error(err);
+                // If portal fails (e.g. key redemption user without stripe ID), fallback to modal
+                setShowUnlockModal(true);
+                addToast("Пренасочване към панел за управление...", "info");
+            } finally {
+                setLoadingPortal(false);
+                setProfileMenuOpen(false);
+            }
+        }
     };
 
     return (
@@ -334,8 +356,8 @@ export const Sidebar = ({
                                  <button onClick={() => {setShowSettings(true); setProfileMenuOpen(false)}} className="w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-white/5 text-sm font-medium flex items-center gap-3 transition-colors">
                                     <Settings size={16} className="text-gray-500"/> Настройки
                                  </button>
-                                 <button onClick={() => {setShowUnlockModal(true); setProfileMenuOpen(false)}} className="w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-white/5 text-sm font-medium flex items-center gap-3 transition-colors">
-                                    <CreditCard size={16} className="text-gray-500"/> Управление на плана
+                                 <button onClick={handleManageSubscription} disabled={loadingPortal} className="w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-white/5 text-sm font-medium flex items-center gap-3 transition-colors disabled:opacity-50">
+                                    <CreditCard size={16} className="text-gray-500"/> {userPlan === 'free' ? 'Upgrade Plan' : (loadingPortal ? 'Зареждане...' : 'Управление на плана')}
                                  </button>
                                  <button onClick={() => {setActiveSubject(null); setHomeView('terms'); setProfileMenuOpen(false); if(isMobile) setSidebarOpen(false);}} className="w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-white/5 text-sm font-medium flex items-center gap-3 transition-colors">
                                     <FileText size={16} className="text-gray-500"/> Общи условия

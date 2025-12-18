@@ -179,6 +179,13 @@ export const App = () => {
     };
     handleHashError();
 
+    // Handle Stripe Success Return
+    if (window.location.search.includes('success=true') || window.location.search.includes('session_id=')) {
+        addToast("Абонаментът е активиран успешно!", "success");
+        window.history.replaceState(null, '', window.location.pathname);
+        // Force refresh profile will happen in syncProfile
+    }
+
     const syncProfile = (session: SupabaseSession | null) => {
         setSession(session);
         setAuthLoading(false);
@@ -361,7 +368,7 @@ export const App = () => {
                           setDailyImageCount(0);
                       }
                   }
-                  addToast('Настройките са синхронизирани', 'info');
+                  // Quiet sync
               }
           })
           .subscribe();
