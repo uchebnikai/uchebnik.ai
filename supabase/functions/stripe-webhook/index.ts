@@ -5,9 +5,9 @@ import Stripe from "https://esm.sh/stripe@12.0.0?target=deno"
 declare const Deno: any;
 
 const PRICES = {
-  FREE: 'price_1SfhklE0C0vexh9CpxGIMsst',
-  PLUS: 'price_1Sfhl3E0C0vexh9CQsMo20Hl',
-  PRO:  'price_1SfhlFE0C0vexh9CFPbCNZDw'
+  FREE: 'price_1SfPSOE0C0vexh9CQmjhJYYX',
+  PLUS: 'price_1SfPSpE0C0vexh9Cg2YUGPah',
+  PRO:  'price_1SfPTEE0C0vexh9C9RZMvkHB'
 }
 
 serve(async (req) => {
