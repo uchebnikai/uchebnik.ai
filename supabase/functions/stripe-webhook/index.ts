@@ -4,7 +4,6 @@ import Stripe from "https://esm.sh/stripe@12.0.0?target=deno"
 
 declare const Deno: any;
 
-// Price IDs (TEST MODE)
 const PRICES = {
   FREE: 'price_1SfhklE0C0vexh9CpxGIMsst',
   PLUS: 'price_1Sfhl3E0C0vexh9CQsMo20Hl',
@@ -37,7 +36,13 @@ serve(async (req) => {
 
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+      {
+        auth: {
+            autoRefreshToken: false,
+            persistSession: false
+        }
+      }
     )
 
     console.log(`Received event: ${event.type} | ID: ${event.id}`)
@@ -45,8 +50,23 @@ serve(async (req) => {
     const handleSubscriptionUpdate = async (subscription: any, customerId: string, explicitUserId?: string) => {
         let userId = explicitUserId || subscription.metadata?.supabase_user_id;
 
+        // Fallback: If metadata is missing on subscription, check the Customer object
         if (!userId) {
-            console.log(`No user ID in metadata, looking up customer: ${customerId}`)
+            console.log(`Metadata missing on subscription. Fetching customer ${customerId}...`)
+            try {
+                const customer = await stripe.customers.retrieve(customerId);
+                if (!customer.deleted && customer.metadata?.supabase_user_id) {
+                    userId = customer.metadata.supabase_user_id;
+                    console.log(`Found user ID from Customer metadata: ${userId}`);
+                }
+            } catch (e) {
+                console.error("Error fetching customer:", e);
+            }
+        }
+
+        // Final Fallback: DB Lookup
+        if (!userId) {
+            console.log(`Looking up user by stripe_customer_id: ${customerId}`)
             const { data: profile } = await supabaseAdmin
                 .from('profiles')
                 .select('id')
@@ -64,40 +84,56 @@ serve(async (req) => {
         const status = subscription.status
         
         let plan = 'free'
-        
-        if (status === 'active' || status === 'trialing') {
+        // Treat incomplete (awaiting payment confirmation) as valid for the moment if we are in checkout flow
+        if (status === 'active' || status === 'trialing' || status === 'incomplete') {
             if (priceId === PRICES.PLUS) plan = 'plus'
             else if (priceId === PRICES.PRO) plan = 'pro'
         }
 
-        console.log(`Updating User: ${userId} | Plan: ${plan} | Status: ${status} | Price: ${priceId}`)
+        console.log(`Processing User: ${userId} | Plan: ${plan} | Status: ${status}`)
 
-        const { data: currentProfile } = await supabaseAdmin.from('profiles').select('settings').eq('id', userId).single();
+        // Fetch current settings to preserve them
+        const { data: currentProfile, error: fetchError } = await supabaseAdmin
+            .from('profiles')
+            .select('settings')
+            .eq('id', userId)
+            .single();
+        
+        if (fetchError) {
+            console.error("Error fetching profile settings:", fetchError);
+        }
+
         const currentSettings = currentProfile?.settings || {};
-
-        const { error, data } = await supabaseAdmin.from('profiles').update({ 
-            plan: plan, 
+        
+        // Prepare updates
+        const updates = {
+            plan: plan,
             stripe_subscription_id: subscription.id,
             stripe_customer_id: customerId,
-            updated_at: new Date().toISOString(), // Force update timestamp
+            updated_at: new Date().toISOString(),
             settings: {
                 ...currentSettings,
-                plan: plan
+                plan: plan // Sync plan inside settings JSON as well
             }
-        })
-        .eq('id', userId)
-        .select()
+        };
+
+        const { error, data } = await supabaseAdmin
+            .from('profiles')
+            .update(updates)
+            .eq('id', userId)
+            .select();
 
         if (error) {
             console.error('Error updating profile:', error)
         } else {
-            console.log(`Successfully updated user ${userId}. Rows affected: ${data?.length}`)
+            console.log(`SUCCESS: Updated user ${userId} to ${plan}. Rows: ${data?.length}`)
         }
     }
 
     if (event.type === 'checkout.session.completed') {
         const session = event.data.object
-        const userId = session.metadata?.supabase_user_id
+        // Use client_reference_id as primary source of truth
+        const userId = session.client_reference_id || session.metadata?.supabase_user_id
         
         if (session.subscription) {
             const subscription = await stripe.subscriptions.retrieve(session.subscription as string)

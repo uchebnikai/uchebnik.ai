@@ -15,30 +15,24 @@ serve(async (req) => {
   }
 
   try {
-    // 1. Initialize Supabase (Client Context to get User)
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
       { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
     )
 
-    // 2. Get User
     const { data: { user } } = await supabaseClient.auth.getUser()
     if (!user) {
       throw new Error('Not authenticated')
     }
 
-    // 3. Initialize Stripe
     const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') ?? '', {
       apiVersion: '2022-11-15',
       httpClient: Stripe.createFetchHttpClient(),
     })
 
-    // 4. Parse Body
     const { priceId, returnUrl } = await req.json()
 
-    // 5. Get or Create Stripe Customer
-    // We check the 'profiles' table for an existing stripe_customer_id
     const { data: profile } = await supabaseClient
       .from('profiles')
       .select('stripe_customer_id')
@@ -47,7 +41,12 @@ serve(async (req) => {
 
     let customerId = profile?.stripe_customer_id
 
-    if (!customerId) {
+    if (customerId) {
+        // Ensure existing customer has metadata
+        await stripe.customers.update(customerId, {
+            metadata: { supabase_user_id: user.id }
+        });
+    } else {
       console.log(`Creating new Stripe customer for user ${user.id}`)
       const customer = await stripe.customers.create({
         email: user.email,
@@ -57,7 +56,7 @@ serve(async (req) => {
       })
       customerId = customer.id
 
-      // Save to Supabase
+      // Use Admin Client to bypass RLS for profile update
       const supabaseAdmin = createClient(
         Deno.env.get('SUPABASE_URL') ?? '',
         Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
@@ -69,8 +68,8 @@ serve(async (req) => {
         .eq('id', user.id)
     }
 
-    // 6. Create Checkout Session
-    console.log(`Creating checkout session for ${priceId} (Customer: ${customerId})`)
+    console.log(`Creating checkout session for ${priceId} (User: ${user.id})`)
+    
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       line_items: [
@@ -82,6 +81,7 @@ serve(async (req) => {
       mode: 'subscription',
       success_url: `${returnUrl}?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${returnUrl}`,
+      client_reference_id: user.id, // Native Stripe field for tracking
       metadata: {
         supabase_user_id: user.id,
       },
