@@ -68,7 +68,12 @@ export const Auth = ({ isModal = false, onSuccess }: AuthProps) => {
           setTimeout(() => setMode('login'), 2000);
       }
     } catch (err: any) {
-      setError(err.message || 'Възникна грешка.');
+      // Handle Database Error specifically
+      if (err.message && (err.message.includes('Database error') || err.message.includes('saving new user'))) {
+          setError('Възникна системна грешка при регистрацията. Моля, опитайте отново по-късно или се свържете с поддръжката.');
+      } else {
+          setError(err.message || 'Възникна грешка.');
+      }
     } finally {
       setLoading(false);
     }
