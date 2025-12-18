@@ -28,18 +28,18 @@ export const SubjectDashboard = ({
     
     if (!activeSubject) return null;
       
-    const isStudent = userRole === 'student';
+    const isStudent = userRole === 'student' || userRole === 'uni_student';
     
     return (
       <div className={`flex-1 overflow-y-auto custom-scrollbar p-4 md:p-8 flex flex-col items-center justify-center relative overflow-x-hidden bg-transparent`}>
-         <button onClick={() => { setActiveSubject(null); setHomeView('school_select'); }} className="absolute top-6 left-6 p-2 text-gray-500 hover:bg-white/20 dark:hover:bg-black/20 backdrop-blur-md rounded-full transition-colors z-20"><ArrowLeft size={24}/></button>
+         <button onClick={() => { setActiveSubject(null); setHomeView(userRole?.includes('uni') ? 'university_select' : 'school_select'); }} className="absolute top-6 left-6 p-2 text-gray-500 hover:bg-white/20 dark:hover:bg-black/20 backdrop-blur-md rounded-full transition-colors z-20"><ArrowLeft size={24}/></button>
 
          <div className="max-w-3xl w-full text-center space-y-6 animate-in fade-in zoom-in-95 duration-500">
              <div className={`w-24 h-24 mx-auto rounded-[32px] ${activeSubject.color} flex items-center justify-center text-white shadow-2xl shadow-indigo-500/30 rotate-3`}>
                  <DynamicIcon name={activeSubject.icon} className="w-12 h-12" />
              </div>
              <h1 className="text-4xl md:text-5xl font-black text-zinc-900 dark:text-white font-display tracking-tight">{activeSubject.name}</h1>
-             <p className="text-xl text-gray-500 dark:text-gray-400">{isStudent ? 'Какво ще правим днес?' : 'Инструменти за учителя'}</p>
+             <p className="text-xl text-gray-500 dark:text-gray-400">{isStudent ? 'Какво ще правим днес?' : 'Инструменти за преподавателя'}</p>
              
              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
                  {isStudent ? (

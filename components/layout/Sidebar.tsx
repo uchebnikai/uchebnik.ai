@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { MessageSquare, Trash2, Plus, School, GraduationCap, Briefcase, ChevronDown, User, Settings, CreditCard, HelpCircle, LogOut, ArrowRight, ChevronUp, FileText, Flame, CloudOff, RefreshCw, Cloud, PanelLeftClose, PanelLeftOpen, LayoutDashboard } from 'lucide-react';
+import { MessageSquare, Trash2, Plus, School, GraduationCap, Briefcase, ChevronDown, User, Settings, CreditCard, HelpCircle, LogOut, ArrowRight, ChevronUp, FileText, Flame, CloudOff, RefreshCw, Cloud, PanelLeftClose, PanelLeftOpen, LayoutDashboard, Landmark } from 'lucide-react';
 import { DynamicIcon } from '../ui/DynamicIcon';
 import { SUBJECTS } from '../../constants';
 import { SubjectId, AppMode, Session, UserRole, UserSettings, UserPlan, SubjectConfig, HomeViewType } from '../../types';
@@ -71,6 +71,12 @@ export const Sidebar = ({
     const [schoolFolderOpen, setSchoolFolderOpen] = useState(true); 
     const [studentsFolderOpen, setStudentsFolderOpen] = useState(false);
     const [teachersFolderOpen, setTeachersFolderOpen] = useState(false);
+    
+    // University Folders
+    const [uniFolderOpen, setUniFolderOpen] = useState(true);
+    const [uniStudentsFolderOpen, setUniStudentsFolderOpen] = useState(false);
+    const [uniTeachersFolderOpen, setUniTeachersFolderOpen] = useState(false);
+
     const [profileMenuOpen, setProfileMenuOpen] = useState(false);
     const [collapsed, setCollapsed] = useState(false);
     
@@ -151,151 +157,265 @@ export const Sidebar = ({
                      {/* School Home */}
                      <button 
                         onClick={() => { setActiveSubject(null); setHomeView('school_select'); setUserRole(null); }}
-                        className={`p-3 rounded-xl transition-all ${homeView === 'school_select' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30' : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10 hover:text-indigo-500'}`}
-                        title="Училище (Меню)"
+                        className={`p-3 rounded-xl transition-all ${homeView === 'school_select' || homeView === 'student_subjects' || homeView === 'teacher_subjects' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30' : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10 hover:text-indigo-500'}`}
+                        title="Училище"
                      >
                         <School size={20} />
                      </button>
-
-                     <div className="w-8 h-px bg-gray-200 dark:bg-white/10" />
-
-                     {/* Student Redirect */}
+                     
+                     {/* University Home */}
                      <button 
-                        onClick={() => { setActiveSubject(null); setHomeView('student_subjects'); setUserRole('student'); }}
-                        className={`p-3 rounded-xl transition-all ${userRole === 'student' && !activeSubject ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30' : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10 hover:text-indigo-500'}`}
-                        title="Ученик"
+                        onClick={() => { setActiveSubject(null); setHomeView('university_select'); setUserRole(null); }}
+                        className={`p-3 rounded-xl transition-all ${homeView === 'university_select' || homeView === 'uni_student_subjects' || homeView === 'uni_teacher_subjects' ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-500/30' : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10 hover:text-emerald-500'}`}
+                        title="Университет"
                      >
-                        <GraduationCap size={20} />
-                     </button>
-
-                     {/* Teacher Redirect */}
-                     <button 
-                        onClick={() => { setActiveSubject(null); setHomeView('teacher_subjects'); setUserRole('teacher'); }}
-                        className={`p-3 rounded-xl transition-all ${userRole === 'teacher' && !activeSubject ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30' : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10 hover:text-indigo-500'}`}
-                        title="Учител"
-                     >
-                        <Briefcase size={20} />
+                        <Landmark size={20} />
                      </button>
                  </div>
              ) : (
-                 <div className="mt-2">
-                     <button onClick={() => { setActiveSubject(null); setHomeView('school_select'); setUserRole(null); setSchoolFolderOpen(!schoolFolderOpen); }} className="w-full flex items-center justify-between px-2 py-3 text-gray-400 dark:text-zinc-500 hover:text-indigo-500 transition-colors">
-                         <div className="flex items-center gap-2">
-                             <School size={18} />
-                             <span className="text-xs font-bold uppercase tracking-widest">Училище</span>
-                         </div>
-                         <ChevronDown size={14} className={`transition-transform duration-300 ${schoolFolderOpen ? 'rotate-180' : ''}`}/>
-                     </button>
+                 <div className="mt-2 space-y-2">
                      
-                     {schoolFolderOpen && (
-                         <div className="pl-4 space-y-1 animate-in slide-in-from-top-2">
-                             
-                             {/* Students Subfolder */}
-                             <div className="border-l border-indigo-500/10 pl-2">
-                                 <div className="flex items-center justify-between w-full px-2 py-2 group">
-                                     <button 
-                                        onClick={() => { setActiveSubject(null); setHomeView('student_subjects'); setUserRole('student'); if(isMobile) setSidebarOpen(false); }}
-                                        className="flex items-center gap-2 text-gray-500 dark:text-zinc-400 hover:text-indigo-500 transition-colors flex-1 text-left"
-                                     >
-                                        <GraduationCap size={14} />
-                                        <span className="text-[11px] font-bold uppercase tracking-wider">Ученици</span>
-                                     </button>
-                                     <button onClick={() => setStudentsFolderOpen(!studentsFolderOpen)} className="p-1 text-gray-400 hover:text-indigo-500 rounded-full hover:bg-gray-100 dark:hover:bg-white/5 transition-colors">
-                                        <ChevronDown size={12} className={`transition-transform duration-300 ${studentsFolderOpen ? 'rotate-180' : ''}`}/>
-                                     </button>
-                                 </div>
-                                 
-                                 {studentsFolderOpen && (
-                                     <div className="space-y-0.5 mt-1 animate-in slide-in-from-top-1">
-                                         {SUBJECTS.filter(s => s.id !== SubjectId.GENERAL).map(s => (
-                                             <div key={`student-${s.id}`}>
-                                                <button 
-                                                    onClick={() => { handleSubjectChange(s, 'student'); if(isMobile) setSidebarOpen(false); }}
-                                                    className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm transition-colors ${activeSubject?.id === s.id && userRole === 'student' ? 'bg-indigo-50 dark:bg-white/10 text-indigo-600 dark:text-indigo-300 font-bold' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5'}`}
-                                                >
-                                                    <div className={`w-2 h-2 rounded-full ${s.color} shrink-0`}></div>
-                                                    <span className="truncate">{s.name}</span>
-                                                </button>
-                                                
-                                                {/* Sessions List (Student) */}
-                                                {activeSubject?.id === s.id && userRole === 'student' && (
-                                                    <div className="ml-4 pl-2 border-l border-indigo-500/20 space-y-0.5 my-1">
-                                                        {sessions.filter(sess => sess.subjectId === s.id && sess.role === 'student').map(sess => (
-                                                            <div key={sess.id} className="flex items-center group/session">
-                                                                <button 
-                                                                    onClick={() => { setActiveSessionId(sess.id); if(isMobile) setSidebarOpen(false); setShowSubjectDashboard(false); }}
-                                                                    className={`flex-1 text-left px-2 py-1.5 rounded-lg text-xs font-medium truncate transition-colors ${activeSessionId === sess.id ? 'text-indigo-600 dark:text-white bg-indigo-50 dark:bg-white/5' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
-                                                                >
-                                                                    {sess.title}
-                                                                </button>
-                                                                <button onClick={() => deleteSession(sess.id)} className="p-1 text-gray-400 hover:text-red-500 opacity-0 group-hover/session:opacity-100 transition-opacity"><Trash2 size={10}/></button>
-                                                            </div>
-                                                        ))}
-                                                        <button onClick={() => { createNewSession(s.id, 'student', activeMode); if(isMobile) setSidebarOpen(false); setShowSubjectDashboard(false); }} className="w-full text-left px-2 py-1.5 text-[10px] font-bold text-indigo-500 hover:text-indigo-600 flex items-center gap-1">
-                                                            <Plus size={10}/> Нов чат
-                                                        </button>
-                                                    </div>
-                                                )}
-                                             </div>
-                                         ))}
-                                     </div>
-                                 )}
-                             </div>
-
-                             {/* Teachers Subfolder */}
-                             <div className="border-l border-indigo-500/10 pl-2 mt-2">
-                                <div className="flex items-center justify-between w-full px-2 py-2 group">
-                                     <button 
-                                        onClick={() => { setActiveSubject(null); setHomeView('teacher_subjects'); setUserRole('teacher'); if(isMobile) setSidebarOpen(false); }}
-                                        className="flex items-center gap-2 text-gray-500 dark:text-zinc-400 hover:text-indigo-500 transition-colors flex-1 text-left"
-                                     >
-                                        <Briefcase size={14} />
-                                        <span className="text-[11px] font-bold uppercase tracking-wider">Учители</span>
-                                     </button>
-                                     <button onClick={() => setTeachersFolderOpen(!teachersFolderOpen)} className="p-1 text-gray-400 hover:text-indigo-500 rounded-full hover:bg-gray-100 dark:hover:bg-white/5 transition-colors">
-                                        <ChevronDown size={12} className={`transition-transform duration-300 ${teachersFolderOpen ? 'rotate-180' : ''}`}/>
-                                     </button>
-                                 </div>
-                                
-                                {teachersFolderOpen && (
-                                    <div className="space-y-0.5 mt-1 animate-in slide-in-from-top-1">
-                                        {SUBJECTS.filter(s => s.id !== SubjectId.GENERAL).map(s => (
-                                            <div key={`teacher-${s.id}`}>
-                                                <button 
-                                                    onClick={() => { handleSubjectChange(s, 'teacher'); if(isMobile) setSidebarOpen(false); }}
-                                                    className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm transition-colors ${activeSubject?.id === s.id && userRole === 'teacher' ? 'bg-indigo-50 dark:bg-white/10 text-indigo-600 dark:text-indigo-300 font-bold' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5'}`}
-                                                >
-                                                    <div className={`w-1.5 h-1.5 rounded-full ${s.color}`}></div>
-                                                    <span className="truncate">{s.name}</span>
-                                                </button>
-
-                                                {/* Sessions List (Teacher) */}
-                                                {activeSubject?.id === s.id && userRole === 'teacher' && (
-                                                    <div className="ml-4 pl-2 border-l border-indigo-500/20 space-y-0.5 my-1">
-                                                        {sessions.filter(sess => sess.subjectId === s.id && sess.role === 'teacher').map(sess => (
-                                                            <div key={sess.id} className="flex items-center group/session">
-                                                                <button 
-                                                                    onClick={() => { setActiveSessionId(sess.id); if(isMobile) setSidebarOpen(false); setShowSubjectDashboard(false); }}
-                                                                    className={`flex-1 text-left px-2 py-1.5 rounded-lg text-xs font-medium truncate transition-colors ${activeSessionId === sess.id ? 'text-indigo-600 dark:text-white bg-indigo-50 dark:bg-white/5' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
-                                                                >
-                                                                    {sess.title}
-                                                                </button>
-                                                                <button onClick={() => deleteSession(sess.id)} className="p-1 text-gray-400 hover:text-red-500 opacity-0 group-hover/session:opacity-100 transition-opacity"><Trash2 size={10}/></button>
-                                                            </div>
-                                                        ))}
-                                                        <button onClick={() => { createNewSession(s.id, 'teacher', activeMode); if(isMobile) setSidebarOpen(false); setShowSubjectDashboard(false); }} className="w-full text-left px-2 py-1.5 text-[10px] font-bold text-indigo-500 hover:text-indigo-600 flex items-center gap-1">
-                                                            <Plus size={10}/> Нов чат
-                                                        </button>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
+                     {/* SCHOOL SECTION */}
+                     <div>
+                        <button onClick={() => { setActiveSubject(null); setHomeView('school_select'); setUserRole(null); setSchoolFolderOpen(!schoolFolderOpen); }} className="w-full flex items-center justify-between px-2 py-3 text-gray-400 dark:text-zinc-500 hover:text-indigo-500 transition-colors">
+                            <div className="flex items-center gap-2">
+                                <School size={18} />
+                                <span className="text-xs font-bold uppercase tracking-widest">Училище</span>
                             </div>
+                            <ChevronDown size={14} className={`transition-transform duration-300 ${schoolFolderOpen ? 'rotate-180' : ''}`}/>
+                        </button>
+                        
+                        {schoolFolderOpen && (
+                            <div className="pl-4 space-y-1 animate-in slide-in-from-top-2">
+                                
+                                {/* Students Subfolder */}
+                                <div className="border-l border-indigo-500/10 pl-2">
+                                    <div className="flex items-center justify-between w-full px-2 py-2 group">
+                                        <button 
+                                            onClick={() => { setActiveSubject(null); setHomeView('student_subjects'); setUserRole('student'); if(isMobile) setSidebarOpen(false); }}
+                                            className="flex items-center gap-2 text-gray-500 dark:text-zinc-400 hover:text-indigo-500 transition-colors flex-1 text-left"
+                                        >
+                                            <GraduationCap size={14} />
+                                            <span className="text-[11px] font-bold uppercase tracking-wider">Ученици</span>
+                                        </button>
+                                        <button onClick={() => setStudentsFolderOpen(!studentsFolderOpen)} className="p-1 text-gray-400 hover:text-indigo-500 rounded-full hover:bg-gray-100 dark:hover:bg-white/5 transition-colors">
+                                            <ChevronDown size={12} className={`transition-transform duration-300 ${studentsFolderOpen ? 'rotate-180' : ''}`}/>
+                                        </button>
+                                    </div>
+                                    
+                                    {studentsFolderOpen && (
+                                        <div className="space-y-0.5 mt-1 animate-in slide-in-from-top-1">
+                                            {SUBJECTS.filter(s => s.id !== SubjectId.GENERAL && s.categories.includes('school')).map(s => (
+                                                <div key={`student-${s.id}`}>
+                                                    <button 
+                                                        onClick={() => { handleSubjectChange(s, 'student'); if(isMobile) setSidebarOpen(false); }}
+                                                        className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm transition-colors ${activeSubject?.id === s.id && userRole === 'student' ? 'bg-indigo-50 dark:bg-white/10 text-indigo-600 dark:text-indigo-300 font-bold' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5'}`}
+                                                    >
+                                                        <div className={`w-2 h-2 rounded-full ${s.color} shrink-0`}></div>
+                                                        <span className="truncate">{s.name}</span>
+                                                    </button>
+                                                    
+                                                    {/* Sessions List (Student) */}
+                                                    {activeSubject?.id === s.id && userRole === 'student' && (
+                                                        <div className="ml-4 pl-2 border-l border-indigo-500/20 space-y-0.5 my-1">
+                                                            {sessions.filter(sess => sess.subjectId === s.id && sess.role === 'student').map(sess => (
+                                                                <div key={sess.id} className="flex items-center group/session">
+                                                                    <button 
+                                                                        onClick={() => { setActiveSessionId(sess.id); if(isMobile) setSidebarOpen(false); setShowSubjectDashboard(false); }}
+                                                                        className={`flex-1 text-left px-2 py-1.5 rounded-lg text-xs font-medium truncate transition-colors ${activeSessionId === sess.id ? 'text-indigo-600 dark:text-white bg-indigo-50 dark:bg-white/5' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
+                                                                    >
+                                                                        {sess.title}
+                                                                    </button>
+                                                                    <button onClick={() => deleteSession(sess.id)} className="p-1 text-gray-400 hover:text-red-500 opacity-0 group-hover/session:opacity-100 transition-opacity"><Trash2 size={10}/></button>
+                                                                </div>
+                                                            ))}
+                                                            <button onClick={() => { createNewSession(s.id, 'student', activeMode); if(isMobile) setSidebarOpen(false); setShowSubjectDashboard(false); }} className="w-full text-left px-2 py-1.5 text-[10px] font-bold text-indigo-500 hover:text-indigo-600 flex items-center gap-1">
+                                                                <Plus size={10}/> Нов чат
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
 
-                         </div>
-                     )}
+                                {/* Teachers Subfolder */}
+                                <div className="border-l border-indigo-500/10 pl-2 mt-2">
+                                    <div className="flex items-center justify-between w-full px-2 py-2 group">
+                                        <button 
+                                            onClick={() => { setActiveSubject(null); setHomeView('teacher_subjects'); setUserRole('teacher'); if(isMobile) setSidebarOpen(false); }}
+                                            className="flex items-center gap-2 text-gray-500 dark:text-zinc-400 hover:text-indigo-500 transition-colors flex-1 text-left"
+                                        >
+                                            <Briefcase size={14} />
+                                            <span className="text-[11px] font-bold uppercase tracking-wider">Учители</span>
+                                        </button>
+                                        <button onClick={() => setTeachersFolderOpen(!teachersFolderOpen)} className="p-1 text-gray-400 hover:text-indigo-500 rounded-full hover:bg-gray-100 dark:hover:bg-white/5 transition-colors">
+                                            <ChevronDown size={12} className={`transition-transform duration-300 ${teachersFolderOpen ? 'rotate-180' : ''}`}/>
+                                        </button>
+                                    </div>
+                                    
+                                    {teachersFolderOpen && (
+                                        <div className="space-y-0.5 mt-1 animate-in slide-in-from-top-1">
+                                            {SUBJECTS.filter(s => s.id !== SubjectId.GENERAL && s.categories.includes('school')).map(s => (
+                                                <div key={`teacher-${s.id}`}>
+                                                    <button 
+                                                        onClick={() => { handleSubjectChange(s, 'teacher'); if(isMobile) setSidebarOpen(false); }}
+                                                        className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm transition-colors ${activeSubject?.id === s.id && userRole === 'teacher' ? 'bg-indigo-50 dark:bg-white/10 text-indigo-600 dark:text-indigo-300 font-bold' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5'}`}
+                                                    >
+                                                        <div className={`w-1.5 h-1.5 rounded-full ${s.color}`}></div>
+                                                        <span className="truncate">{s.name}</span>
+                                                    </button>
+
+                                                    {/* Sessions List (Teacher) */}
+                                                    {activeSubject?.id === s.id && userRole === 'teacher' && (
+                                                        <div className="ml-4 pl-2 border-l border-indigo-500/20 space-y-0.5 my-1">
+                                                            {sessions.filter(sess => sess.subjectId === s.id && sess.role === 'teacher').map(sess => (
+                                                                <div key={sess.id} className="flex items-center group/session">
+                                                                    <button 
+                                                                        onClick={() => { setActiveSessionId(sess.id); if(isMobile) setSidebarOpen(false); setShowSubjectDashboard(false); }}
+                                                                        className={`flex-1 text-left px-2 py-1.5 rounded-lg text-xs font-medium truncate transition-colors ${activeSessionId === sess.id ? 'text-indigo-600 dark:text-white bg-indigo-50 dark:bg-white/5' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
+                                                                    >
+                                                                        {sess.title}
+                                                                    </button>
+                                                                    <button onClick={() => deleteSession(sess.id)} className="p-1 text-gray-400 hover:text-red-500 opacity-0 group-hover/session:opacity-100 transition-opacity"><Trash2 size={10}/></button>
+                                                                </div>
+                                                            ))}
+                                                            <button onClick={() => { createNewSession(s.id, 'teacher', activeMode); if(isMobile) setSidebarOpen(false); setShowSubjectDashboard(false); }} className="w-full text-left px-2 py-1.5 text-[10px] font-bold text-indigo-500 hover:text-indigo-600 flex items-center gap-1">
+                                                                <Plus size={10}/> Нов чат
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+
+                            </div>
+                        )}
+                     </div>
+                     
+                     {/* UNIVERSITY SECTION */}
+                     <div className="pt-2">
+                        <button onClick={() => { setActiveSubject(null); setHomeView('university_select'); setUserRole(null); setUniFolderOpen(!uniFolderOpen); }} className="w-full flex items-center justify-between px-2 py-3 text-gray-400 dark:text-zinc-500 hover:text-emerald-500 transition-colors">
+                            <div className="flex items-center gap-2">
+                                <Landmark size={18} />
+                                <span className="text-xs font-bold uppercase tracking-widest">Университет</span>
+                            </div>
+                            <ChevronDown size={14} className={`transition-transform duration-300 ${uniFolderOpen ? 'rotate-180' : ''}`}/>
+                        </button>
+                        
+                        {uniFolderOpen && (
+                            <div className="pl-4 space-y-1 animate-in slide-in-from-top-2">
+                                
+                                {/* Uni Students Subfolder */}
+                                <div className="border-l border-emerald-500/10 pl-2">
+                                    <div className="flex items-center justify-between w-full px-2 py-2 group">
+                                        <button 
+                                            onClick={() => { setActiveSubject(null); setHomeView('uni_student_subjects'); setUserRole('uni_student'); if(isMobile) setSidebarOpen(false); }}
+                                            className="flex items-center gap-2 text-gray-500 dark:text-zinc-400 hover:text-emerald-500 transition-colors flex-1 text-left"
+                                        >
+                                            <GraduationCap size={14} />
+                                            <span className="text-[11px] font-bold uppercase tracking-wider">Студенти</span>
+                                        </button>
+                                        <button onClick={() => setUniStudentsFolderOpen(!uniStudentsFolderOpen)} className="p-1 text-gray-400 hover:text-emerald-500 rounded-full hover:bg-gray-100 dark:hover:bg-white/5 transition-colors">
+                                            <ChevronDown size={12} className={`transition-transform duration-300 ${uniStudentsFolderOpen ? 'rotate-180' : ''}`}/>
+                                        </button>
+                                    </div>
+                                    
+                                    {uniStudentsFolderOpen && (
+                                        <div className="space-y-0.5 mt-1 animate-in slide-in-from-top-1">
+                                            {SUBJECTS.filter(s => s.id !== SubjectId.GENERAL && s.categories.includes('university')).map(s => (
+                                                <div key={`uni-student-${s.id}`}>
+                                                    <button 
+                                                        onClick={() => { handleSubjectChange(s, 'uni_student'); if(isMobile) setSidebarOpen(false); }}
+                                                        className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm transition-colors ${activeSubject?.id === s.id && userRole === 'uni_student' ? 'bg-emerald-50 dark:bg-white/10 text-emerald-600 dark:text-emerald-300 font-bold' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5'}`}
+                                                    >
+                                                        <div className={`w-2 h-2 rounded-full ${s.color} shrink-0`}></div>
+                                                        <span className="truncate">{s.name}</span>
+                                                    </button>
+                                                    
+                                                    {/* Sessions List (Uni Student) */}
+                                                    {activeSubject?.id === s.id && userRole === 'uni_student' && (
+                                                        <div className="ml-4 pl-2 border-l border-emerald-500/20 space-y-0.5 my-1">
+                                                            {sessions.filter(sess => sess.subjectId === s.id && sess.role === 'uni_student').map(sess => (
+                                                                <div key={sess.id} className="flex items-center group/session">
+                                                                    <button 
+                                                                        onClick={() => { setActiveSessionId(sess.id); if(isMobile) setSidebarOpen(false); setShowSubjectDashboard(false); }}
+                                                                        className={`flex-1 text-left px-2 py-1.5 rounded-lg text-xs font-medium truncate transition-colors ${activeSessionId === sess.id ? 'text-emerald-600 dark:text-white bg-emerald-50 dark:bg-white/5' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
+                                                                    >
+                                                                        {sess.title}
+                                                                    </button>
+                                                                    <button onClick={() => deleteSession(sess.id)} className="p-1 text-gray-400 hover:text-red-500 opacity-0 group-hover/session:opacity-100 transition-opacity"><Trash2 size={10}/></button>
+                                                                </div>
+                                                            ))}
+                                                            <button onClick={() => { createNewSession(s.id, 'uni_student', activeMode); if(isMobile) setSidebarOpen(false); setShowSubjectDashboard(false); }} className="w-full text-left px-2 py-1.5 text-[10px] font-bold text-emerald-500 hover:text-emerald-600 flex items-center gap-1">
+                                                                <Plus size={10}/> Нов чат
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Uni Teachers Subfolder */}
+                                <div className="border-l border-emerald-500/10 pl-2 mt-2">
+                                    <div className="flex items-center justify-between w-full px-2 py-2 group">
+                                        <button 
+                                            onClick={() => { setActiveSubject(null); setHomeView('uni_teacher_subjects'); setUserRole('uni_teacher'); if(isMobile) setSidebarOpen(false); }}
+                                            className="flex items-center gap-2 text-gray-500 dark:text-zinc-400 hover:text-emerald-500 transition-colors flex-1 text-left"
+                                        >
+                                            <Briefcase size={14} />
+                                            <span className="text-[11px] font-bold uppercase tracking-wider">Професори</span>
+                                        </button>
+                                        <button onClick={() => setUniTeachersFolderOpen(!uniTeachersFolderOpen)} className="p-1 text-gray-400 hover:text-emerald-500 rounded-full hover:bg-gray-100 dark:hover:bg-white/5 transition-colors">
+                                            <ChevronDown size={12} className={`transition-transform duration-300 ${uniTeachersFolderOpen ? 'rotate-180' : ''}`}/>
+                                        </button>
+                                    </div>
+                                    
+                                    {uniTeachersFolderOpen && (
+                                        <div className="space-y-0.5 mt-1 animate-in slide-in-from-top-1">
+                                            {SUBJECTS.filter(s => s.id !== SubjectId.GENERAL && s.categories.includes('university')).map(s => (
+                                                <div key={`uni-teacher-${s.id}`}>
+                                                    <button 
+                                                        onClick={() => { handleSubjectChange(s, 'uni_teacher'); if(isMobile) setSidebarOpen(false); }}
+                                                        className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm transition-colors ${activeSubject?.id === s.id && userRole === 'uni_teacher' ? 'bg-emerald-50 dark:bg-white/10 text-emerald-600 dark:text-emerald-300 font-bold' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5'}`}
+                                                    >
+                                                        <div className={`w-1.5 h-1.5 rounded-full ${s.color}`}></div>
+                                                        <span className="truncate">{s.name}</span>
+                                                    </button>
+
+                                                    {/* Sessions List (Uni Teacher) */}
+                                                    {activeSubject?.id === s.id && userRole === 'uni_teacher' && (
+                                                        <div className="ml-4 pl-2 border-l border-emerald-500/20 space-y-0.5 my-1">
+                                                            {sessions.filter(sess => sess.subjectId === s.id && sess.role === 'uni_teacher').map(sess => (
+                                                                <div key={sess.id} className="flex items-center group/session">
+                                                                    <button 
+                                                                        onClick={() => { setActiveSessionId(sess.id); if(isMobile) setSidebarOpen(false); setShowSubjectDashboard(false); }}
+                                                                        className={`flex-1 text-left px-2 py-1.5 rounded-lg text-xs font-medium truncate transition-colors ${activeSessionId === sess.id ? 'text-emerald-600 dark:text-white bg-emerald-50 dark:bg-white/5' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
+                                                                    >
+                                                                        {sess.title}
+                                                                    </button>
+                                                                    <button onClick={() => deleteSession(sess.id)} className="p-1 text-gray-400 hover:text-red-500 opacity-0 group-hover/session:opacity-100 transition-opacity"><Trash2 size={10}/></button>
+                                                                </div>
+                                                            ))}
+                                                            <button onClick={() => { createNewSession(s.id, 'uni_teacher', activeMode); if(isMobile) setSidebarOpen(false); setShowSubjectDashboard(false); }} className="w-full text-left px-2 py-1.5 text-[10px] font-bold text-emerald-500 hover:text-emerald-600 flex items-center gap-1">
+                                                                <Plus size={10}/> Нов чат
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+                     </div>
+
                  </div>
              )}
           </div>

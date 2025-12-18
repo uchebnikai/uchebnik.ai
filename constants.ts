@@ -1,3 +1,4 @@
+
 import { SubjectId, AppMode, SubjectConfig } from './types';
 
 export const STRIPE_PRICES = {
@@ -24,13 +25,15 @@ export const GRADE_PROMPTS = {
   '8-12': `ВАЖНО: Потребителят е ученик в гимназиален етап (8-12 клас).
   - Използвай академичен, но разбираем език.
   - Можеш да навлизаш в детайли.`,
-  'university': `ВАЖНО: Потребителят е студент.
-  - Използвай високо ниво на академичен език.
-  - Бъди изчерпателен и точен.`
+  'university': `ВАЖНО: Потребителят е студент в университет.
+  - Използвай висок академичен стил и професионална терминология.
+  - Бъди изчерпателен, точен и критичен.
+  - Когато е възможно, цитирай академични принципи или теории.
+  - Не се дръж като учител в училище, а като професор или експерт в областта.`
 };
 
 export const SYSTEM_PROMPTS = {
-  DEFAULT: `Ти си полезен AI асистент за ученици. Помагай с уроците, решавай задачи и отговаряй на въпроси. Винаги бъди учтив и насърчаващ. Отговаряй на български език освен ако не е указано друго (например за час по английски).
+  DEFAULT: `Ти си полезен AI асистент за ученици и студенти. Помагай с уроците, решавай задачи и отговаряй на въпроси. Винаги бъди учтив и насърчаващ. Отговаряй на български език освен ако не е указано друго (например за час по английски).
   
   ВАЖНО ЗА МАТЕМАТИКА:
   Винаги използвай LaTeX форматиране за всички математически формули и символи.
@@ -38,12 +41,12 @@ export const SYSTEM_PROMPTS = {
   - Пример: "Решението е $x = 5$." или "$$\\sqrt{a^2 + b^2}$$".
   - Никога не пиши "sqrt", "alpha", "approx" като обикновен текст, използвай съответно $\\sqrt{...}$, $\\alpha$, $\\approx$.`,
 
-  LEARN: `Ти си учител. Твоята цел е да научиш ученика на дадена тема. Не давай просто отговорите, а обяснявай концепциите. Използвай примери и аналогии. Структурирай информацията логично.
+  LEARN: `Ти си преподавател. Твоята цел е да научиш потребителя на дадена тема. Не давай просто отговорите, а обяснявай концепциите. Използвай примери и аналогии. Структурирай информацията логично.
   
   ВАЖНО ЗА МАТЕМАТИКА:
   Използвай LaTeX ($...$ или $$...$$) за всяка формула, числова зависимост или символ. Това прави текста по-четлив и професионален.`,
 
-  SOLVE: `Ти си помощник за решаване на задачи. Когато ти се даде задача, реши я стъпка по стъпка. Обясни всяка стъпка ясно.
+  SOLVE: `Ти си експерт по решаване на задачи. Когато ти се даде задача, реши я стъпка по стъпка. Обясни всяка стъпка ясно.
   
   ВАЖНО ЗА МАТЕМАТИКА:
   - ИЗПОЛЗВАЙ LaTeX ($...$ или $$...$$) ЗА ВСИЧКИ математически изрази, формули и символи.
@@ -71,7 +74,7 @@ export const SYSTEM_PROMPTS = {
   PRESENTATION: `Създай план за презентация. Структурирай го в слайдове. За всеки слайд дай заглавие, съдържание (булети) и бележки за презентатора. Върни отговора САМО в JSON формат.`,
   
   // Teacher Prompts
-  TEACHER_TEST: `Ти си помощник на учителя. Твоята задача е да създаваш и редактираш тестове.
+  TEACHER_TEST: `Ти си помощник на учителя/професора. Твоята задача е да създаваш и редактираш тестове.
 
   ВАЖНИ ИНСТРУКЦИИ ЗА РЕДАКТИРАНЕ:
   1. Ако потребителят поиска промяна, ТРЯБВА да вземеш предвид съществуващия тест от историята.
@@ -96,7 +99,7 @@ export const SYSTEM_PROMPTS = {
   {
     "title": "Заглавие на теста",
     "subject": "Предмет",
-    "grade": "Клас",
+    "grade": "Клас/Курс",
     "questions": [
        {
          "id": 1,
@@ -115,8 +118,8 @@ export const SYSTEM_PROMPTS = {
 
   Върни само JSON обекта.`,
   
-  TEACHER_PLAN: `Ти си помощник на учителя. Създай подробен план на урок (конспект). Включи: Цели на урока, Очаквани резултати, Необходими материали, План на протичане (Въведение, Изложение, Заключение, Упражнение).`,
-  TEACHER_RESOURCES: `Ти си помощник на учителя. Предложи идеи за допълнителни материали, интерактивни занимания, домашни работи и проекти за учениците по дадената тема.`
+  TEACHER_PLAN: `Ти си помощник на учителя/професора. Създай подробен план на урок или лекция (конспект). Включи: Цели, Очаквани резултати, Необходими материали/литература, План на протичане (Въведение, Основна част, Дискусия, Заключение).`,
+  TEACHER_RESOURCES: `Ти си помощник на учителя/професора. Предложи идеи за допълнителни материали, академични източници, интерактивни занимания, курсови проекти и задачи за студенти/ученици.`
 };
 
 export const SUBJECTS: SubjectConfig[] = [
@@ -126,7 +129,8 @@ export const SUBJECTS: SubjectConfig[] = [
     icon: 'MessageSquare',
     color: 'bg-indigo-500',
     modes: [AppMode.CHAT],
-    description: 'Попитай ме каквото и да е.'
+    description: 'Попитай ме каквото и да е.',
+    categories: ['school', 'university']
   },
   {
     id: SubjectId.MATH,
@@ -134,7 +138,8 @@ export const SUBJECTS: SubjectConfig[] = [
     icon: 'Calculator',
     color: 'bg-blue-500',
     modes: [AppMode.SOLVE, AppMode.LEARN],
-    description: 'Алгебра, геометрия и задачи.'
+    description: 'Алгебра, геометрия и задачи.',
+    categories: ['school']
   },
   {
     id: SubjectId.BULGARIAN,
@@ -142,7 +147,8 @@ export const SUBJECTS: SubjectConfig[] = [
     icon: 'BookOpen',
     color: 'bg-red-500',
     modes: [AppMode.SOLVE, AppMode.LEARN],
-    description: 'Граматика и литература.'
+    description: 'Граматика и литература.',
+    categories: ['school']
   },
   {
     id: SubjectId.ENGLISH,
@@ -150,7 +156,8 @@ export const SUBJECTS: SubjectConfig[] = [
     icon: 'Languages',
     color: 'bg-blue-400',
     modes: [AppMode.SOLVE, AppMode.LEARN, AppMode.CHAT],
-    description: 'Превод и упражнения.'
+    description: 'Превод и упражнения.',
+    categories: ['school', 'university']
   },
   {
     id: SubjectId.PHYSICS,
@@ -158,7 +165,8 @@ export const SUBJECTS: SubjectConfig[] = [
     icon: 'Atom',
     color: 'bg-violet-500',
     modes: [AppMode.SOLVE, AppMode.LEARN],
-    description: 'Закони и формули.'
+    description: 'Закони и формули.',
+    categories: ['school']
   },
   {
     id: SubjectId.CHEMISTRY,
@@ -166,7 +174,8 @@ export const SUBJECTS: SubjectConfig[] = [
     icon: 'FlaskConical',
     color: 'bg-green-500',
     modes: [AppMode.SOLVE, AppMode.LEARN],
-    description: 'Реакции и елементи.'
+    description: 'Реакции и елементи.',
+    categories: ['school', 'university']
   },
   {
     id: SubjectId.BIOLOGY,
@@ -174,7 +183,8 @@ export const SUBJECTS: SubjectConfig[] = [
     icon: 'Dna',
     color: 'bg-emerald-500',
     modes: [AppMode.LEARN],
-    description: 'Живот и природа.'
+    description: 'Живот и природа.',
+    categories: ['school']
   },
   {
     id: SubjectId.HISTORY,
@@ -182,7 +192,8 @@ export const SUBJECTS: SubjectConfig[] = [
     icon: 'Landmark',
     color: 'bg-amber-600',
     modes: [AppMode.LEARN],
-    description: 'Събития и дати.'
+    description: 'Събития и дати.',
+    categories: ['school', 'university']
   },
   {
     id: SubjectId.GEOGRAPHY,
@@ -190,7 +201,8 @@ export const SUBJECTS: SubjectConfig[] = [
     icon: 'Globe',
     color: 'bg-cyan-500',
     modes: [AppMode.LEARN],
-    description: 'Държави и карти.'
+    description: 'Държави и карти.',
+    categories: ['school']
   },
    {
     id: SubjectId.FRENCH,
@@ -198,7 +210,8 @@ export const SUBJECTS: SubjectConfig[] = [
     icon: 'Languages',
     color: 'bg-blue-600',
     modes: [AppMode.SOLVE, AppMode.LEARN, AppMode.CHAT],
-    description: 'Превод и упражнения.'
+    description: 'Превод и упражнения.',
+    categories: ['school', 'university']
   },
   {
     id: SubjectId.SPANISH,
@@ -206,7 +219,8 @@ export const SUBJECTS: SubjectConfig[] = [
     icon: 'Languages',
     color: 'bg-orange-500',
     modes: [AppMode.SOLVE, AppMode.LEARN, AppMode.CHAT],
-    description: 'Граматика и разговори.'
+    description: 'Граматика и разговори.',
+    categories: ['school', 'university']
   },
   {
     id: SubjectId.JAPANESE,
@@ -214,7 +228,8 @@ export const SUBJECTS: SubjectConfig[] = [
     icon: 'Languages',
     color: 'bg-red-400',
     modes: [AppMode.SOLVE, AppMode.LEARN, AppMode.CHAT],
-    description: 'Кандзи и култура.'
+    description: 'Кандзи и култура.',
+    categories: ['school', 'university']
   },
   {
     id: SubjectId.IT,
@@ -222,7 +237,8 @@ export const SUBJECTS: SubjectConfig[] = [
     icon: 'Cpu',
     color: 'bg-slate-600',
     modes: [AppMode.SOLVE, AppMode.LEARN],
-    description: 'Програмиране и технологии.'
+    description: 'Програмиране и технологии.',
+    categories: ['school']
   },
   {
     id: SubjectId.PHILOSOPHY,
@@ -230,7 +246,8 @@ export const SUBJECTS: SubjectConfig[] = [
     icon: 'Brain',
     color: 'bg-purple-400',
     modes: [AppMode.LEARN],
-    description: 'Логика и етика.'
+    description: 'Логика и етика.',
+    categories: ['school', 'university']
   },
   {
     id: SubjectId.ART,
@@ -238,7 +255,8 @@ export const SUBJECTS: SubjectConfig[] = [
     icon: 'Palette',
     color: 'bg-pink-500',
     modes: [AppMode.DRAW, AppMode.PRESENTATION, AppMode.LEARN],
-    description: 'Рисуване и дизайн.'
+    description: 'Рисуване и дизайн.',
+    categories: ['school', 'university']
   },
   {
     id: SubjectId.PE,
@@ -246,6 +264,90 @@ export const SUBJECTS: SubjectConfig[] = [
     icon: 'Activity',
     color: 'bg-orange-500',
     modes: [AppMode.LEARN],
-    description: 'Фитнес и здраве.'
+    description: 'Фитнес и здраве.',
+    categories: ['school']
+  },
+  
+  // UNIVERSITY SPECIFIC SUBJECTS (Bulgarian Context)
+  {
+    id: SubjectId.HIGHER_MATH,
+    name: 'Висша Математика',
+    icon: 'Sigma',
+    color: 'bg-blue-700',
+    modes: [AppMode.SOLVE, AppMode.LEARN],
+    description: 'Анализ, Алгебра, Статистика.',
+    categories: ['university']
+  },
+  {
+    id: SubjectId.COMPUTER_SCIENCE,
+    name: 'Компютърни Науки',
+    icon: 'Terminal',
+    color: 'bg-slate-800',
+    modes: [AppMode.SOLVE, AppMode.LEARN],
+    description: 'Алгоритми, Структури, ООП.',
+    categories: ['university']
+  },
+  {
+    id: SubjectId.ECONOMICS,
+    name: 'Икономика',
+    icon: 'TrendingUp',
+    color: 'bg-emerald-700',
+    modes: [AppMode.SOLVE, AppMode.LEARN],
+    description: 'Макро, Микро, Финанси.',
+    categories: ['university']
+  },
+  {
+    id: SubjectId.LAW,
+    name: 'Право',
+    icon: 'Scale',
+    color: 'bg-amber-800',
+    modes: [AppMode.LEARN],
+    description: 'Гражданско, Наказателно, Търговско.',
+    categories: ['university']
+  },
+  {
+    id: SubjectId.MEDICINE,
+    name: 'Медицина',
+    icon: 'Stethoscope',
+    color: 'bg-red-600',
+    modes: [AppMode.LEARN],
+    description: 'Анатомия, Патология, Фармация.',
+    categories: ['university']
+  },
+  {
+    id: SubjectId.ENGINEERING,
+    name: 'Инженерство',
+    icon: 'Wrench',
+    color: 'bg-orange-700',
+    modes: [AppMode.SOLVE, AppMode.LEARN],
+    description: 'Механика, Електроника, Автоматизация.',
+    categories: ['university']
+  },
+  {
+    id: SubjectId.PSYCHOLOGY,
+    name: 'Психология',
+    icon: 'Brain',
+    color: 'bg-purple-600',
+    modes: [AppMode.LEARN],
+    description: 'Когнитивна, Социална, Клинична.',
+    categories: ['university']
+  },
+  {
+    id: SubjectId.MARKETING,
+    name: 'Маркетинг',
+    icon: 'Megaphone',
+    color: 'bg-pink-600',
+    modes: [AppMode.LEARN, AppMode.TEACHER_PLAN],
+    description: 'Бизнес стратегии, Реклама, PR.',
+    categories: ['university']
+  },
+  {
+    id: SubjectId.STATISTICS,
+    name: 'Статистика',
+    icon: 'BarChart2',
+    color: 'bg-cyan-700',
+    modes: [AppMode.SOLVE, AppMode.LEARN],
+    description: 'Вероятности, Анализ на данни.',
+    categories: ['university']
   }
 ];

@@ -1,3 +1,4 @@
+
 export enum SubjectId {
   GENERAL = 'general',
   ENGLISH = 'english',
@@ -14,7 +15,17 @@ export enum SubjectId {
   PHILOSOPHY = 'philosophy',
   IT = 'it',
   PE = 'pe',
-  ART = 'art'
+  ART = 'art',
+  // University Subjects
+  HIGHER_MATH = 'higher_math',
+  COMPUTER_SCIENCE = 'computer_science',
+  ECONOMICS = 'economics',
+  LAW = 'law',
+  MEDICINE = 'medicine',
+  ENGINEERING = 'engineering',
+  MARKETING = 'marketing',
+  PSYCHOLOGY = 'psychology',
+  STATISTICS = 'statistics'
 }
 
 export enum AppMode {
@@ -31,9 +42,11 @@ export enum AppMode {
 }
 
 // New type for managing view state including static pages
-export type HomeViewType = 'landing' | 'school_select' | 'student_subjects' | 'teacher_subjects' | 'terms' | 'privacy' | 'cookies' | 'about' | 'contact';
+export type HomeViewType = 'landing' | 'school_select' | 'university_select' | 'student_subjects' | 'teacher_subjects' | 'uni_student_subjects' | 'uni_teacher_subjects' | 'terms' | 'privacy' | 'cookies' | 'about' | 'contact';
 
-export type UserRole = 'student' | 'teacher';
+export type UserRole = 'student' | 'teacher' | 'uni_student' | 'uni_teacher';
+
+export type SubjectCategory = 'school' | 'university';
 
 export interface SubjectConfig {
   id: SubjectId;
@@ -42,6 +55,7 @@ export interface SubjectConfig {
   color: string;
   modes: AppMode[];
   description: string;
+  categories: SubjectCategory[];
 }
 
 export interface ChartData {

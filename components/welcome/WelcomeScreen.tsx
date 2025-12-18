@@ -1,6 +1,6 @@
 
 import React, { useState, useRef } from 'react';
-import { Shield, MessageSquare, ArrowRight, School, GraduationCap, Briefcase, ArrowLeft, ArrowUpRight, Search, ImageIcon, Camera, Mic, MicOff, X, Menu } from 'lucide-react';
+import { Shield, MessageSquare, ArrowRight, School, GraduationCap, Briefcase, ArrowLeft, ArrowUpRight, Search, ImageIcon, Camera, Mic, MicOff, X, Menu, Landmark } from 'lucide-react';
 import { SubjectConfig, UserRole, UserSettings, HomeViewType, SubjectId } from '../../types';
 import { SUBJECTS } from '../../constants';
 import { DynamicIcon } from '../ui/DynamicIcon';
@@ -162,25 +162,33 @@ export const WelcomeScreen = ({
                 <h1 className="text-4xl md:text-6xl lg:text-8xl font-black text-transparent bg-clip-text bg-gradient-to-br from-zinc-900 to-zinc-500 dark:from-white dark:to-zinc-500 tracking-tighter leading-[1.1] md:leading-[1] font-display">
                 Здравей{userMeta.firstName ? `, ${userMeta.firstName}` : ''}.
                 </h1>
-                <p className="text-base md:text-2xl text-zinc-500 dark:text-zinc-400 font-medium max-w-2xl mx-auto leading-relaxed px-4">Твоят интелигентен помощник за училище.</p>
+                <p className="text-base md:text-2xl text-zinc-500 dark:text-zinc-400 font-medium max-w-2xl mx-auto leading-relaxed px-4">Твоят интелигентен помощник за образование.</p>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full px-2 md:px-12 max-w-4xl mb-6 md:mb-10 shrink-0">
-                <button onClick={() => handleSubjectChange(SUBJECTS[0])} className="group relative h-48 sm:h-64 md:h-80 rounded-[28px] md:rounded-[40px] p-6 md:p-10 text-left bg-zinc-900/80 dark:bg-black/60 backdrop-blur-xl text-white shadow-2xl hover:scale-[1.02] active:scale-[0.98] transition-all duration-500 ease-out overflow-hidden ring-1 ring-white/10 hover:ring-indigo-500/30 flex flex-col justify-between shrink-0">
-                <div className="relative z-10 flex flex-col h-full justify-between">
-                    <div className="bg-white/10 w-10 h-10 md:w-16 md:h-16 rounded-xl md:rounded-3xl flex items-center justify-center backdrop-blur-md"><MessageSquare size={20} className="md:w-8 md:h-8" /></div>
-                    <div><h3 className="text-2xl md:text-5xl font-bold tracking-tight mb-1 md:mb-3">Общ Чат</h3><p className="opacity-70 text-sm md:text-lg font-medium">Попитай каквото и да е.</p></div>
-                    <div className="flex items-center gap-2 md:gap-3 font-bold text-xs md:text-sm bg-white/20 w-fit px-4 md:px-6 py-2 md:py-3 rounded-full backdrop-blur-md group-hover:bg-white/30 transition-colors">Старт <ArrowRight size={14} className="md:w-4 md:h-4" /></div>
-                </div>
-                <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-indigo-500 to-accent-500 blur-[120px] opacity-20 group-hover:opacity-40 transition-opacity duration-500" />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full px-2 md:px-12 max-w-6xl mb-6 md:mb-10 shrink-0">
+                <button onClick={() => handleSubjectChange(SUBJECTS[0])} className="group relative h-48 sm:h-64 rounded-[28px] md:rounded-[40px] p-6 md:p-8 text-left bg-zinc-900/80 dark:bg-black/60 backdrop-blur-xl text-white shadow-2xl hover:scale-[1.02] active:scale-[0.98] transition-all duration-500 ease-out overflow-hidden ring-1 ring-white/10 hover:ring-indigo-500/30 flex flex-col justify-between shrink-0">
+                    <div className="relative z-10 flex flex-col h-full justify-between">
+                        <div className="bg-white/10 w-10 h-10 md:w-14 md:h-14 rounded-xl md:rounded-3xl flex items-center justify-center backdrop-blur-md"><MessageSquare size={20} className="md:w-6 md:h-6" /></div>
+                        <div><h3 className="text-xl md:text-3xl font-bold tracking-tight mb-1 md:mb-2">Общ Чат</h3><p className="opacity-70 text-sm md:text-base font-medium">Попитай каквото и да е.</p></div>
+                        <div className="flex items-center gap-2 md:gap-3 font-bold text-xs md:text-sm bg-white/20 w-fit px-4 md:px-6 py-2 md:py-3 rounded-full backdrop-blur-md group-hover:bg-white/30 transition-colors">Старт <ArrowRight size={14} className="md:w-4 md:h-4" /></div>
+                    </div>
+                    <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-indigo-500 to-accent-500 blur-[120px] opacity-20 group-hover:opacity-40 transition-opacity duration-500" />
                 </button>
 
-                <button onClick={() => setHomeView('school_select')} className="group relative h-48 sm:h-64 md:h-80 rounded-[28px] md:rounded-[40px] p-6 md:p-10 text-left bg-white/60 dark:bg-black/40 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-xl hover:shadow-2xl hover:border-indigo-500/30 transition-all duration-500 ease-out hover:scale-[1.02] active:scale-[0.98] flex flex-col justify-between shrink-0">
-                <div className="relative z-10 flex flex-col h-full justify-between">
-                    <div className="bg-indigo-500/10 w-10 h-10 md:w-16 md:h-16 rounded-xl md:rounded-3xl flex items-center justify-center text-indigo-600 dark:text-indigo-400"><School size={20} className="md:w-8 md:h-8" /></div>
-                    <div><h3 className="text-2xl md:text-5xl font-bold text-zinc-900 dark:text-white tracking-tight mb-1 md:mb-3">Училище</h3><p className="text-zinc-500 mt-0.5 md:mt-2 text-sm md:text-lg font-medium">Ученици и Учители</p></div>
-                    <div className="flex items-center gap-2 md:gap-3 font-bold text-xs md:text-sm text-zinc-600 dark:text-zinc-300 bg-black/5 dark:bg-white/5 w-fit px-4 md:px-6 py-2 md:py-3 rounded-full group-hover:bg-black/10 dark:group-hover:bg-white/10 transition-colors">Влез <ArrowRight size={14} className="md:w-4 md:h-4" /></div>
-                </div>
+                <button onClick={() => setHomeView('school_select')} className="group relative h-48 sm:h-64 rounded-[28px] md:rounded-[40px] p-6 md:p-8 text-left bg-white/60 dark:bg-black/40 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-xl hover:shadow-2xl hover:border-indigo-500/30 transition-all duration-500 ease-out hover:scale-[1.02] active:scale-[0.98] flex flex-col justify-between shrink-0">
+                    <div className="relative z-10 flex flex-col h-full justify-between">
+                        <div className="bg-indigo-500/10 w-10 h-10 md:w-14 md:h-14 rounded-xl md:rounded-3xl flex items-center justify-center text-indigo-600 dark:text-indigo-400"><School size={20} className="md:w-6 md:h-6" /></div>
+                        <div><h3 className="text-xl md:text-3xl font-bold text-zinc-900 dark:text-white tracking-tight mb-1 md:mb-2">Училище</h3><p className="text-zinc-500 mt-0.5 text-sm md:text-base font-medium">Ученици и Учители</p></div>
+                        <div className="flex items-center gap-2 md:gap-3 font-bold text-xs md:text-sm text-zinc-600 dark:text-zinc-300 bg-black/5 dark:bg-white/5 w-fit px-4 md:px-6 py-2 md:py-3 rounded-full group-hover:bg-black/10 dark:group-hover:bg-white/10 transition-colors">Влез <ArrowRight size={14} className="md:w-4 md:h-4" /></div>
+                    </div>
+                </button>
+
+                <button onClick={() => setHomeView('university_select')} className="group relative h-48 sm:h-64 rounded-[28px] md:rounded-[40px] p-6 md:p-8 text-left bg-white/60 dark:bg-black/40 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-xl hover:shadow-2xl hover:border-emerald-500/30 transition-all duration-500 ease-out hover:scale-[1.02] active:scale-[0.98] flex flex-col justify-between shrink-0">
+                    <div className="relative z-10 flex flex-col h-full justify-between">
+                        <div className="bg-emerald-500/10 w-10 h-10 md:w-14 md:h-14 rounded-xl md:rounded-3xl flex items-center justify-center text-emerald-600 dark:text-emerald-400"><Landmark size={20} className="md:w-6 md:h-6" /></div>
+                        <div><h3 className="text-xl md:text-3xl font-bold text-zinc-900 dark:text-white tracking-tight mb-1 md:mb-2">Университет</h3><p className="text-zinc-500 mt-0.5 text-sm md:text-base font-medium">Студенти и Професори</p></div>
+                        <div className="flex items-center gap-2 md:gap-3 font-bold text-xs md:text-sm text-zinc-600 dark:text-zinc-300 bg-black/5 dark:bg-white/5 w-fit px-4 md:px-6 py-2 md:py-3 rounded-full group-hover:bg-black/10 dark:group-hover:bg-white/10 transition-colors">Влез <ArrowRight size={14} className="md:w-4 md:h-4" /></div>
+                    </div>
                 </button>
             </div>
 
@@ -273,14 +281,42 @@ export const WelcomeScreen = ({
         </div>
       )}
 
-      {(homeView === 'student_subjects' || homeView === 'teacher_subjects') && (
+      {homeView === 'university_select' && (
+        <div className={`max-w-5xl w-full flex-1 flex flex-col items-center justify-center relative z-10 ${SLIDE_UP} duration-500 overflow-y-auto custom-scrollbar p-4 md:p-8`}>
+             <button onClick={() => setHomeView('landing')} className="absolute top-0 left-0 flex items-center gap-2 text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors font-bold z-20 m-4 md:m-8"><ArrowLeft size={20}/> Назад</button>
+             <h2 className="text-4xl md:text-5xl font-black text-zinc-900 dark:text-white mb-8 md:mb-12 tracking-tight mt-16 md:mt-0">Избери Роля (ВУЗ)</h2>
+             
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full px-2 md:px-12">
+                 <button onClick={() => { setHomeView('uni_student_subjects'); setUserRole('uni_student'); }} className="group relative h-64 md:h-72 rounded-[40px] p-8 text-left bg-emerald-600/90 backdrop-blur-xl text-white shadow-2xl hover:scale-[1.02] active:scale-[0.98] transition-all border border-white/10">
+                     <div className="relative z-10 flex flex-col h-full justify-between">
+                         <div className="p-4 bg-white/20 rounded-3xl w-fit backdrop-blur-md"><GraduationCap size={40}/></div>
+                         <div><h3 className="text-4xl font-black mb-2">Студент</h3><p className="opacity-80 font-medium text-lg">Курсови работи и изпити.</p></div>
+                     </div>
+                     <div className="absolute inset-0 bg-gradient-to-br from-emerald-500 to-teal-600 opacity-50 rounded-[40px]"/>
+                 </button>
+
+                 <button onClick={() => { setHomeView('uni_teacher_subjects'); setUserRole('uni_teacher'); }} className="group relative h-64 md:h-72 rounded-[40px] p-8 text-left bg-white/60 dark:bg-black/40 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-2xl hover:scale-[1.02] active:scale-[0.98] transition-all">
+                     <div className="relative z-10 flex flex-col h-full justify-between">
+                         <div className="p-4 bg-gray-100 dark:bg-white/5 text-emerald-600 dark:text-emerald-400 rounded-3xl w-fit"><Briefcase size={40}/></div>
+                         <div><h3 className="text-4xl font-black mb-2 text-zinc-900 dark:text-white">Професор</h3><p className="text-zinc-500 font-medium text-lg">Лекции и материали.</p></div>
+                     </div>
+                 </button>
+             </div>
+        </div>
+      )}
+
+      {(homeView === 'student_subjects' || homeView === 'teacher_subjects' || homeView === 'uni_student_subjects' || homeView === 'uni_teacher_subjects') && (
         <div className={`max-w-7xl w-full py-4 md:py-12 px-2 md:px-4 ${SLIDE_UP} fade-in duration-500 relative z-10 overflow-y-auto custom-scrollbar flex-1`}>
-           <button onClick={() => setHomeView('school_select')} className="mb-6 md:mb-10 flex items-center gap-3 text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors font-semibold group sticky top-0 bg-background/50 backdrop-blur-md py-2 z-20 w-fit rounded-full pr-4"><div className="p-2 md:p-3 bg-white/50 dark:bg-black/50 backdrop-blur-md rounded-full border border-indigo-500/10 shadow-sm group-hover:-translate-x-1 transition-transform"><ArrowLeft size={18} /></div> Назад към роли</button>
-           <h2 className="text-3xl md:text-4xl font-bold text-zinc-900 dark:text-white mb-2 tracking-tight px-2">{homeView === 'student_subjects' ? 'Ученик' : 'Учител'} • Предмети</h2>
+           <button onClick={() => setHomeView(homeView.includes('uni') ? 'university_select' : 'school_select')} className="mb-6 md:mb-10 flex items-center gap-3 text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors font-semibold group sticky top-0 bg-background/50 backdrop-blur-md py-2 z-20 w-fit rounded-full pr-4"><div className="p-2 md:p-3 bg-white/50 dark:bg-black/50 backdrop-blur-md rounded-full border border-indigo-500/10 shadow-sm group-hover:-translate-x-1 transition-transform"><ArrowLeft size={18} /></div> Назад към роли</button>
+           <h2 className="text-3xl md:text-4xl font-bold text-zinc-900 dark:text-white mb-2 tracking-tight px-2">
+               {homeView === 'student_subjects' ? 'Ученик' : 
+                homeView === 'teacher_subjects' ? 'Учител' : 
+                homeView === 'uni_student_subjects' ? 'Студент' : 'Професор'} • Предмети
+           </h2>
            <p className="text-gray-500 px-2 mb-8 md:mb-10 font-medium">Избери предмет, за да започнеш.</p>
 
            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-6 pb-20">
-              {SUBJECTS.filter(s => s.id !== SubjectId.GENERAL).map((s, i) => (
+              {SUBJECTS.filter(s => s.id !== SubjectId.GENERAL && s.categories.includes(homeView.includes('uni') ? 'university' : 'school')).map((s, i) => (
                 <button key={s.id} onClick={() => handleSubjectChange(s)} style={getStaggeredDelay(i)} className={`group flex flex-col items-center text-center p-4 md:p-8 bg-white/40 dark:bg-white/5 backdrop-blur-xl rounded-[24px] md:rounded-[32px] border border-white/30 dark:border-white/10 hover:border-indigo-500/50 shadow-sm hover:shadow-2xl hover:shadow-indigo-500/10 transition-all duration-300 hover:-translate-y-2 ${FADE_IN} fill-mode-backwards`}>
                    <div className={`w-12 h-12 md:w-20 md:h-20 rounded-2xl md:rounded-3xl ${s.color} text-white flex items-center justify-center mb-3 md:mb-6 shadow-xl shadow-indigo-500/20 group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300`}><DynamicIcon name={s.icon} className="w-6 h-6 md:w-10 md:h-10" /></div>
                    <h3 className="font-bold text-zinc-900 dark:text-white text-sm md:text-xl mb-1 md:mb-2">{s.name}</h3>
