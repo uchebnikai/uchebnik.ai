@@ -57,8 +57,7 @@ serve(async (req) => {
       })
       customerId = customer.id
 
-      // Save to Supabase (Admin context needed if RLS blocks update, 
-      // but usually users can update their own profile. If not, upgrade to Service Role here.)
+      // Save to Supabase
       const supabaseAdmin = createClient(
         Deno.env.get('SUPABASE_URL') ?? '',
         Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
@@ -86,6 +85,11 @@ serve(async (req) => {
       metadata: {
         supabase_user_id: user.id,
       },
+      subscription_data: {
+        metadata: {
+            supabase_user_id: user.id
+        }
+      }
     })
 
     return new Response(

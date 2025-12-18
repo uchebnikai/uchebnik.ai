@@ -24,8 +24,6 @@ serve(async (req) => {
       httpClient: Stripe.createFetchHttpClient(),
     })
 
-    // 1. Verify Request
-    // IMPORTANT: Use constructEventAsync to avoid "SubtleCryptoProvider cannot be used in a synchronous context"
     const body = await req.text()
     const endpointSecret = Deno.env.get('STRIPE_WEBHOOK_SIGNING_SECRET')
     
@@ -37,20 +35,18 @@ serve(async (req) => {
         return new Response(`Webhook Error: ${err.message}`, { status: 400 })
     }
 
-    // 2. Initialize Admin Client (Service Role)
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    console.log(`Received event: ${event.type}`)
+    console.log(`Received event: ${event.type} | ID: ${event.id}`)
 
-    // Helper: Update Plan
     const handleSubscriptionUpdate = async (subscription: any, customerId: string, explicitUserId?: string) => {
-        let userId = explicitUserId;
+        let userId = explicitUserId || subscription.metadata?.supabase_user_id;
 
-        // If user ID not provided (e.g. renewal/update event), look up by Stripe Customer ID
         if (!userId) {
+            console.log(`No user ID in metadata, looking up customer: ${customerId}`)
             const { data: profile } = await supabaseAdmin
                 .from('profiles')
                 .select('id')
@@ -60,7 +56,7 @@ serve(async (req) => {
         }
 
         if (!userId) {
-            console.error(`User not found for customer ID: ${customerId}`)
+            console.error(`CRITICAL: User not found for customer ID: ${customerId}`)
             return
         }
 
@@ -69,43 +65,40 @@ serve(async (req) => {
         
         let plan = 'free'
         
-        // Map Price ID to Plan
         if (status === 'active' || status === 'trialing') {
             if (priceId === PRICES.PLUS) plan = 'plus'
             else if (priceId === PRICES.PRO) plan = 'pro'
         }
 
-        console.log(`Processing update for User: ${userId} | Price: ${priceId} | Plan: ${plan} | Status: ${status}`)
+        console.log(`Updating User: ${userId} | Plan: ${plan} | Status: ${status} | Price: ${priceId}`)
 
-        // Update DB: Update specific fields while preserving others
-        // We assume 'settings' contains a 'plan' field, or there is a root 'plan' column.
-        // Adjust based on your specific schema. Here we try updating both common patterns.
-        
-        // Fetch current settings first to merge if needed
         const { data: currentProfile } = await supabaseAdmin.from('profiles').select('settings').eq('id', userId).single();
         const currentSettings = currentProfile?.settings || {};
 
-        const { error } = await supabaseAdmin.from('profiles').update({ 
-            plan: plan, // If you have a root column
+        const { error, data } = await supabaseAdmin.from('profiles').update({ 
+            plan: plan, 
             stripe_subscription_id: subscription.id,
             stripe_customer_id: customerId,
+            updated_at: new Date().toISOString(), // Force update timestamp
             settings: {
                 ...currentSettings,
                 plan: plan
             }
-        }).eq('id', userId)
+        })
+        .eq('id', userId)
+        .select()
 
-        if (error) console.error('Error updating profile:', error)
-        else console.log(`Successfully updated user ${userId} to plan ${plan}`)
+        if (error) {
+            console.error('Error updating profile:', error)
+        } else {
+            console.log(`Successfully updated user ${userId}. Rows affected: ${data?.length}`)
+        }
     }
 
-    // 3. Handle Events
     if (event.type === 'checkout.session.completed') {
         const session = event.data.object
         const userId = session.metadata?.supabase_user_id
         
-        console.log(`Checkout completed for user: ${userId}`)
-
         if (session.subscription) {
             const subscription = await stripe.subscriptions.retrieve(session.subscription as string)
             await handleSubscriptionUpdate(subscription, session.customer as string, userId)
@@ -127,12 +120,12 @@ serve(async (req) => {
             await supabaseAdmin.from('profiles').update({ 
                 plan: 'free', 
                 stripe_subscription_id: null,
+                updated_at: new Date().toISOString(),
                 settings: { ...currentSettings, plan: 'free' }
             }).eq('id', profile.id)
         }
     }
     else if (event.type === 'invoice.paid') {
-        // Good for ensuring status stays synced on renewal
         const invoice = event.data.object
         if (invoice.subscription) {
             const subscription = await stripe.subscriptions.retrieve(invoice.subscription as string)
