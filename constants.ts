@@ -1,5 +1,11 @@
 import { SubjectId, AppMode, SubjectConfig } from './types';
 
+export const STRIPE_PRICES = {
+  FREE: 'price_1SfPSOE0C0vexh9CQmjhJYYX',
+  PLUS: 'price_1SfPSpE0C0vexh9Cg2YUGPah',
+  PRO: 'price_1SfPTEE0C0vexh9C9RZMvkHB'
+};
+
 export const AI_MODELS = [
   { id: 'auto', name: 'Автоматичен (Според плана)', description: 'Избира най-добрия модел за твоя план.' },
   { id: 'google/gemma-3-4b-it:free', name: 'Gemma 3 (4B)', description: 'Бърз и лек модел (Free).' },

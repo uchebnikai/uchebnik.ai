@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { SubjectConfig, SubjectId, AppMode, Message, Slide, UserSettings, Session, UserPlan, UserRole, HomeViewType } from './types';
 import { SUBJECTS } from './constants';
@@ -178,13 +177,6 @@ export const App = () => {
         }
     };
     handleHashError();
-
-    // Handle Stripe Success Return
-    if (window.location.search.includes('success=true') || window.location.search.includes('session_id=')) {
-        addToast("Абонаментът е активиран успешно!", "success");
-        window.history.replaceState(null, '', window.location.pathname);
-        // Force refresh profile will happen in syncProfile
-    }
 
     const syncProfile = (session: SupabaseSession | null) => {
         setSession(session);
@@ -368,7 +360,7 @@ export const App = () => {
                           setDailyImageCount(0);
                       }
                   }
-                  // Quiet sync
+                  addToast('Настройките са синхронизирани', 'info');
               }
           })
           .subscribe();
@@ -1226,6 +1218,7 @@ export const App = () => {
             setUnlockKeyInput={setUnlockKeyInput}
             handleUnlockSubmit={handleUnlockSubmit}
             userPlan={userPlan}
+            addToast={addToast}
         />
         <SettingsModal 
             showSettings={showSettings}
@@ -1242,6 +1235,7 @@ export const App = () => {
             setIsDarkMode={setIsDarkMode}
             handleBackgroundUpload={handleBackgroundUpload}
             handleDeleteAllChats={handleDeleteAllChats}
+            addToast={addToast}
         />
         <Lightbox image={zoomedImage} onClose={() => setZoomedImage(null)} />
         

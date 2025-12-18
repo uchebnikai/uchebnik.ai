@@ -1,12 +1,12 @@
-
-import React, { useRef } from 'react';
-import { X, User, Upload, Lock, Check, Palette, Plus, Moon, Sun, ImageIcon, Edit2, Cpu, ChevronDown, Database, Trash2, ArrowRight, Settings } from 'lucide-react';
+import React, { useRef, useState } from 'react';
+import { X, User, Upload, Lock, Check, Palette, Plus, Moon, Sun, ImageIcon, Edit2, Cpu, ChevronDown, Database, Trash2, ArrowRight, Settings, CreditCard, Loader2 } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { UserSettings } from '../../types';
 import { AI_MODELS } from '../../constants';
 import { INPUT_SETTINGS } from '../../styles/ui';
 import { getDynamicColorStyle } from '../../styles/theme';
 import { MODAL_ENTER } from '../../animations/transitions';
+import { supabase } from '../../supabaseClient';
 
 interface SettingsModalProps {
   showSettings: boolean;
@@ -23,6 +23,7 @@ interface SettingsModalProps {
   setIsDarkMode: (val: boolean) => void;
   handleBackgroundUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleDeleteAllChats: () => void;
+  addToast: (msg: string, type: 'success' | 'error' | 'info') => void;
 }
 
 export const SettingsModal = ({
@@ -39,11 +40,33 @@ export const SettingsModal = ({
   isDarkMode,
   setIsDarkMode,
   handleBackgroundUpload,
-  handleDeleteAllChats
+  handleDeleteAllChats,
+  addToast
 }: SettingsModalProps) => {
     
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const backgroundInputRef = useRef<HTMLInputElement>(null);
+  const [loadingPortal, setLoadingPortal] = useState(false);
+
+  const handleManageSubscription = async () => {
+      setLoadingPortal(true);
+      try {
+          const { data, error } = await supabase.functions.invoke('create-portal-session', {
+              body: { returnUrl: window.location.origin }
+          });
+
+          if (error) throw error;
+          if (data?.url) {
+              window.location.href = data.url;
+          } else {
+              throw new Error("No portal URL returned");
+          }
+      } catch (error: any) {
+          console.error("Portal error:", error);
+          addToast("Възникна грешка при отваряне на портала за управление.", "error");
+          setLoadingPortal(false);
+      }
+  };
 
   if (!showSettings) return null;
 
@@ -102,6 +125,14 @@ export const SettingsModal = ({
                         <label className="text-xs font-bold text-gray-500 ml-1">Имейл</label>
                         <input value={editProfile.email} onChange={e => setEditProfile({...editProfile, email: e.target.value})} className={INPUT_SETTINGS}/>
                     </div>
+
+                    {isPremium && (
+                        <div className="col-span-full mt-2">
+                             <Button onClick={handleManageSubscription} disabled={loadingPortal} variant="secondary" className="w-full justify-between" icon={CreditCard}>
+                                {loadingPortal ? <><Loader2 size={16} className="animate-spin"/> Зареждане...</> : <>Управление на абонамента <ArrowRight size={16} className="opacity-50"/></>}
+                             </Button>
+                        </div>
+                    )}
                     
                     <div className="col-span-full pt-4 border-t border-gray-100 dark:border-white/5 mt-2">
                         <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 mb-4">
