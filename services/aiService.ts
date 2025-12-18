@@ -1,28 +1,10 @@
+
 import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
 import { AppMode, SubjectId, Slide, ChartData, GeometryData, Message, TestData } from "../types";
 import { SYSTEM_PROMPTS, SUBJECTS } from "../constants";
 
 // Helper for delay
 const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
-// Helper for retry logic
-async function withRetry<T>(fn: () => Promise<T>, retries = 3, delay = 2000): Promise<T> {
-  try {
-    return await fn();
-  } catch (error: any) {
-    const msg = error.toString().toLowerCase();
-    // Don't retry if it's a client error (4xx)
-    if (msg.includes('400') || msg.includes('401') || msg.includes('403')) {
-        throw error;
-    }
-    if (retries > 0) {
-      console.warn(`API Busy/Error. Retrying... Attempts left: ${retries}. Waiting ${delay}ms. Error: ${msg}`);
-      await wait(delay);
-      return withRetry(fn, retries - 1, delay * 2);
-    }
-    throw error;
-  }
-}
 
 // Improved JSON Extractor
 function extractJson(text: string): string | null {
@@ -44,8 +26,9 @@ export const generateResponse = async (
   promptText: string,
   imagesBase64?: string[],
   history: Message[] = [],
-  preferredModel: string = 'gemini-2.5-flash', // Ignored as we force 2.5 Flash
-  onStreamUpdate?: (text: string, reasoning: string) => void
+  preferredModel: string = 'gemini-2.5-flash',
+  onStreamUpdate?: (text: string, reasoning: string) => void,
+  signal?: AbortSignal
 ): Promise<Message> => {
   
   const apiKey = process.env.API_KEY || "";
@@ -170,6 +153,11 @@ export const generateResponse = async (
       let fullText = "";
 
       for await (const chunk of result) {
+          // Check for abort signal
+          if (signal?.aborted) {
+              break;
+          }
+
           const chunkText = chunk.text;
           if (chunkText) {
               fullText += chunkText;

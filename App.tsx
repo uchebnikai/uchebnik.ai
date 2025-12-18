@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { SubjectConfig, SubjectId, AppMode, Message, Slide, UserSettings, Session, UserPlan, UserRole, HomeViewType } from './types';
 import { SUBJECTS } from './constants';
@@ -148,6 +149,9 @@ export const App = () => {
   const loadingSubjectsRef = useRef(loadingSubjects);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
   const speakingTimeoutRef = useRef<any>(null);
+  
+  // AbortController for stopping generation
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -671,6 +675,30 @@ export const App = () => {
 
   const handleReply = (msg: Message) => { setReplyingTo(msg); };
 
+  const handleStopGeneration = () => {
+    if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+        abortControllerRef.current = null;
+    }
+    // Force stop loading state for active subject immediately
+    if (activeSubject) {
+        setLoadingSubjects(prev => ({ ...prev, [activeSubject.id]: false }));
+    }
+    
+    // Also stop listening if active
+    if (isListening) {
+        if (recognitionRef.current) {
+            recognitionRef.current.onend = null;
+            recognitionRef.current.stop();
+        }
+        setIsListening(false);
+    }
+    
+    // Stop speaking if active
+    window.speechSynthesis.cancel();
+    setSpeakingMessageId(null);
+  };
+
   const handleSend = async (overrideText?: string, overrideImages?: string[]) => {
     if (!session) { 
         const currentSubId = activeSubjectRef.current?.id || SubjectId.GENERAL;
@@ -716,7 +744,12 @@ export const App = () => {
         return s;
     }));
     setInputValue(''); setSelectedImages([]); if(fileInputRef.current) fileInputRef.current.value = '';
+    
+    // Start Loading and Setup Controller
     setLoadingSubjects(prev => ({ ...prev, [currentSubId]: true }));
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     let finalPrompt = textToSend;
     if (replyContext) {
         const snippet = replyContext.text.substring(0, 300) + (replyContext.text.length > 300 ? '...' : '');
@@ -731,8 +764,15 @@ export const App = () => {
       let preferredModel = 'google/gemma-3-4b-it:free';
       if (userPlan === 'plus') preferredModel = 'google/gemma-3-12b-it:free';
       if (userPlan === 'pro') preferredModel = 'google/gemma-3-27b-it:free';
-      setLoadingSubjects(prev => ({ ...prev, [currentSubId]: false }));
-      const response = await generateResponse(currentSubId, currentMode, finalPrompt, currentImgs, historyForAI, preferredModel, (textChunk, reasoningChunk) => {
+      
+      const response = await generateResponse(
+          currentSubId, 
+          currentMode, 
+          finalPrompt, 
+          currentImgs, 
+          historyForAI, 
+          preferredModel, 
+          (textChunk, reasoningChunk) => {
               setSessions(prev => prev.map(s => {
                   if (s.id === sessId) {
                       return { ...s, messages: s.messages.map(m => {
@@ -742,7 +782,10 @@ export const App = () => {
                   }
                   return s;
               }));
-      });
+          },
+          controller.signal
+      );
+
       if (currentImgs.length > 0) { incrementImageCount(currentImgs.length); }
       setSessions(prev => prev.map(s => {
           if (s.id === sessId) {
@@ -761,12 +804,18 @@ export const App = () => {
          if (userSettings.notifications) { setNotification({ message: `Нов отговор: ${SUBJECTS.find(s => s.id === currentSubId)?.name}`, subjectId: currentSubId }); setTimeout(() => setNotification(null), 4000); }
       } else if (userSettings.notifications && userSettings.sound) { new Audio('https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3').play().catch(()=>{}); }
       return response.text;
-    } catch (error) {
+    } catch (error: any) {
        console.error("HandleSend Error:", error);
+       // Only show error message if it wasn't an intentional abort
+       if (error.name !== 'AbortError' && !controller.signal.aborted) {
+           const errorMsg: Message = { id: Date.now().toString(), role: 'model', text: "Възникна грешка. Моля опитайте отново.", isError: true, timestamp: Date.now(), isStreaming: false };
+           setSessions(prev => prev.map(s => { if (s.id === sessId) { return { ...s, messages: s.messages.map(m => m.id === tempAiMsgId ? errorMsg : m) }; } return s; }));
+           return "Възникна грешка.";
+       }
+       return "";
+    } finally {
        setLoadingSubjects(prev => ({ ...prev, [currentSubId]: false }));
-       const errorMsg: Message = { id: Date.now().toString(), role: 'model', text: "Възникна грешка. Моля опитайте отново.", isError: true, timestamp: Date.now(), isStreaming: false };
-       setSessions(prev => prev.map(s => { if (s.id === sessId) { return { ...s, messages: s.messages.map(m => m.id === tempAiMsgId ? errorMsg : m) }; } return s; }));
-       return "Възникна грешка.";
+       abortControllerRef.current = null;
     }
   };
 
@@ -1191,6 +1240,7 @@ export const App = () => {
                     selectedImages={selectedImages}
                     handleRemoveImage={handleRemoveImage}
                     onCameraCapture={handleCameraCapture}
+                    onStopGeneration={handleStopGeneration}
                 />
             </div>
         )}

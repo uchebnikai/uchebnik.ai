@@ -1,6 +1,6 @@
 
 import React, { useRef, useEffect, useState } from 'react';
-import { Reply, X, ImageIcon, Mic, MicOff, ArrowUpRight, Calculator, Camera } from 'lucide-react';
+import { Reply, X, ImageIcon, Mic, MicOff, ArrowUpRight, Calculator, Camera, Square } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
@@ -25,6 +25,7 @@ interface ChatInputAreaProps {
   selectedImages: string[];
   handleRemoveImage: (index: number) => void;
   onCameraCapture?: (base64: string) => void;
+  onStopGeneration: () => void;
 }
 
 const MATH_SYMBOLS = [
@@ -59,7 +60,8 @@ export const ChatInputArea = ({
   handleSend,
   selectedImages,
   handleRemoveImage,
-  onCameraCapture
+  onCameraCapture,
+  onStopGeneration
 }: ChatInputAreaProps) => {
   
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -146,28 +148,28 @@ export const ChatInputArea = ({
                 </div>
                 )}
 
-                <div className={`${INPUT_AREA_BASE} ${userSettings.customBackground ? INPUT_AREA_CUSTOM_BG : INPUT_AREA_DEFAULT_BG} ${loadingSubject ? 'opacity-70 pointer-events-none' : ''}`}>
+                <div className={`${INPUT_AREA_BASE} ${userSettings.customBackground ? INPUT_AREA_CUSTOM_BG : INPUT_AREA_DEFAULT_BG}`}>
                 
                 {/* Attach Button */}
-                <button onClick={() => fileInputRef.current?.click()} disabled={loadingSubject} className="flex-none w-10 h-10 rounded-full flex items-center justify-center text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-white/10 transition-colors">
+                <button onClick={() => fileInputRef.current?.click()} disabled={loadingSubject} className="flex-none w-10 h-10 rounded-full flex items-center justify-center text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-white/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
                     <ImageIcon size={20} strokeWidth={2}/>
                 </button>
                 <input type="file" ref={fileInputRef} onChange={handleImageUpload} className="hidden" accept="image/*" multiple />
                 
                 {/* Camera Button */}
                 {onCameraCapture && (
-                    <button onClick={() => setShowCamera(true)} disabled={loadingSubject} className="flex-none w-10 h-10 rounded-full flex items-center justify-center text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-white/10 transition-colors">
+                    <button onClick={() => setShowCamera(true)} disabled={loadingSubject} className="flex-none w-10 h-10 rounded-full flex items-center justify-center text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-white/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
                         <Camera size={20} strokeWidth={2}/>
                     </button>
                 )}
 
                 {/* Math Toggle */}
-                <button onClick={() => setShowMath(!showMath)} className={`flex-none w-10 h-10 rounded-full flex items-center justify-center transition-colors ${showMath ? 'text-indigo-600 bg-indigo-50 dark:bg-white/10' : 'text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-white/10'}`}>
+                <button onClick={() => setShowMath(!showMath)} disabled={loadingSubject} className={`flex-none w-10 h-10 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${showMath ? 'text-indigo-600 bg-indigo-50 dark:bg-white/10' : 'text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-white/10'}`}>
                     <Calculator size={20} strokeWidth={2}/>
                 </button>
 
                 {/* Voice Button */}
-                <button onClick={toggleListening} disabled={loadingSubject} className={`flex-none w-10 h-10 rounded-full flex items-center justify-center transition-all active:scale-95 disabled:opacity-50 ${isListening ? 'bg-red-500 text-white shadow-lg shadow-red-500/30 animate-pulse' : 'text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-white/10'}`}>
+                <button onClick={toggleListening} disabled={loadingSubject} className={`flex-none w-10 h-10 rounded-full flex items-center justify-center transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed ${isListening ? 'bg-red-500 text-white shadow-lg shadow-red-500/30 animate-pulse' : 'text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-white/10'}`}>
                     {isListening ? <MicOff size={20}/> : <Mic size={20} strokeWidth={2}/>}
                 </button>
 
@@ -178,17 +180,23 @@ export const ChatInputArea = ({
                         value={inputValue}
                         onChange={e => setInputValue(e.target.value)}
                         onKeyDown={e => {if(e.key === 'Enter' && !e.shiftKey && !loadingSubject){e.preventDefault(); handleSend();}}} 
-                        placeholder={replyingTo ? "Напиши отговор..." : "Напиши съобщение..."}
+                        placeholder={replyingTo ? "Напиши отговор..." : loadingSubject ? "AI генерира отговор..." : "Напиши съобщение..."}
                         disabled={loadingSubject}
-                        className="w-full bg-transparent border-none focus:ring-0 p-0 text-base text-zinc-900 dark:text-zinc-100 placeholder-gray-400 resize-none max-h-24 min-h-[24px] leading-6"
+                        className="w-full bg-transparent border-none focus:ring-0 p-0 text-base text-zinc-900 dark:text-zinc-100 placeholder-gray-400 resize-none max-h-24 min-h-[24px] leading-6 disabled:opacity-60 disabled:cursor-not-allowed"
                         rows={1}
                     />
                 </div>
 
-                {/* Send Button */}
-                <button onClick={handleSend} disabled={(!inputValue.trim() && !selectedImages.length) || loadingSubject} className="flex-none w-10 h-10 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white flex items-center justify-center shadow-lg shadow-indigo-600/30 disabled:opacity-50 disabled:shadow-none transition-all active:scale-95">
-                    <ArrowUpRight size={20} strokeWidth={2.5} />
-                </button>
+                {/* Send / Stop Button */}
+                {loadingSubject ? (
+                    <button onClick={onStopGeneration} className="flex-none w-10 h-10 rounded-full bg-red-500 hover:bg-red-600 text-white flex items-center justify-center shadow-lg shadow-red-500/30 transition-all active:scale-95 animate-in zoom-in duration-300">
+                        <Square size={16} fill="currentColor" strokeWidth={2.5} />
+                    </button>
+                ) : (
+                    <button onClick={handleSend} disabled={(!inputValue.trim() && !selectedImages.length)} className="flex-none w-10 h-10 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white flex items-center justify-center shadow-lg shadow-indigo-600/30 disabled:opacity-50 disabled:shadow-none transition-all active:scale-95">
+                        <ArrowUpRight size={20} strokeWidth={2.5} />
+                    </button>
+                )}
 
                 {/* Image Preview Overlay */}
                 {selectedImages.length > 0 && (
