@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+
+import React, { useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import remarkGfm from 'remark-gfm';
-import { Projector, Download, Check, ThumbsUp, ThumbsDown, Reply, Volume2, Square, Copy, Share2, Sparkles, Brain, ChevronDown, ChevronUp, Lightbulb, Loader2, FileJson, Presentation } from 'lucide-react';
+import { Projector, Download, Check, ThumbsUp, ThumbsDown, Reply, Volume2, Square, Copy, Share2, Sparkles, Loader2 } from 'lucide-react';
 import { Message, UserSettings, SubjectConfig } from '../../types';
 import { handleDownloadPPTX } from '../../utils/exportUtils';
 import { CodeBlock } from '../ui/CodeBlock';
@@ -47,22 +48,6 @@ export const MessageList = ({
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const lastMessageIdRef = useRef<string | null>(null);
-  const [expandedReasoning, setExpandedReasoning] = useState<Record<string, boolean>>({});
-
-  const toggleReasoning = (id: string) => {
-     setExpandedReasoning(prev => ({
-        ...prev,
-        [id]: !prev[id]
-     }));
-  };
-
-  // Auto-expand reasoning only if not already set (undefined)
-  useEffect(() => {
-      const lastMsg = currentMessages[currentMessages.length - 1];
-      if (lastMsg && lastMsg.role === 'model' && lastMsg.reasoning && !lastMsg.text && expandedReasoning[lastMsg.id] === undefined) {
-          setExpandedReasoning(prev => ({ ...prev, [lastMsg.id]: true }));
-      }
-  }, [currentMessages, expandedReasoning]);
 
   // Smart Auto-Scroll Logic
   useEffect(() => {
@@ -117,45 +102,6 @@ export const MessageList = ({
                         </div>
                      )}
                      
-                     {/* Enhanced Reasoning / Thinking UI */}
-                     {msg.reasoning && (
-                        <div className="mb-6">
-                           <div className={`rounded-xl overflow-hidden border transition-all duration-300 ${expandedReasoning[msg.id] ? 'bg-indigo-50/50 dark:bg-indigo-900/10 border-indigo-200 dark:border-indigo-500/20' : 'bg-gray-50 dark:bg-white/5 border-transparent'}`}>
-                               <button 
-                                  onClick={() => toggleReasoning(msg.id)}
-                                  className="w-full flex items-center justify-between px-4 py-3 text-left group/btn"
-                               >
-                                  <div className="flex items-center gap-2.5">
-                                      <div className={`p-1.5 rounded-lg ${isStreaming && !msg.text ? 'bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400' : 'bg-gray-200 dark:bg-white/10 text-gray-500'}`}>
-                                          {isStreaming && !msg.text ? <Loader2 size={14} className="animate-spin"/> : <Brain size={14} />}
-                                      </div>
-                                      <div className="flex flex-col">
-                                          <span className={`text-xs font-bold ${isStreaming && !msg.text ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-600 dark:text-gray-300'}`}>
-                                              {isStreaming && !msg.text ? 'Анализирам задачата...' : 'Мисловен процес'}
-                                          </span>
-                                          {!expandedReasoning[msg.id] && (
-                                              <span className="text-[10px] text-gray-400 truncate max-w-[150px] sm:max-w-[300px]">
-                                                  Натисни за детайли
-                                              </span>
-                                          )}
-                                      </div>
-                                  </div>
-                                  <ChevronDown size={14} className={`text-gray-400 transition-transform duration-300 ${expandedReasoning[msg.id] ? 'rotate-180' : ''}`}/>
-                               </button>
-                               
-                               {expandedReasoning[msg.id] && (
-                                  <div className="px-4 pb-4 pt-0 animate-in slide-in-from-top-1 fade-in">
-                                     <div className="h-px w-full bg-indigo-500/10 mb-3" />
-                                     <div className="text-xs md:text-sm text-zinc-600 dark:text-zinc-400 font-mono leading-relaxed opacity-90 break-words whitespace-pre-wrap">
-                                        {msg.reasoning}
-                                        {isStreaming && !msg.text && <span className="inline-block w-1.5 h-3 ml-1 bg-indigo-500 animate-pulse align-middle"/>}
-                                     </div>
-                                  </div>
-                               )}
-                           </div>
-                        </div>
-                     )}
-
                      {/* Finished Slides */}
                      {msg.type === 'slides' && msg.slidesData && (
                         <div className="space-y-4">
@@ -169,8 +115,8 @@ export const MessageList = ({
                         <TestRenderer data={msg.testData} />
                      )}
 
-                     {/* Initializing State (Empty text & no reasoning yet) */}
-                     {isStreaming && !msg.text && !msg.reasoning && (
+                     {/* Initializing State (Empty text) */}
+                     {isStreaming && !msg.text && (
                         <div className="flex items-center gap-3 text-sm text-gray-500 italic py-2 animate-pulse">
                            <Loader2 className="animate-spin text-indigo-500" size={18}/>
                            <span>Подготовка на отговора...</span>
@@ -253,7 +199,7 @@ export const MessageList = ({
             {loadingSubject && (
                <div className={`flex flex-col gap-2 pl-4 ${FADE_IN} duration-500`}>
                   <div className="flex gap-4">
-                      <div className={`w-10 h-10 lg:w-12 lg:h-12 rounded-full bg-white dark:bg-zinc-900 border border-indigo-500/20 flex items-center justify-center shadow-sm ${PULSE_SLOW}`}><Brain size={18} className="text-indigo-500"/></div>
+                      <div className={`w-10 h-10 lg:w-12 lg:h-12 rounded-full bg-white dark:bg-zinc-900 border border-indigo-500/20 flex items-center justify-center shadow-sm ${PULSE_SLOW}`}><Sparkles size={18} className="text-indigo-500"/></div>
                       <div className="bg-white/50 dark:bg-white/5 px-6 py-4 rounded-[24px] lg:rounded-[32px] rounded-bl-sm border border-indigo-500/20 flex items-center gap-2 backdrop-blur-md">
                          <div className={`w-2 h-2 bg-indigo-500 rounded-full ${BOUNCE_DELAY}`}/>
                          <div className={`w-2 h-2 bg-indigo-500 rounded-full ${BOUNCE_DELAY} delay-100`}/>
