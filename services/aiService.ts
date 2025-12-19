@@ -66,6 +66,9 @@ export const generateResponse = async (
       forceJson = true;
   }
 
+  // Thinking config is implicitly supported by 2.5 Flash, instruct it to use <think> tags for UI
+  systemInstruction += "\n\nIMPORTANT: Before answering, explain your reasoning step-by-step enclosed in <think> tags.";
+
   systemInstruction = `CURRENT SUBJECT CONTEXT: ${subjectName}. All responses must relate to ${subjectName}.\n\n${systemInstruction}`;
 
   try {
@@ -124,6 +127,7 @@ export const generateResponse = async (
       const result = await chat.sendMessageStream({ message: currentParts });
       
       let finalContent = "";
+      let finalReasoning = "";
       let fullText = "";
 
       for await (const chunk of result) {
@@ -136,19 +140,31 @@ export const generateResponse = async (
           if (chunkText) {
               fullText += chunkText;
               
-              // Strip <think> tags from stream display
-              finalContent = fullText.replace(/<think>[\s\S]*?(?:<\/think>|$)/gi, "").trim();
+              // Simple parsing for <think> tags during stream
+              const thinkMatch = fullText.match(/<think>([\s\S]*?)(?:<\/think>|$)/i);
+              if (thinkMatch) {
+                  finalReasoning = thinkMatch[1].trim();
+                  finalContent = fullText.replace(/<think>[\s\S]*?(?:<\/think>|$)/gi, "").trim();
+              } else {
+                  finalContent = fullText;
+              }
 
               if (onStreamUpdate) {
-                  onStreamUpdate(finalContent, "");
+                  onStreamUpdate(finalContent, finalReasoning);
               }
           }
       }
 
       // Final cleanup
       let processedText = fullText;
-      processedText = processedText.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
-      processedText = processedText.replace(/<think>/g, "").replace(/<\/think>/g, "");
+      const thinkMatch = processedText.match(/<think>([\s\S]*?)(?:<\/think>|$)/i);
+      if (thinkMatch) {
+          if (!finalReasoning) {
+             finalReasoning = thinkMatch[1].trim();
+          }
+          processedText = processedText.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
+          processedText = processedText.replace(/<think>/g, "").replace(/<\/think>/g, "");
+      }
 
       if (mode === AppMode.PRESENTATION) {
          try {
@@ -161,7 +177,8 @@ export const generateResponse = async (
                      text: "Готово! Ето план за твоята презентация:",
                      type: 'slides',
                      slidesData: slides,
-                     timestamp: Date.now()
+                     timestamp: Date.now(),
+                     reasoning: finalReasoning
                  };
              }
          } catch (e) { console.error("Presentation JSON parse error", e); }
@@ -178,7 +195,8 @@ export const generateResponse = async (
                      text: `Готово! Ето теста на тема: ${testData.title || promptText}`,
                      type: 'test_generated',
                      testData: testData,
-                     timestamp: Date.now()
+                     timestamp: Date.now(),
+                     reasoning: finalReasoning
                  };
              }
           } catch (e) { console.error("Test JSON parse error", e); }
@@ -210,7 +228,8 @@ export const generateResponse = async (
           type: 'text',
           chartData: chartData,
           geometryData: geometryData,
-          timestamp: Date.now()
+          timestamp: Date.now(),
+          reasoning: finalReasoning
       };
 
   } catch (error: any) {
