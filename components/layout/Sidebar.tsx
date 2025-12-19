@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { MessageSquare, Trash2, Plus, School, GraduationCap, Briefcase, ChevronDown, User, Settings, CreditCard, HelpCircle, LogOut, ArrowRight, ChevronUp, FileText, Flame, CloudOff, RefreshCw, Cloud, PanelLeftClose, PanelLeftOpen, LayoutDashboard, Landmark, Wrench, Star } from 'lucide-react';
+import { MessageSquare, Trash2, Plus, School, GraduationCap, Briefcase, ChevronDown, User, Settings, CreditCard, HelpCircle, LogOut, ArrowRight, ChevronUp, FileText, Flame, CloudOff, RefreshCw, Cloud, PanelLeftClose, PanelLeftOpen, LayoutDashboard, Landmark } from 'lucide-react';
 import { DynamicIcon } from '../ui/DynamicIcon';
 import { SUBJECTS } from '../../constants';
 import { SubjectId, AppMode, Session, UserRole, UserSettings, UserPlan, SubjectConfig, HomeViewType } from '../../types';
@@ -35,7 +35,6 @@ interface SidebarProps {
   streak: number;
   syncStatus?: 'synced' | 'syncing' | 'error' | 'offline';
   homeView: HomeViewType;
-  setActiveTool: (tool: string | null) => void;
 }
 
 export const Sidebar = ({
@@ -66,8 +65,7 @@ export const Sidebar = ({
   userRole,
   streak,
   syncStatus = 'synced',
-  homeView,
-  setActiveTool
+  homeView
 }: SidebarProps) => {
     
     // Internal State for Folders
@@ -79,9 +77,6 @@ export const Sidebar = ({
     const [uniFolderOpen, setUniFolderOpen] = useState(true);
     const [uniStudentsFolderOpen, setUniStudentsFolderOpen] = useState(false);
     const [uniTeachersFolderOpen, setUniTeachersFolderOpen] = useState(false);
-    
-    // Tools Folder
-    const [toolsFolderOpen, setToolsFolderOpen] = useState(false);
 
     const [profileMenuOpen, setProfileMenuOpen] = useState(false);
     const [collapsed, setCollapsed] = useState(false);
@@ -176,15 +171,6 @@ export const Sidebar = ({
                         title={t('university', userSettings.language)}
                      >
                         <Landmark size={20} />
-                     </button>
-
-                     {/* Tools Toggle */}
-                     <button 
-                        onClick={() => { setActiveTool('calculator'); }}
-                        className={`p-3 rounded-xl transition-all text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10 hover:text-amber-500`}
-                        title="Tools"
-                     >
-                        <Wrench size={20} />
                      </button>
                  </div>
              ) : (
@@ -431,39 +417,6 @@ export const Sidebar = ({
                         )}
                      </div>
 
-                     {/* TOOLS SECTION (NEW) */}
-                     <div className="pt-2">
-                        <button onClick={() => setToolsFolderOpen(!toolsFolderOpen)} className="w-full flex items-center justify-between px-2 py-3 text-gray-400 dark:text-zinc-500 hover:text-amber-500 transition-colors">
-                            <div className="flex items-center gap-2">
-                                <Wrench size={18} />
-                                <span className="text-xs font-bold uppercase tracking-widest">Инструменти</span>
-                            </div>
-                            <ChevronDown size={14} className={`transition-transform duration-300 ${toolsFolderOpen ? 'rotate-180' : ''}`}/>
-                        </button>
-                        
-                        {toolsFolderOpen && (
-                            <div className="pl-4 space-y-1 animate-in slide-in-from-top-2 border-l border-amber-500/10 ml-2">
-                                {[
-                                    { id: 'calculator', label: 'Калкулатор', icon: 'Calculator' },
-                                    { id: 'timer', label: 'Pomodoro Timer', icon: 'Clock' },
-                                    { id: 'notes', label: 'Бележки', icon: 'StickyNote' },
-                                    { id: 'converter', label: 'Конвертор', icon: 'RefreshCw' },
-                                    { id: 'periodic', label: 'Менделеева Таблица', icon: 'Atom' },
-                                    { id: 'music', label: 'Lo-Fi Focus', icon: 'Music' },
-                                ].map(tool => (
-                                    <button 
-                                        key={tool.id}
-                                        onClick={() => { setActiveTool(tool.id); if(isMobile) setSidebarOpen(false); }}
-                                        className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm transition-colors text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-amber-500"
-                                    >
-                                        <DynamicIcon name={tool.icon} className="w-4 h-4"/>
-                                        <span className="truncate">{tool.label}</span>
-                                    </button>
-                                ))}
-                            </div>
-                        )}
-                     </div>
-
                  </div>
              )}
           </div>
@@ -535,11 +488,13 @@ export const Sidebar = ({
                                     </div>
                                     <div className="flex items-center gap-2">
                                         <div className={`text-[10px] font-bold uppercase tracking-wider ${userPlan === 'pro' ? 'text-amber-500' : userPlan === 'plus' ? 'text-indigo-500' : 'text-gray-500'}`}>
-                                            Lvl {userSettings.level || 1}
+                                            {userPlan === 'pro' ? 'Pro Plan' : userPlan === 'plus' ? 'Plus Plan' : 'Free Plan'}
                                         </div>
-                                        <div className="w-16 h-1.5 bg-gray-200 dark:bg-white/10 rounded-full overflow-hidden">
-                                            <div className="h-full bg-indigo-500 rounded-full" style={{width: `${Math.min((userSettings.xp || 0) % 100, 100)}%`}} />
-                                        </div>
+                                        {streak > 0 && (
+                                            <div className="flex items-center gap-1 text-[10px] font-bold text-orange-500 bg-orange-100 dark:bg-orange-500/20 px-1.5 py-0.5 rounded-full">
+                                                <Flame size={10} fill="currentColor" /> {streak}
+                                            </div>
+                                        )}
                                     </div>
                                     <div className="text-[10px] uppercase font-bold tracking-widest flex items-center gap-1.5 opacity-60 mt-1">
                                         {syncStatus === 'syncing' && <><RefreshCw size={10} className="animate-spin"/> {t('syncing', userSettings.language)}</>}

@@ -34,7 +34,6 @@ import { WelcomeScreen } from './components/welcome/WelcomeScreen';
 import { ChatHeader } from './components/chat/ChatHeader';
 import { MessageList } from './components/chat/MessageList';
 import { ChatInputArea } from './components/chat/ChatInputArea';
-import { Toolbox } from './components/tools/Toolbox'; // NEW
 import { TermsOfService, PrivacyPolicy, CookiePolicy, About, Contact } from './components/pages/StaticPages';
 
 interface GeneratedKey {
@@ -103,9 +102,6 @@ export const App = () => {
   const [voiceCallStatus, setVoiceCallStatus] = useState<'idle' | 'listening' | 'processing' | 'speaking'>('idle');
   const [voiceMuted, setVoiceMuted] = useState(false);
   
-  // NEW: Toolbox State
-  const [activeTool, setActiveTool] = useState<string | null>(null);
-
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [userSettings, setUserSettings] = useState<UserSettings>({
     userName: '', 
@@ -122,12 +118,7 @@ export const App = () => {
     language: 'bg',
     teachingStyle: 'normal',
     enterToSend: true,
-    fontFamily: 'inter',
-    // New defaults
-    xp: 0,
-    level: 1,
-    badges: [],
-    notes: ''
+    fontFamily: 'inter'
   });
   const [unreadSubjects, setUnreadSubjects] = useState<Set<string>>(new Set());
   const [notification, setNotification] = useState<{ message: string, subjectId: string } | null>(null);
@@ -285,8 +276,6 @@ export const App = () => {
                       // Ensure language is set
                       if (!merged.language) merged.language = 'bg';
                       if (!merged.teachingStyle) merged.teachingStyle = 'normal';
-                      if (!merged.xp) merged.xp = 0;
-                      if (!merged.level) merged.level = 1;
                       
                       setUserSettings(prev => ({ ...prev, ...merged }));
                       if (plan) setUserPlan(plan);
@@ -498,11 +487,7 @@ export const App = () => {
                             language: 'bg',
                             teachingStyle: 'normal',
                             enterToSend: true,
-                            fontFamily: 'inter',
-                            xp: 0,
-                            level: 1,
-                            badges: [],
-                            notes: ''
+                            fontFamily: 'inter'
                         });
                      }
                 }
@@ -631,20 +616,6 @@ export const App = () => {
       const newCount = dailyImageCount + count;
       setDailyImageCount(newCount);
       localStorage.setItem('uchebnik_image_count', newCount.toString());
-  };
-
-  const addXP = (amount: number) => {
-      setUserSettings(prev => {
-          let newXP = (prev.xp || 0) + amount;
-          let newLevel = prev.level || 1;
-          const nextLevelXP = newLevel * 100;
-          if (newXP >= nextLevelXP) {
-              newLevel++;
-              newXP -= nextLevelXP;
-              addToast(`Level Up! You are now level ${newLevel} 🎉`, 'success');
-          }
-          return { ...prev, xp: newXP, level: newLevel };
-      });
   };
 
   const currentMessages = sessions.find(s => s.id === activeSessionId)?.messages || [];
@@ -885,8 +856,6 @@ export const App = () => {
           return s;
       }));
       
-      addXP(10); // Reward XP
-
       if (activeSubjectRef.current?.id !== currentSubId) {
          setUnreadSubjects(prev => new Set(prev).add(currentSubId));
          if (userSettings.notifications) { setNotification({ message: `Нов отговор: ${t(`subject_${currentSubId}`, userSettings.language)}`, subjectId: currentSubId }); setTimeout(() => setNotification(null), 4000); }
@@ -1216,8 +1185,6 @@ export const App = () => {
             streak={streak}
             syncStatus={syncStatus}
             homeView={homeView}
-            // New: Pass set tool
-            setActiveTool={setActiveTool}
           />
       )}
       
@@ -1264,13 +1231,6 @@ export const App = () => {
                 userRole={userRole}
                 userSettings={userSettings}
                 handleStartMode={handleStartMode}
-                // New: Pass handler
-                onQuickAction={(prompt) => {
-                    createNewSession(activeSubject.id, userRole || undefined, AppMode.CHAT);
-                    // Slight delay to allow session creation to settle
-                    setTimeout(() => handleSend(prompt), 100);
-                    setShowSubjectDashboard(false);
-                }}
             />
         ) : (
             <div className={`flex-1 flex flex-col relative h-full bg-transparent`}>
@@ -1350,13 +1310,6 @@ export const App = () => {
       </main>
 
         {/* Modals moved outside of main to properly overlay sidebar */}
-        <Toolbox 
-            activeTool={activeTool} 
-            onClose={() => setActiveTool(null)} 
-            userSettings={userSettings}
-            setUserSettings={setUserSettings}
-        />
-        
         <AdminPanel 
             showAdminAuth={showAdminAuth}
             setShowAdminAuth={setShowAdminAuth}
