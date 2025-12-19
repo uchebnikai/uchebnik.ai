@@ -135,14 +135,19 @@ export const generateResponse = async (
           if (chunkText) {
               fullText += chunkText;
               
+              // Remove <think> content from visualization immediately
+              let displayText = fullText.replace(/<think>[\s\S]*?<\/think>/g, ''); // Remove completed thoughts
+              displayText = displayText.replace(/<think>[\s\S]*/g, ''); // Remove active/incomplete thoughts
+              displayText = displayText.trimStart();
+
               if (onStreamUpdate) {
-                  onStreamUpdate(fullText, "");
+                  onStreamUpdate(displayText, "");
               }
           }
       }
 
-      // Final cleanup
-      let processedText = fullText;
+      // Final cleanup - clean think tags from the result text permanently
+      let processedText = fullText.replace(/<think>[\s\S]*?<\/think>/g, '').replace(/<think>[\s\S]*$/g, '').trim();
 
       if (mode === AppMode.PRESENTATION) {
          try {
