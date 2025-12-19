@@ -5,7 +5,7 @@ import {
   ImageIcon, Edit2, Cpu, ChevronDown, Database, Trash2, 
   ArrowRight, Settings, CreditCard, Loader2, Globe, 
   Layout, Smartphone, Monitor, Sparkles, LogOut, Volume2, 
-  Keyboard, Type, Download, Zap, Brain, MessageCircle
+  Keyboard, Type, Download, Zap, Brain, MessageCircle, PaintBucket
 } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { UserSettings } from '../../types';
@@ -36,6 +36,41 @@ type SettingsTab = 'account' | 'appearance' | 'ai' | 'system' | 'data';
 
 const PRESET_COLORS = ['#6366f1', '#ec4899', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#14b8a6'];
 
+const THEME_PRESETS = [
+  { 
+    id: 'cyberpunk', 
+    name: 'Cyberpunk', 
+    color: '#db2777', 
+    darkMode: true, 
+    bg: 'https://images.unsplash.com/photo-1605218427360-60290c0a9b69?q=80&w=1000&auto=format&fit=crop',
+    icon: Zap 
+  },
+  { 
+    id: 'forest', 
+    name: 'Forest', 
+    color: '#059669', 
+    darkMode: true, 
+    bg: 'https://images.unsplash.com/photo-1448375240586-dfd8d395ea6c?q=80&w=1000&auto=format&fit=crop',
+    icon:  (props: any) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 10v.2A3 3 0 0 1 8.9 16v0H5v0h0a3 3 0 0 1-1-5.8V10a3 3 0 0 1 5.3-2.1l.4.4Z"/><path d="M7 16v6"/><path d="M13 19v3"/><path d="M12 19h8.3a1 1 0 0 0 .7-1.7L18 14h.3a1 1 0 0 0 .7-1.7L16 9h.2a1 1 0 0 0 .9-1.7l-3.5-6a1 1 0 0 0-1.7 0l-3.5 6a1 1 0 0 0 .9 1.7h.2l-3 3.3a1 1 0 0 0 .7 1.7H10l-3 3.3a1 1 0 0 0 .7 1.7H12Z"/></svg>
+  },
+  { 
+    id: 'sunset', 
+    name: 'Sunset', 
+    color: '#ea580c', 
+    darkMode: false, 
+    bg: 'https://images.unsplash.com/photo-1495616811223-4d98c6e9d869?q=80&w=1000&auto=format&fit=crop',
+    icon: Sun 
+  },
+  { 
+    id: 'midnight', 
+    name: 'Midnight', 
+    color: '#4f46e5', 
+    darkMode: true, 
+    bg: null, // Default
+    icon: Moon
+  }
+];
+
 export const SettingsModal = ({
   showSettings,
   setShowSettings,
@@ -59,7 +94,7 @@ export const SettingsModal = ({
   const [activeTab, setActiveTab] = useState<SettingsTab>('account');
   const [loadingPortal, setLoadingPortal] = useState(false);
 
-  const isCustomColor = !PRESET_COLORS.includes(userSettings.themeColor);
+  const isCustomColor = !PRESET_COLORS.includes(userSettings.themeColor) && !THEME_PRESETS.some(t => t.color === userSettings.themeColor);
 
   const handleManageSubscription = async () => {
       setLoadingPortal(true);
@@ -90,6 +125,16 @@ export const SettingsModal = ({
       downloadAnchorNode.click();
       downloadAnchorNode.remove();
       addToast("Данните са експортирани успешно.", "success");
+  };
+
+  const applyThemePreset = (preset: typeof THEME_PRESETS[0]) => {
+      setUserSettings((prev: any) => ({
+          ...prev,
+          themeColor: preset.color,
+          customBackground: preset.bg
+      }));
+      setIsDarkMode(preset.darkMode);
+      addToast(`Тема "${preset.name}" активирана`, 'success');
   };
 
   if (!showSettings) return null;
@@ -136,7 +181,7 @@ export const SettingsModal = ({
          </div>
 
          <div className="mt-auto p-4 hidden md:block">
-             <div className="text-xs text-gray-400 text-center font-medium">Uchebnik AI v1.5</div>
+             <div className="text-xs text-gray-400 text-center font-medium">Uchebnik AI v1.6</div>
          </div>
       </div>
 
@@ -244,6 +289,37 @@ export const SettingsModal = ({
                                 ))}
                               </select>
                               <ChevronDown size={20} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"/>
+                          </div>
+                      </section>
+
+                      {/* Theme Engine 2.0 Presets */}
+                      <section className="space-y-4">
+                          <div className="flex justify-between items-center">
+                              <label className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                                  <PaintBucket size={18} className="text-purple-500"/> Theme Engine 2.0
+                              </label>
+                              {!isPremium && <span className="px-2 py-1 bg-gray-200 dark:bg-white/10 rounded text-[10px] font-bold text-gray-500 uppercase">Plus / Pro</span>}
+                          </div>
+                          
+                          <div className={`grid grid-cols-2 md:grid-cols-4 gap-3 ${!isPremium ? 'opacity-60 pointer-events-none' : ''}`}>
+                              {THEME_PRESETS.map((preset) => (
+                                  <button
+                                      key={preset.id}
+                                      onClick={() => applyThemePreset(preset)}
+                                      className="group relative flex flex-col items-center gap-2 p-3 rounded-2xl bg-gray-50 dark:bg-black/20 border border-transparent hover:border-indigo-500/50 transition-all hover:scale-105 active:scale-95"
+                                  >
+                                      <div 
+                                        className="w-12 h-12 rounded-xl flex items-center justify-center text-white shadow-md relative overflow-hidden"
+                                        style={{ backgroundColor: preset.color }}
+                                      >
+                                          {preset.bg && <img src={preset.bg} className="absolute inset-0 w-full h-full object-cover opacity-50"/>}
+                                          <div className="relative z-10">
+                                              <preset.icon size={20} />
+                                          </div>
+                                      </div>
+                                      <span className="text-xs font-bold text-gray-600 dark:text-gray-300">{preset.name}</span>
+                                  </button>
+                              ))}
                           </div>
                       </section>
 
