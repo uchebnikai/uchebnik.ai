@@ -36,6 +36,15 @@ type SettingsTab = 'account' | 'appearance' | 'ai' | 'system' | 'data';
 
 const PRESET_COLORS = ['#6366f1', '#ec4899', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#14b8a6'];
 
+const PRESET_BACKGROUNDS = [
+  "https://applescoop.org/image/wallpapers/mac/anime-cartoon-style-mountains-digital-art-crescent-waterfall-2025-best-ultra-hd-high-resolution-4k-desktop-backgrounds-wallpapers-for-mac-linux-and-windows-pc-11-03-2025-1741731277-hd-wallpaper.jpeg",
+  "https://i.pinimg.com/originals/a0/2d/03/a02d03a01afa19720a22cc3dbc17407e.jpg",
+  "https://wallpapercat.com/w/full/5/c/0/2117697-3840x2160-desktop-4k-dark-wallpaper.jpg",
+  "https://www.pixelstalk.net/wp-content/uploads/2025/07/Anime-Hello-Kitty-backgrounds-designed-for-fans-of-the-beloved-character.jpg",
+  "https://i.ibb.co/67HHXjjx/924e9515a89877de9a879ad812e7362e.gif",
+  "https://i.pinimg.com/originals/21/b6/9f/21b69fbf3c3762775fd6878971633329.gif"
+];
+
 export const SettingsModal = ({
   showSettings,
   setShowSettings,
@@ -334,7 +343,7 @@ export const SettingsModal = ({
                           </button>
                       </section>
 
-                      {/* Custom Background */}
+                      {/* Chat Backgrounds */}
                       <section className={`space-y-4 ${!isPremium ? 'opacity-70' : ''}`}>
                            <div className="flex justify-between items-center">
                               <label className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
@@ -343,31 +352,45 @@ export const SettingsModal = ({
                               {!isPremium && <span className="px-2 py-1 bg-gray-200 dark:bg-white/10 rounded text-[10px] font-bold text-gray-500 uppercase">Plus / Pro required</span>}
                            </div>
                            
-                           <div className={`h-48 rounded-2xl border-2 border-dashed border-gray-300 dark:border-white/10 hover:border-indigo-500 dark:hover:border-indigo-500 transition-all cursor-pointer relative overflow-hidden group bg-gray-50 dark:bg-black/20 ${!isPremium ? 'pointer-events-none' : ''}`} onClick={() => isPremium && backgroundInputRef.current?.click()}>
-                               {userSettings.customBackground ? (
-                                   <>
-                                      <img src={userSettings.customBackground} className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
-                                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
-                                          <span className="px-4 py-2 bg-white/20 backdrop-blur-md rounded-lg text-white font-bold flex items-center gap-2"><Edit2 size={16}/> {t('edit', userSettings.language)}</span>
-                                          <button 
-                                            onClick={(e) => { e.stopPropagation(); setUserSettings((prev: any) => ({...prev, customBackground: null})); }} 
-                                            className="px-4 py-2 bg-red-500/80 backdrop-blur-md rounded-lg text-white font-bold hover:bg-red-600 transition-colors"
-                                          >
-                                              {t('remove', userSettings.language)}
-                                          </button>
-                                      </div>
-                                   </>
-                               ) : (
-                                   <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-gray-400 group-hover:text-indigo-500 transition-colors">
-                                       <div className="p-4 bg-white dark:bg-white/5 rounded-full shadow-sm"><Upload size={24}/></div>
-                                       <div className="text-center">
-                                           <span className="text-sm font-bold block">{t('upload_image', userSettings.language)}</span>
-                                           <span className="text-xs opacity-70">JPG, PNG, GIF (Max 5MB)</span>
-                                       </div>
-                                   </div>
-                               )}
-                               <input type="file" ref={backgroundInputRef} onChange={handleBackgroundUpload} className="hidden" accept="image/*"/>
+                           <div className={`grid grid-cols-2 md:grid-cols-4 gap-3 ${!isPremium ? 'pointer-events-none' : ''}`}>
+                               {/* Upload Button */}
+                               <div 
+                                   onClick={() => isPremium && backgroundInputRef.current?.click()}
+                                   className="aspect-video rounded-xl border-2 border-dashed border-gray-300 dark:border-white/10 hover:border-indigo-500 dark:hover:border-indigo-500 transition-all cursor-pointer flex flex-col items-center justify-center gap-2 group bg-gray-50 dark:bg-black/20"
+                               >
+                                   <div className="p-2 bg-white dark:bg-white/5 rounded-full shadow-sm group-hover:scale-110 transition-transform"><Upload size={18}/></div>
+                                   <span className="text-xs font-bold text-gray-500 group-hover:text-indigo-500">Upload</span>
+                                   <input type="file" ref={backgroundInputRef} onChange={handleBackgroundUpload} className="hidden" accept="image/*"/>
+                               </div>
+
+                               {/* Presets */}
+                               {PRESET_BACKGROUNDS.map((bg, idx) => (
+                                   <button 
+                                       key={idx}
+                                       onClick={() => setUserSettings((prev: any) => ({...prev, customBackground: bg}))}
+                                       className={`relative aspect-video rounded-xl overflow-hidden border-2 transition-all group ${userSettings.customBackground === bg ? 'border-indigo-500 ring-2 ring-indigo-500/30' : 'border-transparent hover:border-indigo-500/50'}`}
+                                   >
+                                       <img src={bg} className="w-full h-full object-cover" loading="lazy" />
+                                       {userSettings.customBackground === bg && (
+                                           <div className="absolute inset-0 bg-indigo-500/20 flex items-center justify-center">
+                                               <div className="bg-indigo-500 text-white rounded-full p-1"><Check size={14}/></div>
+                                           </div>
+                                       )}
+                                   </button>
+                               ))}
                            </div>
+                           
+                           {/* Remove Button if background is set */}
+                           {userSettings.customBackground && (
+                               <div className="flex justify-end">
+                                    <button 
+                                       onClick={() => setUserSettings((prev: any) => ({...prev, customBackground: null}))} 
+                                       className="text-xs font-bold text-red-500 hover:text-red-600 flex items-center gap-1"
+                                   >
+                                       <Trash2 size={14}/> {t('remove', userSettings.language)} Background
+                                   </button>
+                               </div>
+                           )}
                       </section>
                   </div>
               )}
