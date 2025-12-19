@@ -34,6 +34,8 @@ interface SettingsModalProps {
 
 type SettingsTab = 'account' | 'appearance' | 'ai' | 'system' | 'data';
 
+const PRESET_COLORS = ['#6366f1', '#ec4899', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#14b8a6'];
+
 export const SettingsModal = ({
   showSettings,
   setShowSettings,
@@ -56,6 +58,8 @@ export const SettingsModal = ({
   const backgroundInputRef = useRef<HTMLInputElement>(null);
   const [activeTab, setActiveTab] = useState<SettingsTab>('account');
   const [loadingPortal, setLoadingPortal] = useState(false);
+
+  const isCustomColor = !PRESET_COLORS.includes(userSettings.themeColor);
 
   const handleManageSubscription = async () => {
       setLoadingPortal(true);
@@ -252,7 +256,7 @@ export const SettingsModal = ({
                               {!isPremium && <span className="px-2 py-1 bg-gray-200 dark:bg-white/10 rounded text-[10px] font-bold text-gray-500 uppercase">Plus / Pro required</span>}
                           </div>
                           <div className={`flex flex-wrap gap-4 ${!isPremium ? 'pointer-events-none' : ''}`}>
-                              {['#6366f1', '#ec4899', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#14b8a6'].map(c => (
+                              {PRESET_COLORS.map(c => (
                                   <button 
                                     key={c} 
                                     onClick={() => setUserSettings((prev: any) => ({...prev, themeColor: c}))} 
@@ -262,6 +266,31 @@ export const SettingsModal = ({
                                       {userSettings.themeColor === c && <Check size={20} className="text-white drop-shadow-md"/>}
                                   </button>
                               ))}
+
+                              {/* Custom Color Picker */}
+                              <div className="relative group">
+                                  <input
+                                      type="color"
+                                      value={userSettings.themeColor}
+                                      onChange={(e) => setUserSettings((prev: any) => ({...prev, themeColor: e.target.value}))}
+                                      className="absolute inset-0 opacity-0 w-full h-full cursor-pointer z-10"
+                                      title="Choose custom color"
+                                  />
+                                  <div 
+                                      className={`w-12 h-12 rounded-full transition-all shadow-sm flex items-center justify-center relative overflow-hidden ${
+                                          isCustomColor 
+                                          ? 'ring-2 ring-offset-2 ring-indigo-500 scale-110 dark:ring-offset-zinc-900' 
+                                          : 'border-2 border-dashed border-gray-300 dark:border-white/20 hover:border-indigo-500 hover:scale-105'
+                                      }`}
+                                      style={isCustomColor ? { backgroundColor: userSettings.themeColor } : {}}
+                                  >
+                                      {isCustomColor ? (
+                                          <Check size={20} className="text-white drop-shadow-md"/>
+                                      ) : (
+                                          <Plus size={20} className="text-gray-400 group-hover:text-indigo-500 transition-colors" />
+                                      )}
+                                  </div>
+                              </div>
                           </div>
                       </section>
 
