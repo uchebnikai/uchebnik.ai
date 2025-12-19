@@ -124,7 +124,6 @@ export const generateResponse = async (
       const result = await chat.sendMessageStream({ message: currentParts });
       
       let finalContent = "";
-      let finalReasoning = "";
       let fullText = "";
 
       for await (const chunk of result) {
@@ -137,31 +136,17 @@ export const generateResponse = async (
           if (chunkText) {
               fullText += chunkText;
               
-              // Simple parsing for <think> tags during stream (legacy support if model hallucinates it)
-              const thinkMatch = fullText.match(/<think>([\s\S]*?)(?:<\/think>|$)/i);
-              if (thinkMatch) {
-                  finalReasoning = thinkMatch[1].trim();
-                  finalContent = fullText.replace(/<think>[\s\S]*?(?:<\/think>|$)/gi, "").trim();
-              } else {
-                  finalContent = fullText;
-              }
+              // Remove any raw <think> tags from visibility if they leak
+              finalContent = fullText.replace(/<think>[\s\S]*?(?:<\/think>|$)/gi, "").trim();
 
               if (onStreamUpdate) {
-                  onStreamUpdate(finalContent, finalReasoning);
+                  onStreamUpdate(finalContent, "");
               }
           }
       }
 
       // Final cleanup
-      let processedText = fullText;
-      const thinkMatch = processedText.match(/<think>([\s\S]*?)(?:<\/think>|$)/i);
-      if (thinkMatch) {
-          if (!finalReasoning) {
-             finalReasoning = thinkMatch[1].trim();
-          }
-          processedText = processedText.replace(/<think>[\s\S]*?<\/think>/gi, "").trim();
-          processedText = processedText.replace(/<think>/g, "").replace(/<\/think>/g, "");
-      }
+      let processedText = fullText.replace(/<think>[\s\S]*?(?:<\/think>|$)/gi, "").trim();
 
       if (mode === AppMode.PRESENTATION) {
          try {
@@ -175,7 +160,7 @@ export const generateResponse = async (
                      type: 'slides',
                      slidesData: slides,
                      timestamp: Date.now(),
-                     reasoning: finalReasoning
+                     reasoning: ""
                  };
              }
          } catch (e) { console.error("Presentation JSON parse error", e); }
@@ -193,7 +178,7 @@ export const generateResponse = async (
                      type: 'test_generated',
                      testData: testData,
                      timestamp: Date.now(),
-                     reasoning: finalReasoning
+                     reasoning: ""
                  };
              }
           } catch (e) { console.error("Test JSON parse error", e); }
@@ -226,7 +211,7 @@ export const generateResponse = async (
           chartData: chartData,
           geometryData: geometryData,
           timestamp: Date.now(),
-          reasoning: finalReasoning
+          reasoning: ""
       };
 
   } catch (error: any) {
