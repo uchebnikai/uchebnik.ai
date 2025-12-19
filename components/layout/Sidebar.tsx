@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { MessageSquare, Trash2, Plus, School, GraduationCap, Briefcase, ChevronDown, User, Settings, CreditCard, HelpCircle, LogOut, ArrowRight, ChevronUp, FileText, Flame, CloudOff, RefreshCw, Cloud, PanelLeftClose, PanelLeftOpen, LayoutDashboard, Landmark } from 'lucide-react';
+import { MessageSquare, Trash2, Plus, School, GraduationCap, Briefcase, ChevronDown, User, Settings, CreditCard, HelpCircle, LogOut, ArrowRight, ChevronUp, FileText, Flame, CloudOff, RefreshCw, Cloud, PanelLeftClose, PanelLeftOpen, LayoutDashboard, Landmark, Calendar } from 'lucide-react';
 import { DynamicIcon } from '../ui/DynamicIcon';
 import { SUBJECTS } from '../../constants';
 import { SubjectId, AppMode, Session, UserRole, UserSettings, UserPlan, SubjectConfig, HomeViewType } from '../../types';
@@ -129,6 +129,15 @@ export const Sidebar = ({
                    <div className={`p-1.5 rounded-lg shrink-0 ${activeSubject?.id === SubjectId.GENERAL ? 'bg-white/20' : 'bg-gray-100 dark:bg-white/5 text-indigo-600 dark:text-indigo-400'}`}><MessageSquare size={18} /></div>
                    {!collapsed && <span className="font-bold text-sm">{t('chat_general', userSettings.language)}</span>}
                    {unreadSubjects.has(SubjectId.GENERAL) && <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full animate-pulse" />}
+              </button>
+              
+              <button 
+                onClick={() => { setActiveSubject(null); setHomeView('calendar'); if(isMobile) setSidebarOpen(false); }} 
+                className={`w-full flex items-center ${collapsed ? 'justify-center px-0 py-3' : 'gap-3 px-4 py-3.5'} rounded-2xl transition-all relative overflow-hidden group border ${homeView === 'calendar' ? 'bg-indigo-600 border-indigo-500 text-white shadow-lg shadow-indigo-500/25' : 'glass-button border-indigo-500/10 text-zinc-700 dark:text-zinc-300 hover:border-indigo-500/30'}`}
+                title="Календар"
+              >
+                   <div className={`p-1.5 rounded-lg shrink-0 ${homeView === 'calendar' ? 'bg-white/20' : 'bg-gray-100 dark:bg-white/5 text-indigo-600 dark:text-indigo-400'}`}><Calendar size={18} /></div>
+                   {!collapsed && <span className="font-bold text-sm">Календар</span>}
               </button>
               
               {/* General Chat Sessions List */}

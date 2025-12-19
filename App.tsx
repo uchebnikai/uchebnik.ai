@@ -1,12 +1,12 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { SubjectConfig, SubjectId, AppMode, Message, Slide, UserSettings, Session, UserPlan, UserRole, HomeViewType } from './types';
+import { SubjectConfig, SubjectId, AppMode, Message, Slide, UserSettings, Session, UserPlan, UserRole, HomeViewType, Reminder } from './types';
 import { SUBJECTS } from './constants';
 import { generateResponse } from './services/aiService';
 import { supabase } from './supabaseClient';
 import { Auth } from './components/auth/Auth';
 import { 
-  Loader2, X, AlertCircle, CheckCircle, Info, Minimize, Database
+  Loader2, X, AlertCircle, CheckCircle, Info, Minimize, Database, Bell
 } from 'lucide-react';
 
 import { Session as SupabaseSession } from '@supabase/supabase-js';
@@ -35,6 +35,7 @@ import { ChatHeader } from './components/chat/ChatHeader';
 import { MessageList } from './components/chat/MessageList';
 import { ChatInputArea } from './components/chat/ChatInputArea';
 import { TermsOfService, PrivacyPolicy, CookiePolicy, About, Contact } from './components/pages/StaticPages';
+import { CalendarView } from './components/calendar/CalendarView';
 
 interface GeneratedKey {
   code: string;
@@ -57,6 +58,7 @@ export const App = () => {
   const [showSubjectDashboard, setShowSubjectDashboard] = useState(false); 
   const [activeMode, setActiveMode] = useState<AppMode>(AppMode.SOLVE);
   const [sessions, setSessions] = useState<Session[]>([]);
+  const [reminders, setReminders] = useState<Reminder[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [inputValue, setInputValue] = useState('');
   
@@ -144,6 +146,7 @@ export const App = () => {
   
   const activeSubjectRef = useRef(activeSubject);
   const sessionsRef = useRef(sessions);
+  const remindersRef = useRef(reminders);
   const activeSessionIdRef = useRef(activeSessionId);
   const activeModeRef = useRef(activeMode);
   const isVoiceCallActiveRef = useRef(isVoiceCallActive);
@@ -169,6 +172,25 @@ export const App = () => {
   useTheme(userSettings);
 
   // --- Effects ---
+
+  // Reminder Checker Effect
+  useEffect(() => {
+      const interval = setInterval(() => {
+          const now = Date.now();
+          remindersRef.current.forEach(reminder => {
+              if (!reminder.isCompleted && reminder.date <= now) {
+                  // Trigger notification
+                  addToast(`🔔 Напомняне: ${reminder.text}`, 'info');
+                  if (userSettings.notifications && userSettings.sound) {
+                      new Audio('https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3').play().catch(()=>{});
+                  }
+                  // Mark as completed
+                  setReminders(prev => prev.map(r => r.id === reminder.id ? { ...r, isCompleted: true } : r));
+              }
+          });
+      }, 10000); // Check every 10 seconds
+      return () => clearInterval(interval);
+  }, [userSettings.notifications, userSettings.sound]);
 
   // Font Application
   useEffect(() => {
@@ -206,6 +228,7 @@ export const App = () => {
             setShowAuthModal(false);
         } else {
             setSessions([]);
+            setReminders([]);
             setSyncStatus('synced');
             setIsRemoteDataLoaded(false);
         }
@@ -271,7 +294,7 @@ export const App = () => {
 
               if (profileData) {
                   if (profileData.settings) {
-                      const { plan, stats, ...restSettings } = profileData.settings;
+                      const { plan, stats, reminders: remoteReminders, ...restSettings } = profileData.settings;
                       const merged = { ...restSettings, themeColor: profileData.theme_color, customBackground: profileData.custom_background };
                       // Ensure language is set
                       if (!merged.language) merged.language = 'bg';
@@ -279,6 +302,7 @@ export const App = () => {
                       
                       setUserSettings(prev => ({ ...prev, ...merged }));
                       if (plan) setUserPlan(plan);
+                      if (remoteReminders) setReminders(remoteReminders);
                       if (stats) {
                           setStreak(stats.streak || 0);
                           const today = new Date().toDateString();
@@ -373,9 +397,10 @@ export const App = () => {
               const remoteData = payload.new as any;
               if (remoteData && remoteData.settings) {
                   isIncomingUpdateRef.current = true;
-                  const { plan, stats, ...settingsRest } = remoteData.settings;
+                  const { plan, stats, reminders: remoteReminders, ...settingsRest } = remoteData.settings;
                   setUserSettings(prev => ({ ...prev, ...settingsRest, themeColor: remoteData.theme_color, custom_background: remoteData.custom_background }));
                   if (plan) setUserPlan(plan);
+                  if (remoteReminders) setReminders(remoteReminders);
                   if (stats) {
                       setStreak(stats.streak || 0);
                       const today = new Date().toDateString();
@@ -420,6 +445,7 @@ export const App = () => {
       syncSettingsTimer.current = setTimeout(async () => {
           const fullSettingsPayload = {
               ...userSettings, plan: userPlan,
+              reminders,
               stats: { streak, dailyImageCount, lastImageDate: localStorage.getItem('uchebnik_image_date'), lastVisit: localStorage.getItem('uchebnik_last_visit') }
           };
           const { error } = await supabase.from('profiles').upsert({
@@ -428,7 +454,7 @@ export const App = () => {
           if (error && error.code === '42P01') { setMissingDbTables(true); }
       }, 1000);
       return () => { if(syncSettingsTimer.current) clearTimeout(syncSettingsTimer.current); };
-  }, [userSettings, userPlan, streak, dailyImageCount, session?.user?.id, isRemoteDataLoaded, missingDbTables]);
+  }, [userSettings, userPlan, streak, dailyImageCount, reminders, session?.user?.id, isRemoteDataLoaded, missingDbTables]);
 
   // Window Resize
   useEffect(() => {
@@ -552,6 +578,7 @@ export const App = () => {
   useEffect(() => { document.documentElement.classList.toggle('dark', isDarkMode); }, [isDarkMode]);
   useEffect(() => { activeSubjectRef.current = activeSubject; if(activeSubject && isVoiceCallActive) endVoiceCall(); }, [activeSubject]);
   useEffect(() => { sessionsRef.current = sessions; }, [sessions]);
+  useEffect(() => { remindersRef.current = reminders; }, [reminders]);
   useEffect(() => { activeSessionIdRef.current = activeSessionId; }, [activeSessionId]);
   useEffect(() => { activeModeRef.current = activeMode; }, [activeMode]);
   useEffect(() => { isVoiceCallActiveRef.current = isVoiceCallActive; }, [isVoiceCallActive]);
@@ -606,8 +633,8 @@ export const App = () => {
   // --- Logic Helpers ---
   const checkImageLimit = (count = 1): boolean => {
       let limit = 4;
-      if (userPlan === 'plus') limit = 12;
-      if (userPlan === 'pro') limit = 9999;
+      if (userPlan === 'plus' limit = 12;
+      if (userPlan === 'pro' limit = 9999;
       if (dailyImageCount + count > limit) { addToast(`Достигнахте лимита за изображения за деня (${limit}). Ъпгрейднете плана си за повече.`, 'error'); return false; }
       return true;
   };
@@ -1037,7 +1064,7 @@ export const App = () => {
     }
     
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if(!SR) { addToast('Гласовата услуга не се поддържа от този браузър.', 'error'); return; }
+    if(!SR) { addToast('Гласовото разпознаване не се поддържа от този браузър.', 'error'); return; }
     
     // Clean up
     if (recognitionRef.current) {
@@ -1212,6 +1239,15 @@ export const App = () => {
             homeView === 'cookies' ? <CookiePolicy onBack={() => setHomeView('landing')} userSettings={userSettings} /> :
             homeView === 'about' ? <About onBack={() => setHomeView('landing')} userSettings={userSettings} /> :
             homeView === 'contact' ? <Contact onBack={() => setHomeView('landing')} userSettings={userSettings} /> :
+            homeView === 'calendar' ? (
+                <CalendarView 
+                    onBack={() => setHomeView('landing')} 
+                    userSettings={userSettings} 
+                    reminders={reminders} 
+                    setReminders={setReminders}
+                    addToast={addToast}
+                />
+            ) :
             <WelcomeScreen 
                 homeView={homeView}
                 userMeta={userMeta}

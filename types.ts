@@ -64,7 +64,7 @@ export enum AppMode {
 }
 
 // New type for managing view state including static pages
-export type HomeViewType = 'landing' | 'school_select' | 'university_select' | 'student_subjects' | 'teacher_subjects' | 'uni_student_subjects' | 'uni_teacher_subjects' | 'terms' | 'privacy' | 'cookies' | 'about' | 'contact';
+export type HomeViewType = 'landing' | 'school_select' | 'university_select' | 'student_subjects' | 'teacher_subjects' | 'uni_student_subjects' | 'uni_teacher_subjects' | 'terms' | 'privacy' | 'cookies' | 'about' | 'contact' | 'calendar';
 
 export type UserRole = 'student' | 'teacher' | 'uni_student' | 'uni_teacher';
 
@@ -108,6 +108,13 @@ export interface TestData {
   subject: string;
   grade?: string;
   questions: TestQuestion[];
+}
+
+export interface Reminder {
+  id: string;
+  text: string;
+  date: number; // Timestamp
+  isCompleted: boolean;
 }
 
 export interface Message {
