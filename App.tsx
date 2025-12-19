@@ -1,6 +1,5 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import ReactDOM from 'react-dom/client';
 import { SubjectConfig, SubjectId, AppMode, Message, Slide, UserSettings, Session, UserPlan, UserRole, HomeViewType } from './types';
 import { SUBJECTS } from './constants';
 import { generateResponse } from './services/aiService';
@@ -35,8 +34,6 @@ import { WelcomeScreen } from './components/welcome/WelcomeScreen';
 import { ChatHeader } from './components/chat/ChatHeader';
 import { MessageList } from './components/chat/MessageList';
 import { ChatInputArea } from './components/chat/ChatInputArea';
-import { CommandPalette } from './components/ui/CommandPalette';
-import { ZenPlayer } from './components/tools/ZenPlayer';
 import { TermsOfService, PrivacyPolicy, CookiePolicy, About, Contact } from './components/pages/StaticPages';
 
 interface GeneratedKey {
@@ -100,10 +97,6 @@ export const App = () => {
   const [targetPlan, setTargetPlan] = useState<UserPlan | null>(null);
   const [unlockLoading, setUnlockLoading] = useState(false);
 
-  // New Feature States
-  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
-  const [zenModeActive, setZenModeActive] = useState(false);
-
   // Voice State
   const [isVoiceCallActive, setIsVoiceCallActive] = useState(false);
   const [voiceCallStatus, setVoiceCallStatus] = useState<'idle' | 'listening' | 'processing' | 'speaking'>('idle');
@@ -125,11 +118,7 @@ export const App = () => {
     language: 'bg',
     teachingStyle: 'normal',
     enterToSend: true,
-    fontFamily: 'inter',
-    customInstructions: '',
-    zenMode: false,
-    zenSound: 'lofi',
-    showTimestamp: true
+    fontFamily: 'inter'
   });
   const [unreadSubjects, setUnreadSubjects] = useState<Set<string>>(new Set());
   const [notification, setNotification] = useState<{ message: string, subjectId: string } | null>(null);
@@ -498,11 +487,7 @@ export const App = () => {
                             language: 'bg',
                             teachingStyle: 'normal',
                             enterToSend: true,
-                            fontFamily: 'inter',
-                            customInstructions: '',
-                            zenMode: false,
-                            zenSound: 'lofi',
-                            showTimestamp: true
+                            fontFamily: 'inter'
                         });
                      }
                 }
@@ -663,7 +648,7 @@ export const App = () => {
     const sessionTitle = subjectId === SubjectId.GENERAL ? `${t('chat_general', userSettings.language)} #${existingCount + 1}` : `${sessionBaseName} #${existingCount + 1}`;
     
     const newSession: Session = {
-      id: crypto.randomUUID(), subjectId, title: sessionTitle, createdAt: Date.now(), lastModified: Date.now(), preview: '...', messages: [], role: role || userRole || undefined, mode: initialMode, isFavorite: false
+      id: crypto.randomUUID(), subjectId, title: sessionTitle, createdAt: Date.now(), lastModified: Date.now(), preview: '...', messages: [], role: role || userRole || undefined, mode: initialMode
     };
 
     if (subjectId === SubjectId.GENERAL) { 
@@ -1126,9 +1111,6 @@ export const App = () => {
       handleSubjectChange(SUBJECTS[0]); 
   };
 
-  const toggleTheme = () => setIsDarkMode(!isDarkMode);
-  const toggleZenMode = () => setZenModeActive(!zenModeActive);
-
   if (authLoading) {
     return (
        <div className="h-screen w-full flex items-center justify-center bg-background text-foreground">
@@ -1173,17 +1155,6 @@ export const App = () => {
           </div>
       )}
 
-      <ZenPlayer active={zenModeActive} onClose={() => setZenModeActive(false)} initialSound={userSettings.zenSound}/>
-      <CommandPalette 
-        isOpen={commandPaletteOpen} 
-        setIsOpen={setCommandPaletteOpen}
-        setActiveSubject={setActiveSubject}
-        setHomeView={setHomeView}
-        toggleTheme={toggleTheme}
-        toggleZenMode={toggleZenMode}
-        setSettingsOpen={setShowSettings}
-      />
-
       {!focusMode && (
           <Sidebar 
             sidebarOpen={sidebarOpen}
@@ -1214,8 +1185,6 @@ export const App = () => {
             streak={streak}
             syncStatus={syncStatus}
             homeView={homeView}
-            setCommandPaletteOpen={setCommandPaletteOpen}
-            toggleZenMode={toggleZenMode}
           />
       )}
       
