@@ -155,6 +155,7 @@ export const App = () => {
   
   // AbortController for stopping generation
   const abortControllerRef = useRef<AbortController | null>(null);
+  const responseWatchdogRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -734,6 +735,11 @@ export const App = () => {
         abortControllerRef.current.abort();
         abortControllerRef.current = null;
     }
+    if (responseWatchdogRef.current) {
+        clearTimeout(responseWatchdogRef.current);
+        responseWatchdogRef.current = null;
+    }
+    
     // Force stop loading state for active subject immediately
     if (activeSubject) {
         setLoadingSubjects(prev => ({ ...prev, [activeSubject.id]: false }));
@@ -804,6 +810,23 @@ export const App = () => {
     const controller = new AbortController();
     abortControllerRef.current = controller;
 
+    // Watchdog logic to prevent infinite hanging
+    const startWatchdog = () => {
+        if (responseWatchdogRef.current) clearTimeout(responseWatchdogRef.current);
+        responseWatchdogRef.current = setTimeout(() => {
+            if (abortControllerRef.current === controller) {
+                console.warn("AI Response Watchdog Timeout - Aborting");
+                controller.abort();
+                // Manually trigger error state in UI as the promise might stay pending or behave oddly
+                const errorMsg: Message = { id: Date.now().toString(), role: 'model', text: t('error', userSettings.language) + " (Timeout)", isError: true, timestamp: Date.now(), isStreaming: false };
+                setSessions(prev => prev.map(s => { if (s.id === sessId) { return { ...s, messages: s.messages.map(m => m.id === tempAiMsgId ? errorMsg : m) }; } return s; }));
+                setLoadingSubjects(prev => ({ ...prev, [currentSubId]: false }));
+            }
+        }, 25000); // 25 seconds of silence before timeout
+    };
+
+    startWatchdog();
+
     let finalPrompt = textToSend;
     if (replyContext) {
         const snippet = replyContext.text.substring(0, 300) + (replyContext.text.length > 300 ? '...' : '');
@@ -827,6 +850,7 @@ export const App = () => {
           historyForAI, 
           preferredModel, 
           (textChunk, reasoningChunk) => {
+              startWatchdog(); // Reset watchdog on any activity
               setSessions(prev => prev.map(s => {
                   if (s.id === sessId) {
                       return { ...s, messages: s.messages.map(m => {
@@ -841,6 +865,9 @@ export const App = () => {
           userSettings.language, // Pass Language
           userSettings.teachingStyle // Pass Teaching Style
       );
+
+      // Check if aborted during await (by watchdog or manual stop)
+      if (controller.signal.aborted) return "";
 
       if (currentImgs.length > 0) { incrementImageCount(currentImgs.length); }
       setSessions(prev => prev.map(s => {
@@ -863,14 +890,16 @@ export const App = () => {
       return response.text;
     } catch (error: any) {
        console.error("HandleSend Error:", error);
-       // Only show error message if it wasn't an intentional abort
-       if (error.name !== 'AbortError' && !controller.signal.aborted) {
-           const errorMsg: Message = { id: Date.now().toString(), role: 'model', text: t('error', userSettings.language), isError: true, timestamp: Date.now(), isStreaming: false };
-           setSessions(prev => prev.map(s => { if (s.id === sessId) { return { ...s, messages: s.messages.map(m => m.id === tempAiMsgId ? errorMsg : m) }; } return s; }));
-           return "Error.";
+       
+       if (error.name === 'AbortError' || controller.signal.aborted) {
+           return "Aborted";
        }
-       return "";
+
+       const errorMsg: Message = { id: Date.now().toString(), role: 'model', text: t('error', userSettings.language), isError: true, timestamp: Date.now(), isStreaming: false };
+       setSessions(prev => prev.map(s => { if (s.id === sessId) { return { ...s, messages: s.messages.map(m => m.id === tempAiMsgId ? errorMsg : m) }; } return s; }));
+       return "Error.";
     } finally {
+       if (responseWatchdogRef.current) clearTimeout(responseWatchdogRef.current);
        setLoadingSubjects(prev => ({ ...prev, [currentSubId]: false }));
        abortControllerRef.current = null;
     }
