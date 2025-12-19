@@ -66,9 +66,6 @@ export const generateResponse = async (
       forceJson = true;
   }
 
-  // Thinking config is implicitly supported by 2.5 Flash, instruct it to use <think> tags for UI
-  systemInstruction += "\n\nIMPORTANT: Before answering, explain your reasoning step-by-step enclosed in <think> tags.";
-
   systemInstruction = `CURRENT SUBJECT CONTEXT: ${subjectName}. All responses must relate to ${subjectName}.\n\n${systemInstruction}`;
 
   try {
@@ -140,7 +137,7 @@ export const generateResponse = async (
           if (chunkText) {
               fullText += chunkText;
               
-              // Simple parsing for <think> tags during stream
+              // Simple parsing for <think> tags during stream (legacy support if model hallucinates it)
               const thinkMatch = fullText.match(/<think>([\s\S]*?)(?:<\/think>|$)/i);
               if (thinkMatch) {
                   finalReasoning = thinkMatch[1].trim();

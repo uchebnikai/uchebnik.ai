@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+
+import React, { useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import remarkGfm from 'remark-gfm';
-import { Projector, Download, Check, ThumbsUp, ThumbsDown, Reply, Volume2, Square, Copy, Share2, Sparkles, Brain, ChevronDown, ChevronUp, Lightbulb, Loader2, FileJson, Presentation } from 'lucide-react';
+import { Projector, Download, Check, ThumbsUp, ThumbsDown, Reply, Volume2, Square, Copy, Share2, Loader2, Brain } from 'lucide-react';
 import { Message, UserSettings, SubjectConfig } from '../../types';
 import { handleDownloadPPTX } from '../../utils/exportUtils';
 import { CodeBlock } from '../ui/CodeBlock';
@@ -29,6 +30,32 @@ interface MessageListProps {
   messagesEndRef: React.RefObject<HTMLDivElement | null>;
 }
 
+// Varied loading messages to keep user interested
+const LOADING_MESSAGES = [
+    "Размърдвам мозъчните клетки...",
+    "Преглеждам учебниците...",
+    "Формулирам най-доброто решение...",
+    "Анализирам въпроса ти...",
+    "Свързвам точките...",
+    "Проверявам фактите...",
+    "Оформям резултата...",
+    "Изчислявам вероятностите...",
+    "Консултирам се с базата данни...",
+    "Структурирам информацията...",
+    "Подготвям точен отговор...",
+    "Минавам през записките си...",
+    "Търся най-добрия пример..."
+];
+
+const getLoadingMessage = (id: string) => {
+    // Deterministic selection based on ID so it doesn't flicker on re-renders
+    let sum = 0;
+    for (let i = 0; i < id.length; i++) {
+        sum += id.charCodeAt(i);
+    }
+    return LOADING_MESSAGES[sum % LOADING_MESSAGES.length];
+};
+
 export const MessageList = ({
   currentMessages,
   userSettings,
@@ -47,22 +74,6 @@ export const MessageList = ({
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const lastMessageIdRef = useRef<string | null>(null);
-  const [expandedReasoning, setExpandedReasoning] = useState<Record<string, boolean>>({});
-
-  const toggleReasoning = (id: string) => {
-     setExpandedReasoning(prev => ({
-        ...prev,
-        [id]: !prev[id]
-     }));
-  };
-
-  // Auto-expand reasoning only if not already set (undefined)
-  useEffect(() => {
-      const lastMsg = currentMessages[currentMessages.length - 1];
-      if (lastMsg && lastMsg.role === 'model' && lastMsg.reasoning && !lastMsg.text && expandedReasoning[lastMsg.id] === undefined) {
-          setExpandedReasoning(prev => ({ ...prev, [lastMsg.id]: true }));
-      }
-  }, [currentMessages, expandedReasoning]);
 
   // Smart Auto-Scroll Logic
   useEffect(() => {
@@ -117,45 +128,6 @@ export const MessageList = ({
                         </div>
                      )}
                      
-                     {/* Enhanced Reasoning / Thinking UI */}
-                     {msg.reasoning && (
-                        <div className="mb-6">
-                           <div className={`rounded-xl overflow-hidden border transition-all duration-300 ${expandedReasoning[msg.id] ? 'bg-indigo-50/50 dark:bg-indigo-900/10 border-indigo-200 dark:border-indigo-500/20' : 'bg-gray-50 dark:bg-white/5 border-transparent'}`}>
-                               <button 
-                                  onClick={() => toggleReasoning(msg.id)}
-                                  className="w-full flex items-center justify-between px-4 py-3 text-left group/btn"
-                               >
-                                  <div className="flex items-center gap-2.5">
-                                      <div className={`p-1.5 rounded-lg ${isStreaming && !msg.text ? 'bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400' : 'bg-gray-200 dark:bg-white/10 text-gray-500'}`}>
-                                          {isStreaming && !msg.text ? <Loader2 size={14} className="animate-spin"/> : <Brain size={14} />}
-                                      </div>
-                                      <div className="flex flex-col">
-                                          <span className={`text-xs font-bold ${isStreaming && !msg.text ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-600 dark:text-gray-300'}`}>
-                                              {isStreaming && !msg.text ? 'Анализирам задачата...' : 'Мисловен процес'}
-                                          </span>
-                                          {!expandedReasoning[msg.id] && (
-                                              <span className="text-[10px] text-gray-400 truncate max-w-[150px] sm:max-w-[300px]">
-                                                  Натисни за детайли
-                                              </span>
-                                          )}
-                                      </div>
-                                  </div>
-                                  <ChevronDown size={14} className={`text-gray-400 transition-transform duration-300 ${expandedReasoning[msg.id] ? 'rotate-180' : ''}`}/>
-                               </button>
-                               
-                               {expandedReasoning[msg.id] && (
-                                  <div className="px-4 pb-4 pt-0 animate-in slide-in-from-top-1 fade-in">
-                                     <div className="h-px w-full bg-indigo-500/10 mb-3" />
-                                     <div className="text-xs md:text-sm text-zinc-600 dark:text-zinc-400 font-mono leading-relaxed opacity-90 break-words whitespace-pre-wrap">
-                                        {msg.reasoning}
-                                        {isStreaming && !msg.text && <span className="inline-block w-1.5 h-3 ml-1 bg-indigo-500 animate-pulse align-middle"/>}
-                                     </div>
-                                  </div>
-                               )}
-                           </div>
-                        </div>
-                     )}
-
                      {/* Finished Slides */}
                      {msg.type === 'slides' && msg.slidesData && (
                         <div className="space-y-4">
@@ -170,10 +142,10 @@ export const MessageList = ({
                      )}
 
                      {/* Initializing State (Empty text & no reasoning yet) */}
-                     {isStreaming && !msg.text && !msg.reasoning && (
+                     {isStreaming && !msg.text && (
                         <div className="flex items-center gap-3 text-sm text-gray-500 italic py-2 animate-pulse">
                            <Loader2 className="animate-spin text-indigo-500" size={18}/>
-                           <span>Подготовка на отговора...</span>
+                           <span>{getLoadingMessage(msg.id)}</span>
                         </div>
                      )}
 
