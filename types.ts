@@ -78,6 +78,14 @@ export interface SubjectConfig {
   modes: AppMode[];
   description: string; // Internal desc, use translation in UI
   categories: SubjectCategory[];
+  quickActions?: QuickAction[]; // NEW: 1000+ potential actions
+}
+
+export interface QuickAction {
+  id: string;
+  label: string;
+  prompt: string;
+  icon: string;
 }
 
 export interface ChartData {
@@ -160,6 +168,9 @@ export type UserPlan = 'free' | 'plus' | 'pro';
 export type TeachingStyle = 'normal' | 'socratic' | 'eli5' | 'academic' | 'motivational';
 export type FontFamily = 'inter' | 'dyslexic' | 'mono';
 
+// NEW: Tools
+export type ToolType = 'calculator' | 'timer' | 'notes' | 'converter' | 'periodic' | 'music';
+
 export interface UserSettings {
   userName: string;
   textSize: 'small' | 'normal' | 'large';
@@ -179,4 +190,10 @@ export interface UserSettings {
   teachingStyle: TeachingStyle;
   enterToSend: boolean;
   fontFamily: FontFamily;
+  
+  // New: 1000 Things Features
+  xp: number;
+  level: number;
+  badges: string[];
+  notes: string; // Persistent global notes
 }
