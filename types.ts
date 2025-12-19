@@ -64,7 +64,7 @@ export enum AppMode {
 }
 
 // New type for managing view state including static pages
-export type HomeViewType = 'landing' | 'school_select' | 'university_select' | 'student_subjects' | 'teacher_subjects' | 'uni_student_subjects' | 'uni_teacher_subjects' | 'terms' | 'privacy' | 'cookies' | 'about' | 'contact';
+export type HomeViewType = 'landing' | 'school_select' | 'university_select' | 'student_subjects' | 'teacher_subjects' | 'uni_student_subjects' | 'uni_teacher_subjects' | 'terms' | 'privacy' | 'cookies' | 'about' | 'contact' | 'achievements';
 
 export type UserRole = 'student' | 'teacher' | 'uni_student' | 'uni_teacher';
 
@@ -127,6 +127,8 @@ export interface Message {
   replyToId?: string; // ID of the message being replied to
   reasoning?: string; // Content from <think> tags
   isStreaming?: boolean; // Track if the message is currently being generated
+  relatedQuestions?: string[]; // New: Suggested follow-up questions
+  isEdited?: boolean; // New: Track if message was edited
 }
 
 export interface Session {
@@ -139,6 +141,25 @@ export interface Session {
   preview: string; // Short text preview of the last message
   role?: UserRole; // Track which role created this session
   mode?: AppMode;  // Track specific mode
+  isFavorite?: boolean; // New: Pin/Favorite session
+  folderId?: string; // New: Folder organization
+  tags?: string[]; // New: Tags
+}
+
+export interface Folder {
+    id: string;
+    name: string;
+    color: string;
+}
+
+export interface Achievement {
+    id: string;
+    title: string;
+    description: string;
+    icon: string;
+    unlockedAt?: number;
+    progress: number;
+    maxProgress: number;
 }
 
 export interface Slide {
@@ -179,4 +200,10 @@ export interface UserSettings {
   teachingStyle: TeachingStyle;
   enterToSend: boolean;
   fontFamily: FontFamily;
+  
+  // New Features
+  customInstructions: string;
+  zenMode: boolean;
+  zenSound: 'rain' | 'lofi' | 'forest' | 'white_noise' | 'none';
+  showTimestamp: boolean;
 }

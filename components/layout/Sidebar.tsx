@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { MessageSquare, Trash2, Plus, School, GraduationCap, Briefcase, ChevronDown, User, Settings, CreditCard, HelpCircle, LogOut, ArrowRight, ChevronUp, FileText, Flame, CloudOff, RefreshCw, Cloud, PanelLeftClose, PanelLeftOpen, LayoutDashboard, Landmark } from 'lucide-react';
+import { MessageSquare, Trash2, Plus, School, GraduationCap, Briefcase, ChevronDown, User, Settings, CreditCard, HelpCircle, LogOut, ArrowRight, ChevronUp, FileText, Flame, CloudOff, RefreshCw, Cloud, PanelLeftClose, PanelLeftOpen, LayoutDashboard, Landmark, Star, Music, Search, Command } from 'lucide-react';
 import { DynamicIcon } from '../ui/DynamicIcon';
 import { SUBJECTS } from '../../constants';
 import { SubjectId, AppMode, Session, UserRole, UserSettings, UserPlan, SubjectConfig, HomeViewType } from '../../types';
@@ -35,6 +35,8 @@ interface SidebarProps {
   streak: number;
   syncStatus?: 'synced' | 'syncing' | 'error' | 'offline';
   homeView: HomeViewType;
+  setCommandPaletteOpen: (val: boolean) => void;
+  toggleZenMode: () => void;
 }
 
 export const Sidebar = ({
@@ -65,7 +67,9 @@ export const Sidebar = ({
   userRole,
   streak,
   syncStatus = 'synced',
-  homeView
+  homeView,
+  setCommandPaletteOpen,
+  toggleZenMode
 }: SidebarProps) => {
     
     // Internal State for Folders
@@ -77,6 +81,8 @@ export const Sidebar = ({
     const [uniFolderOpen, setUniFolderOpen] = useState(true);
     const [uniStudentsFolderOpen, setUniStudentsFolderOpen] = useState(false);
     const [uniTeachersFolderOpen, setUniTeachersFolderOpen] = useState(false);
+    
+    const [favoritesOpen, setFavoritesOpen] = useState(true);
 
     const [profileMenuOpen, setProfileMenuOpen] = useState(false);
     const [collapsed, setCollapsed] = useState(false);
@@ -86,6 +92,9 @@ export const Sidebar = ({
     const toggleCollapse = () => {
         setCollapsed(!collapsed);
     };
+
+    // Filter favorite sessions
+    const favoriteSessions = sessions.filter(s => s.isFavorite);
 
     return (
       <>
@@ -120,7 +129,23 @@ export const Sidebar = ({
             </button>
           </div>
 
-          <div className="space-y-1 px-4 mt-2">
+          <div className="px-4 mt-2">
+              <button 
+                onClick={() => setCommandPaletteOpen(true)}
+                className={`w-full flex items-center ${collapsed ? 'justify-center py-3' : 'gap-2 px-3 py-2.5'} bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 rounded-xl text-gray-500 transition-colors border border-transparent hover:border-indigo-500/20 mb-2`}
+                title="Search (Cmd+K)"
+              >
+                  <Search size={16}/>
+                  {!collapsed && (
+                      <div className="flex flex-1 justify-between items-center">
+                          <span className="text-xs font-medium">Бързо търсене...</span>
+                          <span className="text-[10px] bg-white/50 dark:bg-black/20 px-1.5 py-0.5 rounded border border-black/5 dark:border-white/10 font-mono">⌘K</span>
+                      </div>
+                  )}
+              </button>
+          </div>
+
+          <div className="space-y-1 px-4 mt-1">
               <button 
                 onClick={() => { handleSubjectChange(SUBJECTS[0]); setHomeView('landing'); }} 
                 className={`w-full flex items-center ${collapsed ? 'justify-center px-0 py-3' : 'gap-3 px-4 py-3.5'} rounded-2xl transition-all relative overflow-hidden group border ${activeSubject?.id === SubjectId.GENERAL ? 'bg-indigo-600 border-indigo-500 text-white shadow-lg shadow-indigo-500/25' : 'glass-button border-indigo-500/10 text-zinc-700 dark:text-zinc-300 hover:border-indigo-500/30'}`}
@@ -172,10 +197,48 @@ export const Sidebar = ({
                      >
                         <Landmark size={20} />
                      </button>
+
+                     {/* Favorites shortcut */}
+                     <button 
+                        className={`p-3 rounded-xl transition-all text-gray-400 hover:bg-amber-100 dark:hover:bg-amber-500/20 hover:text-amber-500`}
+                        title="Любими"
+                     >
+                        <Star size={20} />
+                     </button>
                  </div>
              ) : (
                  <div className="mt-2 space-y-2">
                      
+                     {/* FAVORITES SECTION (NEW) */}
+                     {favoriteSessions.length > 0 && (
+                         <div>
+                            <button onClick={() => setFavoritesOpen(!favoritesOpen)} className="w-full flex items-center justify-between px-2 py-3 text-gray-400 dark:text-zinc-500 hover:text-amber-500 transition-colors">
+                                <div className="flex items-center gap-2">
+                                    <Star size={18} />
+                                    <span className="text-xs font-bold uppercase tracking-widest">Любими</span>
+                                </div>
+                                <ChevronDown size={14} className={`transition-transform duration-300 ${favoritesOpen ? 'rotate-180' : ''}`}/>
+                            </button>
+                            {favoritesOpen && (
+                                <div className="ml-4 border-l border-amber-500/20 pl-2 space-y-0.5 animate-in slide-in-from-top-1">
+                                    {favoriteSessions.map(s => (
+                                        <button 
+                                            key={`fav-${s.id}`}
+                                            onClick={() => { setActiveSessionId(s.id); if(isMobile) setSidebarOpen(false); 
+                                                const sub = SUBJECTS.find(sub => sub.id === s.subjectId);
+                                                if(sub) { setActiveSubject(sub); setUserRole(s.role || null); }
+                                            }}
+                                            className={`w-full text-left px-2 py-1.5 rounded-lg text-xs font-medium truncate transition-colors ${activeSessionId === s.id ? 'bg-amber-100 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400' : 'text-gray-400 hover:text-amber-500'}`}
+                                        >
+                                            <span className="mr-1.5 opacity-50">{SUBJECTS.find(sub => sub.id === s.subjectId)?.icon === 'Calculator' ? '🧮' : '📄'}</span>
+                                            {s.title}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                         </div>
+                     )}
+
                      {/* SCHOOL SECTION */}
                      <div>
                         <button onClick={() => { setActiveSubject(null); setHomeView('school_select'); setUserRole(null); setSchoolFolderOpen(!schoolFolderOpen); }} className="w-full flex items-center justify-between px-2 py-3 text-gray-400 dark:text-zinc-500 hover:text-indigo-500 transition-colors">
@@ -455,14 +518,14 @@ export const Sidebar = ({
                                  <button onClick={() => {setShowSettings(true); setProfileMenuOpen(false)}} className="w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-white/5 text-sm font-medium flex items-center gap-3 transition-colors">
                                     <Settings size={16} className="text-gray-500"/> {t('settings', userSettings.language)}
                                  </button>
+                                 <button onClick={() => {setHomeView('achievements'); setProfileMenuOpen(false)}} className="w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-white/5 text-sm font-medium flex items-center gap-3 transition-colors">
+                                    <Flame size={16} className="text-orange-500"/> Постижения
+                                 </button>
+                                 <button onClick={() => {toggleZenMode(); setProfileMenuOpen(false)}} className="w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-white/5 text-sm font-medium flex items-center gap-3 transition-colors">
+                                    <Music size={16} className="text-gray-500"/> Zen Mode (Audio)
+                                 </button>
                                  <button onClick={() => {setShowUnlockModal(true); setProfileMenuOpen(false)}} className="w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-white/5 text-sm font-medium flex items-center gap-3 transition-colors">
                                     <CreditCard size={16} className="text-gray-500"/> {t('manage_plan', userSettings.language)}
-                                 </button>
-                                 <button onClick={() => {setActiveSubject(null); setHomeView('terms'); setProfileMenuOpen(false); if(isMobile) setSidebarOpen(false);}} className="w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-white/5 text-sm font-medium flex items-center gap-3 transition-colors">
-                                    <FileText size={16} className="text-gray-500"/> {t('terms', userSettings.language)}
-                                 </button>
-                                  <button onClick={() => {addToast('Свържете се с нас в Discord за помощ.', 'info'); setProfileMenuOpen(false)}} className="w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-white/5 text-sm font-medium flex items-center gap-3 transition-colors">
-                                    <HelpCircle size={16} className="text-gray-500"/> {t('help', userSettings.language)}
                                  </button>
                                  <div className="h-px bg-gray-100 dark:bg-white/5 mx-2" />
                                  <button onClick={handleLogout} className="w-full text-left px-4 py-3 hover:bg-red-50 dark:hover:bg-red-900/10 text-red-500 text-sm font-medium flex items-center gap-3 transition-colors">
