@@ -166,7 +166,7 @@ export const MessageList = ({
                         </div>
                      )}
 
-                     {msg.text && !isStreamingTest && !isStreamingSlides && (
+                     {msg.text && !isStreamingTest && !isStreamingSlides && msg.type !== 'test_generated' && msg.type !== 'slides' && (
                          <div className="markdown-content w-full break-words overflow-hidden">
                              <ReactMarkdown remarkPlugins={[remarkMath, remarkGfm]} rehypePlugins={[rehypeKatex]} components={{code: CodeBlock}}>
                                  {msg.text}

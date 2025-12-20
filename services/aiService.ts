@@ -195,14 +195,43 @@ export const generateResponse = async (
              if (jsonStr) {
                  let parsedData = JSON.parse(jsonStr);
                  
-                 // FIX: Handle case where AI returns an Array of questions instead of the TestData object
+                 // Normalize: Handle case where AI returns an Array (either of strings or objects) instead of the TestData object
                  if (Array.isArray(parsedData)) {
+                     const normalizedQuestions = parsedData.map((q: any, index: number) => {
+                         // If the item is just a string, convert it to a TestQuestion object
+                         if (typeof q === 'string') {
+                             return {
+                                 id: index + 1,
+                                 question: q,
+                                 type: 'open_answer',
+                                 options: [],
+                                 correctAnswer: 'Виж в ключа' // Placeholder
+                             };
+                         }
+                         // If it's already an object, ensure it has an ID
+                         return { ...q, id: q.id || index + 1 };
+                     });
+
                      parsedData = {
                          title: promptText.length < 50 ? promptText : "Генериран Тест",
                          subject: subjectName,
                          grade: "",
-                         questions: parsedData
+                         questions: normalizedQuestions
                      };
+                 } else if (parsedData && Array.isArray(parsedData.questions)) {
+                     // Even if it is an object, ensure questions inside are normalized
+                     parsedData.questions = parsedData.questions.map((q: any, index: number) => {
+                         if (typeof q === 'string') {
+                             return {
+                                 id: index + 1,
+                                 question: q,
+                                 type: 'open_answer',
+                                 options: [],
+                                 correctAnswer: 'Виж в ключа'
+                             };
+                         }
+                         return { ...q, id: q.id || index + 1 };
+                     });
                  }
 
                  // Validate minimal structure
@@ -221,8 +250,6 @@ export const generateResponse = async (
              }
           } catch (e) { 
               console.error("Test JSON parse error", e); 
-              // If parsing fails but we are in test mode, we might want to return text but the user expects a test.
-              // We'll let it fall through to text, but maybe append a warning or try to repair.
           }
       }
 
