@@ -3,28 +3,9 @@ import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
 import { AppMode, SubjectId, Slide, ChartData, GeometryData, Message, TestData, TeachingStyle } from "../types";
 import { getSystemPrompt, SUBJECTS } from "../constants";
 import { Language } from '../utils/translations';
-import { supabase } from '../supabaseClient';
 
 // Helper for delay
 const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
-// Helper to log analytics safely without blocking
-const logAnalytics = async (eventType: string, subjectId: string, mode: string, metadata: any) => {
-    try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) {
-            await supabase.from('analytics_events').insert({
-                user_id: session.user.id,
-                event_type: eventType,
-                subject_id: subjectId,
-                mode: mode,
-                metadata: metadata
-            });
-        }
-    } catch (e) {
-        console.warn("Failed to log analytics", e);
-    }
-};
 
 // Improved JSON Extractor
 function extractJson(text: string): string | null {
@@ -65,10 +46,8 @@ export const generateResponse = async (
       };
   }
 
-  // Calculate approximate input tokens (rough estimate: 4 chars = 1 token)
-  const inputTokenEstimate = (promptText.length + history.reduce((acc, m) => acc + m.text.length, 0)) / 4;
-
   const subjectConfig = SUBJECTS.find(s => s.id === subjectId);
+  // We use the internal name for system context, prompts handle the language output
   const subjectName = subjectConfig ? subjectConfig.name : "Unknown Subject";
   const modelName = 'gemini-2.5-flash';
 
@@ -79,9 +58,12 @@ export const generateResponse = async (
 
   // Get localized system prompt based on mode, language, and teaching style
   let systemInstruction = getSystemPrompt(isImageRequest ? 'DRAW' : mode, language, teachingStyle);
-  
-  if (mode === AppMode.TEACHER_TEST || mode === AppMode.PRESENTATION) {
-      // JSON instructions handled in getSystemPrompt
+  let forceJson = false;
+
+  if (isImageRequest) {
+      // Draw instructions handled
+  } else if (mode === AppMode.TEACHER_TEST || mode === AppMode.PRESENTATION) {
+      forceJson = true;
   }
 
   systemInstruction = `CURRENT SUBJECT CONTEXT: ${subjectName}. All responses must relate to ${subjectName}.\n\n${systemInstruction}`;
@@ -89,8 +71,9 @@ export const generateResponse = async (
   try {
       const ai = new GoogleGenAI({ apiKey });
       
-      // Construct history contents
+      // Construct history contents (text only to save tokens/bandwidth)
       const historyContents: any[] = [];
+      
       history.filter(msg => !msg.isError && msg.text && msg.type !== 'image_generated' && msg.type !== 'slides').forEach(msg => {
           let content = msg.text;
           if (msg.imageAnalysis) {
@@ -104,6 +87,7 @@ export const generateResponse = async (
 
       // Construct current message parts
       const currentParts: any[] = [];
+      
       let finalUserPrompt = promptText;
       
       if (mode === AppMode.TEACHER_TEST) {
@@ -130,36 +114,36 @@ export const generateResponse = async (
       // Create chat session
       const chat = ai.chats.create({
           model: modelName,
-          config: { systemInstruction: systemInstruction },
+          config: {
+              systemInstruction: systemInstruction,
+          },
           history: historyContents
       });
 
       // Stream response
       const result = await chat.sendMessageStream({ message: currentParts });
       
-      let fullText = "";
       let finalContent = "";
+      let fullText = "";
 
       for await (const chunk of result) {
-          if (signal?.aborted) break;
+          // Check for abort signal
+          if (signal?.aborted) {
+              break;
+          }
+
           const chunkText = chunk.text;
           if (chunkText) {
               fullText += chunkText;
+              
+              // Remove any raw <think> tags from visibility if they leak
               finalContent = fullText.replace(/<think>[\s\S]*?(?:<\/think>|$)/gi, "").trim();
+
               if (onStreamUpdate) {
                   onStreamUpdate(finalContent, "");
               }
           }
       }
-
-      // Log Usage
-      const outputTokenEstimate = fullText.length / 4;
-      logAnalytics('send_message', subjectId, mode, {
-          input_tokens: Math.ceil(inputTokenEstimate),
-          output_tokens: Math.ceil(outputTokenEstimate),
-          model: modelName,
-          has_images: hasImages
-      });
 
       // Final cleanup
       let processedText = fullText.replace(/<think>[\s\S]*?(?:<\/think>|$)/gi, "").trim();
@@ -232,8 +216,6 @@ export const generateResponse = async (
 
   } catch (error: any) {
       console.error("Gemini API Error:", error);
-      logAnalytics('error', subjectId, mode, { error: error.message });
-      
       let errorMessage = error.message || "Unknown error";
       let displayMessage = `Възникна грешка при връзката с AI: ${errorMessage}`;
 
@@ -241,6 +223,8 @@ export const generateResponse = async (
           displayMessage = "⚠️ Достигнат е лимитът на заявките към Google Gemini. Моля, опитайте по-късно.";
       } else if (errorMessage.includes("401") || errorMessage.includes("API key")) {
           displayMessage = "⚠️ Невалиден Google API ключ.";
+      } else if (errorMessage.includes("503") || errorMessage.includes("500")) {
+          displayMessage = "⚠️ Сървърът на Google AI е временно недостъпен. Моля, опитайте след малко.";
       }
 
       return {
