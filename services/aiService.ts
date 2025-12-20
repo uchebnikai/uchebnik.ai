@@ -9,6 +9,11 @@ const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 // Improved JSON Extractor
 function extractJson(text: string): string | null {
+  // If the model returns pure JSON without markdown blocks (common with responseMimeType)
+  if (text.trim().startsWith('{') || text.trim().startsWith('[')) {
+      return text;
+  }
+
   const match = text.match(/```json\n([\s\S]*?)\n```/) || text.match(/```([\s\S]*?)```/);
   if (match && match[1]) {
       return match[1];
@@ -59,15 +64,16 @@ export const generateResponse = async (
 
   // Get localized system prompt based on mode, language, and teaching style
   let systemInstruction = getSystemPrompt(isImageRequest ? 'DRAW' : mode, language, teachingStyle, customPersona);
-  let forceJson = false;
+  
+  // Configuration for the model
+  const config: any = {
+      systemInstruction: `CURRENT SUBJECT CONTEXT: ${subjectName}. All responses must relate to ${subjectName}.\n\n${systemInstruction}`,
+  };
 
-  if (isImageRequest) {
-      // Draw instructions handled
-  } else if (mode === AppMode.TEACHER_TEST || mode === AppMode.PRESENTATION) {
-      forceJson = true;
+  // Force JSON for specific modes to ensure UI components render correctly
+  if (mode === AppMode.TEACHER_TEST || mode === AppMode.PRESENTATION) {
+      config.responseMimeType = 'application/json';
   }
-
-  systemInstruction = `CURRENT SUBJECT CONTEXT: ${subjectName}. All responses must relate to ${subjectName}.\n\n${systemInstruction}`;
 
   try {
       const ai = new GoogleGenAI({ apiKey });
@@ -115,9 +121,7 @@ export const generateResponse = async (
       // Create chat session
       const chat = ai.chats.create({
           model: modelName,
-          config: {
-              systemInstruction: systemInstruction,
-          },
+          config: config,
           history: historyContents
       });
 
