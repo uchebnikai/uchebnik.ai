@@ -177,6 +177,7 @@ export interface UserSettings {
   
   // New Enhanced Settings
   teachingStyle: TeachingStyle;
+  customPersona?: string; // Pro feature: Custom System Prompt
   enterToSend: boolean;
   fontFamily: FontFamily;
 }

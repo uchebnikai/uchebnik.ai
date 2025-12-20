@@ -45,6 +45,14 @@ const PRESET_BACKGROUNDS = [
   "https://i.pinimg.com/originals/21/b6/9f/21b69fbf3c3762775fd6878971633329.gif"
 ];
 
+const CUSTOM_PERSONAS = [
+    { label: "🤓 Albert Einstein", prompt: "Act like Albert Einstein. Be eccentric, brilliant, and use physics analogies." },
+    { label: "🏴‍☠️ Pirate", prompt: "Talk like a pirate! Use words like 'matey', 'ahoy', and 'treasure'. Be adventurous." },
+    { label: "🎤 Rapper", prompt: "Speak in rhymes and flow like a rapper. Keep it cool and rhythmic." },
+    { label: "👵 Grandma", prompt: "Act like a sweet, caring grandmother. Call the user 'dear' and offer cookies (virtually)." },
+    { label: "💻 Senior Dev", prompt: "Act like a grumpy but helpful Senior Developer. Be concise, technical, and slightly sarcastic." }
+];
+
 export const SettingsModal = ({
   showSettings,
   setShowSettings,
@@ -145,7 +153,7 @@ export const SettingsModal = ({
          </div>
 
          <div className="mt-auto p-4 hidden md:block">
-             <div className="text-xs text-gray-400 text-center font-medium">Uchebnik AI v1.5</div>
+             <div className="text-xs text-gray-400 text-center font-medium">Uchebnik AI v1.6</div>
          </div>
       </div>
 
@@ -427,6 +435,41 @@ export const SettingsModal = ({
                                       <div className="text-xs opacity-70">{style.desc}</div>
                                   </button>
                               ))}
+                          </div>
+                      </section>
+
+                      {/* Custom Persona (Pro Feature) */}
+                      <section className={`space-y-4 p-6 bg-gradient-to-br from-indigo-50/50 to-purple-50/50 dark:from-indigo-900/10 dark:to-purple-900/10 rounded-2xl border border-indigo-200 dark:border-indigo-500/20 ${!isPremium ? 'opacity-70' : ''}`}>
+                          <div className="flex justify-between items-center mb-2">
+                              <label className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                                  <Zap size={18} className="text-amber-500"/> Персонализирана Роля (Persona)
+                              </label>
+                              {!isPremium && <span className="px-2 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded text-[10px] font-bold uppercase">Pro Only</span>}
+                          </div>
+                          <div className={`space-y-3 ${!isPremium ? 'pointer-events-none grayscale' : ''}`}>
+                              <p className="text-xs text-gray-500">Напишете как точно искате AI да се държи. Това ще замени стандартния стил на преподаване.</p>
+                              <textarea 
+                                  value={userSettings.customPersona || ''}
+                                  onChange={(e) => setUserSettings({...userSettings, customPersona: e.target.value})}
+                                  placeholder='Пример: "Ти си Шерлок Холмс. Използвай дедукция и говори загадъчно."'
+                                  className="w-full bg-white dark:bg-black/30 border border-gray-200 dark:border-white/10 rounded-xl p-4 text-sm min-h-[100px] outline-none focus:border-indigo-500 transition-all resize-none"
+                              />
+                              <div className="flex flex-wrap gap-2">
+                                  {CUSTOM_PERSONAS.map((p, i) => (
+                                      <button 
+                                          key={i} 
+                                          onClick={() => setUserSettings({...userSettings, customPersona: p.prompt})}
+                                          className="px-3 py-1.5 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg text-xs font-medium hover:bg-indigo-50 dark:hover:bg-white/10 hover:text-indigo-600 dark:hover:text-white transition-colors"
+                                      >
+                                          {p.label}
+                                      </button>
+                                  ))}
+                                  {userSettings.customPersona && (
+                                      <button onClick={() => setUserSettings({...userSettings, customPersona: ''})} className="px-3 py-1.5 bg-red-50 dark:bg-red-900/20 text-red-500 rounded-lg text-xs font-bold hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors">
+                                          Изчисти
+                                      </button>
+                                  )}
+                              </div>
                           </div>
                       </section>
 

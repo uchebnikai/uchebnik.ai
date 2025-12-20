@@ -118,7 +118,8 @@ export const App = () => {
     language: 'bg',
     teachingStyle: 'normal',
     enterToSend: true,
-    fontFamily: 'inter'
+    fontFamily: 'inter',
+    customPersona: ''
   });
   const [unreadSubjects, setUnreadSubjects] = useState<Set<string>>(new Set());
   const [notification, setNotification] = useState<{ message: string, subjectId: string } | null>(null);
@@ -277,6 +278,7 @@ export const App = () => {
                       // Ensure language is set
                       if (!merged.language) merged.language = 'bg';
                       if (!merged.teachingStyle) merged.teachingStyle = 'normal';
+                      if (!merged.customPersona) merged.customPersona = '';
                       
                       setUserSettings(prev => ({ ...prev, ...merged }));
                       if (plan) setUserPlan(plan);
@@ -488,7 +490,8 @@ export const App = () => {
                             language: 'bg',
                             teachingStyle: 'normal',
                             enterToSend: true,
-                            fontFamily: 'inter'
+                            fontFamily: 'inter',
+                            customPersona: ''
                         });
                      }
                 }
@@ -863,7 +866,8 @@ export const App = () => {
           },
           controller.signal,
           userSettings.language, // Pass Language
-          userSettings.teachingStyle // Pass Teaching Style
+          userSettings.teachingStyle, // Pass Teaching Style
+          userSettings.customPersona // Pass Custom Persona
       );
 
       // Check if aborted during await (by watchdog or manual stop)

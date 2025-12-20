@@ -31,7 +31,8 @@ export const generateResponse = async (
   onStreamUpdate?: (text: string, reasoning: string) => void,
   signal?: AbortSignal,
   language: Language = 'bg',
-  teachingStyle: TeachingStyle = 'normal'
+  teachingStyle: TeachingStyle = 'normal',
+  customPersona?: string
 ): Promise<Message> => {
   
   const apiKey = process.env.API_KEY || "";
@@ -57,7 +58,7 @@ export const generateResponse = async (
   const isImageRequest = (subjectId === SubjectId.ART && mode === AppMode.DRAW) || imageKeywords.test(promptText);
 
   // Get localized system prompt based on mode, language, and teaching style
-  let systemInstruction = getSystemPrompt(isImageRequest ? 'DRAW' : mode, language, teachingStyle);
+  let systemInstruction = getSystemPrompt(isImageRequest ? 'DRAW' : mode, language, teachingStyle, customPersona);
   let forceJson = false;
 
   if (isImageRequest) {

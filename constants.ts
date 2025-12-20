@@ -12,7 +12,7 @@ export const AI_MODELS = [
   { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', description: 'Най-бързият и мощен модел на Google.' }
 ];
 
-export const getSystemPrompt = (mode: string, lang: Language, teachingStyle: TeachingStyle = 'normal'): string => {
+export const getSystemPrompt = (mode: string, lang: Language, teachingStyle: TeachingStyle = 'normal', customPersona?: string): string => {
   const languageNames: Record<Language, string> = {
     bg: 'Bulgarian',
     en: 'English',
@@ -41,22 +41,28 @@ export const getSystemPrompt = (mode: string, lang: Language, teachingStyle: Tea
   const targetLang = languageNames[lang] || 'English';
 
   let personalityInstruction = "";
-  switch (teachingStyle) {
-    case 'socratic':
-      personalityInstruction = "IMPORTANT: Adopt a Socratic teaching style. Do NOT give the final answer immediately. Ask guiding questions to help the user figure it out themselves. Be patient and thoughtful.";
-      break;
-    case 'eli5':
-      personalityInstruction = "IMPORTANT: Explain Like I'm 5 (ELI5). Use extremely simple analogies, basic vocabulary, and short sentences. Avoid complex jargon.";
-      break;
-    case 'academic':
-      personalityInstruction = "IMPORTANT: Use formal, academic language. Be precise with terminology, cite principles where appropriate, and maintain a professional tone.";
-      break;
-    case 'motivational':
-      personalityInstruction = "IMPORTANT: Be an enthusiastic and motivational coach! Use emojis (🚀, ✨, 👏), positive reinforcement, and encouraging words. Celebrate the user's effort.";
-      break;
-    default:
-      personalityInstruction = "Be helpful, polite, and encouraging.";
-      break;
+  
+  // Custom Persona overrides Teaching Style if present
+  if (customPersona && customPersona.trim().length > 0) {
+      personalityInstruction = `IMPORTANT: Adopt the following persona/role strictly: "${customPersona}". Maintain this persona throughout the conversation.`;
+  } else {
+      switch (teachingStyle) {
+        case 'socratic':
+          personalityInstruction = "IMPORTANT: Adopt a Socratic teaching style. Do NOT give the final answer immediately. Ask guiding questions to help the user figure it out themselves. Be patient and thoughtful.";
+          break;
+        case 'eli5':
+          personalityInstruction = "IMPORTANT: Explain Like I'm 5 (ELI5). Use extremely simple analogies, basic vocabulary, and short sentences. Avoid complex jargon.";
+          break;
+        case 'academic':
+          personalityInstruction = "IMPORTANT: Use formal, academic language. Be precise with terminology, cite principles where appropriate, and maintain a professional tone.";
+          break;
+        case 'motivational':
+          personalityInstruction = "IMPORTANT: Be an enthusiastic and motivational coach! Use emojis (🚀, ✨, 👏), positive reinforcement, and encouraging words. Celebrate the user's effort.";
+          break;
+        default:
+          personalityInstruction = "Be helpful, polite, and encouraging.";
+          break;
+      }
   }
 
   const baseInstructions = `You are a helpful AI assistant for students and teachers. ${personalityInstruction} Help with lessons, solve problems, and answer questions. 
