@@ -10,16 +10,33 @@ const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 // Improved JSON Extractor
 function extractJson(text: string): string | null {
   // If the model returns pure JSON without markdown blocks (common with responseMimeType)
-  if (text.trim().startsWith('{') || text.trim().startsWith('[')) {
-      return text;
+  const trimmed = text.trim();
+  if ((trimmed.startsWith('{') && trimmed.endsWith('}')) || (trimmed.startsWith('[') && trimmed.endsWith(']'))) {
+      return trimmed;
   }
 
   const match = text.match(/```json\n([\s\S]*?)\n```/) || text.match(/```([\s\S]*?)```/);
   if (match && match[1]) {
       return match[1];
   }
-  const start = text.indexOf('{');
-  const end = text.lastIndexOf('}');
+  
+  // Try to find the first { or [ and the last } or ]
+  const startObj = text.indexOf('{');
+  const startArr = text.indexOf('[');
+  
+  let start = -1;
+  if (startObj !== -1 && startArr !== -1) start = Math.min(startObj, startArr);
+  else if (startObj !== -1) start = startObj;
+  else if (startArr !== -1) start = startArr;
+
+  const endObj = text.lastIndexOf('}');
+  const endArr = text.lastIndexOf(']');
+  
+  let end = -1;
+  if (endObj !== -1 && endArr !== -1) end = Math.max(endObj, endArr);
+  else if (endObj !== -1) end = endObj;
+  else if (endArr !== -1) end = endArr;
+
   if (start !== -1 && end !== -1 && end > start) {
       return text.substring(start, end + 1);
   }
@@ -53,7 +70,6 @@ export const generateResponse = async (
   }
 
   const subjectConfig = SUBJECTS.find(s => s.id === subjectId);
-  // We use the internal name for system context, prompts handle the language output
   const subjectName = subjectConfig ? subjectConfig.name : "Unknown Subject";
   const modelName = 'gemini-2.5-flash';
 
@@ -62,8 +78,18 @@ export const generateResponse = async (
   const imageKeywords = /(draw|paint|generate image|create a picture|make an image|нарисувай|рисувай|генерирай изображение|генерирай снимка|направи снимка|изображение на)/i;
   const isImageRequest = (subjectId === SubjectId.ART && mode === AppMode.DRAW) || imageKeywords.test(promptText);
 
+  // Detect Test Creation Intent even if not in explicit Test Mode
+  const testKeywords = /(create|make|generate|write|създай|направи|генерирай|изготви)\s+(a\s+)?(test|exam|quiz|questions|тест|изпит|контролно|въпроси)/i;
+  const isTestRequest = mode === AppMode.TEACHER_TEST || testKeywords.test(promptText);
+
+  // Determine effective mode for system prompt
+  let effectiveMode = mode;
+  if (isTestRequest && mode !== AppMode.TEACHER_TEST) {
+      effectiveMode = AppMode.TEACHER_TEST;
+  }
+
   // Get localized system prompt based on mode, language, and teaching style
-  let systemInstruction = getSystemPrompt(isImageRequest ? 'DRAW' : mode, language, teachingStyle, customPersona);
+  let systemInstruction = getSystemPrompt(isImageRequest ? 'DRAW' : effectiveMode, language, teachingStyle, customPersona);
   
   // Configuration for the model
   const config: any = {
@@ -71,16 +97,16 @@ export const generateResponse = async (
   };
 
   // Force JSON for specific modes to ensure UI components render correctly
-  if (mode === AppMode.TEACHER_TEST || mode === AppMode.PRESENTATION) {
+  // We use effectiveMode here to catch the auto-detected test requests
+  if (effectiveMode === AppMode.TEACHER_TEST || effectiveMode === AppMode.PRESENTATION) {
       config.responseMimeType = 'application/json';
   }
 
   try {
       const ai = new GoogleGenAI({ apiKey });
       
-      // Construct history contents (text only to save tokens/bandwidth)
+      // Construct history contents
       const historyContents: any[] = [];
-      
       history.filter(msg => !msg.isError && msg.text && msg.type !== 'image_generated' && msg.type !== 'slides').forEach(msg => {
           let content = msg.text;
           if (msg.imageAnalysis) {
@@ -94,10 +120,9 @@ export const generateResponse = async (
 
       // Construct current message parts
       const currentParts: any[] = [];
-      
       let finalUserPrompt = promptText;
       
-      if (mode === AppMode.TEACHER_TEST) {
+      if (effectiveMode === AppMode.TEACHER_TEST) {
           const prevTest = history.find(m => m.type === 'test_generated')?.testData;
           if (prevTest) {
               finalUserPrompt = `[PREVIOUS TEST CONTEXT]: ${JSON.stringify(prevTest)}\n\nUSER REQUEST: ${finalUserPrompt}`;
@@ -132,28 +157,21 @@ export const generateResponse = async (
       let fullText = "";
 
       for await (const chunk of result) {
-          // Check for abort signal
-          if (signal?.aborted) {
-              break;
-          }
+          if (signal?.aborted) break;
 
           const chunkText = chunk.text;
           if (chunkText) {
               fullText += chunkText;
-              
-              // Remove any raw <think> tags from visibility if they leak
               finalContent = fullText.replace(/<think>[\s\S]*?(?:<\/think>|$)/gi, "").trim();
-
               if (onStreamUpdate) {
                   onStreamUpdate(finalContent, "");
               }
           }
       }
 
-      // Final cleanup
       let processedText = fullText.replace(/<think>[\s\S]*?(?:<\/think>|$)/gi, "").trim();
 
-      if (mode === AppMode.PRESENTATION) {
+      if (effectiveMode === AppMode.PRESENTATION) {
          try {
              const jsonStr = extractJson(processedText);
              if (jsonStr) {
@@ -171,22 +189,41 @@ export const generateResponse = async (
          } catch (e) { console.error("Presentation JSON parse error", e); }
       }
 
-      if (mode === AppMode.TEACHER_TEST) {
+      if (effectiveMode === AppMode.TEACHER_TEST) {
           try {
              const jsonStr = extractJson(processedText);
              if (jsonStr) {
-                 const testData: TestData = JSON.parse(jsonStr);
-                 return {
-                     id: Date.now().toString(),
-                     role: 'model',
-                     text: `Готово! Ето теста на тема: ${testData.title || promptText}`,
-                     type: 'test_generated',
-                     testData: testData,
-                     timestamp: Date.now(),
-                     reasoning: ""
-                 };
+                 let parsedData = JSON.parse(jsonStr);
+                 
+                 // FIX: Handle case where AI returns an Array of questions instead of the TestData object
+                 if (Array.isArray(parsedData)) {
+                     parsedData = {
+                         title: promptText.length < 50 ? promptText : "Генериран Тест",
+                         subject: subjectName,
+                         grade: "",
+                         questions: parsedData
+                     };
+                 }
+
+                 // Validate minimal structure
+                 if (parsedData && (parsedData.questions || Array.isArray(parsedData.questions))) {
+                     const testData: TestData = parsedData;
+                     return {
+                         id: Date.now().toString(),
+                         role: 'model',
+                         text: `Готово! Ето теста: ${testData.title || "Нов Тест"}`,
+                         type: 'test_generated',
+                         testData: testData,
+                         timestamp: Date.now(),
+                         reasoning: ""
+                     };
+                 }
              }
-          } catch (e) { console.error("Test JSON parse error", e); }
+          } catch (e) { 
+              console.error("Test JSON parse error", e); 
+              // If parsing fails but we are in test mode, we might want to return text but the user expects a test.
+              // We'll let it fall through to text, but maybe append a warning or try to repair.
+          }
       }
 
       let chartData: ChartData | undefined;
