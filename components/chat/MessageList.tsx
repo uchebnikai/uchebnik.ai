@@ -4,7 +4,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import remarkGfm from 'remark-gfm';
-import { Projector, Download, Check, ThumbsUp, ThumbsDown, Reply, Volume2, Square, Copy, Share2, Loader2 } from 'lucide-react';
+import { Projector, Download, Check, ThumbsUp, ThumbsDown, Reply, Volume2, Square, Copy, Share2, Loader2, Globe, ExternalLink } from 'lucide-react';
 import { Message, UserSettings, SubjectConfig } from '../../types';
 import { handleDownloadPPTX } from '../../utils/exportUtils';
 import { CodeBlock } from '../ui/CodeBlock';
@@ -32,15 +32,15 @@ interface MessageListProps {
 
 // Clear and simple loading messages
 const LOADING_MESSAGES = [
+    "Търся в интернет...",
+    "Проверявам информацията...",
     "Подготвям отговора...",
     "Анализирам въпроса...",
-    "Търся информация...",
+    "Разглеждам източници...",
     "Формулирам решение...",
-    "Проверявам фактите...",
-    "Пиша отговора...",
     "Осмислям контекста...",
     "Генерирам идеи...",
-    "Структурирам информацията..."
+    "Структурирам данните..."
 ];
 
 const getLoadingMessage = (id: string) => {
@@ -178,6 +178,36 @@ export const MessageList = ({
                      {msg.chartData && <ChartRenderer data={msg.chartData} />}
                      {msg.geometryData && <GeometryRenderer data={msg.geometryData} />}
                      
+                     {/* Search Sources Display */}
+                     {msg.sources && msg.sources.length > 0 && (
+                         <div className="mt-4 pt-3 border-t border-gray-200 dark:border-white/10">
+                             <div className="flex items-center gap-2 text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                                 <Globe size={12} /> Използвани източници
+                             </div>
+                             <div className="flex flex-wrap gap-2">
+                                 {msg.sources.map((source, i) => (
+                                     <a 
+                                        key={i} 
+                                        href={source.uri} 
+                                        target="_blank" 
+                                        rel="noopener noreferrer"
+                                        className="flex items-center gap-2 px-3 py-1.5 bg-white/50 dark:bg-black/20 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 border border-gray-200 dark:border-white/10 rounded-lg text-xs font-medium text-gray-700 dark:text-gray-300 transition-colors group/link max-w-[200px] truncate"
+                                     >
+                                         <div className="w-4 h-4 rounded-full bg-gray-100 dark:bg-white/10 flex items-center justify-center shrink-0">
+                                             <img 
+                                                src={`https://www.google.com/s2/favicons?domain=${source.uri}&sz=32`} 
+                                                className="w-3 h-3 object-contain"
+                                                onError={(e) => { e.currentTarget.style.display='none'; }}
+                                             />
+                                         </div>
+                                         <span className="truncate">{source.title || new URL(source.uri).hostname}</span>
+                                         <ExternalLink size={10} className="opacity-0 group-hover/link:opacity-50 transition-opacity ml-auto shrink-0"/>
+                                     </a>
+                                 ))}
+                             </div>
+                         </div>
+                     )}
+
                      <div className={`text-[10px] mt-2 lg:mt-4 font-bold tracking-wide flex items-center justify-end gap-1.5 opacity-60`}>
                         {msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : ''}
                         {msg.role === 'user' && <Check size={12} />}

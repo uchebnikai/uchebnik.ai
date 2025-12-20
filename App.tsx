@@ -895,7 +895,20 @@ export const App = () => {
           if (s.id === sessId) {
               const updatedMessages = s.messages.map(m => {
                   if (m.id === tempAiMsgId) {
-                      return { ...m, text: response.text, reasoning: response.reasoning, isError: response.isError, type: response.type, slidesData: response.slidesData, testData: response.testData, chartData: response.chartData, geometryData: response.geometryData, imageAnalysis: response.imageAnalysis, isStreaming: false };
+                      return { 
+                          ...m, 
+                          text: response.text, 
+                          reasoning: response.reasoning, 
+                          isError: response.isError, 
+                          type: response.type, 
+                          slidesData: response.slidesData, 
+                          testData: response.testData, 
+                          chartData: response.chartData, 
+                          geometryData: response.geometryData, 
+                          imageAnalysis: response.imageAnalysis, 
+                          sources: response.sources, // Save sources here
+                          isStreaming: false 
+                      };
                   }
                   return m;
               });

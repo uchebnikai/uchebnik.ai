@@ -110,6 +110,11 @@ export interface TestData {
   questions: TestQuestion[];
 }
 
+export interface SearchSource {
+  title: string;
+  uri: string;
+}
+
 export interface Message {
   id: string;
   role: 'user' | 'model';
@@ -127,6 +132,7 @@ export interface Message {
   replyToId?: string; // ID of the message being replied to
   reasoning?: string; // Content from <think> tags
   isStreaming?: boolean; // Track if the message is currently being generated
+  sources?: SearchSource[]; // Grounding metadata from Google Search
 }
 
 export interface Session {

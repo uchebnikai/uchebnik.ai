@@ -1,6 +1,6 @@
 
 import { GoogleGenAI, GenerateContentResponse, Tool } from "@google/genai";
-import { AppMode, SubjectId, Slide, ChartData, GeometryData, Message, TestData, TeachingStyle } from "../types";
+import { AppMode, SubjectId, Slide, ChartData, GeometryData, Message, TestData, TeachingStyle, SearchSource } from "../types";
 import { getSystemPrompt, SUBJECTS } from "../constants";
 import { Language } from '../utils/translations';
 
@@ -139,6 +139,7 @@ export const generateResponse = async (
       
       let finalContent = "";
       let fullText = "";
+      let sources: SearchSource[] = [];
 
       for await (const chunk of result) {
           // Check for abort signal
@@ -146,16 +147,34 @@ export const generateResponse = async (
               break;
           }
 
+          // Handle Text
           const chunkText = chunk.text;
           if (chunkText) {
               fullText += chunkText;
-              
               // Remove any raw <think> tags from visibility if they leak
               finalContent = fullText.replace(/<think>[\s\S]*?(?:<\/think>|$)/gi, "").trim();
-
               if (onStreamUpdate) {
                   onStreamUpdate(finalContent, "");
               }
+          }
+
+          // Handle Grounding (Sources)
+          // The SDK returns groundingMetadata in the candidates or root chunk
+          const grounding = chunk.candidates?.[0]?.groundingMetadata || (chunk as any).groundingMetadata;
+          if (grounding && grounding.groundingChunks) {
+              const webChunks = grounding.groundingChunks
+                  .filter((c: any) => c.web)
+                  .map((c: any) => ({
+                      title: c.web.title || "Web Source",
+                      uri: c.web.uri
+                  }));
+              
+              // Dedup sources based on URI
+              webChunks.forEach((s: SearchSource) => {
+                  if (!sources.some(existing => existing.uri === s.uri)) {
+                      sources.push(s);
+                  }
+              });
           }
       }
 
@@ -225,7 +244,8 @@ export const generateResponse = async (
           chartData: chartData,
           geometryData: geometryData,
           timestamp: Date.now(),
-          reasoning: ""
+          reasoning: "",
+          sources: sources.length > 0 ? sources : undefined
       };
 
   } catch (error: any) {
