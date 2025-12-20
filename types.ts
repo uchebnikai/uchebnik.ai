@@ -180,3 +180,46 @@ export interface UserSettings {
   enterToSend: boolean;
   fontFamily: FontFamily;
 }
+
+// --- Admin & Analytics Interfaces ---
+
+export interface AdminUser {
+  id: string;
+  email: string;
+  full_name: string;
+  plan: UserPlan;
+  created_at: string;
+  last_sign_in_at: string;
+  is_banned: boolean;
+}
+
+export interface DashboardStats {
+  total_users: number;
+  pro_users: number;
+  mrr_estimate: number;
+  active_today?: number;
+}
+
+export interface Announcement {
+  id: string;
+  message: string;
+  type: 'info' | 'warning' | 'error';
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface AuditLog {
+  id: string;
+  admin_email: string;
+  action: string;
+  details: string;
+  created_at: string;
+}
+
+export interface SystemErrorLog {
+  id: string;
+  user_email?: string;
+  error_message: string;
+  context: string;
+  created_at: string;
+}
