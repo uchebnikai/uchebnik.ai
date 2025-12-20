@@ -7,8 +7,8 @@ export enum SubjectId {
   BULGARIAN = 'bulgarian',
   FRENCH = 'french',
   SPANISH = 'spanish',
-  GERMAN = 'german', // New
-  RUSSIAN = 'russian', // New
+  GERMAN = 'german',
+  RUSSIAN = 'russian',
   JAPANESE = 'japanese',
   CHEMISTRY = 'chemistry',
   PHYSICS = 'physics',
@@ -20,10 +20,10 @@ export enum SubjectId {
   IT = 'it',
   PE = 'pe',
   ART = 'art',
-  MUSIC = 'music', // New
-  TECHNOLOGIES = 'technologies', // New
-  CITIZENSHIP = 'citizenship', // New
-  RELIGION = 'religion', // New
+  MUSIC = 'music',
+  TECHNOLOGIES = 'technologies',
+  CITIZENSHIP = 'citizenship',
+  RELIGION = 'religion',
   
   // University Subjects
   HIGHER_MATH = 'higher_math',
@@ -31,31 +31,31 @@ export enum SubjectId {
   ECONOMICS = 'economics',
   LAW = 'law',
   MEDICINE = 'medicine',
-  DENTAL_MEDICINE = 'dental_medicine', // New
-  PHARMACY = 'pharmacy', // New
-  VETERINARY_MEDICINE = 'veterinary_medicine', // New
+  DENTAL_MEDICINE = 'dental_medicine',
+  PHARMACY = 'pharmacy',
+  VETERINARY_MEDICINE = 'veterinary_medicine',
   ENGINEERING = 'engineering',
-  ARCHITECTURE = 'architecture', // New
+  ARCHITECTURE = 'architecture',
   MARKETING = 'marketing',
-  FINANCE = 'finance', // New
-  MANAGEMENT = 'management', // New
+  FINANCE = 'finance',
+  MANAGEMENT = 'management',
   PSYCHOLOGY = 'psychology',
   STATISTICS = 'statistics',
-  PEDAGOGY = 'pedagogy', // New
-  POLITICAL_SCIENCE = 'political_science', // New
-  INT_RELATIONS = 'int_relations', // New
-  JOURNALISM = 'journalism', // New
-  SOCIOLOGY = 'sociology', // New
-  ECOLOGY = 'ecology', // New
-  TOURISM = 'tourism' // New
+  PEDAGOGY = 'pedagogy',
+  POLITICAL_SCIENCE = 'political_science',
+  INT_RELATIONS = 'int_relations',
+  JOURNALISM = 'journalism',
+  SOCIOLOGY = 'sociology',
+  ECOLOGY = 'ecology',
+  TOURISM = 'tourism'
 }
 
 export enum AppMode {
-  SOLVE = 'solve', // Решаване
-  LEARN = 'learn', // Научаване на урок
-  DRAW = 'draw',   // Рисуване (Art)
-  PRESENTATION = 'presentation', // Презентация (Art)
-  CHAT = 'chat',    // Общ чат
+  SOLVE = 'solve',
+  LEARN = 'learn',
+  DRAW = 'draw',
+  PRESENTATION = 'presentation',
+  CHAT = 'chat',
   
   // Teacher Modes
   TEACHER_TEST = 'teacher_test',
@@ -63,7 +63,6 @@ export enum AppMode {
   TEACHER_RESOURCES = 'teacher_resources'
 }
 
-// New type for managing view state including static pages
 export type HomeViewType = 'landing' | 'school_select' | 'university_select' | 'student_subjects' | 'teacher_subjects' | 'uni_student_subjects' | 'uni_teacher_subjects' | 'terms' | 'privacy' | 'cookies' | 'about' | 'contact';
 
 export type UserRole = 'student' | 'teacher' | 'uni_student' | 'uni_teacher';
@@ -72,11 +71,11 @@ export type SubjectCategory = 'school' | 'university';
 
 export interface SubjectConfig {
   id: SubjectId;
-  name: string; // Internal name, use translation in UI
+  name: string;
   icon: string;
   color: string;
   modes: AppMode[];
-  description: string; // Internal desc, use translation in UI
+  description: string;
   categories: SubjectCategory[];
 }
 
@@ -90,17 +89,17 @@ export interface ChartData {
 
 export interface GeometryData {
   title: string;
-  svg: string; // Raw SVG string
+  svg: string;
 }
 
 export interface TestQuestion {
   id: number;
   question: string;
-  options?: string[]; // If multiple choice
-  correctAnswer?: string; // For the key
+  options?: string[];
+  correctAnswer?: string;
   type: 'multiple_choice' | 'open_answer';
-  chartData?: ChartData; // Optional chart for the question
-  geometryData?: GeometryData; // Optional geometry drawing
+  chartData?: ChartData;
+  geometryData?: GeometryData;
 }
 
 export interface TestData {
@@ -114,19 +113,19 @@ export interface Message {
   id: string;
   role: 'user' | 'model';
   text: string;
-  timestamp: number; // New: For history tracking
-  images?: string[]; // base64
-  imageAnalysis?: string; // Context for the image (fixes bug where context is lost in history)
+  timestamp: number;
+  images?: string[];
+  imageAnalysis?: string;
   isError?: boolean;
   type?: 'text' | 'image_generated' | 'slides' | 'test_generated';
-  slidesData?: Slide[]; // For presentation mode
-  testData?: TestData; // For teacher test mode
-  chartData?: ChartData; // For Math/Physics data visualization
-  geometryData?: GeometryData; // For Math/Physics geometric drawings
-  rating?: 'up' | 'down'; // User feedback
-  replyToId?: string; // ID of the message being replied to
-  reasoning?: string; // Content from <think> tags
-  isStreaming?: boolean; // Track if the message is currently being generated
+  slidesData?: Slide[];
+  testData?: TestData;
+  chartData?: ChartData;
+  geometryData?: GeometryData;
+  rating?: 'up' | 'down';
+  replyToId?: string;
+  reasoning?: string;
+  isStreaming?: boolean;
 }
 
 export interface Session {
@@ -136,9 +135,9 @@ export interface Session {
   createdAt: number;
   lastModified: number;
   messages: Message[];
-  preview: string; // Short text preview of the last message
-  role?: UserRole; // Track which role created this session
-  mode?: AppMode;  // Track specific mode
+  preview: string;
+  role?: UserRole;
+  mode?: AppMode;
 }
 
 export interface Slide {
@@ -170,13 +169,53 @@ export interface UserSettings {
   creativity: 'strict' | 'balanced' | 'creative';
   languageLevel: 'simple' | 'standard' | 'advanced';
   preferredModel: string;
-  // New Personalization Settings
-  themeColor: string; // Hex code
-  customBackground: string | null; // Base64 image
+  themeColor: string;
+  customBackground: string | null;
   language: Language; 
-  
-  // New Enhanced Settings
   teachingStyle: TeachingStyle;
   enterToSend: boolean;
   fontFamily: FontFamily;
+}
+
+// --- Admin & Analytics Types ---
+
+export interface AnalyticsEvent {
+  id: string;
+  user_id: string | null;
+  event_type: 'start_session' | 'send_message' | 'upgrade_click' | 'error' | 'page_view';
+  subject_id?: string;
+  mode?: string;
+  metadata?: any;
+  created_at: string;
+}
+
+export interface Announcement {
+  id: string;
+  message: string;
+  type: 'info' | 'warning' | 'error';
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface AdminAuditLog {
+  id: string;
+  admin_id: string;
+  action: string;
+  target_user_id?: string;
+  details?: any;
+  created_at: string;
+}
+
+export interface UserProfileExtended {
+  id: string;
+  email?: string;
+  full_name?: string;
+  plan: UserPlan;
+  is_banned: boolean;
+  last_active_at?: string;
+  created_at: string;
+  usage_stats?: {
+    total_tokens: number;
+    messages_count: number;
+  };
 }
