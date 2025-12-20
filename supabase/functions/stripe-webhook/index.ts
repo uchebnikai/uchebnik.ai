@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 import Stripe from "https://esm.sh/stripe@12.0.0?target=deno"
@@ -112,49 +113,23 @@ serve(async (req) => {
             ? currentProfile.settings 
             : {};
         
-        // Prepare Full Update Payload
+        // Prepare Update Payload (storing plan in settings only)
         const updatePayload = {
-            plan: plan,
             stripe_subscription_id: subscription.id,
             stripe_customer_id: customerId,
             updated_at: new Date().toISOString(),
             settings: {
                 ...currentSettings,
-                plan: plan // Sync plan inside settings JSON as well
+                plan: plan // Sync plan inside settings JSON
             }
         };
 
-        // Attempt 1: Full Update
+        // Update Profile
         let { error, data } = await supabaseAdmin
             .from('profiles')
             .update(updatePayload)
             .eq('id', userId)
             .select();
-
-        // Attempt 2: Fallback (Settings + IDs, Excluding 'plan' column)
-        // If the error is strictly about the 'plan' column not being found, we can still update other columns.
-        if (error) {
-            console.warn(`Full update failed (${error.code}). Retrying with safe update (excluding 'plan' column)...`, error.message);
-            
-            const fallbackPayload = {
-                stripe_subscription_id: subscription.id,
-                stripe_customer_id: customerId,
-                updated_at: new Date().toISOString(),
-                settings: {
-                    ...currentSettings,
-                    plan: plan
-                }
-            };
-            
-            const retryRes = await supabaseAdmin
-                .from('profiles')
-                .update(fallbackPayload)
-                .eq('id', userId)
-                .select();
-                
-            error = retryRes.error;
-            data = retryRes.data;
-        }
 
         if (error) {
             console.error('Final error updating profile in Supabase:', error)
@@ -191,7 +166,6 @@ serve(async (req) => {
         if (profile) {
             const currentSettings = profile.settings || {};
             await supabaseAdmin.from('profiles').update({ 
-                plan: 'free', 
                 stripe_subscription_id: null,
                 updated_at: new Date().toISOString(),
                 settings: { ...currentSettings, plan: 'free' }
