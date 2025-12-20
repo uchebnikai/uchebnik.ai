@@ -612,7 +612,7 @@ export const App = () => {
       let limit = 4;
       if (userPlan === 'plus') limit = 12;
       if (userPlan === 'pro') limit = 9999;
-      if (dailyImageCount + count > limit) { addToast(`Достигнахте лимита за изображения за деня (${limit}). Ъпгрейднете плана си за повече.`, 'error'); return false; }
+      if (dailyImageCount + count > limit) { setShowUnlockModal(true); return false; }
       return true;
   };
 
@@ -1248,6 +1248,7 @@ export const App = () => {
             streak={streak}
             syncStatus={syncStatus}
             homeView={homeView}
+            dailyImageCount={dailyImageCount}
           />
       )}
       
@@ -1412,6 +1413,7 @@ export const App = () => {
             handleBackgroundUpload={handleBackgroundUpload}
             handleDeleteAllChats={handleDeleteAllChats}
             addToast={addToast}
+            userPlan={userPlan}
         />
         <Lightbox image={zoomedImage} onClose={() => setZoomedImage(null)} />
         

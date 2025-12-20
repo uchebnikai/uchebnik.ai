@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { MessageSquare, Trash2, Plus, School, GraduationCap, Briefcase, ChevronDown, User, Settings, CreditCard, HelpCircle, LogOut, ArrowRight, ChevronUp, FileText, Flame, CloudOff, RefreshCw, Cloud, PanelLeftClose, PanelLeftOpen, LayoutDashboard, Landmark } from 'lucide-react';
+import { MessageSquare, Trash2, Plus, School, GraduationCap, Briefcase, ChevronDown, User, Settings, CreditCard, HelpCircle, LogOut, ArrowRight, ChevronUp, FileText, Flame, CloudOff, RefreshCw, Cloud, PanelLeftClose, PanelLeftOpen, LayoutDashboard, Landmark, Zap, Lock } from 'lucide-react';
 import { DynamicIcon } from '../ui/DynamicIcon';
 import { SUBJECTS } from '../../constants';
 import { SubjectId, AppMode, Session, UserRole, UserSettings, UserPlan, SubjectConfig, HomeViewType } from '../../types';
@@ -35,6 +35,7 @@ interface SidebarProps {
   streak: number;
   syncStatus?: 'synced' | 'syncing' | 'error' | 'offline';
   homeView: HomeViewType;
+  dailyImageCount?: number; // Added to props
 }
 
 export const Sidebar = ({
@@ -65,7 +66,8 @@ export const Sidebar = ({
   userRole,
   streak,
   syncStatus = 'synced',
-  homeView
+  homeView,
+  dailyImageCount = 0
 }: SidebarProps) => {
     
     // Internal State for Folders
@@ -87,6 +89,11 @@ export const Sidebar = ({
         setCollapsed(!collapsed);
     };
 
+    // Usage Logic
+    const maxImages = userPlan === 'free' ? 4 : (userPlan === 'plus' ? 12 : 9999);
+    const usagePercent = Math.min((dailyImageCount / maxImages) * 100, 100);
+    const isNearLimit = usagePercent >= 75;
+
     return (
       <>
         {isMobile && sidebarOpen && <div className="fixed inset-0 bg-black/60 z-40 backdrop-blur-sm animate-in fade-in" onClick={() => setSidebarOpen(false)} />}
@@ -107,9 +114,11 @@ export const Sidebar = ({
                {!collapsed && (
                    <div className="text-left">
                       <h1 className="font-bold text-xl text-zinc-900 dark:text-white tracking-tight font-display">Uchebnik AI</h1>
-                      <p className={`text-[10px] font-bold tracking-widest uppercase ${userPlan === 'pro' ? 'text-amber-500' : userPlan === 'plus' ? 'text-indigo-500' : 'text-gray-500'}`}>
-                        {userPlan === 'pro' ? 'PRO PLAN' : userPlan === 'plus' ? 'PLUS PLAN' : 'FREE PLAN'}
-                      </p>
+                      <div className="flex items-center gap-2">
+                          <p className={`text-[10px] font-bold tracking-widest uppercase ${userPlan === 'pro' ? 'text-amber-500' : userPlan === 'plus' ? 'text-indigo-500' : 'text-gray-500'}`}>
+                            {userPlan === 'pro' ? 'PRO PLAN' : userPlan === 'plus' ? 'PLUS PLAN' : 'FREE PLAN'}
+                          </p>
+                      </div>
                    </div>
                )}
             </button>
@@ -155,7 +164,6 @@ export const Sidebar = ({
           <div className="flex-1 overflow-y-auto px-4 pb-4 custom-scrollbar">
              {collapsed ? (
                  <div className="mt-4 flex flex-col items-center gap-4 w-full animate-in fade-in">
-                     {/* School Home */}
                      <button 
                         onClick={() => { setActiveSubject(null); setHomeView('school_select'); setUserRole(null); }}
                         className={`p-3 rounded-xl transition-all ${homeView === 'school_select' || homeView === 'student_subjects' || homeView === 'teacher_subjects' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30' : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10 hover:text-indigo-500'}`}
@@ -163,8 +171,6 @@ export const Sidebar = ({
                      >
                         <School size={20} />
                      </button>
-                     
-                     {/* University Home */}
                      <button 
                         onClick={() => { setActiveSubject(null); setHomeView('university_select'); setUserRole(null); }}
                         className={`p-3 rounded-xl transition-all ${homeView === 'university_select' || homeView === 'uni_student_subjects' || homeView === 'uni_teacher_subjects' ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-500/30' : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10 hover:text-emerald-500'}`}
@@ -175,7 +181,6 @@ export const Sidebar = ({
                  </div>
              ) : (
                  <div className="mt-2 space-y-2">
-                     
                      {/* SCHOOL SECTION */}
                      <div>
                         <button onClick={() => { setActiveSubject(null); setHomeView('school_select'); setUserRole(null); setSchoolFolderOpen(!schoolFolderOpen); }} className="w-full flex items-center justify-between px-2 py-3 text-gray-400 dark:text-zinc-500 hover:text-indigo-500 transition-colors">
@@ -188,7 +193,6 @@ export const Sidebar = ({
                         
                         {schoolFolderOpen && (
                             <div className="pl-4 space-y-1 animate-in slide-in-from-top-2">
-                                
                                 {/* Students Subfolder */}
                                 <div className="border-l border-indigo-500/10 pl-2">
                                     <div className="flex items-center justify-between w-full px-2 py-2 group">
@@ -203,7 +207,6 @@ export const Sidebar = ({
                                             <ChevronDown size={12} className={`transition-transform duration-300 ${studentsFolderOpen ? 'rotate-180' : ''}`}/>
                                         </button>
                                     </div>
-                                    
                                     {studentsFolderOpen && (
                                         <div className="space-y-0.5 mt-1 animate-in slide-in-from-top-1">
                                             {SUBJECTS.filter(s => s.id !== SubjectId.GENERAL && s.categories.includes('school')).map(s => (
@@ -215,8 +218,6 @@ export const Sidebar = ({
                                                         <div className={`w-2 h-2 rounded-full ${s.color} shrink-0`}></div>
                                                         <span className="truncate">{t(`subject_${s.id}`, userSettings.language)}</span>
                                                     </button>
-                                                    
-                                                    {/* Sessions List (Student) */}
                                                     {activeSubject?.id === s.id && userRole === 'student' && (
                                                         <div className="ml-4 pl-2 border-l border-indigo-500/20 space-y-0.5 my-1">
                                                             {sessions.filter(sess => sess.subjectId === s.id && sess.role === 'student').map(sess => (
@@ -240,7 +241,6 @@ export const Sidebar = ({
                                         </div>
                                     )}
                                 </div>
-
                                 {/* Teachers Subfolder */}
                                 <div className="border-l border-indigo-500/10 pl-2 mt-2">
                                     <div className="flex items-center justify-between w-full px-2 py-2 group">
@@ -255,7 +255,6 @@ export const Sidebar = ({
                                             <ChevronDown size={12} className={`transition-transform duration-300 ${teachersFolderOpen ? 'rotate-180' : ''}`}/>
                                         </button>
                                     </div>
-                                    
                                     {teachersFolderOpen && (
                                         <div className="space-y-0.5 mt-1 animate-in slide-in-from-top-1">
                                             {SUBJECTS.filter(s => s.id !== SubjectId.GENERAL && s.categories.includes('school')).map(s => (
@@ -267,8 +266,6 @@ export const Sidebar = ({
                                                         <div className={`w-1.5 h-1.5 rounded-full ${s.color}`}></div>
                                                         <span className="truncate">{t(`subject_${s.id}`, userSettings.language)}</span>
                                                     </button>
-
-                                                    {/* Sessions List (Teacher) */}
                                                     {activeSubject?.id === s.id && userRole === 'teacher' && (
                                                         <div className="ml-4 pl-2 border-l border-indigo-500/20 space-y-0.5 my-1">
                                                             {sessions.filter(sess => sess.subjectId === s.id && sess.role === 'teacher').map(sess => (
@@ -292,7 +289,6 @@ export const Sidebar = ({
                                         </div>
                                     )}
                                 </div>
-
                             </div>
                         )}
                      </div>
@@ -306,11 +302,8 @@ export const Sidebar = ({
                             </div>
                             <ChevronDown size={14} className={`transition-transform duration-300 ${uniFolderOpen ? 'rotate-180' : ''}`}/>
                         </button>
-                        
                         {uniFolderOpen && (
                             <div className="pl-4 space-y-1 animate-in slide-in-from-top-2">
-                                
-                                {/* Uni Students Subfolder */}
                                 <div className="border-l border-emerald-500/10 pl-2">
                                     <div className="flex items-center justify-between w-full px-2 py-2 group">
                                         <button 
@@ -324,7 +317,6 @@ export const Sidebar = ({
                                             <ChevronDown size={12} className={`transition-transform duration-300 ${uniStudentsFolderOpen ? 'rotate-180' : ''}`}/>
                                         </button>
                                     </div>
-                                    
                                     {uniStudentsFolderOpen && (
                                         <div className="space-y-0.5 mt-1 animate-in slide-in-from-top-1">
                                             {SUBJECTS.filter(s => s.id !== SubjectId.GENERAL && s.categories.includes('university')).map(s => (
@@ -336,8 +328,6 @@ export const Sidebar = ({
                                                         <div className={`w-2 h-2 rounded-full ${s.color} shrink-0`}></div>
                                                         <span className="truncate">{t(`subject_${s.id}`, userSettings.language)}</span>
                                                     </button>
-                                                    
-                                                    {/* Sessions List (Uni Student) */}
                                                     {activeSubject?.id === s.id && userRole === 'uni_student' && (
                                                         <div className="ml-4 pl-2 border-l border-emerald-500/20 space-y-0.5 my-1">
                                                             {sessions.filter(sess => sess.subjectId === s.id && sess.role === 'uni_student').map(sess => (
@@ -361,7 +351,6 @@ export const Sidebar = ({
                                         </div>
                                     )}
                                 </div>
-
                                 {/* Uni Teachers Subfolder */}
                                 <div className="border-l border-emerald-500/10 pl-2 mt-2">
                                     <div className="flex items-center justify-between w-full px-2 py-2 group">
@@ -376,7 +365,6 @@ export const Sidebar = ({
                                             <ChevronDown size={12} className={`transition-transform duration-300 ${uniTeachersFolderOpen ? 'rotate-180' : ''}`}/>
                                         </button>
                                     </div>
-                                    
                                     {uniTeachersFolderOpen && (
                                         <div className="space-y-0.5 mt-1 animate-in slide-in-from-top-1">
                                             {SUBJECTS.filter(s => s.id !== SubjectId.GENERAL && s.categories.includes('university')).map(s => (
@@ -388,8 +376,6 @@ export const Sidebar = ({
                                                         <div className={`w-1.5 h-1.5 rounded-full ${s.color}`}></div>
                                                         <span className="truncate">{t(`subject_${s.id}`, userSettings.language)}</span>
                                                     </button>
-
-                                                    {/* Sessions List (Uni Teacher) */}
                                                     {activeSubject?.id === s.id && userRole === 'uni_teacher' && (
                                                         <div className="ml-4 pl-2 border-l border-emerald-500/20 space-y-0.5 my-1">
                                                             {sessions.filter(sess => sess.subjectId === s.id && sess.role === 'uni_teacher').map(sess => (
@@ -416,19 +402,40 @@ export const Sidebar = ({
                             </div>
                         )}
                      </div>
-
                  </div>
              )}
           </div>
 
           <div className={`p-4 border-t border-white/10 bg-white/20 dark:bg-black/20 space-y-3 backdrop-blur-md flex flex-col justify-center`}>
+             {/* Usage Progress Bar for Non-Pro Users */}
              {userPlan !== 'pro' && !collapsed && (
-               <button onClick={() => setShowUnlockModal(true)} className="w-full mb-1 group relative overflow-hidden rounded-2xl p-4 text-left shadow-xl transition-all hover:scale-[1.02] active:scale-[0.98]">
+               <div className="px-1 mb-2">
+                  <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-wider mb-1.5">
+                      <span className={isNearLimit ? "text-red-500" : "text-gray-500"}>
+                          {dailyImageCount} / {maxImages} Scans
+                      </span>
+                      <span className="text-indigo-500">Дневен Лимит</span>
+                  </div>
+                  <div className="h-1.5 w-full bg-gray-200 dark:bg-white/10 rounded-full overflow-hidden">
+                      <div 
+                        className={`h-full rounded-full transition-all duration-500 ${isNearLimit ? 'bg-red-500' : 'bg-indigo-500'}`} 
+                        style={{width: `${usagePercent}%`}}
+                      />
+                  </div>
+                  {isNearLimit && <p className="text-[10px] text-red-500 mt-1 font-medium animate-pulse">Лимитът наближава!</p>}
+               </div>
+             )}
+
+             {userPlan !== 'pro' && !collapsed && (
+               <button onClick={() => setShowUnlockModal(true)} className={`w-full mb-1 group relative overflow-hidden rounded-2xl p-4 text-left shadow-xl transition-all hover:scale-[1.02] active:scale-[0.98] ${isNearLimit ? 'animate-pulse-slow ring-2 ring-red-500/50' : ''}`}>
                   <div className="absolute inset-0 bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 animate-gradient-xy" />
                   <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20" />
                   <div className="relative z-10 flex items-center justify-between text-white">
                      <div>
-                        <h3 className="font-black text-lg tracking-tight">{t('upgrade_plan', userSettings.language)}</h3>
+                        <h3 className="font-black text-lg tracking-tight flex items-center gap-2">
+                            {t('upgrade_plan', userSettings.language)}
+                            {isNearLimit && <Lock size={14} />}
+                        </h3>
                         <p className="text-xs font-medium text-indigo-100 opacity-90">{t('unlock_potential', userSettings.language)}</p>
                      </div>
                      <div className="w-8 h-8 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center border border-white/20">
@@ -439,10 +446,11 @@ export const Sidebar = ({
              )}
              
              {userPlan !== 'pro' && collapsed && (
-                 <button onClick={() => setShowUnlockModal(true)} className="w-full flex justify-center mb-1 group">
+                 <button onClick={() => setShowUnlockModal(true)} className="w-full flex justify-center mb-1 group relative">
                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-600 to-pink-600 flex items-center justify-center text-white shadow-lg">
                          <CreditCard size={18}/>
                      </div>
+                     {isNearLimit && <div className="absolute top-0 right-2 w-3 h-3 bg-red-500 rounded-full border-2 border-black"></div>}
                  </button>
              )}
              
@@ -491,8 +499,8 @@ export const Sidebar = ({
                                             {userPlan === 'pro' ? 'Pro Plan' : userPlan === 'plus' ? 'Plus Plan' : 'Free Plan'}
                                         </div>
                                         {streak > 0 && (
-                                            <div className="flex items-center gap-1 text-[10px] font-bold text-orange-500 bg-orange-100 dark:bg-orange-500/20 px-1.5 py-0.5 rounded-full">
-                                                <Flame size={10} fill="currentColor" /> {streak}
+                                            <div className="flex items-center gap-1 text-[10px] font-bold text-orange-500 bg-orange-100 dark:bg-orange-500/20 px-1.5 py-0.5 rounded-full animate-in zoom-in">
+                                                <Flame size={10} fill="currentColor" className="animate-pulse" /> {streak}
                                             </div>
                                         )}
                                     </div>

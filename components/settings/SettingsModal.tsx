@@ -8,7 +8,7 @@ import {
   Keyboard, Type, Download, Zap, Brain, MessageCircle
 } from 'lucide-react';
 import { Button } from '../ui/Button';
-import { UserSettings } from '../../types';
+import { UserSettings, UserPlan } from '../../types';
 import { getDynamicColorStyle } from '../../styles/theme';
 import { MODAL_ENTER, FADE_IN } from '../../animations/transitions';
 import { supabase } from '../../supabaseClient';
@@ -30,6 +30,7 @@ interface SettingsModalProps {
   handleBackgroundUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleDeleteAllChats: () => void;
   addToast: (msg: string, type: 'success' | 'error' | 'info') => void;
+  userPlan: UserPlan;
 }
 
 type SettingsTab = 'account' | 'appearance' | 'ai' | 'system' | 'data';
@@ -68,7 +69,8 @@ export const SettingsModal = ({
   setIsDarkMode,
   handleBackgroundUpload,
   handleDeleteAllChats,
-  addToast
+  addToast,
+  userPlan
 }: SettingsModalProps) => {
     
   const avatarInputRef = useRef<HTMLInputElement>(null);
@@ -118,6 +120,8 @@ export const SettingsModal = ({
     { id: 'system', label: 'Система', icon: Settings },
     { id: 'data', label: t('data', userSettings.language), icon: Database },
   ];
+
+  const isPro = userPlan === 'pro';
 
   return (
   <div className="fixed inset-0 z-[90] bg-black/60 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-300">
@@ -221,7 +225,7 @@ export const SettingsModal = ({
                              <div className="relative z-10 flex justify-between items-center">
                                  <div>
                                      <div className="text-indigo-200 text-xs font-bold uppercase tracking-wider mb-1">Вашият план</div>
-                                     <h4 className="text-2xl font-black">Pro Plan</h4>
+                                     <h4 className="text-2xl font-black">{userPlan === 'pro' ? 'Pro Plan' : 'Plus Plan'}</h4>
                                  </div>
                                  <Button onClick={handleManageSubscription} disabled={loadingPortal} className="bg-white text-indigo-600 hover:bg-indigo-50 border-none shadow-none">
                                     {loadingPortal ? <Loader2 size={18} className="animate-spin"/> : 'Управление'}
@@ -498,14 +502,14 @@ export const SettingsModal = ({
                       </section>
 
                       {/* Custom Persona (Pro Feature) */}
-                      <section className={`space-y-4 p-6 bg-gradient-to-br from-indigo-50/50 to-purple-50/50 dark:from-indigo-900/10 dark:to-purple-900/10 rounded-2xl border border-indigo-200 dark:border-indigo-500/20 ${!isPremium ? 'opacity-70' : ''}`}>
+                      <section className={`space-y-4 p-6 bg-gradient-to-br from-indigo-50/50 to-purple-50/50 dark:from-indigo-900/10 dark:to-purple-900/10 rounded-2xl border border-indigo-200 dark:border-indigo-500/20 ${!isPro ? 'opacity-70' : ''}`}>
                           <div className="flex justify-between items-center mb-2">
                               <label className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
                                   <Zap size={18} className="text-amber-500"/> Персонализирана Роля (Persona)
                               </label>
-                              {!isPremium && <span className="px-2 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded text-[10px] font-bold uppercase">Plus / Pro</span>}
+                              {!isPro && <span className="px-2 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded text-[10px] font-bold uppercase">Pro Only</span>}
                           </div>
-                          <div className={`space-y-3 ${!isPremium ? 'pointer-events-none grayscale' : ''}`}>
+                          <div className={`space-y-3 ${!isPro ? 'pointer-events-none grayscale' : ''}`}>
                               <p className="text-xs text-gray-500">Напишете как точно искате AI да се държи. Това ще замени стандартния стил на преподаване.</p>
                               <textarea 
                                   value={userSettings.customPersona || ''}
