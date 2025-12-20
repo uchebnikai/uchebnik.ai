@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { ArrowLeft, Mail, MapPin, Globe } from 'lucide-react';
 import { SLIDE_UP, FADE_IN } from '../../animations/transitions';
@@ -132,7 +133,7 @@ export const Contact = ({ onBack, userSettings }: PageProps) => (
   <PageLayout title="Контакти" onBack={onBack} userSettings={userSettings}>
     <p className="text-lg">Имате въпроси, предложения или се нуждаете от помощ? Екипът ни е тук за вас.</p>
     
-    <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6 not-prose">
+    <div className="mt-8 grid grid-cols-1 gap-6 not-prose">
         <div className="p-6 bg-white dark:bg-zinc-900 rounded-2xl border border-indigo-500/20 shadow-lg">
             <h3 className="text-xl font-bold text-zinc-900 dark:text-white mb-4 flex items-center gap-2">
                 <Mail className="text-indigo-500"/> Email Support
@@ -140,16 +141,8 @@ export const Contact = ({ onBack, userSettings }: PageProps) => (
             <p className="text-gray-500 mb-4 text-sm">За технически въпроси и партньорства:</p>
             <a href="mailto:support@uchebnikai.com" className="text-indigo-600 dark:text-indigo-400 font-bold hover:underline">support@uchebnikai.com</a>
         </div>
-
-        <div className="p-6 bg-white dark:bg-zinc-900 rounded-2xl border border-[#5865F2]/30 shadow-lg">
-            <h3 className="text-xl font-bold text-zinc-900 dark:text-white mb-4 flex items-center gap-2">
-                <Globe className="text-[#5865F2]"/> Community
-            </h3>
-            <p className="text-gray-500 mb-4 text-sm">Присъединете се към нашия Discord сървър за бърза помощ:</p>
-            <a href="https://discord.gg/4SB2NGPq8h" target="_blank" rel="noreferrer" className="text-[#5865F2] font-bold hover:underline">Join Discord Server</a>
-        </div>
         
-        <div className="col-span-1 md:col-span-2 p-6 bg-white dark:bg-zinc-900 rounded-2xl border border-gray-200 dark:border-white/10 shadow-lg flex items-start gap-4">
+        <div className="p-6 bg-white dark:bg-zinc-900 rounded-2xl border border-gray-200 dark:border-white/10 shadow-lg flex items-start gap-4">
              <MapPin className="text-gray-400 shrink-0 mt-1"/>
              <div>
                  <h3 className="font-bold text-zinc-900 dark:text-white">Локация</h3>
