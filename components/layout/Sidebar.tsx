@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { MessageSquare, Trash2, Plus, School, GraduationCap, Briefcase, ChevronDown, User, Settings, CreditCard, HelpCircle, LogOut, ArrowRight, ChevronUp, FileText, Flame, CloudOff, RefreshCw, Cloud, PanelLeftClose, PanelLeftOpen, LayoutDashboard, Landmark, Zap, Lock } from 'lucide-react';
+import { MessageSquare, Trash2, Plus, School, GraduationCap, Briefcase, ChevronDown, User, Settings, CreditCard, HelpCircle, LogOut, ArrowRight, ChevronUp, FileText, Flame, CloudOff, RefreshCw, Cloud, PanelLeftClose, PanelLeftOpen, LayoutDashboard, Landmark, Zap, Lock, LogIn } from 'lucide-react';
 import { DynamicIcon } from '../ui/DynamicIcon';
 import { SUBJECTS } from '../../constants';
 import { SubjectId, AppMode, Session, UserRole, UserSettings, UserPlan, SubjectConfig, HomeViewType } from '../../types';
@@ -407,12 +407,12 @@ export const Sidebar = ({
           </div>
 
           <div className={`p-4 border-t border-white/10 bg-white/20 dark:bg-black/20 space-y-3 backdrop-blur-md flex flex-col justify-center`}>
-             {/* Usage Progress Bar for Non-Pro Users */}
-             {userPlan !== 'pro' && !collapsed && (
+             {/* Usage Progress Bar for Non-Pro Users - ONLY IF LOGGED IN */}
+             {session && userPlan !== 'pro' && !collapsed && (
                <div className="px-1 mb-2">
                   <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-wider mb-1.5">
                       <span className={isNearLimit ? "text-red-500" : "text-gray-500"}>
-                          {dailyImageCount} / {maxImages} Scans
+                          {dailyImageCount} / {maxImages} Снимки
                       </span>
                       <span className="text-indigo-500">Дневен Лимит</span>
                   </div>
@@ -426,7 +426,8 @@ export const Sidebar = ({
                </div>
              )}
 
-             {userPlan !== 'pro' && !collapsed && (
+             {/* Upgrade Plan Card - ONLY IF LOGGED IN */}
+             {session && userPlan !== 'pro' && !collapsed && (
                <button onClick={() => setShowUnlockModal(true)} className={`w-full mb-1 group relative overflow-hidden rounded-2xl p-4 text-left shadow-xl transition-all hover:scale-[1.02] active:scale-[0.98] ${isNearLimit ? 'animate-pulse-slow ring-2 ring-red-500/50' : ''}`}>
                   <div className="absolute inset-0 bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 animate-gradient-xy" />
                   <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20" />
@@ -445,7 +446,8 @@ export const Sidebar = ({
                </button>
              )}
              
-             {userPlan !== 'pro' && collapsed && (
+             {/* Small Upgrade Icon - ONLY IF LOGGED IN */}
+             {session && userPlan !== 'pro' && collapsed && (
                  <button onClick={() => setShowUnlockModal(true)} className="w-full flex justify-center mb-1 group relative">
                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-600 to-pink-600 flex items-center justify-center text-white shadow-lg">
                          <CreditCard size={18}/>
@@ -516,12 +518,13 @@ export const Sidebar = ({
                     </button>
                  </div>
              ) : (
-                 <button onClick={() => setShowAuthModal(true)} className={`w-full mb-1 flex items-center gap-3 p-3 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold transition-all shadow-lg shadow-indigo-500/20 active:scale-95 ${collapsed ? 'justify-center' : ''}`}>
-                     <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center border border-white/20 shrink-0"><User size={20}/></div>
+                 <button onClick={() => setShowAuthModal(true)} className={`w-full mb-1 flex items-center gap-3 p-3 rounded-2xl bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-600 text-white font-bold transition-all shadow-xl shadow-indigo-500/25 active:scale-95 group relative overflow-hidden ${collapsed ? 'justify-center' : ''}`}>
+                     <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 pointer-events-none" />
+                     <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center border border-white/20 shrink-0 relative z-10"><LogIn size={20}/></div>
                      {!collapsed && (
-                         <div className="text-left">
+                         <div className="text-left relative z-10">
                              <div className="text-sm">{t('login', userSettings.language)}</div>
-                             <div className="text-[10px] opacity-80">Запази прогреса си</div>
+                             <div className="text-[10px] opacity-80 font-medium">Запази прогреса си</div>
                          </div>
                      )}
                  </button>
