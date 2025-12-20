@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { FileText, X, FileType, Loader2, Download, Printer } from 'lucide-react';
 import * as docx from 'docx';
@@ -16,6 +15,7 @@ const FONT_URL = "https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.66/fonts/Ro
 const svgToPng = (svgString: string): Promise<string> => {
   return new Promise((resolve, reject) => {
     const img = new Image();
+    // basic cleanup for safety and size definition
     const svgBlob = new Blob([svgString], {type: 'image/svg+xml;charset=utf-8'});
     const url = URL.createObjectURL(svgBlob);
     
@@ -27,6 +27,7 @@ const svgToPng = (svgString: string): Promise<string> => {
       if(ctx) {
           ctx.fillStyle = 'white';
           ctx.fillRect(0, 0, canvas.width, canvas.height);
+          // Scale to fit
           const scale = Math.min(600 / img.width, 400 / img.height);
           const w = img.width * scale || 600;
           const h = img.height * scale || 400;
@@ -48,16 +49,8 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
   const [visible, setVisible] = useState(true);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
-  // Safety check for malformed data
-  if (!data || !data.questions || !Array.isArray(data.questions)) {
-      return (
-          <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 text-sm">
-              Грешка при визуализацията на теста. Данните са невалидни.
-          </div>
-      );
-  }
-
   const handleDownloadWord = async () => {
+    // Pre-process questions to convert geometry SVGs to PNGs
     const processedQuestions = await Promise.all(data.questions.map(async (q) => {
         let imageRun = null;
         if (q.geometryData?.svg) {
@@ -89,12 +82,12 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
                     spacing: { after: 400 }
                 }),
                 new docx.Paragraph({
-                    children: [new docx.TextRun({ text: cleanMathText(data.title || "Тест"), bold: true, size: 32 })],
+                    children: [new docx.TextRun({ text: cleanMathText(data.title), bold: true, size: 32 })],
                     alignment: docx.AlignmentType.CENTER,
                     spacing: { after: 200 }
                 }),
                 new docx.Paragraph({
-                    children: [new docx.TextRun({ text: `${data.subject || ''} | ${data.grade || ''}`, size: 24, color: "666666" })],
+                    children: [new docx.TextRun({ text: `${data.subject} | ${data.grade || ''}`, size: 24, color: "666666" })],
                     alignment: docx.AlignmentType.CENTER,
                     spacing: { after: 400 }
                 }),
@@ -114,7 +107,7 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
                         }));
                     }
 
-                    if (q.options && q.options.length > 0) {
+                    if (q.options) {
                         q.options.forEach(opt => {
                             elements.push(new docx.Paragraph({
                                 children: [new docx.TextRun({ text: cleanMathText(opt), size: 24 })],
@@ -158,7 +151,7 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${(data.title || 'test').replace(/\s+/g, '_')}.docx`;
+    a.download = `${data.title.replace(/\s+/g, '_')}.docx`;
     a.click();
     window.URL.revokeObjectURL(url);
   };
@@ -194,14 +187,15 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
         doc.text("Клас: _________", 20, 30);
         doc.text("Номер: _________", 80, 30);
         doc.setFontSize(18);
-        doc.text(cleanMathText(data.title || "Тест"), 105, 50, { align: 'center' });
+        doc.text(cleanMathText(data.title), 105, 50, { align: 'center' });
         doc.setFontSize(12);
         doc.setTextColor(100);
-        doc.text(`${data.subject || ''} | ${data.grade || ''}`, 105, 58, { align: 'center' });
+        doc.text(`${data.subject} | ${data.grade || ''}`, 105, 58, { align: 'center' });
         doc.setTextColor(0);
         
         let y = 70;
         
+        // Loop sequentially to handle async image generation
         for (let i = 0; i < data.questions.length; i++) {
             const q = data.questions[i];
             if (y > 250) { doc.addPage(); y = 20; }
@@ -232,7 +226,7 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
                 y += 10;
             }
 
-            if (q.options && q.options.length > 0) {
+            if (q.options) {
                q.options.forEach(opt => {
                   if (y > 270) { doc.addPage(); y = 20; }
                   doc.text(cleanMathText(opt), 25, y);
@@ -261,7 +255,7 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
              doc.text(`${i + 1}. ${cleanMathText(q.correctAnswer || '-')}`, 20, ky);
              ky += 8;
         });
-        doc.save(`${(data.title || 'test').replace(/\s+/g, '_')}.pdf`);
+        doc.save(`${data.title.replace(/\s+/g, '_')}.pdf`);
       } catch (e) {
         console.error("PDF Gen Error", e);
       } finally {
@@ -275,7 +269,7 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
      const html = `
         <html>
         <head>
-            <title>${cleanMathText(data.title || "Тест")}</title>
+            <title>${cleanMathText(data.title)}</title>
             <style>
                 @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
                 body { font-family: 'Roboto', sans-serif; padding: 40px; color: #000; }
@@ -303,8 +297,8 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
                 <div class="field-row">Име: _________________________________________________</div>
                 <div class="field-row">Клас: _________ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Номер: _________</div>
             </div>
-            <h1>${cleanMathText(data.title || "Тест")}</h1>
-            <div class="meta">${data.subject || ''} ${data.grade ? '| ' + data.grade : ''}</div>
+            <h1>${cleanMathText(data.title)}</h1>
+            <div class="meta">${data.subject} ${data.grade ? '| ' + data.grade : ''}</div>
             ${data.questions.map((q, i) => `
                 <div class="question">
                     <div class="q-text">${i + 1}. ${cleanMathText(q.question)}</div>
@@ -312,7 +306,7 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
                     ${q.geometryData ? `<div class="geometry-container">${q.geometryData.svg}</div>` : ''}
                     ${q.chartData ? `<div class="chart-placeholder">[Графика: ${q.chartData.title || 'Данни'}]</div>` : ''}
                     
-                    ${q.options && q.options.length > 0
+                    ${q.options 
                         ? q.options.map(o => `<div class="option">${cleanMathText(o)}</div>`).join('') 
                         : `<div class="open-lines"></div><div class="open-lines"></div>`}
                 </div>
@@ -351,7 +345,7 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
     <div className="mt-4 p-5 glass-card rounded-3xl animate-in fade-in zoom-in-95 duration-300">
         <div className="flex justify-between items-center mb-6">
             <div className="flex flex-col">
-                <h4 className="font-bold text-lg leading-tight">{cleanMathText(data.title || "Тест")}</h4>
+                <h4 className="font-bold text-lg leading-tight">{cleanMathText(data.title)}</h4>
                 <span className="text-xs text-gray-500 uppercase tracking-wide mt-1">{data.questions.length} въпроса • {data.subject}</span>
             </div>
             <button onClick={() => setVisible(false)} className="p-1.5 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-full transition-colors text-gray-400"><X size={16} /></button>
@@ -386,7 +380,7 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
                         </div>
                     )}
 
-                    {q.options && q.options.length > 0 && (
+                    {q.options && (
                         <div className="space-y-2 ml-2">
                             {q.options.map((opt, idx) => (
                                 <div key={idx} className="flex items-center gap-3">

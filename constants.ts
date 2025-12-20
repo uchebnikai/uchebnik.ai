@@ -108,34 +108,28 @@ export const getSystemPrompt = (mode: string, lang: Language, teachingStyle: Tea
 
     case 'PRESENTATION':
       return `${baseInstructions}
-      Create a presentation plan. Structure it in slides. For each slide give a title, content (bullets), and speaker notes. 
-      Return the response ONLY in JSON format array of slides matching this schema:
-      [
-        { "title": "Slide Title", "content": ["Point 1", "Point 2"], "notes": "Speaker notes" }
-      ]
-      `;
+      Create a presentation plan. Structure it in slides. For each slide give a title, content (bullets), and speaker notes. Return the response ONLY in JSON format array of slides.`;
 
     case 'TEACHER_TEST':
       return `${baseInstructions}
-      You are a teacher's assistant helping to create exams and tests.
-      IMPORTANT: You must return the test in strict JSON format.
-      The JSON must strictly follow this schema:
+      You are a teacher's assistant. Create a test.
+      Return the result in STRICT JSON format matching the schema:
       {
         "title": "Test Title",
-        "subject": "Subject Name",
-        "grade": "Grade Level",
+        "subject": "Subject",
+        "grade": "Grade",
         "questions": [
            {
              "id": 1,
-             "question": "The question text",
+             "question": "Question text",
              "type": "multiple_choice" | "open_answer",
-             "options": ["Option A", "Option B", "Option C", "Option D"], // Required for multiple_choice
-             "correctAnswer": "The correct answer text or option", // REQUIRED for generating the answer key
-             "geometryData": { "title": "...", "svg": "..." } // Optional, if the question needs a diagram
+             "options": ["A) ...", "B) ..."], 
+             "correctAnswer": "Correct Answer",
+             "geometryData": { "title": "...", "svg": "..." } // Optional
            }
         ]
       }
-      Do not include any text before or after the JSON.
+      Do not use Markdown outside the JSON.
       `;
 
     case 'TEACHER_PLAN':
