@@ -3,13 +3,10 @@ import React, { useState } from 'react';
 import { FileText, X, FileType, Loader2, Download, Printer } from 'lucide-react';
 import * as docx from 'docx';
 import { jsPDF } from "jspdf";
-import ReactMarkdown from 'react-markdown';
-import remarkMath from 'remark-math';
-import rehypeKatex from 'rehype-katex';
 import { TestData } from '../../types';
-import { cleanMathText, preprocessLatex } from '../../utils/text';
+import { cleanMathText } from '../../utils/text';
 import { ChartRenderer } from './ChartRenderer';
-import { CodeBlock } from '../ui/CodeBlock';
+import { GeometryRenderer } from './GeometryRenderer';
 
 // Cache font buffer at module level to avoid re-fetching
 let cachedFontBuffer: ArrayBuffer | null = null;
@@ -375,21 +372,7 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
         <div className="space-y-4 max-h-[60vh] overflow-y-auto custom-scrollbar p-2 bg-white/50 dark:bg-black/20 rounded-xl border border-indigo-500/5">
             {data.questions.map((q, i) => (
                 <div key={i} className="p-4 bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-gray-100 dark:border-white/5">
-                    <div className="flex gap-2 mb-3">
-                        <span className="font-bold text-indigo-500 text-sm mt-0.5">{i + 1}.</span>
-                        <div className="text-sm font-bold text-zinc-900 dark:text-zinc-100 markdown-content">
-                            <ReactMarkdown 
-                                remarkPlugins={[remarkMath]} 
-                                rehypePlugins={[rehypeKatex]} 
-                                components={{
-                                    p: ({node, ...props}) => <p className="mb-0" {...props} />,
-                                    code: CodeBlock
-                                }}
-                            >
-                                {preprocessLatex(q.question)}
-                            </ReactMarkdown>
-                        </div>
-                    </div>
+                    <p className="font-bold text-sm mb-3 flex gap-2"><span className="text-indigo-500">{i + 1}.</span> {cleanMathText(q.question)}</p>
                     
                     {q.geometryData && (
                         <div className="mb-4 flex justify-center p-4 bg-white/50 dark:bg-white/5 rounded-xl border border-indigo-500/10">
@@ -404,21 +387,11 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
                     )}
 
                     {q.options && q.options.length > 0 && (
-                        <div className="space-y-2 ml-6">
+                        <div className="space-y-2 ml-2">
                             {q.options.map((opt, idx) => (
                                 <div key={idx} className="flex items-center gap-3">
-                                    <div className="w-4 h-4 rounded-full border border-gray-300 dark:border-white/20 shrink-0"></div>
-                                    <div className="text-sm text-gray-700 dark:text-gray-300 markdown-content">
-                                        <ReactMarkdown 
-                                            remarkPlugins={[remarkMath]} 
-                                            rehypePlugins={[rehypeKatex]}
-                                            components={{
-                                                p: ({node, ...props}) => <p className="mb-0" {...props} />
-                                            }}
-                                        >
-                                            {preprocessLatex(opt)}
-                                        </ReactMarkdown>
-                                    </div>
+                                    <div className="w-4 h-4 rounded-full border border-gray-300 dark:border-white/20"></div>
+                                    <p className="text-sm text-gray-700 dark:text-gray-300">{cleanMathText(opt)}</p>
                                 </div>
                             ))}
                         </div>
