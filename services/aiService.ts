@@ -78,8 +78,8 @@ export const generateResponse = async (
   const imageKeywords = /(draw|paint|generate image|create a picture|make an image|нарисувай|рисувай|генерирай изображение|генерирай снимка|направи снимка|изображение на)/i;
   const isImageRequest = (subjectId === SubjectId.ART && mode === AppMode.DRAW) || imageKeywords.test(promptText);
 
-  // Detect Test Creation Intent even if not in explicit Test Mode
-  const testKeywords = /(create|make|generate|write|създай|направи|генерирай|изготви)\s+(a\s+)?(test|exam|quiz|questions|тест|изпит|контролно|въпроси)/i;
+  // Detect Test Creation Intent - Relaxed Regex
+  const testKeywords = /(create|make|generate|write|създай|направи|генерирай|изготви)[\s\S]*?(test|exam|quiz|questions|тест|изпит|контролно|въпроси)/i;
   const isTestRequest = mode === AppMode.TEACHER_TEST || testKeywords.test(promptText);
 
   // Determine effective mode for system prompt
@@ -96,8 +96,7 @@ export const generateResponse = async (
       systemInstruction: `CURRENT SUBJECT CONTEXT: ${subjectName}. All responses must relate to ${subjectName}.\n\n${systemInstruction}`,
   };
 
-  // Force JSON for specific modes to ensure UI components render correctly
-  // We use effectiveMode here to catch the auto-detected test requests
+  // Force JSON for specific modes
   if (effectiveMode === AppMode.TEACHER_TEST || effectiveMode === AppMode.PRESENTATION) {
       config.responseMimeType = 'application/json';
   }
@@ -105,7 +104,6 @@ export const generateResponse = async (
   try {
       const ai = new GoogleGenAI({ apiKey });
       
-      // Construct history contents
       const historyContents: any[] = [];
       history.filter(msg => !msg.isError && msg.text && msg.type !== 'image_generated' && msg.type !== 'slides').forEach(msg => {
           let content = msg.text;
@@ -118,7 +116,6 @@ export const generateResponse = async (
           });
       });
 
-      // Construct current message parts
       const currentParts: any[] = [];
       let finalUserPrompt = promptText;
       
@@ -143,14 +140,12 @@ export const generateResponse = async (
       }
       currentParts.push({ text: finalUserPrompt });
 
-      // Create chat session
       const chat = ai.chats.create({
           model: modelName,
           config: config,
           history: historyContents
       });
 
-      // Stream response
       const result = await chat.sendMessageStream({ message: currentParts });
       
       let finalContent = "";
@@ -171,6 +166,7 @@ export const generateResponse = async (
 
       let processedText = fullText.replace(/<think>[\s\S]*?(?:<\/think>|$)/gi, "").trim();
 
+      // Presentation Detection
       if (effectiveMode === AppMode.PRESENTATION) {
          try {
              const jsonStr = extractJson(processedText);
@@ -189,35 +185,50 @@ export const generateResponse = async (
          } catch (e) { console.error("Presentation JSON parse error", e); }
       }
 
-      if (effectiveMode === AppMode.TEACHER_TEST) {
+      // Test Detection logic (Now opportunistic - runs even if effectiveMode wasn't set perfectly, if JSON is present)
+      // We check if it WAS a test request OR if the output looks like a test JSON
+      const looksLikeJson = (processedText.trim().startsWith('{') || processedText.trim().startsWith('[') || processedText.includes('```json'));
+      
+      if (effectiveMode === AppMode.TEACHER_TEST || looksLikeJson) {
           try {
              const jsonStr = extractJson(processedText);
              if (jsonStr) {
                  let parsedData = JSON.parse(jsonStr);
                  
                  // Normalize: Handle case where AI returns an Array (either of strings or objects) instead of the TestData object
+                 let isTestArray = false;
                  if (Array.isArray(parsedData)) {
-                     const normalizedQuestions = parsedData.map((q: any, index: number) => {
-                         // If the item is just a string, convert it to a TestQuestion object
-                         if (typeof q === 'string') {
-                             return {
-                                 id: index + 1,
-                                 question: q,
-                                 type: 'open_answer',
-                                 options: [],
-                                 correctAnswer: 'Виж в ключа' // Placeholder
+                     // Check if it looks like a test array (has questions or is strings)
+                     if (parsedData.length > 0 && (typeof parsedData[0] === 'string' || parsedData[0].question)) {
+                         isTestArray = true;
+                         const normalizedQuestions = parsedData.map((q: any, index: number) => {
+                             if (typeof q === 'string') {
+                                 return {
+                                     id: index + 1,
+                                     question: q,
+                                     type: 'open_answer',
+                                     options: [],
+                                     correctAnswer: 'Виж в ключа' 
+                                 };
+                             }
+                             return { 
+                                 id: q.id || index + 1,
+                                 question: q.question || "Въпрос",
+                                 type: q.type || (q.options ? 'multiple_choice' : 'open_answer'),
+                                 options: q.options || [],
+                                 correctAnswer: q.correctAnswer || q.answer || 'Виж в ключа',
+                                 geometryData: q.geometryData,
+                                 chartData: q.chartData
                              };
-                         }
-                         // If it's already an object, ensure it has an ID
-                         return { ...q, id: q.id || index + 1 };
-                     });
+                         });
 
-                     parsedData = {
-                         title: promptText.length < 50 ? promptText : "Генериран Тест",
-                         subject: subjectName,
-                         grade: "",
-                         questions: normalizedQuestions
-                     };
+                         parsedData = {
+                             title: promptText.length < 50 ? promptText : "Генериран Тест",
+                             subject: subjectName,
+                             grade: "",
+                             questions: normalizedQuestions
+                         };
+                     }
                  } else if (parsedData && Array.isArray(parsedData.questions)) {
                      // Even if it is an object, ensure questions inside are normalized
                      parsedData.questions = parsedData.questions.map((q: any, index: number) => {
@@ -230,12 +241,20 @@ export const generateResponse = async (
                                  correctAnswer: 'Виж в ключа'
                              };
                          }
-                         return { ...q, id: q.id || index + 1 };
+                         return { 
+                             id: q.id || index + 1,
+                             question: q.question || "Въпрос",
+                             type: q.type || (q.options ? 'multiple_choice' : 'open_answer'),
+                             options: q.options || [],
+                             correctAnswer: q.correctAnswer || q.answer || 'Виж в ключа',
+                             geometryData: q.geometryData,
+                             chartData: q.chartData
+                         };
                      });
                  }
 
-                 // Validate minimal structure
-                 if (parsedData && (parsedData.questions || Array.isArray(parsedData.questions))) {
+                 // Validate minimal structure to confirm it's actually a test
+                 if (parsedData && (parsedData.questions || isTestArray)) {
                      const testData: TestData = parsedData;
                      return {
                          id: Date.now().toString(),
@@ -249,7 +268,10 @@ export const generateResponse = async (
                  }
              }
           } catch (e) { 
-              console.error("Test JSON parse error", e); 
+              // Only log if we were EXPECTING a test
+              if (effectiveMode === AppMode.TEACHER_TEST) {
+                  console.error("Test JSON parse error", e); 
+              }
           }
       }
 
