@@ -208,7 +208,7 @@ export const generateResponse = async (
                                      question: q,
                                      type: 'open_answer',
                                      options: [],
-                                     correctAnswer: 'Виж в ключа' 
+                                     correctAnswer: undefined // Will appear as '-' in UI, better than "See key"
                                  };
                              }
                              return { 
@@ -216,7 +216,7 @@ export const generateResponse = async (
                                  question: q.question || "Въпрос",
                                  type: q.type || (q.options ? 'multiple_choice' : 'open_answer'),
                                  options: q.options || [],
-                                 correctAnswer: q.correctAnswer || q.answer || 'Виж в ключа',
+                                 correctAnswer: q.correctAnswer || q.answer,
                                  geometryData: q.geometryData,
                                  chartData: q.chartData
                              };
@@ -238,7 +238,7 @@ export const generateResponse = async (
                                  question: q,
                                  type: 'open_answer',
                                  options: [],
-                                 correctAnswer: 'Виж в ключа'
+                                 correctAnswer: undefined
                              };
                          }
                          return { 
@@ -246,7 +246,7 @@ export const generateResponse = async (
                              question: q.question || "Въпрос",
                              type: q.type || (q.options ? 'multiple_choice' : 'open_answer'),
                              options: q.options || [],
-                             correctAnswer: q.correctAnswer || q.answer || 'Виж в ключа',
+                             correctAnswer: q.correctAnswer || q.answer,
                              geometryData: q.geometryData,
                              chartData: q.chartData
                          };

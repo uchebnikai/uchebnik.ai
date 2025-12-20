@@ -130,12 +130,14 @@ export const getSystemPrompt = (mode: string, lang: Language, teachingStyle: Tea
              "question": "The question text",
              "type": "multiple_choice" | "open_answer",
              "options": ["Option A", "Option B", "Option C", "Option D"], // Required for multiple_choice
-             "correctAnswer": "The correct answer text or option", // REQUIRED for generating the answer key
+             "correctAnswer": "The FULL solution/answer text here.", // MANDATORY. You MUST calculate/solve the problem and put the result here.
              "geometryData": { "title": "...", "svg": "..." } // Optional, if the question needs a diagram
            }
         ]
       }
       Do not include any text before or after the JSON.
+      ENSURE EVERY QUESTION HAS A FILLED 'correctAnswer' FIELD.
+      ${latexInstructions}
       `;
 
     case 'TEACHER_PLAN':
