@@ -150,7 +150,7 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
                 }),
                 ...data.questions.map((q, index) => 
                      new docx.Paragraph({
-                         children: [new docx.TextRun({ text: `${index + 1}. ${cleanMathText(q.correctAnswer || 'Отговорът не е генериран.')}`, size: 24 })]
+                         children: [new docx.TextRun({ text: `${index + 1}. ${cleanMathText(q.correctAnswer || '-')}`, size: 24 })]
                      })
                 )
             ]
