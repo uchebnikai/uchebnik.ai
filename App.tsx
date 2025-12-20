@@ -488,7 +488,7 @@ export const App = () => {
                             themeColor: '#6366f1', 
                             customBackground: null, 
                             language: 'bg',
-                            teachingStyle: 'normal',
+                            teachingStyle: 'normal', 
                             enterToSend: true,
                             fontFamily: 'inter',
                             customPersona: ''
@@ -842,9 +842,25 @@ export const App = () => {
       const sessionMessages = currentSessionsList.find(s => s.id === sessId)?.messages || [];
       const historyForAI = [...sessionMessages, newUserMsg];
       
-      let preferredModel = 'gemini-2.5-flash';
-      if (userPlan === 'plus') preferredModel = 'gemini-3-flash-preview';
-      if (userPlan === 'pro') preferredModel = 'gemini-3-flash-preview';
+      let selectedModel = 'gemini-2.5-flash'; // Default safe fallback
+
+      if (!userSettings.preferredModel || userSettings.preferredModel === 'auto') {
+          // Auto Mode: Decide based on plan
+          if (userPlan === 'plus' || userPlan === 'pro') {
+              selectedModel = 'gemini-3-flash-preview';
+          } else {
+              selectedModel = 'gemini-2.5-flash';
+          }
+      } else {
+          // Manual Selection Mode
+          selectedModel = userSettings.preferredModel;
+          
+          // Enforce Plan Restriction: If user selected Gemini 3 manually but is on Free plan, force downgrade
+          // This handles edge cases where settings might persist after plan expiry
+          if (selectedModel === 'gemini-3-flash-preview' && userPlan === 'free') {
+              selectedModel = 'gemini-2.5-flash';
+          }
+      }
       
       const response = await generateResponse(
           currentSubId, 
@@ -852,7 +868,7 @@ export const App = () => {
           finalPrompt, 
           currentImgs, 
           historyForAI, 
-          preferredModel, 
+          selectedModel, 
           (textChunk, reasoningChunk) => {
               startWatchdog(); // Reset watchdog on any activity
               setSessions(prev => prev.map(s => {
