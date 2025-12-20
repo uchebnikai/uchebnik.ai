@@ -151,8 +151,15 @@ export const generateResponse = async (
           const chunkText = chunk.text;
           if (chunkText) {
               fullText += chunkText;
-              // Remove any raw <think> tags from visibility if they leak
+              
+              // Robust think tag handling:
+              // 1. Remove complete <think>...</think> blocks
+              // 2. Remove open <think>... at the end of the string
+              // This prevents the "flash" of answer if the answer was somehow interpreted as part of a think block,
+              // though strictly speaking, think tags should be distinct.
+              // The regex (?:<\/think>|$) ensures we match until end if not closed.
               finalContent = fullText.replace(/<think>[\s\S]*?(?:<\/think>|$)/gi, "").trim();
+              
               if (onStreamUpdate) {
                   onStreamUpdate(finalContent, "");
               }

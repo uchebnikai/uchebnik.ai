@@ -95,6 +95,7 @@ export const MessageList = ({
                const isStreaming = msg.isStreaming;
                const isStreamingTest = isStreaming && msg.type === 'test_generated';
                const isStreamingSlides = isStreaming && msg.type === 'slides';
+               const hasText = msg.text && msg.text.trim().length > 0;
 
                return (
                <div key={msg.id} id={msg.id} className={`group flex flex-col gap-2 ${SLIDE_UP} duration-700 ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
@@ -127,7 +128,8 @@ export const MessageList = ({
                         <TestRenderer data={msg.testData} />
                      )}
 
-                     {isStreaming && !msg.text && (
+                     {/* Loading State: Show if streaming AND no text yet */}
+                     {isStreaming && !hasText && (
                         <div className="flex items-center gap-3 text-sm text-gray-500 italic py-2 animate-pulse">
                            <Loader2 className="animate-spin text-indigo-500" size={18}/>
                            <span>{getLoadingMessage(msg.id)}</span>
@@ -166,19 +168,19 @@ export const MessageList = ({
                         </div>
                      )}
 
-                     {msg.text && !isStreamingTest && !isStreamingSlides && (
+                     {hasText && !isStreamingTest && !isStreamingSlides && (
                          <div className="markdown-content w-full break-words overflow-hidden">
                              <ReactMarkdown remarkPlugins={[remarkMath, remarkGfm]} rehypePlugins={[rehypeKatex]} components={{code: CodeBlock}}>
                                  {msg.text}
                              </ReactMarkdown>
-                             {isStreaming && <span className="inline-block w-2 h-4 ml-0.5 bg-current opacity-70 animate-pulse align-middle rounded-sm"/>}
+                             {/* Small cursor indicator at the end if streaming, instead of big loader */}
+                             {isStreaming && <span className="inline-block w-2 h-4 ml-0.5 bg-indigo-500 opacity-80 animate-pulse align-middle rounded-sm"/>}
                          </div>
                      )}
                      
                      {msg.chartData && <ChartRenderer data={msg.chartData} />}
                      {msg.geometryData && <GeometryRenderer data={msg.geometryData} />}
                      
-                     {/* Search Sources Display */}
                      {msg.sources && msg.sources.length > 0 && (
                          <div className="mt-4 pt-3 border-t border-gray-200 dark:border-white/10">
                              <div className="flex items-center gap-2 text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
