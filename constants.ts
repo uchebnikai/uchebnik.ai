@@ -62,7 +62,6 @@ export const getSystemPrompt = (mode: string, lang: Language, teachingStyle: Tea
   const baseInstructions = `You are a helpful AI assistant for students and teachers. ${personalityInstruction} Help with lessons, solve problems, and answer questions. 
   IMPORTANT: You MUST reply in ${targetLang} language (unless the user specifically asks for another language or it is a language learning subject).`;
 
-  // Fix escaping for backslashes in template literals
   const latexInstructions = `
   IMPORTANT FOR MATH/PHYSICS:
   Always use LaTeX formatting for all mathematical formulas and symbols.

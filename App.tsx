@@ -6,7 +6,7 @@ import { generateResponse } from './services/aiService';
 import { supabase } from './supabaseClient';
 import { Auth } from './components/auth/Auth';
 import { 
-  Loader2, X, AlertCircle, CheckCircle, Info, Minimize, Database, Megaphone
+  Loader2, X, AlertCircle, CheckCircle, Info, Minimize, Database
 } from 'lucide-react';
 
 import { Session as SupabaseSession } from '@supabase/supabase-js';
@@ -122,7 +122,6 @@ export const App = () => {
   });
   const [unreadSubjects, setUnreadSubjects] = useState<Set<string>>(new Set());
   const [notification, setNotification] = useState<{ message: string, subjectId: string } | null>(null);
-  const [systemAnnouncement, setSystemAnnouncement] = useState<{message: string, type: 'info'|'warning'|'error'} | null>(null);
   const [isListening, setIsListening] = useState(false);
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
   
@@ -329,34 +328,6 @@ export const App = () => {
       
       loadRemoteData();
   }, [session?.user?.id]);
-
-  // System Announcements Listener
-  useEffect(() => {
-      const fetchAnnouncements = async () => {
-          const { data } = await supabase
-              .from('system_announcements')
-              .select('*')
-              .eq('is_active', true)
-              .order('created_at', { ascending: false })
-              .limit(1)
-              .single();
-          
-          if (data) {
-              setSystemAnnouncement({ message: data.message, type: data.type || 'info' });
-          }
-      };
-
-      fetchAnnouncements();
-
-      const channel = supabase.channel('public:system_announcements')
-          .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'system_announcements', filter: 'is_active=eq.true' }, payload => {
-              const newAnn = payload.new as any;
-              setSystemAnnouncement({ message: newAnn.message, type: newAnn.type || 'info' });
-          })
-          .subscribe();
-
-      return () => { supabase.removeChannel(channel); };
-  }, []);
 
   // Subscriptions
   useEffect(() => {
@@ -926,18 +897,6 @@ export const App = () => {
 
        const errorMsg: Message = { id: Date.now().toString(), role: 'model', text: t('error', userSettings.language), isError: true, timestamp: Date.now(), isStreaming: false };
        setSessions(prev => prev.map(s => { if (s.id === sessId) { return { ...s, messages: s.messages.map(m => m.id === tempAiMsgId ? errorMsg : m) }; } return s; }));
-       
-       // Log error to analytics if authenticated
-       if (session?.user?.id) {
-           try {
-               await supabase.from('analytics_events').insert({
-                   user_id: session.user.id,
-                   event_type: 'error',
-                   metadata: { error: error.message, context: 'handleSend' }
-               });
-           } catch(e) {}
-       }
-
        return "Error.";
     } finally {
        if (responseWatchdogRef.current) clearTimeout(responseWatchdogRef.current);
@@ -1259,15 +1218,6 @@ export const App = () => {
       )}
       
       <main className="flex-1 flex flex-col relative w-full h-full overflow-hidden transition-all duration-300 z-10">
-        {/* System Announcements Banner */}
-        {systemAnnouncement && (
-            <div className={`w-full px-4 py-2 flex items-center justify-center gap-3 animate-in slide-in-from-top-2 ${systemAnnouncement.type === 'error' ? 'bg-red-600 text-white' : systemAnnouncement.type === 'warning' ? 'bg-amber-500 text-black' : 'bg-indigo-600 text-white'}`}>
-                <Megaphone size={18} className="shrink-0 animate-bounce" />
-                <span className="text-sm font-bold">{systemAnnouncement.message}</span>
-                <button onClick={() => setSystemAnnouncement(null)} className="ml-2 hover:opacity-70"><X size={16}/></button>
-            </div>
-        )}
-
         {(syncStatus === 'error' && syncErrorDetails) || missingDbTables ? (
             <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[100] animate-in slide-in-from-bottom-2 fade-in">
                 <div className={`backdrop-blur-md text-white px-4 py-3 rounded-xl shadow-lg flex items-center gap-3 max-w-md border ${missingDbTables ? 'bg-amber-600/90 border-amber-500/50' : 'bg-red-500/90 border-red-400/50'}`}>
