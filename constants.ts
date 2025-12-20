@@ -9,7 +9,8 @@ export const STRIPE_PRICES = {
 };
 
 export const AI_MODELS = [
-  { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', description: 'Най-бързият и мощен модел на Google.' }
+  { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', description: 'Най-бързият и мощен модел на Google.' },
+  { id: 'gemini-3-flash-preview', name: 'Gemini 3 Flash', description: 'Най-новият модел от следващо поколение.' }
 ];
 
 export const getSystemPrompt = (mode: string, lang: Language, teachingStyle: TeachingStyle = 'normal', customPersona?: string): string => {

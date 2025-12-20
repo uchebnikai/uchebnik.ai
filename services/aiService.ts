@@ -1,5 +1,5 @@
 
-import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
+import { GoogleGenAI, GenerateContentResponse, Tool } from "@google/genai";
 import { AppMode, SubjectId, Slide, ChartData, GeometryData, Message, TestData, TeachingStyle } from "../types";
 import { getSystemPrompt, SUBJECTS } from "../constants";
 import { Language } from '../utils/translations';
@@ -48,9 +48,12 @@ export const generateResponse = async (
   }
 
   const subjectConfig = SUBJECTS.find(s => s.id === subjectId);
-  // We use the internal name for system context, prompts handle the language output
   const subjectName = subjectConfig ? subjectConfig.name : "Unknown Subject";
-  const modelName = 'gemini-2.5-flash';
+  
+  // Use the passed preferredModel, defaulting only if undefined
+  const modelName = preferredModel || 'gemini-2.5-flash';
+  
+  console.log(`[AI Service] Generating response using model: ${modelName} for subject: ${subjectName}`);
 
   const hasImages = imagesBase64 && imagesBase64.length > 0;
   
@@ -112,11 +115,21 @@ export const generateResponse = async (
       }
       currentParts.push({ text: finalUserPrompt });
 
+      // Configure tools
+      const tools: Tool[] = [];
+      
+      // Enable Google Search for Gemini 3 on specific subjects for better accuracy
+      if (modelName.includes('gemini-3') && 
+         (subjectId === SubjectId.GENERAL || subjectId === SubjectId.HISTORY || subjectId === SubjectId.GEOGRAPHY)) {
+          tools.push({ googleSearch: {} });
+      }
+
       // Create chat session
       const chat = ai.chats.create({
           model: modelName,
           config: {
               systemInstruction: systemInstruction,
+              tools: tools.length > 0 ? tools : undefined
           },
           history: historyContents
       });

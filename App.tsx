@@ -841,9 +841,10 @@ export const App = () => {
     try {
       const sessionMessages = currentSessionsList.find(s => s.id === sessId)?.messages || [];
       const historyForAI = [...sessionMessages, newUserMsg];
+      
       let preferredModel = 'gemini-2.5-flash';
-      if (userPlan === 'plus') preferredModel = 'gemini-2.5-flash';
-      if (userPlan === 'pro') preferredModel = 'gemini-2.5-flash';
+      if (userPlan === 'plus') preferredModel = 'gemini-3-flash-preview';
+      if (userPlan === 'pro') preferredModel = 'gemini-3-flash-preview';
       
       const response = await generateResponse(
           currentSubId, 
