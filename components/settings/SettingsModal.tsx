@@ -77,6 +77,7 @@ export const SettingsModal = ({
   const backgroundInputRef = useRef<HTMLInputElement>(null);
   const [activeTab, setActiveTab] = useState<SettingsTab>('account');
   const [loadingPortal, setLoadingPortal] = useState(false);
+  const [isLangOpen, setIsLangOpen] = useState(false);
 
   const isCustomColor = !PRESET_COLORS.includes(userSettings.themeColor);
 
@@ -122,6 +123,7 @@ export const SettingsModal = ({
   ];
 
   const isPro = userPlan === 'pro';
+  const currentLang = LANGUAGES.find(l => l.code === userSettings.language) || LANGUAGES[0];
 
   return (
   <div className="fixed inset-0 z-[90] bg-black/60 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-300">
@@ -157,7 +159,7 @@ export const SettingsModal = ({
          </div>
 
          <div className="mt-auto p-4 hidden md:block">
-             <div className="text-xs text-gray-400 text-center font-medium">Uchebnik AI v1.7</div>
+             <div className="text-xs text-gray-400 text-center font-medium">Uchebnik AI v1.8</div>
          </div>
       </div>
 
@@ -249,22 +251,56 @@ export const SettingsModal = ({
                           <p className="text-gray-500">Направете приложението свое.</p>
                       </div>
 
-                      {/* Language */}
+                      {/* Language with Custom Custom Dropdown for Flag Support */}
                       <section className="space-y-4">
                           <label className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
                               <Globe size={18} className="text-indigo-500"/> {t('language', userSettings.language)}
                           </label>
                           <div className="relative">
-                              <select 
-                                value={userSettings.language} 
-                                onChange={(e) => setUserSettings((prev: any) => ({...prev, language: e.target.value}))}
-                                className="w-full appearance-none bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 pr-10 outline-none focus:border-indigo-500 transition-all font-medium text-base"
+                              <button 
+                                onClick={() => setIsLangOpen(!isLangOpen)}
+                                className="w-full flex items-center justify-between bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-left"
                               >
-                                {LANGUAGES.map(lang => (
-                                    <option key={lang.code} value={lang.code}>{lang.flag} {lang.label}</option>
-                                ))}
-                              </select>
-                              <ChevronDown size={20} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"/>
+                                  <div className="flex items-center gap-3">
+                                      <img 
+                                        src={`https://flagcdn.com/w40/${currentLang.countryCode}.png`} 
+                                        srcSet={`https://flagcdn.com/w80/${currentLang.countryCode}.png 2x`}
+                                        width="24" 
+                                        alt={currentLang.countryCode} 
+                                        className="rounded-md object-cover shadow-sm"
+                                      />
+                                      <span>{currentLang.label}</span>
+                                  </div>
+                                  <ChevronDown size={20} className={`text-gray-400 transition-transform ${isLangOpen ? 'rotate-180' : ''}`}/>
+                              </button>
+                              
+                              {isLangOpen && (
+                                <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-white/10 rounded-xl shadow-2xl max-h-64 overflow-y-auto custom-scrollbar z-50 animate-in slide-in-from-top-2">
+                                    <div className="p-2 grid grid-cols-1 gap-1">
+                                        {LANGUAGES.map(lang => (
+                                            <button 
+                                                key={lang.code}
+                                                onClick={() => {
+                                                    setUserSettings((prev: any) => ({...prev, language: lang.code}));
+                                                    setIsLangOpen(false);
+                                                }}
+                                                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${userSettings.language === lang.code ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 font-bold' : 'hover:bg-gray-50 dark:hover:bg-white/5 text-gray-700 dark:text-gray-300'}`}
+                                            >
+                                                <img 
+                                                    src={`https://flagcdn.com/w40/${lang.countryCode}.png`} 
+                                                    width="20" 
+                                                    alt={lang.countryCode} 
+                                                    className="rounded shadow-sm"
+                                                />
+                                                {lang.label}
+                                                {userSettings.language === lang.code && <Check size={16} className="ml-auto"/>}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                              )}
+                              
+                              {isLangOpen && <div className="fixed inset-0 z-40" onClick={() => setIsLangOpen(false)} />}
                           </div>
                       </section>
 
