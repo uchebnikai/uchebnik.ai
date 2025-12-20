@@ -433,7 +433,7 @@ export const SettingsModal = ({
                                   </div>
                               </button>
 
-                              {/* Gemini 2.5 Flash */}
+                              {/* Gemini 2.5 Flash -> Standard AI */}
                               <button
                                   onClick={() => setUserSettings({...userSettings, preferredModel: 'gemini-2.5-flash'})}
                                   className={`p-4 rounded-xl text-left border transition-all flex items-center gap-4 ${userSettings.preferredModel === 'gemini-2.5-flash'
@@ -444,12 +444,12 @@ export const SettingsModal = ({
                                       <Zap size={20} />
                                   </div>
                                   <div>
-                                      <div className="font-bold text-sm">Gemini 2.5 Flash</div>
+                                      <div className="font-bold text-sm">Standard AI</div>
                                       <div className="text-xs opacity-70">Бърз и лек. Идеален за прости задачи.</div>
                                   </div>
                               </button>
 
-                              {/* Gemini 3 Flash Preview */}
+                              {/* Gemini 3 Flash Preview -> Advanced AI */}
                               <button
                                   onClick={() => isPremium ? setUserSettings({...userSettings, preferredModel: 'gemini-3-flash-preview'}) : addToast('Този модел изисква Plus или Pro план.', 'info')}
                                   className={`p-4 rounded-xl text-left border transition-all flex items-center gap-4 relative overflow-hidden ${userSettings.preferredModel === 'gemini-3-flash-preview'
@@ -461,8 +461,8 @@ export const SettingsModal = ({
                                   </div>
                                   <div>
                                       <div className="font-bold text-sm flex items-center gap-2">
-                                          Gemini 3 Flash 
-                                          {!isPremium && <span className="text-[10px] bg-amber-500 text-white px-2 py-0.5 rounded-full uppercase tracking-wider">Premium</span>}
+                                          Advanced AI 
+                                          {!isPremium && <span className="text-[10px] bg-amber-500 text-white px-2 py-0.5 rounded-full uppercase tracking-wider">Plus / Pro</span>}
                                       </div>
                                       <div className="text-xs opacity-70">Следващо поколение интелект и логика.</div>
                                   </div>
@@ -503,7 +503,7 @@ export const SettingsModal = ({
                               <label className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
                                   <Zap size={18} className="text-amber-500"/> Персонализирана Роля (Persona)
                               </label>
-                              {!isPremium && <span className="px-2 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded text-[10px] font-bold uppercase">Pro Only</span>}
+                              {!isPremium && <span className="px-2 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded text-[10px] font-bold uppercase">Plus / Pro</span>}
                           </div>
                           <div className={`space-y-3 ${!isPremium ? 'pointer-events-none grayscale' : ''}`}>
                               <p className="text-xs text-gray-500">Напишете как точно искате AI да се държи. Това ще замени стандартния стил на преподаване.</p>
