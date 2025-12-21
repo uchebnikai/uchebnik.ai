@@ -10,10 +10,11 @@ type AuthMode = 'login' | 'register' | 'forgot_password' | 'update_password';
 interface AuthProps {
   isModal?: boolean;
   onSuccess?: () => void;
+  initialMode?: AuthMode;
 }
 
-export const Auth = ({ isModal = false, onSuccess }: AuthProps) => {
-  const [mode, setMode] = useState<AuthMode>('login');
+export const Auth = ({ isModal = false, onSuccess, initialMode = 'login' }: AuthProps) => {
+  const [mode, setMode] = useState<AuthMode>(initialMode);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   

@@ -54,6 +54,8 @@ export const App = () => {
   const [session, setSession] = useState<SupabaseSession | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [initialAuthMode, setInitialAuthMode] = useState<'login' | 'register'>('login');
+  
   const [isRemoteDataLoaded, setIsRemoteDataLoaded] = useState(false);
   const [syncStatus, setSyncStatus] = useState<'synced' | 'syncing' | 'error' | 'offline'>('synced');
   const [syncErrorDetails, setSyncErrorDetails] = useState<string | null>(null);
@@ -158,6 +160,11 @@ export const App = () => {
     setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 4000);
   };
 
+  const closeAuthModal = () => {
+      setShowAuthModal(false);
+      setTimeout(() => setInitialAuthMode('login'), 300); // Reset to login after animation
+  };
+
   // --- Refs ---
   const recognitionRef = useRef<any>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -215,6 +222,11 @@ export const App = () => {
     if (refCode) {
         localStorage.setItem('uchebnik_invite_code', refCode);
         addToast(t('referral_applied', userSettings.language) || 'Invite code applied! Sign up to claim reward.', 'success');
+        
+        // Auto-open registration modal
+        setInitialAuthMode('register');
+        setShowAuthModal(true);
+
         // Clean URL
         const newUrl = window.location.pathname;
         window.history.replaceState({}, '', newUrl);
@@ -1507,10 +1519,10 @@ export const App = () => {
       )}
       
       {showAuthModal && (
-        <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in" onClick={(e) => { if(e.target === e.currentTarget) setShowAuthModal(false) }}>
+        <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in" onClick={(e) => { if(e.target === e.currentTarget) closeAuthModal() }}>
            <div className="relative w-full max-w-md">
-              <button onClick={() => setShowAuthModal(false)} className="absolute top-4 right-4 z-50 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"><X size={20}/></button>
-              <Auth isModal={true} onSuccess={() => setShowAuthModal(false)} />
+              <button onClick={closeAuthModal} className="absolute top-4 right-4 z-50 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"><X size={20}/></button>
+              <Auth isModal={true} onSuccess={closeAuthModal} initialMode={initialAuthMode} />
            </div>
         </div>
       )}
