@@ -1,5 +1,6 @@
 
 
+
 import { SubjectId } from '../types';
 
 export type Language = 
@@ -152,6 +153,11 @@ const BASE_EN = {
     'auth_success_default_title': 'Success!',
     'auth_success_default_desc': 'Action completed successfully.',
     'continue_to_app': 'Continue to App',
+    'referrals': 'Invite Friends',
+    'referral_applied': 'Invite code applied!',
+    'referral_link_copied': 'Referral link copied!',
+    'referral_reward_toast': 'Friend verified! You earned 3 days of Pro! 🎉',
+    'copy': 'Copy',
 };
 
 // Complete English Dictionary (Fallback)
@@ -321,6 +327,11 @@ const BG_DICT = {
     'auth_success_default_title': 'Успех!',
     'auth_success_default_desc': 'Действието е изпълнено успешно.',
     'continue_to_app': 'Към приложението',
+    'referrals': 'Покани Приятел',
+    'referral_applied': 'Кодът за покана е приложен!',
+    'referral_link_copied': 'Линкът е копиран!',
+    'referral_reward_toast': 'Приятел се регистрира! Спечелихте 3 дни Pro! 🎉',
+    'copy': 'Копирай',
     [`subject_${SubjectId.MATH}`]: 'Математика',
     [`subject_${SubjectId.BULGARIAN}`]: 'Български език и Литература',
     [`subject_${SubjectId.ENGLISH}`]: 'Английски език',

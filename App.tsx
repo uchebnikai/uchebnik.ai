@@ -9,7 +9,7 @@ import { supabase } from './supabaseClient';
 import { Auth } from './components/auth/Auth';
 import { AuthSuccess } from './components/auth/AuthSuccess';
 import { 
-  Loader2, X, AlertCircle, CheckCircle, Info, Minimize, Database, Radio
+  Loader2, X, AlertCircle, CheckCircle, Info, Minimize, Database, Radio, Gift
 } from 'lucide-react';
 
 import { Session as SupabaseSession } from '@supabase/supabase-js';
@@ -137,6 +137,8 @@ export const App = () => {
     customPersona: '',
     christmasMode: false,
     preferredVoice: DEFAULT_VOICE,
+    referralCode: '',
+    proExpiresAt: ''
   });
   const [unreadSubjects, setUnreadSubjects] = useState<Set<string>>(new Set());
   const [notification, setNotification] = useState<{ message: string, subjectId: string } | null>(null);
@@ -203,8 +205,19 @@ export const App = () => {
       }
   }, [userSettings.fontFamily]);
 
-  // Auth Effect
+  // Auth & URL Logic (Referrals)
   useEffect(() => {
+    // 1. Check for Referral Code in URL
+    const searchParams = new URLSearchParams(window.location.search);
+    const refCode = searchParams.get('ref');
+    if (refCode) {
+        localStorage.setItem('uchebnik_invite_code', refCode);
+        addToast(t('referral_applied', userSettings.language) || 'Invite code applied! Sign up to claim reward.', 'success');
+        // Clean URL
+        const newUrl = window.location.pathname;
+        window.history.replaceState({}, '', newUrl);
+    }
+
     const handleAuthRedirects = () => {
         const hash = window.location.hash;
         
@@ -220,32 +233,22 @@ export const App = () => {
         }
 
         // Handle Success/Action Cases based on Supabase 'type'
-        // Examples: #access_token=...&type=signup  OR #access_token=...&type=recovery
         if (hash && hash.includes('type=')) {
             const params = new URLSearchParams(hash.substring(1));
             const type = params.get('type');
 
             if (type === 'recovery') {
-                // Password Reset Flow
-                setShowAuthModal(true); // Open modal...
-                // ...Auth component will handle switching to 'update_password' mode via detecting hash
+                setShowAuthModal(true);
             } else if (type === 'signup' || type === 'invite') {
-                // Email Verification Success
                 setAuthSuccessType('verification');
                 setHomeView('auth_success');
             } else if (type === 'magiclink') {
-                // Magic Link Login Success
                 setAuthSuccessType('magiclink');
                 setHomeView('auth_success');
             } else if (type === 'email_change') {
                 setAuthSuccessType('email_change');
                 setHomeView('auth_success');
             }
-            
-            // IMPORTANT: We do NOT clear the hash here for 'signup' or 'magiclink' anymore.
-            // Supabase client needs the hash to extract the session tokens.
-            // We will clear the hash only after the user acknowledges the success screen
-            // or automatically by Supabase client.
         }
     };
     handleAuthRedirects();
@@ -339,7 +342,7 @@ export const App = () => {
           try {
               const { data: profileData, error: profileError } = await supabase
                   .from('profiles')
-                  .select('settings, theme_color, custom_background')
+                  .select('settings, theme_color, custom_background, referral_code, pro_expires_at')
                   .eq('id', session.user.id)
                   .single();
               
@@ -349,9 +352,13 @@ export const App = () => {
               }
 
               if (profileData) {
+                  // Merge new referral fields
+                  const referralCode = profileData.referral_code;
+                  const proExpiresAt = profileData.pro_expires_at;
+
                   if (profileData.settings) {
                       const { plan, stats, ...restSettings } = profileData.settings;
-                      const merged = { ...restSettings, themeColor: profileData.theme_color, customBackground: profileData.custom_background };
+                      const merged = { ...restSettings, themeColor: profileData.theme_color, customBackground: profileData.custom_background, referralCode, proExpiresAt };
                       
                       if (!merged.language) merged.language = 'bg';
                       if (!merged.teachingStyle) merged.teachingStyle = 'normal';
@@ -360,7 +367,19 @@ export const App = () => {
                       if (!merged.preferredVoice) merged.preferredVoice = DEFAULT_VOICE;
                       
                       setUserSettings(prev => ({ ...prev, ...merged }));
-                      if (plan) setUserPlan(plan);
+                      
+                      // LOGIC: Check Pro Expiry
+                      let effectivePlan = plan;
+                      if (proExpiresAt && new Date(proExpiresAt) < new Date()) {
+                          if (plan !== 'free') {
+                              effectivePlan = 'free';
+                              // Silent downgrade locally, backend should ideally handle this or we update on next sync
+                              console.warn("Pro plan expired.");
+                          }
+                      }
+                      
+                      if (effectivePlan) setUserPlan(effectivePlan);
+                      
                       if (stats) {
                           setStreak(stats.streak || 0);
                           // Restore Token Stats
@@ -378,6 +397,7 @@ export const App = () => {
                   } else {
                       if (profileData.theme_color) setUserSettings(prev => ({...prev, themeColor: profileData.theme_color}));
                       if (profileData.custom_background) setUserSettings(prev => ({...prev, customBackground: profileData.custom_background}));
+                      setUserSettings(prev => ({...prev, referralCode, proExpiresAt}));
                   }
               }
 
@@ -405,7 +425,6 @@ export const App = () => {
               }
               setSyncStatus('synced');
               
-              // Telemetry: Log DB Success
               localStorage.setItem('sys_monitor_db', JSON.stringify({
                   status: 'operational',
                   latency: Math.round(performance.now() - dbStart),
@@ -414,7 +433,6 @@ export const App = () => {
 
           } catch (err) {
               console.error("Failed to load remote data", err);
-              // Telemetry: Log DB Failure
               localStorage.setItem('sys_monitor_db', JSON.stringify({
                   status: 'outage',
                   latency: Math.round(performance.now() - dbStart),
@@ -469,17 +487,42 @@ export const App = () => {
 
   useEffect(() => {
       if (!session?.user?.id || missingDbTables) return;
+      
+      // Separate subscription for profiles to catch Referral Rewards in real-time
       const channel = supabase.channel(`sync-profiles:${session.user.id}`)
           .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${session.user.id}` }, (payload) => {
               const remoteData = payload.new as any;
+              
+              // Check for Referral Reward
+              const oldExpiry = userSettings.proExpiresAt;
+              const newExpiry = remoteData.pro_expires_at;
+              
+              if (newExpiry && (!oldExpiry || new Date(newExpiry) > new Date(oldExpiry))) {
+                  addToast(t('referral_reward_toast', userSettings.language) || "Friend verified! You earned 3 days of Pro! 🎉", 'success');
+                  if (userSettings.sound) {
+                      new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3').play().catch(()=>{});
+                  }
+              }
+
               if (remoteData && remoteData.settings) {
                   isIncomingUpdateRef.current = true;
                   const { plan, stats, ...settingsRest } = remoteData.settings;
-                  setUserSettings(prev => ({ ...prev, ...settingsRest, themeColor: remoteData.theme_color, custom_background: remoteData.custom_background }));
+                  
+                  // Update settings
+                  setUserSettings(prev => ({ 
+                      ...prev, 
+                      ...settingsRest, 
+                      themeColor: remoteData.theme_color, 
+                      custom_background: remoteData.custom_background,
+                      referralCode: remoteData.referral_code,
+                      proExpiresAt: remoteData.pro_expires_at 
+                  }));
+                  
+                  // Update plan (handling expiry check logic if needed again, but backend source of truth)
                   if (plan) setUserPlan(plan);
+                  
                   if (stats) {
                       setStreak(stats.streak || 0);
-                      // Update stats if remote changed
                       if (stats.costCorrection !== undefined) setCostCorrection(stats.costCorrection);
                       
                       const today = new Date().toDateString();
@@ -489,12 +532,11 @@ export const App = () => {
                           setDailyImageCount(0);
                       }
                   }
-                  addToast('Настройките са синхронизирани', 'info');
               }
           })
           .subscribe();
       return () => { supabase.removeChannel(channel); };
-  }, [session?.user?.id, missingDbTables]);
+  }, [session?.user?.id, missingDbTables, userSettings.proExpiresAt]);
 
   useEffect(() => {
       if (!session?.user?.id || !isRemoteDataLoaded) return;
@@ -534,8 +576,17 @@ export const App = () => {
                   costCorrection
               }
           };
+          // Do not send referralCode or proExpiresAt back to 'settings' JSON if they are separate columns, 
+          // but we merged them into userSettings for UI. 
+          // The profile table update here mainly handles the 'settings' JSONB column.
+          const { referralCode, proExpiresAt, ...settingsToSave } = fullSettingsPayload;
+
           const { error } = await supabase.from('profiles').upsert({
-              id: session.user.id, settings: fullSettingsPayload, theme_color: userSettings.themeColor, custom_background: userSettings.customBackground, updated_at: new Date().toISOString()
+              id: session.user.id, 
+              settings: settingsToSave, 
+              theme_color: userSettings.themeColor, 
+              custom_background: userSettings.customBackground, 
+              updated_at: new Date().toISOString()
           });
           if (error && error.code === '42P01') { setMissingDbTables(true); }
       }, 1000);
@@ -603,6 +654,8 @@ export const App = () => {
                             customPersona: '',
                             christmasMode: false,
                             preferredVoice: DEFAULT_VOICE,
+                            referralCode: '',
+                            proExpiresAt: ''
                         });
                      }
                 }
@@ -1689,7 +1742,7 @@ export const App = () => {
       <div className="fixed top-4 right-4 z-[100] flex flex-col gap-2 pointer-events-none">
         {toasts.map(t => (
           <div key={t.id} className={`${TOAST_CONTAINER} ${t.type === 'error' ? TOAST_ERROR : t.type === 'success' ? TOAST_SUCCESS : TOAST_INFO}`}>
-             {t.type === 'error' ? <AlertCircle size={18}/> : t.type === 'success' ? <CheckCircle size={18}/> : <Info size={18}/>}
+             {t.type === 'error' ? <AlertCircle size={18}/> : t.type === 'success' ? <CheckCircle size={18}/> : t.message.includes('Friend verified') ? <Gift size={18} className="text-amber-500" /> : <Info size={18}/>}
              <span className="font-medium text-sm">{t.message}</span>
           </div>
         ))}

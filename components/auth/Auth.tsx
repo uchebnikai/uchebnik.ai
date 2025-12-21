@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { supabase } from '../../supabaseClient';
 import { Loader2, Mail, Lock, User, ArrowRight, Sparkles, CheckCircle, AlertCircle, Calendar } from 'lucide-react';
@@ -33,6 +34,8 @@ export const Auth = ({ isModal = false, onSuccess }: AuthProps) => {
 
     try {
       if (mode === 'register') {
+        const referralCode = localStorage.getItem('uchebnik_invite_code');
+        
         const { error } = await supabase.auth.signUp({
           email,
           password,
@@ -41,7 +44,8 @@ export const Auth = ({ isModal = false, onSuccess }: AuthProps) => {
               first_name: firstName,
               last_name: lastName,
               full_name: `${firstName} ${lastName}`.trim(),
-              birth_date: birthDate
+              birth_date: birthDate,
+              referral_code: referralCode || null // Send the code to trigger the reward logic on verify
             },
             emailRedirectTo: window.location.origin,
           }

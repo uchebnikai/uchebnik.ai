@@ -190,6 +190,8 @@ export interface UserSettings {
   fontFamily: FontFamily;
   christmasMode?: boolean; 
   preferredVoice: string; 
+  referralCode?: string; // New: Unique code for this user
+  proExpiresAt?: string; // New: ISO Date string
   stats?: {
       streak?: number;
       dailyImageCount?: number;
