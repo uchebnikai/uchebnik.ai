@@ -4,7 +4,8 @@ import {
   Shield, X, Copy, CheckCircle, Key, Users, Activity, 
   RefreshCw, Search, Filter, Trash2, Plus, Zap, Crown, 
   ChevronRight, Edit2, Save, MoreHorizontal, Database, 
-  Terminal, Calendar, ArrowUpRight
+  Terminal, Calendar, ArrowUpRight, ArrowLeft, Mail,
+  Clock, Hash, AlertTriangle, Check, Layers
 } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { supabase } from '../../supabaseClient';
@@ -60,9 +61,20 @@ export const AdminPanel = ({
     const [loadingData, setLoadingData] = useState(false);
     const [selectedPlan, setSelectedPlan] = useState<'plus' | 'pro'>('pro');
     const [searchQuery, setSearchQuery] = useState('');
-    const [editingUser, setEditingUser] = useState<string | null>(null);
-    const [editPlanValue, setEditPlanValue] = useState<UserPlan>('free');
     const [showRawData, setShowRawData] = useState<string | null>(null);
+    
+    // Filtering
+    const [filterPlan, setFilterPlan] = useState<'all' | 'free' | 'plus' | 'pro'>('all');
+    const [showFilterMenu, setShowFilterMenu] = useState(false);
+
+    // User Details & Editing
+    const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
+    const [editForm, setEditForm] = useState<{
+        name: string;
+        plan: UserPlan;
+        streak: number;
+        usage: number;
+    } | null>(null);
 
     useEffect(() => {
         if (showAdminPanel) {
@@ -126,23 +138,60 @@ export const AdminPanel = ({
         addToast(`Генериран ключ за ${selectedPlan.toUpperCase()}`, 'success');
     };
 
-    const handleUpdateUserPlan = async (userId: string, newPlan: UserPlan, currentSettings: any) => {
+    const handleSaveUserChanges = async () => {
+        if (!selectedUser || !editForm) return;
+
         try {
-            const updatedSettings = { ...currentSettings, plan: newPlan };
+            // Deep merge updates into existing settings
+            const currentSettings = selectedUser.rawSettings || {};
+            const updatedSettings = {
+                ...currentSettings,
+                userName: editForm.name,
+                plan: editForm.plan,
+                stats: {
+                    ...(currentSettings.stats || {}),
+                    streak: editForm.streak,
+                    dailyImageCount: editForm.usage
+                }
+            };
+
             const { error } = await supabase
                 .from('profiles')
-                .update({ settings: updatedSettings, updated_at: new Date().toISOString() })
-                .eq('id', userId);
+                .update({ 
+                    settings: updatedSettings, 
+                    updated_at: new Date().toISOString() 
+                })
+                .eq('id', selectedUser.id);
 
             if (error) throw error;
 
-            setDbUsers(prev => prev.map(u => u.id === userId ? { ...u, plan: newPlan, rawSettings: updatedSettings } : u));
-            setEditingUser(null);
-            addToast('Планът на потребителя е обновен!', 'success');
+            // Update local state
+            const updatedUser: AdminUser = {
+                ...selectedUser,
+                name: editForm.name,
+                plan: editForm.plan,
+                streak: editForm.streak,
+                usage: editForm.usage,
+                rawSettings: updatedSettings
+            };
+
+            setDbUsers(prev => prev.map(u => u.id === selectedUser.id ? updatedUser : u));
+            setSelectedUser(updatedUser); // Keep viewing updated user
+            addToast('Промените са запазени успешно!', 'success');
         } catch (e) {
             console.error("Update Error:", e);
-            addToast('Грешка при обновяване.', 'error');
+            addToast('Грешка при запазване на промените.', 'error');
         }
+    };
+
+    const handleUserClick = (user: AdminUser) => {
+        setSelectedUser(user);
+        setEditForm({
+            name: user.name,
+            plan: user.plan,
+            streak: user.streak,
+            usage: user.usage
+        });
     };
 
     // Calculate Stats
@@ -157,8 +206,8 @@ export const AdminPanel = ({
 
     if (showAdminAuth) {
       return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-xl p-4 animate-in fade-in">
-          <div className="bg-[#09090b] border border-white/10 w-full max-w-sm p-8 rounded-3xl shadow-2xl relative overflow-hidden">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-xl p-4 animate-in fade-in">
+          <div className="bg-[#09090b]/80 border border-white/10 w-full max-w-sm p-8 rounded-3xl shadow-2xl relative overflow-hidden backdrop-blur-md">
              <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 to-purple-500/10 pointer-events-none"/>
              <button onClick={() => setShowAdminAuth(false)} className="absolute top-4 right-4 text-zinc-500 hover:text-white transition-colors"><X size={20}/></button>
              
@@ -190,12 +239,12 @@ export const AdminPanel = ({
 
     if (showAdminPanel) {
       return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md p-4 animate-in fade-in duration-300">
-           <div className="w-full max-w-7xl h-[90vh] bg-[#09090b]/95 border border-white/10 rounded-[32px] shadow-2xl flex overflow-hidden backdrop-blur-2xl relative">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-300">
+           <div className="w-full max-w-7xl h-[90vh] bg-[#09090b]/90 border border-white/10 rounded-[32px] shadow-2xl flex overflow-hidden backdrop-blur-2xl relative">
              
              {/* Raw Data Modal */}
              {showRawData && (
-                 <div className="absolute inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-8" onClick={() => setShowRawData(null)}>
+                 <div className="absolute inset-0 z-[60] bg-black/80 backdrop-blur-md flex items-center justify-center p-8" onClick={() => setShowRawData(null)}>
                      <div className="w-full max-w-2xl bg-[#111] border border-white/10 rounded-2xl p-6 overflow-hidden flex flex-col max-h-full" onClick={e => e.stopPropagation()}>
                          <div className="flex justify-between items-center mb-4">
                              <h3 className="text-white font-mono font-bold flex items-center gap-2"><Terminal size={18}/> Raw User Data</h3>
@@ -209,25 +258,25 @@ export const AdminPanel = ({
              )}
 
              {/* Sidebar */}
-             <div className="w-72 bg-black/40 border-r border-white/5 flex flex-col p-6">
+             <div className="w-72 bg-black/20 border-r border-white/5 flex flex-col p-6">
                 <div className="flex items-center gap-3 px-2 mb-8">
                     <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-lg shadow-indigo-500/20">
                         <Shield size={18} fill="currentColor"/>
                     </div>
                     <div>
                         <h2 className="font-bold text-white text-sm">Admin Panel</h2>
-                        <div className="text-[10px] text-zinc-500 font-mono">v2.0 • Secure</div>
+                        <div className="text-[10px] text-zinc-500 font-mono">v2.1 • Secure</div>
                     </div>
                 </div>
                 
                 <nav className="space-y-2 flex-1">
-                    <button onClick={() => setActiveTab('dashboard')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTab === 'dashboard' ? 'bg-white/10 text-white border border-white/5' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}>
+                    <button onClick={() => {setActiveTab('dashboard'); setSelectedUser(null);}} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTab === 'dashboard' ? 'bg-white/10 text-white border border-white/5' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}>
                         <Activity size={18}/> Dashboard
                     </button>
-                    <button onClick={() => setActiveTab('users')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTab === 'users' ? 'bg-white/10 text-white border border-white/5' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}>
+                    <button onClick={() => {setActiveTab('users'); setSelectedUser(null);}} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTab === 'users' ? 'bg-white/10 text-white border border-white/5' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}>
                         <Users size={18}/> User Accounts
                     </button>
-                    <button onClick={() => setActiveTab('keys')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTab === 'keys' ? 'bg-white/10 text-white border border-white/5' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}>
+                    <button onClick={() => {setActiveTab('keys'); setSelectedUser(null);}} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTab === 'keys' ? 'bg-white/10 text-white border border-white/5' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}>
                         <Key size={18}/> Access Keys
                     </button>
                 </nav>
@@ -240,12 +289,19 @@ export const AdminPanel = ({
              </div>
 
              {/* Main Content */}
-             <div className="flex-1 flex flex-col overflow-hidden bg-gradient-to-br from-zinc-900/50 to-black/50">
+             <div className="flex-1 flex flex-col overflow-hidden bg-gradient-to-br from-zinc-900/30 to-black/30">
                  {/* Header */}
-                 <div className="h-20 border-b border-white/5 flex items-center justify-between px-8 bg-black/20">
-                     <div>
-                         <h3 className="text-xl font-bold text-white capitalize">{activeTab}</h3>
-                         <p className="text-xs text-zinc-500 mt-0.5">Manage your application data</p>
+                 <div className="h-20 border-b border-white/5 flex items-center justify-between px-8 bg-black/10 backdrop-blur-sm">
+                     <div className="flex items-center gap-4">
+                         {selectedUser && (
+                             <button onClick={() => setSelectedUser(null)} className="p-2 hover:bg-white/10 rounded-full text-zinc-400 hover:text-white transition-colors">
+                                 <ArrowLeft size={20}/>
+                             </button>
+                         )}
+                         <div>
+                             <h3 className="text-xl font-bold text-white capitalize">{selectedUser ? selectedUser.name : activeTab}</h3>
+                             <p className="text-xs text-zinc-500 mt-0.5">{selectedUser ? 'Viewing User Details' : 'Manage your application data'}</p>
+                         </div>
                      </div>
                      <div className="flex items-center gap-3">
                          <div className="flex items-center gap-2 bg-black/40 border border-white/5 rounded-lg px-3 py-1.5">
@@ -261,238 +317,354 @@ export const AdminPanel = ({
                  {/* Content Scroll Area */}
                  <div className="flex-1 overflow-y-auto custom-scrollbar p-8">
                      
-                     {/* DASHBOARD VIEW */}
-                     {activeTab === 'dashboard' && (
-                         <div className="space-y-8">
-                             {/* Stats Grid */}
-                             <div className="grid grid-cols-4 gap-6">
-                                 <div className="p-6 bg-white/5 border border-white/5 rounded-2xl">
-                                     <div className="flex justify-between items-start mb-4">
-                                         <div className="p-3 bg-indigo-500/20 text-indigo-400 rounded-xl"><Users size={20}/></div>
-                                         <span className="text-xs text-zinc-500 font-mono">+2 today</span>
-                                     </div>
-                                     <div className="text-3xl font-black text-white">{totalUsers}</div>
-                                     <div className="text-xs text-zinc-500 mt-1">Total Users</div>
+                     {/* USER DETAILS VIEW */}
+                     {selectedUser && editForm ? (
+                         <div className="max-w-4xl mx-auto space-y-6 animate-in slide-in-from-right fade-in duration-300">
+                             {/* Top Info Card */}
+                             <div className="bg-white/5 border border-white/5 rounded-3xl p-8 flex items-center gap-8 shadow-xl">
+                                 <div 
+                                    className="w-24 h-24 rounded-3xl flex items-center justify-center text-3xl font-black text-white shadow-2xl shadow-indigo-500/20"
+                                    style={{ backgroundColor: selectedUser.theme }}
+                                 >
+                                     {selectedUser.name.charAt(0).toUpperCase()}
                                  </div>
-                                 <div className="p-6 bg-white/5 border border-white/5 rounded-2xl">
-                                     <div className="flex justify-between items-start mb-4">
-                                         <div className="p-3 bg-amber-500/20 text-amber-400 rounded-xl"><Crown size={20}/></div>
-                                         <span className="text-xs text-zinc-500 font-mono">{(proUsers / (totalUsers || 1) * 100).toFixed(0)}% ratio</span>
+                                 <div className="flex-1">
+                                     <h2 className="text-3xl font-bold text-white mb-2">{selectedUser.name}</h2>
+                                     <div className="flex items-center gap-3 text-sm text-zinc-400 mb-4">
+                                         <span className="flex items-center gap-1.5 bg-black/30 px-3 py-1 rounded-lg border border-white/5"><Hash size={12}/> ID: {selectedUser.id}</span>
+                                         <span className="flex items-center gap-1.5 bg-black/30 px-3 py-1 rounded-lg border border-white/5"><Calendar size={12}/> Last Seen: {selectedUser.lastVisit}</span>
                                      </div>
-                                     <div className="text-3xl font-black text-white">{proUsers}</div>
-                                     <div className="text-xs text-zinc-500 mt-1">Pro Subscribers</div>
+                                     <div className="flex items-center gap-4">
+                                         <button 
+                                            onClick={() => setShowRawData(JSON.stringify(selectedUser.rawSettings, null, 2))}
+                                            className="text-xs font-bold text-indigo-400 hover:text-indigo-300 flex items-center gap-1"
+                                         >
+                                             <Database size={12}/> View Raw JSON
+                                         </button>
+                                     </div>
                                  </div>
-                                 <div className="p-6 bg-white/5 border border-white/5 rounded-2xl">
-                                     <div className="flex justify-between items-start mb-4">
-                                         <div className="p-3 bg-purple-500/20 text-purple-400 rounded-xl"><Zap size={20}/></div>
-                                     </div>
-                                     <div className="text-3xl font-black text-white">{plusUsers}</div>
-                                     <div className="text-xs text-zinc-500 mt-1">Plus Subscribers</div>
-                                 </div>
-                                 <div className="p-6 bg-white/5 border border-white/5 rounded-2xl">
-                                     <div className="flex justify-between items-start mb-4">
-                                         <div className="p-3 bg-emerald-500/20 text-emerald-400 rounded-xl"><Activity size={20}/></div>
-                                     </div>
-                                     <div className="text-3xl font-black text-white">{activeToday}</div>
-                                     <div className="text-xs text-zinc-500 mt-1">Active Today</div>
+                                 <div className="text-right space-y-2">
+                                     <Button onClick={handleSaveUserChanges} icon={Save} className="bg-white text-black hover:bg-zinc-200">Save Changes</Button>
                                  </div>
                              </div>
 
                              <div className="grid grid-cols-2 gap-6">
-                                 {/* Recent Keys */}
-                                 <div className="bg-white/5 border border-white/5 rounded-2xl p-6">
-                                     <h4 className="text-white font-bold mb-4 flex items-center gap-2"><Key size={16} className="text-indigo-500"/> Recent Keys</h4>
+                                 {/* Edit Details */}
+                                 <div className="bg-white/5 border border-white/5 rounded-3xl p-6 space-y-5">
+                                     <h4 className="text-lg font-bold text-white flex items-center gap-2"><Edit2 size={18} className="text-zinc-500"/> Edit Profile</h4>
+                                     
                                      <div className="space-y-2">
-                                         {dbKeys.slice(0, 5).map((k, i) => (
-                                             <div key={i} className="flex justify-between items-center p-3 bg-black/20 rounded-xl border border-white/5">
-                                                 <code className="text-xs font-mono text-zinc-300">{k.code}</code>
-                                                 <span className={`text-[10px] px-2 py-0.5 rounded uppercase font-bold ${k.is_used ? 'bg-red-500/20 text-red-400' : 'bg-green-500/20 text-green-400'}`}>
-                                                     {k.is_used ? 'Used' : 'Active'}
-                                                 </span>
-                                             </div>
-                                         ))}
+                                         <label className="text-xs font-bold text-zinc-500 uppercase ml-1">Display Name</label>
+                                         <input 
+                                            value={editForm.name}
+                                            onChange={(e) => setEditForm({...editForm, name: e.target.value})}
+                                            className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-indigo-500 transition-colors"
+                                         />
                                      </div>
-                                 </div>
 
-                                 {/* Recent Users */}
-                                 <div className="bg-white/5 border border-white/5 rounded-2xl p-6">
-                                     <h4 className="text-white font-bold mb-4 flex items-center gap-2"><Users size={16} className="text-emerald-500"/> Newest Members</h4>
                                      <div className="space-y-2">
-                                         {dbUsers.slice(0, 5).map((u, i) => (
-                                             <div key={i} className="flex justify-between items-center p-3 bg-black/20 rounded-xl border border-white/5">
-                                                 <div className="flex items-center gap-3">
-                                                     <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white" style={{backgroundColor: u.theme}}>{u.name[0]}</div>
-                                                     <div>
-                                                         <div className="text-xs font-bold text-white">{u.name}</div>
-                                                         <div className="text-[10px] text-zinc-500">{u.plan}</div>
-                                                     </div>
-                                                 </div>
-                                                 <span className="text-[10px] text-zinc-500">{u.lastVisit}</span>
-                                             </div>
-                                         ))}
-                                     </div>
-                                 </div>
-                             </div>
-                         </div>
-                     )}
-
-                     {/* KEYS MANAGEMENT */}
-                     {activeTab === 'keys' && (
-                         <div className="space-y-6">
-                             {/* Generator Card */}
-                             <div className="bg-white/5 border border-white/5 rounded-2xl p-8 flex flex-col md:flex-row items-center gap-8">
-                                 <div className="flex-1">
-                                     <h4 className="text-xl font-bold text-white mb-2">Generate Access Key</h4>
-                                     <p className="text-zinc-400 text-sm">Create new promotional keys for user activation.</p>
-                                 </div>
-                                 <div className="flex items-center gap-4 bg-black/30 p-2 rounded-xl border border-white/5">
-                                     <button onClick={() => setSelectedPlan('plus')} className={`px-6 py-2.5 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${selectedPlan === 'plus' ? 'bg-indigo-600 text-white shadow-lg' : 'text-zinc-500 hover:text-white'}`}>
-                                         <Zap size={14}/> Plus
-                                     </button>
-                                     <button onClick={() => setSelectedPlan('pro')} className={`px-6 py-2.5 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${selectedPlan === 'pro' ? 'bg-amber-600 text-white shadow-lg' : 'text-zinc-500 hover:text-white'}`}>
-                                         <Crown size={14}/> Pro
-                                     </button>
-                                 </div>
-                                 <Button onClick={handleGenerate} icon={Plus} className="px-8 py-3 bg-white text-black hover:bg-zinc-200">Generate</Button>
-                             </div>
-
-                             {/* Keys Table */}
-                             <div className="bg-white/5 border border-white/5 rounded-2xl overflow-hidden">
-                                 <table className="w-full text-left">
-                                     <thead>
-                                         <tr className="border-b border-white/5 bg-black/20">
-                                             <th className="p-4 text-xs font-bold text-zinc-500 uppercase tracking-wider">Key Code</th>
-                                             <th className="p-4 text-xs font-bold text-zinc-500 uppercase tracking-wider">Plan</th>
-                                             <th className="p-4 text-xs font-bold text-zinc-500 uppercase tracking-wider">Status</th>
-                                             <th className="p-4 text-xs font-bold text-zinc-500 uppercase tracking-wider">Created</th>
-                                             <th className="p-4 text-right text-xs font-bold text-zinc-500 uppercase tracking-wider">Action</th>
-                                         </tr>
-                                     </thead>
-                                     <tbody className="divide-y divide-white/5">
-                                         {dbKeys.map((k, i) => (
-                                             <tr key={i} className="hover:bg-white/5 transition-colors group">
-                                                 <td className="p-4 font-mono text-sm text-indigo-400">{k.code}</td>
-                                                 <td className="p-4">
-                                                     <span className={`text-[10px] font-bold px-2 py-1 rounded uppercase ${k.plan === 'pro' ? 'bg-amber-500/20 text-amber-400' : 'bg-indigo-500/20 text-indigo-400'}`}>{k.plan || 'pro'}</span>
-                                                 </td>
-                                                 <td className="p-4">
-                                                     <div className={`flex items-center gap-2 text-xs font-medium ${k.is_used ? 'text-red-400' : 'text-emerald-400'}`}>
-                                                         <div className={`w-1.5 h-1.5 rounded-full ${k.is_used ? 'bg-red-500' : 'bg-emerald-500'}`}/>
-                                                         {k.is_used ? 'Redeemed' : 'Available'}
-                                                     </div>
-                                                 </td>
-                                                 <td className="p-4 text-xs text-zinc-500">{new Date(k.created_at).toLocaleDateString()}</td>
-                                                 <td className="p-4 text-right">
-                                                     <button onClick={() => {navigator.clipboard.writeText(k.code); addToast('Copied to clipboard', 'success')}} className="p-2 hover:bg-white/10 rounded-lg text-zinc-500 hover:text-white transition-colors">
-                                                         <Copy size={16}/>
-                                                     </button>
-                                                 </td>
-                                             </tr>
-                                         ))}
-                                     </tbody>
-                                 </table>
-                             </div>
-                         </div>
-                     )}
-
-                     {/* USERS MANAGEMENT */}
-                     {activeTab === 'users' && (
-                         <div className="space-y-6">
-                             <div className="flex gap-4">
-                                 <div className="flex-1 relative">
-                                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" size={18}/>
-                                     <input 
-                                        type="text" 
-                                        placeholder="Search users by name..." 
-                                        value={searchQuery}
-                                        onChange={e => setSearchQuery(e.target.value)}
-                                        className="w-full bg-white/5 border border-white/5 rounded-xl pl-12 pr-4 py-3 text-white placeholder-zinc-600 outline-none focus:border-indigo-500 transition-all"
-                                     />
-                                 </div>
-                                 <div className="flex gap-2">
-                                     <button className="px-4 py-3 bg-white/5 border border-white/5 rounded-xl text-zinc-400 hover:text-white transition-colors"><Filter size={18}/></button>
-                                 </div>
-                             </div>
-
-                             <div className="grid grid-cols-1 gap-4">
-                                 {dbUsers.filter(u => !searchQuery || u.name.toLowerCase().includes(searchQuery.toLowerCase())).map((user) => (
-                                     <div key={user.id} className="group bg-white/5 border border-white/5 rounded-2xl p-5 hover:border-indigo-500/30 transition-all">
-                                         <div className="flex items-center justify-between">
-                                             <div className="flex items-center gap-4">
-                                                 <div 
-                                                    className="w-12 h-12 rounded-xl flex items-center justify-center text-lg font-bold text-white shadow-lg"
-                                                    style={{ backgroundColor: user.theme }}
+                                         <label className="text-xs font-bold text-zinc-500 uppercase ml-1">Subscription Plan</label>
+                                         <div className="grid grid-cols-3 gap-2 p-1 bg-black/30 rounded-xl border border-white/5">
+                                             {(['free', 'plus', 'pro'] as const).map(plan => (
+                                                 <button
+                                                    key={plan}
+                                                    onClick={() => setEditForm({...editForm, plan})}
+                                                    className={`py-2 rounded-lg text-xs font-bold uppercase transition-all ${editForm.plan === plan 
+                                                        ? (plan === 'pro' ? 'bg-amber-500 text-white shadow-lg shadow-amber-500/30' : plan === 'plus' ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/30' : 'bg-zinc-600 text-white')
+                                                        : 'text-zinc-500 hover:bg-white/5 hover:text-white'
+                                                    }`}
                                                  >
-                                                     {user.name.charAt(0).toUpperCase()}
-                                                 </div>
-                                                 <div>
-                                                     <div className="flex items-center gap-2 mb-1">
-                                                         <h4 className="font-bold text-white">{user.name}</h4>
-                                                         <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded uppercase ${
-                                                             user.plan === 'pro' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/20' : 
-                                                             user.plan === 'plus' ? 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/20' : 
-                                                             'bg-zinc-800 text-zinc-500 border border-white/5'
-                                                         }`}>
-                                                             {user.plan}
+                                                     {plan}
+                                                 </button>
+                                             ))}
+                                         </div>
+                                     </div>
+                                 </div>
+
+                                 {/* Edit Stats */}
+                                 <div className="bg-white/5 border border-white/5 rounded-3xl p-6 space-y-5">
+                                     <h4 className="text-lg font-bold text-white flex items-center gap-2"><Activity size={18} className="text-zinc-500"/> Usage Stats</h4>
+                                     
+                                     <div className="grid grid-cols-2 gap-4">
+                                         <div className="space-y-2">
+                                             <label className="text-xs font-bold text-zinc-500 uppercase ml-1">Daily Streak</label>
+                                             <div className="relative">
+                                                 <input 
+                                                    type="number"
+                                                    value={editForm.streak}
+                                                    onChange={(e) => setEditForm({...editForm, streak: parseInt(e.target.value) || 0})}
+                                                    className="w-full bg-black/30 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-white outline-none focus:border-orange-500 transition-colors"
+                                                 />
+                                                 <div className="absolute left-3 top-1/2 -translate-y-1/2 text-orange-500"><Zap size={16} fill="currentColor"/></div>
+                                             </div>
+                                         </div>
+                                         <div className="space-y-2">
+                                             <label className="text-xs font-bold text-zinc-500 uppercase ml-1">Images Used (Today)</label>
+                                             <div className="relative">
+                                                 <input 
+                                                    type="number"
+                                                    value={editForm.usage}
+                                                    onChange={(e) => setEditForm({...editForm, usage: parseInt(e.target.value) || 0})}
+                                                    className="w-full bg-black/30 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-white outline-none focus:border-blue-500 transition-colors"
+                                                 />
+                                                 <div className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-500"><Layers size={16}/></div>
+                                             </div>
+                                         </div>
+                                     </div>
+
+                                     <div className="p-4 rounded-xl bg-yellow-500/10 border border-yellow-500/20 flex gap-3 items-start">
+                                         <AlertTriangle size={18} className="text-yellow-500 shrink-0 mt-0.5"/>
+                                         <div>
+                                             <h5 className="text-sm font-bold text-yellow-500">Warning</h5>
+                                             <p className="text-xs text-yellow-500/80 leading-relaxed mt-1">Changing these values directly affects the user's experience. Ensure data accuracy before saving.</p>
+                                         </div>
+                                     </div>
+                                 </div>
+                             </div>
+                         </div>
+                     ) : (
+                         <>
+                             {/* DASHBOARD VIEW */}
+                             {activeTab === 'dashboard' && (
+                                 <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
+                                     {/* Stats Grid */}
+                                     <div className="grid grid-cols-4 gap-6">
+                                         <div className="p-6 bg-white/5 border border-white/5 rounded-3xl hover:border-white/10 transition-colors">
+                                             <div className="flex justify-between items-start mb-4">
+                                                 <div className="p-3 bg-indigo-500/20 text-indigo-400 rounded-2xl"><Users size={20}/></div>
+                                                 <span className="text-xs text-zinc-500 font-mono bg-black/30 px-2 py-1 rounded-lg border border-white/5">+2 today</span>
+                                             </div>
+                                             <div className="text-3xl font-black text-white">{totalUsers}</div>
+                                             <div className="text-xs text-zinc-500 mt-1 font-medium">Total Users</div>
+                                         </div>
+                                         <div className="p-6 bg-white/5 border border-white/5 rounded-3xl hover:border-white/10 transition-colors">
+                                             <div className="flex justify-between items-start mb-4">
+                                                 <div className="p-3 bg-amber-500/20 text-amber-400 rounded-2xl"><Crown size={20}/></div>
+                                                 <span className="text-xs text-zinc-500 font-mono bg-black/30 px-2 py-1 rounded-lg border border-white/5">{(proUsers / (totalUsers || 1) * 100).toFixed(0)}% ratio</span>
+                                             </div>
+                                             <div className="text-3xl font-black text-white">{proUsers}</div>
+                                             <div className="text-xs text-zinc-500 mt-1 font-medium">Pro Subscribers</div>
+                                         </div>
+                                         <div className="p-6 bg-white/5 border border-white/5 rounded-3xl hover:border-white/10 transition-colors">
+                                             <div className="flex justify-between items-start mb-4">
+                                                 <div className="p-3 bg-purple-500/20 text-purple-400 rounded-2xl"><Zap size={20}/></div>
+                                             </div>
+                                             <div className="text-3xl font-black text-white">{plusUsers}</div>
+                                             <div className="text-xs text-zinc-500 mt-1 font-medium">Plus Subscribers</div>
+                                         </div>
+                                         <div className="p-6 bg-white/5 border border-white/5 rounded-3xl hover:border-white/10 transition-colors">
+                                             <div className="flex justify-between items-start mb-4">
+                                                 <div className="p-3 bg-emerald-500/20 text-emerald-400 rounded-2xl"><Activity size={20}/></div>
+                                             </div>
+                                             <div className="text-3xl font-black text-white">{activeToday}</div>
+                                             <div className="text-xs text-zinc-500 mt-1 font-medium">Active Today</div>
+                                         </div>
+                                     </div>
+
+                                     <div className="grid grid-cols-2 gap-6">
+                                         {/* Recent Keys */}
+                                         <div className="bg-white/5 border border-white/5 rounded-3xl p-6">
+                                             <h4 className="text-white font-bold mb-4 flex items-center gap-2"><Key size={16} className="text-indigo-500"/> Recent Keys</h4>
+                                             <div className="space-y-2">
+                                                 {dbKeys.slice(0, 5).map((k, i) => (
+                                                     <div key={i} className="flex justify-between items-center p-3 bg-black/20 rounded-xl border border-white/5 hover:border-white/10 transition-colors">
+                                                         <code className="text-xs font-mono text-zinc-300 bg-black/40 px-2 py-1 rounded">{k.code}</code>
+                                                         <span className={`text-[10px] px-2 py-0.5 rounded uppercase font-bold ${k.is_used ? 'bg-red-500/10 text-red-400 border border-red-500/20' : 'bg-green-500/10 text-green-400 border border-green-500/20'}`}>
+                                                             {k.is_used ? 'Used' : 'Active'}
                                                          </span>
                                                      </div>
-                                                     <div className="flex items-center gap-3 text-xs text-zinc-500 font-mono">
-                                                         <span>ID: {user.id.substring(0, 8)}</span>
-                                                         <span>•</span>
-                                                         <span className="flex items-center gap-1"><Activity size={10}/> {user.usage} imgs/day</span>
-                                                         <span>•</span>
-                                                         <span className="flex items-center gap-1"><Calendar size={10}/> {user.lastVisit}</span>
+                                                 ))}
+                                             </div>
+                                         </div>
+
+                                         {/* Recent Users */}
+                                         <div className="bg-white/5 border border-white/5 rounded-3xl p-6">
+                                             <h4 className="text-white font-bold mb-4 flex items-center gap-2"><Users size={16} className="text-emerald-500"/> Newest Members</h4>
+                                             <div className="space-y-2">
+                                                 {dbUsers.slice(0, 5).map((u, i) => (
+                                                     <button 
+                                                        key={i} 
+                                                        onClick={() => handleUserClick(u)}
+                                                        className="w-full flex justify-between items-center p-3 bg-black/20 rounded-xl border border-white/5 hover:bg-white/5 hover:border-white/10 transition-all text-left group"
+                                                     >
+                                                         <div className="flex items-center gap-3">
+                                                             <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-sm" style={{backgroundColor: u.theme}}>{u.name[0]}</div>
+                                                             <div>
+                                                                 <div className="text-xs font-bold text-white group-hover:text-indigo-400 transition-colors">{u.name}</div>
+                                                                 <div className="text-[10px] text-zinc-500 uppercase">{u.plan}</div>
+                                                             </div>
+                                                         </div>
+                                                         <ChevronRight size={14} className="text-zinc-600 group-hover:text-white transition-colors"/>
+                                                     </button>
+                                                 ))}
+                                             </div>
+                                         </div>
+                                     </div>
+                                 </div>
+                             )}
+
+                             {/* KEYS MANAGEMENT */}
+                             {activeTab === 'keys' && (
+                                 <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
+                                     {/* Generator Card */}
+                                     <div className="bg-white/5 border border-white/5 rounded-3xl p-8 flex flex-col md:flex-row items-center gap-8 shadow-xl relative overflow-hidden">
+                                         <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-purple-500/5 pointer-events-none"/>
+                                         <div className="flex-1 relative z-10">
+                                             <h4 className="text-2xl font-black text-white mb-2">Generate Access Key</h4>
+                                             <p className="text-zinc-400 text-sm max-w-md">Create new secure promotional keys for user activation. These keys unlock specific plan features.</p>
+                                         </div>
+                                         <div className="flex items-center gap-4 bg-black/30 p-2 rounded-2xl border border-white/5 backdrop-blur-md relative z-10">
+                                             <button onClick={() => setSelectedPlan('plus')} className={`px-6 py-3 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${selectedPlan === 'plus' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}>
+                                                 <Zap size={16} fill="currentColor"/> Plus
+                                             </button>
+                                             <button onClick={() => setSelectedPlan('pro')} className={`px-6 py-3 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${selectedPlan === 'pro' ? 'bg-amber-600 text-white shadow-lg shadow-amber-500/30' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}>
+                                                 <Crown size={16} fill="currentColor"/> Pro
+                                             </button>
+                                         </div>
+                                         <Button onClick={handleGenerate} icon={Plus} className="px-8 py-4 bg-white text-black hover:bg-zinc-200 shadow-xl rounded-2xl text-base relative z-10">Generate Key</Button>
+                                     </div>
+
+                                     {/* Keys Table */}
+                                     <div className="bg-white/5 border border-white/5 rounded-3xl overflow-hidden shadow-lg">
+                                         <table className="w-full text-left">
+                                             <thead>
+                                                 <tr className="border-b border-white/5 bg-black/20">
+                                                     <th className="p-5 text-xs font-bold text-zinc-500 uppercase tracking-wider">Key Code</th>
+                                                     <th className="p-5 text-xs font-bold text-zinc-500 uppercase tracking-wider">Plan</th>
+                                                     <th className="p-5 text-xs font-bold text-zinc-500 uppercase tracking-wider">Status</th>
+                                                     <th className="p-5 text-xs font-bold text-zinc-500 uppercase tracking-wider">Created</th>
+                                                     <th className="p-5 text-right text-xs font-bold text-zinc-500 uppercase tracking-wider">Action</th>
+                                                 </tr>
+                                             </thead>
+                                             <tbody className="divide-y divide-white/5">
+                                                 {dbKeys.map((k, i) => (
+                                                     <tr key={i} className="hover:bg-white/5 transition-colors group">
+                                                         <td className="p-5 font-mono text-sm text-indigo-400 font-medium">{k.code}</td>
+                                                         <td className="p-5">
+                                                             <span className={`text-[10px] font-black px-2 py-1 rounded-md uppercase tracking-wider ${k.plan === 'pro' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' : 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20'}`}>{k.plan || 'pro'}</span>
+                                                         </td>
+                                                         <td className="p-5">
+                                                             <div className={`flex items-center gap-2 text-xs font-bold ${k.is_used ? 'text-red-400' : 'text-emerald-400'}`}>
+                                                                 <div className={`w-2 h-2 rounded-full ${k.is_used ? 'bg-red-500' : 'bg-emerald-500'} shadow-[0_0_10px_currentColor]`}/>
+                                                                 {k.is_used ? 'Redeemed' : 'Available'}
+                                                             </div>
+                                                         </td>
+                                                         <td className="p-5 text-xs text-zinc-500">{new Date(k.created_at).toLocaleDateString()}</td>
+                                                         <td className="p-5 text-right">
+                                                             <button onClick={() => {navigator.clipboard.writeText(k.code); addToast('Copied to clipboard', 'success')}} className="p-2 hover:bg-white/10 rounded-xl text-zinc-500 hover:text-white transition-colors">
+                                                                 <Copy size={16}/>
+                                                             </button>
+                                                         </td>
+                                                     </tr>
+                                                 ))}
+                                             </tbody>
+                                         </table>
+                                     </div>
+                                 </div>
+                             )}
+
+                             {/* USERS MANAGEMENT */}
+                             {activeTab === 'users' && (
+                                 <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
+                                     <div className="flex gap-4">
+                                         <div className="flex-1 relative group">
+                                             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-white transition-colors" size={18}/>
+                                             <input 
+                                                type="text" 
+                                                placeholder="Search users by name..." 
+                                                value={searchQuery}
+                                                onChange={e => setSearchQuery(e.target.value)}
+                                                className="w-full bg-white/5 border border-white/5 rounded-2xl pl-12 pr-4 py-4 text-white placeholder-zinc-600 outline-none focus:border-indigo-500/50 focus:bg-black/40 transition-all shadow-lg"
+                                             />
+                                         </div>
+                                         <div className="relative">
+                                             <button 
+                                                onClick={() => setShowFilterMenu(!showFilterMenu)}
+                                                className={`h-full px-6 flex items-center gap-2 bg-white/5 border border-white/5 rounded-2xl text-sm font-bold transition-all hover:bg-white/10 ${filterPlan !== 'all' ? 'text-indigo-400 bg-indigo-500/10 border-indigo-500/30' : 'text-zinc-400'}`}
+                                             >
+                                                 <Filter size={18}/> 
+                                                 {filterPlan === 'all' ? 'Filter' : filterPlan.charAt(0).toUpperCase() + filterPlan.slice(1)}
+                                             </button>
+                                             
+                                             {showFilterMenu && (
+                                                 <div className="absolute top-full right-0 mt-2 w-40 bg-[#111] border border-white/10 rounded-xl shadow-2xl overflow-hidden z-50 animate-in slide-in-from-top-2 fade-in">
+                                                     {(['all', 'free', 'plus', 'pro'] as const).map(p => (
+                                                         <button 
+                                                            key={p}
+                                                            onClick={() => { setFilterPlan(p); setShowFilterMenu(false); }}
+                                                            className={`w-full text-left px-4 py-3 text-xs font-bold uppercase tracking-wider hover:bg-white/5 flex items-center justify-between ${filterPlan === p ? 'text-indigo-400 bg-white/5' : 'text-zinc-500'}`}
+                                                         >
+                                                             {p}
+                                                             {filterPlan === p && <Check size={14}/>}
+                                                         </button>
+                                                     ))}
+                                                 </div>
+                                             )}
+                                             {showFilterMenu && <div className="fixed inset-0 z-40" onClick={() => setShowFilterMenu(false)}/>}
+                                         </div>
+                                     </div>
+
+                                     <div className="grid grid-cols-1 gap-4">
+                                         {dbUsers
+                                            .filter(u => !searchQuery || u.name.toLowerCase().includes(searchQuery.toLowerCase()))
+                                            .filter(u => filterPlan === 'all' || u.plan === filterPlan)
+                                            .map((user) => (
+                                             <div 
+                                                key={user.id} 
+                                                onClick={() => handleUserClick(user)}
+                                                className="group bg-white/5 border border-white/5 rounded-3xl p-5 hover:border-indigo-500/30 hover:bg-white/10 transition-all cursor-pointer shadow-md hover:shadow-xl"
+                                             >
+                                                 <div className="flex items-center justify-between">
+                                                     <div className="flex items-center gap-5">
+                                                         <div 
+                                                            className="w-14 h-14 rounded-2xl flex items-center justify-center text-xl font-bold text-white shadow-lg shadow-black/20 group-hover:scale-110 transition-transform duration-300"
+                                                            style={{ backgroundColor: user.theme }}
+                                                         >
+                                                             {user.name.charAt(0).toUpperCase()}
+                                                         </div>
+                                                         <div>
+                                                             <div className="flex items-center gap-3 mb-1">
+                                                                 <h4 className="font-bold text-white text-lg group-hover:text-indigo-200 transition-colors">{user.name}</h4>
+                                                                 <span className={`text-[10px] font-black px-2 py-0.5 rounded-md uppercase tracking-wider ${
+                                                                     user.plan === 'pro' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' : 
+                                                                     user.plan === 'plus' ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20' : 
+                                                                     'bg-zinc-800 text-zinc-500 border border-white/5'
+                                                                 }`}>
+                                                                     {user.plan}
+                                                                 </span>
+                                                             </div>
+                                                             <div className="flex items-center gap-4 text-xs text-zinc-500 font-mono">
+                                                                 <span className="flex items-center gap-1"><Hash size={10}/> {user.id.substring(0, 8)}...</span>
+                                                                 <span className="w-1 h-1 rounded-full bg-zinc-700"/>
+                                                                 <span className="flex items-center gap-1 group-hover:text-emerald-400 transition-colors"><Activity size={10}/> {user.usage} imgs</span>
+                                                                 <span className="w-1 h-1 rounded-full bg-zinc-700"/>
+                                                                 <span className="flex items-center gap-1"><Calendar size={10}/> {user.lastVisit}</span>
+                                                             </div>
+                                                         </div>
+                                                     </div>
+
+                                                     <div className="flex items-center gap-3">
+                                                         <button className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center text-zinc-500 group-hover:bg-indigo-500 group-hover:text-white group-hover:border-indigo-500 transition-all shadow-lg">
+                                                             <ChevronRight size={18}/>
+                                                         </button>
                                                      </div>
                                                  </div>
                                              </div>
-
-                                             <div className="flex items-center gap-2">
-                                                 {editingUser === user.id ? (
-                                                     <div className="flex items-center gap-2 bg-black/40 p-1 rounded-lg border border-white/10 animate-in slide-in-from-right">
-                                                         <select 
-                                                            value={editPlanValue} 
-                                                            onChange={(e) => setEditPlanValue(e.target.value as UserPlan)}
-                                                            className="bg-transparent text-white text-xs font-bold px-2 outline-none"
-                                                         >
-                                                             <option value="free" className="bg-zinc-900">FREE</option>
-                                                             <option value="plus" className="bg-zinc-900">PLUS</option>
-                                                             <option value="pro" className="bg-zinc-900">PRO</option>
-                                                         </select>
-                                                         <button onClick={() => handleUpdateUserPlan(user.id, editPlanValue, user.rawSettings)} className="p-1.5 bg-green-500/20 text-green-400 rounded hover:bg-green-500/30"><Save size={14}/></button>
-                                                         <button onClick={() => setEditingUser(null)} className="p-1.5 hover:bg-white/10 text-zinc-400 rounded"><X size={14}/></button>
-                                                     </div>
-                                                 ) : (
-                                                     <>
-                                                         <button 
-                                                            onClick={() => { setEditingUser(user.id); setEditPlanValue(user.plan); }} 
-                                                            className="px-3 py-2 bg-white/5 hover:bg-indigo-500/20 hover:text-indigo-400 text-zinc-400 rounded-lg text-xs font-bold transition-all"
-                                                         >
-                                                             Edit Plan
-                                                         </button>
-                                                         <button 
-                                                            onClick={() => setShowRawData(JSON.stringify(user.rawSettings, null, 2))}
-                                                            className="p-2 bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white rounded-lg transition-colors" 
-                                                            title="View JSON"
-                                                         >
-                                                             <Database size={16}/>
-                                                         </button>
-                                                     </>
-                                                 )}
+                                         ))}
+                                         
+                                         {dbUsers.length === 0 && (
+                                             <div className="text-center py-20 bg-white/5 rounded-3xl border border-white/5">
+                                                 <div className="w-20 h-20 bg-black/30 rounded-full flex items-center justify-center mx-auto mb-4 text-zinc-600 border border-white/5">
+                                                     <Users size={32}/>
+                                                 </div>
+                                                 <p className="text-zinc-500 font-bold">No users found.</p>
+                                                 <p className="text-zinc-600 text-sm mt-1">Try adjusting your filters.</p>
                                              </div>
-                                         </div>
+                                         )}
                                      </div>
-                                 ))}
-                                 
-                                 {dbUsers.length === 0 && (
-                                     <div className="text-center py-20">
-                                         <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4 text-zinc-600">
-                                             <Users size={32}/>
-                                         </div>
-                                         <p className="text-zinc-500 font-medium">No users found.</p>
-                                     </div>
-                                 )}
-                             </div>
-                         </div>
+                                 </div>
+                             )}
+                         </>
                      )}
 
                  </div>
