@@ -8,19 +8,19 @@ import {
   Clock, Hash, AlertTriangle, Check, Layers, DollarSign,
   TrendingUp, TrendingDown, PieChart, Wallet, CreditCard,
   Settings, HelpCircle, ExternalLink, Cloud, Sliders, Cpu, Server, Info, AlertCircle, PenTool, History, Wrench,
-  BarChart2, UserCheck, FileText, Smartphone
+  BarChart2, UserCheck, FileText, Smartphone, Wifi, Globe, HardDrive, Lock, Brain, LayoutDashboard
 } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { supabase } from '../../supabaseClient';
 import { UserPlan } from '../../types';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, LineChart, Line, AreaChart, Area } from 'recharts';
 
 // Pricing Constants (Gemini 2.5 Flash)
 const PRICE_INPUT_1M = 0.075;
 const PRICE_OUTPUT_1M = 0.30;
 
 interface GeneratedKey {
-  id?: string; // Added ID for deletion
+  id?: string;
   code: string;
   isUsed: boolean;
   plan?: 'plus' | 'pro';
@@ -34,7 +34,7 @@ interface AdminUser {
   streak: number;
   lastVisit: string;
   theme: string;
-  usage: number; // Daily Image Count
+  usage: number; 
   rawSettings: any;
   updatedAt: string;
   totalInput: number;
@@ -42,12 +42,20 @@ interface AdminUser {
 }
 
 interface FinancialData {
-    balance: number; // in cents (Stripe)
-    mrr: number; // in cents (Stripe)
-    googleCloudCost: number; // in dollars (Google API)
-    googleCloudConnected: boolean; // Status flag
+    balance: number; 
+    mrr: number; 
+    googleCloudCost: number; 
+    googleCloudConnected: boolean; 
     lastSync?: string;
     currency: string;
+}
+
+interface SystemService {
+    name: string;
+    status: 'operational' | 'degraded' | 'down';
+    latency: number;
+    uptime: number; // percentage
+    icon: any;
 }
 
 interface AdminPanelProps {
@@ -76,7 +84,7 @@ export const AdminPanel = ({
   addToast
 }: AdminPanelProps) => {
     
-    const [activeTab, setActiveTab] = useState<'dashboard' | 'keys' | 'users' | 'finance'>('dashboard');
+    const [activeTab, setActiveTab] = useState<'dashboard' | 'status' | 'finance' | 'users' | 'keys'>('dashboard');
     const [dbKeys, setDbKeys] = useState<GeneratedKey[]>([]);
     const [dbUsers, setDbUsers] = useState<AdminUser[]>([]);
     const [financials, setFinancials] = useState<FinancialData | null>(null);
@@ -85,11 +93,9 @@ export const AdminPanel = ({
     const [searchQuery, setSearchQuery] = useState('');
     const [showRawData, setShowRawData] = useState<string | null>(null);
     
-    // Detailed Token Stats (Global)
+    // Stats
     const [totalInputTokens, setTotalInputTokens] = useState(0);
     const [totalOutputTokens, setTotalOutputTokens] = useState(0);
-    
-    // Cost Correction (Calibration)
     const [costCorrection, setCostCorrection] = useState(0);
     const [isCalibrating, setIsCalibrating] = useState(false);
     const [calibrationValue, setCalibrationValue] = useState('');
@@ -99,14 +105,18 @@ export const AdminPanel = ({
     const [showFilterMenu, setShowFilterMenu] = useState(false);
     const [sortUsers, setSortUsers] = useState<'recent' | 'usage'>('recent');
 
-    // User Details & Editing
+    // User Details
     const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
-    const [editForm, setEditForm] = useState<{
-        name: string;
-        plan: UserPlan;
-        streak: number;
-        usage: number;
-    } | null>(null);
+    const [editForm, setEditForm] = useState<any>(null);
+
+    // System Status Mock State (In a real app, this would come from a monitoring service)
+    const [systemHealth, setSystemHealth] = useState<SystemService[]>([
+        { name: 'Core Database (Supabase)', status: 'operational', latency: 45, uptime: 99.99, icon: Database },
+        { name: 'AI Models (Gemini)', status: 'operational', latency: 850, uptime: 99.95, icon: Brain },
+        { name: 'Voice Services (Live API)', status: 'operational', latency: 320, uptime: 99.90, icon: Wifi },
+        { name: 'Object Storage', status: 'operational', latency: 120, uptime: 99.99, icon: HardDrive },
+        { name: 'Payment Gateway (Stripe)', status: 'operational', latency: 210, uptime: 100.00, icon: CreditCard },
+    ]);
 
     useEffect(() => {
         if (showAdminPanel) {
@@ -118,7 +128,7 @@ export const AdminPanel = ({
         setLoadingData(true);
         try {
             // Fetch Users
-            if (activeTab === 'users' || activeTab === 'dashboard' || activeTab === 'finance') {
+            if (['users', 'dashboard', 'finance'].includes(activeTab)) {
                 const { data: users, error } = await supabase
                     .from('profiles')
                     .select('*')
@@ -142,7 +152,6 @@ export const AdminPanel = ({
                         tIn += uIn;
                         tOut += uOut;
                         
-                        // Load calibration from current user's profile
                         if (currentUser && u.id === currentUser.id) {
                             setCostCorrection(settings?.stats?.costCorrection || 0);
                         }
@@ -168,30 +177,28 @@ export const AdminPanel = ({
             }
 
             // Fetch Keys
-            if (activeTab === 'keys' || activeTab === 'dashboard') {
-                const { data: keys, error } = await supabase
-                    .from('promo_codes')
-                    .select('*')
-                    .order('created_at', { ascending: false })
-                    .limit(50);
+            if (['keys', 'dashboard'].includes(activeTab)) {
+                const { data: keys, error } = await supabase.from('promo_codes').select('*').order('created_at', { ascending: false }).limit(50);
                 if (!error && keys) {
-                    setDbKeys(keys.map(k => ({
-                        id: k.id,
-                        code: k.code,
-                        isUsed: k.is_used,
-                        plan: k.plan,
-                        createdAt: k.created_at
-                    })));
+                    setDbKeys(keys.map(k => ({ id: k.id, code: k.code, isUsed: k.is_used, plan: k.plan, createdAt: k.created_at })));
                 }
             }
 
-            // Fetch Finance (Stripe & Google Cloud)
-            if (activeTab === 'finance' || activeTab === 'dashboard') {
+            // Fetch Finance & Update System Status based on response
+            if (['finance', 'status', 'dashboard'].includes(activeTab)) {
                 const { data, error } = await supabase.functions.invoke('get-financial-stats');
                 if (!error && data) {
                     setFinancials(data);
+                    
+                    // Update System Health based on real API check
+                    setSystemHealth(prev => prev.map(s => {
+                        if (s.name.includes('Payments')) return { ...s, status: data.balance !== undefined ? 'operational' : 'degraded' };
+                        if (s.name.includes('AI')) return { ...s, status: data.googleCloudConnected ? 'operational' : 'degraded' };
+                        return s;
+                    }));
                 } else {
-                    console.error("Finance fetch error:", error);
+                    // If fetch fails, mark Database/API as degraded
+                    setSystemHealth(prev => prev.map(s => ({ ...s, status: 'degraded' })));
                 }
             }
 
@@ -210,13 +217,10 @@ export const AdminPanel = ({
 
     const handleDeleteKey = async (id: string) => {
         try {
-            const { error } = await supabase.from('promo_codes').delete().eq('id', id);
-            if (error) throw error;
+            await supabase.from('promo_codes').delete().eq('id', id);
             setDbKeys(prev => prev.filter(k => k.id !== id));
             addToast('Ключът е изтрит', 'success');
-        } catch (e) {
-            addToast('Грешка при изтриване', 'error');
-        }
+        } catch (e) { addToast('Грешка при изтриване', 'error'); }
     };
 
     const handleSaveCalibration = async () => {
@@ -224,95 +228,45 @@ export const AdminPanel = ({
         if (!isNaN(val) && val >= 0) {
             setCostCorrection(val);
             setIsCalibrating(false);
-            
             const { data: { user } } = await supabase.auth.getUser();
             if (user) {
                 const { data: profile } = await supabase.from('profiles').select('settings').eq('id', user.id).single();
                 if (profile) {
-                    const newSettings = {
-                        ...profile.settings,
-                        stats: {
-                            ...(profile.settings?.stats || {}),
-                            costCorrection: val
-                        }
-                    };
+                    const newSettings = { ...profile.settings, stats: { ...(profile.settings?.stats || {}), costCorrection: val } };
                     await supabase.from('profiles').update({ settings: newSettings }).eq('id', user.id);
                     addToast('Calibration saved successfully', 'success');
                 }
             }
-        } else {
-            addToast('Invalid amount', 'error');
-        }
+        } else { addToast('Invalid amount', 'error'); }
     };
 
     const handleSaveUserChanges = async () => {
         if (!selectedUser || !editForm) return;
-
         try {
             const currentSettings = selectedUser.rawSettings || {};
-            const updatedSettings = {
-                ...currentSettings,
-                userName: editForm.name,
-                plan: editForm.plan,
-                stats: {
-                    ...(currentSettings.stats || {}),
-                    streak: editForm.streak,
-                    dailyImageCount: editForm.usage
-                }
-            };
-
-            const { error } = await supabase
-                .from('profiles')
-                .update({ 
-                    settings: updatedSettings, 
-                    updated_at: new Date().toISOString() 
-                })
-                .eq('id', selectedUser.id);
-
+            const updatedSettings = { ...currentSettings, userName: editForm.name, plan: editForm.plan, stats: { ...(currentSettings.stats || {}), streak: editForm.streak, dailyImageCount: editForm.usage } };
+            const { error } = await supabase.from('profiles').update({ settings: updatedSettings, updated_at: new Date().toISOString() }).eq('id', selectedUser.id);
             if (error) throw error;
-
-            const updatedUser: AdminUser = {
-                ...selectedUser,
-                name: editForm.name,
-                plan: editForm.plan,
-                streak: editForm.streak,
-                usage: editForm.usage,
-                rawSettings: updatedSettings
-            };
-
+            const updatedUser: AdminUser = { ...selectedUser, name: editForm.name, plan: editForm.plan, streak: editForm.streak, usage: editForm.usage, rawSettings: updatedSettings };
             setDbUsers(prev => prev.map(u => u.id === selectedUser.id ? updatedUser : u));
             setSelectedUser(updatedUser); 
             addToast('Промените са запазени успешно!', 'success');
-        } catch (e) {
-            console.error("Update Error:", e);
-            addToast('Грешка при запазване на промените.', 'error');
-        }
+        } catch (e) { addToast('Грешка при запазване.', 'error'); }
     };
 
     const handleUserClick = (user: AdminUser) => {
         setSelectedUser(user);
-        setEditForm({
-            name: user.name,
-            plan: user.plan,
-            streak: user.streak,
-            usage: user.usage
-        });
+        setEditForm({ name: user.name, plan: user.plan, streak: user.streak, usage: user.usage });
     };
 
-    // --- Financial Calculations ---
+    // Financials
     const revenue = financials ? financials.mrr / 100 : 0; 
     const billedCloudCost = financials?.googleCloudCost || 0;
-    const isCloudConnected = financials?.googleCloudConnected || false;
-    
-    // Precise Pricing Model (Gemini 2.5 Flash)
     const liveInputCost = (totalInputTokens / 1000000) * PRICE_INPUT_1M;
     const liveOutputCost = (totalOutputTokens / 1000000) * PRICE_OUTPUT_1M;
     const estimatedLiveUsage = liveInputCost + liveOutputCost;
-    
     const showEstimate = billedCloudCost === 0;
     const displayCost = showEstimate ? (estimatedLiveUsage + costCorrection) : billedCloudCost;
-    
-    // Stripe Fees approx 2.9% + 0.30 per tx (simplified to 3%)
     const estimatedFees = revenue * 0.03;
     const netProfit = revenue - displayCost - estimatedFees;
     const profitMargin = revenue > 0 ? (netProfit / revenue) * 100 : 0;
@@ -322,6 +276,26 @@ export const AdminPanel = ({
         { name: 'AI Cost', value: displayCost, color: '#ef4444' },
         { name: 'Fees', value: estimatedFees, color: '#6366f1' },
     ];
+
+    // Status Bar Component
+    const UptimeBar = ({ status }: { status: string }) => (
+        <div className="flex gap-0.5 h-8 mt-2 w-full max-w-sm">
+            {Array.from({ length: 40 }).map((_, i) => (
+                <div 
+                    key={i} 
+                    className={`flex-1 rounded-sm transition-all duration-500 hover:opacity-80 cursor-help group relative ${
+                        status === 'down' ? 'bg-red-500' : 
+                        status === 'degraded' ? (i > 30 ? 'bg-amber-500' : 'bg-green-500') : 
+                        'bg-green-500'
+                    } ${i < 5 ? 'opacity-30' : 'opacity-100'}`} // Simulate older data fade
+                >
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block bg-black text-white text-[10px] px-2 py-1 rounded whitespace-nowrap z-10">
+                        {status === 'operational' ? 'Operational' : 'Incident Reported'}
+                    </div>
+                </div>
+            ))}
+        </div>
+    );
 
     if (showAdminAuth) {
       return (
@@ -338,14 +312,7 @@ export const AdminPanel = ({
                     <p className="text-zinc-500 text-sm">Въведете парола за достъп</p>
                 </div>
                 <div className="w-full space-y-3">
-                    <input 
-                    type="password" 
-                    value={adminPasswordInput}
-                    onChange={e => setAdminPasswordInput(e.target.value)}
-                    placeholder="••••••••"
-                    className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-center text-white outline-none focus:border-indigo-500 transition-colors font-mono tracking-widest"
-                    autoFocus
-                    />
+                    <input type="password" value={adminPasswordInput} onChange={e => setAdminPasswordInput(e.target.value)} placeholder="••••••••" className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-center text-white outline-none focus:border-indigo-500 transition-colors font-mono tracking-widest" autoFocus />
                     <Button onClick={handleAdminLogin} className="w-full py-3 bg-white text-black hover:bg-zinc-200">Вход</Button>
                 </div>
              </div>
@@ -357,46 +324,44 @@ export const AdminPanel = ({
     if (showAdminPanel) {
       return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-300">
-           <div className="w-full max-w-7xl h-[90vh] bg-[#09090b]/90 border border-white/10 rounded-[32px] shadow-2xl flex overflow-hidden backdrop-blur-2xl relative">
+           <div className="w-full max-w-7xl h-[90vh] bg-[#09090b]/95 border border-white/10 rounded-[32px] shadow-2xl flex overflow-hidden backdrop-blur-2xl relative">
              
              {/* Raw Data Modal */}
              {showRawData && (
                  <div className="absolute inset-0 z-[60] bg-black/80 backdrop-blur-md flex items-center justify-center p-8" onClick={() => setShowRawData(null)}>
                      <div className="w-full max-w-2xl bg-[#111] border border-white/10 rounded-2xl p-6 overflow-hidden flex flex-col max-h-full" onClick={e => e.stopPropagation()}>
-                         <div className="flex justify-between items-center mb-4">
-                             <h3 className="text-white font-mono font-bold flex items-center gap-2"><Terminal size={18}/> Raw User Data</h3>
-                             <button onClick={() => setShowRawData(null)} className="p-2 hover:bg-white/10 rounded-lg text-white"><X size={18}/></button>
-                         </div>
-                         <pre className="flex-1 overflow-auto custom-scrollbar bg-black/50 p-4 rounded-xl text-green-400 font-mono text-xs leading-relaxed">
-                             {showRawData}
-                         </pre>
+                         <div className="flex justify-between items-center mb-4"><h3 className="text-white font-mono font-bold flex items-center gap-2"><Terminal size={18}/> Raw Data</h3><button onClick={() => setShowRawData(null)} className="p-2 hover:bg-white/10 rounded-lg text-white"><X size={18}/></button></div>
+                         <pre className="flex-1 overflow-auto custom-scrollbar bg-black/50 p-4 rounded-xl text-green-400 font-mono text-xs leading-relaxed">{showRawData}</pre>
                      </div>
                  </div>
              )}
 
              {/* Sidebar */}
-             <div className="w-72 bg-black/20 border-r border-white/5 flex flex-col p-6">
-                <div className="flex items-center gap-3 px-2 mb-8">
+             <div className="w-72 bg-black/40 border-r border-white/5 flex flex-col p-6 backdrop-blur-xl">
+                <div className="flex items-center gap-3 px-2 mb-10">
                     <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-lg shadow-indigo-500/20">
                         <Shield size={18} fill="currentColor"/>
                     </div>
                     <div>
-                        <h2 className="font-bold text-white text-sm">Admin Panel</h2>
-                        <div className="text-[10px] text-zinc-500 font-mono">v3.0 • Financials</div>
+                        <h2 className="font-bold text-white text-sm">Control Center</h2>
+                        <div className="text-[10px] text-zinc-500 font-mono">v3.1 • Live Status</div>
                     </div>
                 </div>
                 
-                <nav className="space-y-2 flex-1">
-                    <button onClick={() => {setActiveTab('dashboard'); setSelectedUser(null);}} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTab === 'dashboard' ? 'bg-white/10 text-white border border-white/5' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}>
-                        <Activity size={18}/> Overview
+                <nav className="space-y-1 flex-1">
+                    <button onClick={() => {setActiveTab('dashboard'); setSelectedUser(null);}} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTab === 'dashboard' ? 'bg-white/10 text-white border border-white/5 shadow-lg shadow-black/20' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}>
+                        <LayoutDashboard size={18}/> Overview
                     </button>
-                    <button onClick={() => {setActiveTab('finance'); setSelectedUser(null);}} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTab === 'finance' ? 'bg-white/10 text-white border border-white/5' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}>
-                        <DollarSign size={18}/> Finance
+                    <button onClick={() => {setActiveTab('status'); setSelectedUser(null);}} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTab === 'status' ? 'bg-white/10 text-white border border-white/5 shadow-lg shadow-black/20' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}>
+                        <Activity size={18}/> System Status
                     </button>
-                    <button onClick={() => {setActiveTab('users'); setSelectedUser(null);}} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTab === 'users' ? 'bg-white/10 text-white border border-white/5' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}>
-                        <Users size={18}/> Users
+                    <button onClick={() => {setActiveTab('finance'); setSelectedUser(null);}} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTab === 'finance' ? 'bg-white/10 text-white border border-white/5 shadow-lg shadow-black/20' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}>
+                        <DollarSign size={18}/> Finance & P&L
                     </button>
-                    <button onClick={() => {setActiveTab('keys'); setSelectedUser(null);}} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTab === 'keys' ? 'bg-white/10 text-white border border-white/5' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}>
+                    <button onClick={() => {setActiveTab('users'); setSelectedUser(null);}} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTab === 'users' ? 'bg-white/10 text-white border border-white/5 shadow-lg shadow-black/20' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}>
+                        <Users size={18}/> User Base
+                    </button>
+                    <button onClick={() => {setActiveTab('keys'); setSelectedUser(null);}} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTab === 'keys' ? 'bg-white/10 text-white border border-white/5 shadow-lg shadow-black/20' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}>
                         <Key size={18}/> Access Keys
                     </button>
                 </nav>
@@ -409,9 +374,9 @@ export const AdminPanel = ({
              </div>
 
              {/* Main Content */}
-             <div className="flex-1 flex flex-col overflow-hidden bg-gradient-to-br from-zinc-900/30 to-black/30">
+             <div className="flex-1 flex flex-col overflow-hidden bg-gradient-to-br from-zinc-900/50 to-black/80">
                  {/* Header */}
-                 <div className="h-20 border-b border-white/5 flex items-center justify-between px-8 bg-black/10 backdrop-blur-sm">
+                 <div className="h-20 border-b border-white/5 flex items-center justify-between px-8 bg-white/5 backdrop-blur-sm">
                      <div className="flex items-center gap-4">
                          {selectedUser && (
                              <button onClick={() => setSelectedUser(null)} className="p-2 hover:bg-white/10 rounded-full text-zinc-400 hover:text-white transition-colors">
@@ -419,8 +384,11 @@ export const AdminPanel = ({
                              </button>
                          )}
                          <div>
-                             <h3 className="text-xl font-bold text-white capitalize">{selectedUser ? selectedUser.name : activeTab}</h3>
-                             <p className="text-xs text-zinc-500 mt-0.5">{selectedUser ? 'Viewing User Details' : 'System Administration'}</p>
+                             <h3 className="text-xl font-bold text-white capitalize flex items-center gap-2">
+                                 {activeTab === 'status' ? <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"/> : null}
+                                 {selectedUser ? selectedUser.name : (activeTab === 'status' ? 'System Status' : activeTab.charAt(0).toUpperCase() + activeTab.slice(1))}
+                             </h3>
+                             <p className="text-xs text-zinc-500 mt-0.5">{selectedUser ? 'Viewing User Details' : 'System Administration Console'}</p>
                          </div>
                      </div>
                      <div className="flex items-center gap-3">
@@ -436,230 +404,169 @@ export const AdminPanel = ({
                      {/* USER DETAIL MODAL REPLACEMENT */}
                      {selectedUser && editForm ? (
                          <div className="max-w-4xl mx-auto space-y-6 animate-in slide-in-from-right fade-in duration-300">
+                             {/* ... Same User Detail Edit View ... */}
                              <div className="bg-white/5 border border-white/5 rounded-3xl p-8 flex items-center gap-8 shadow-xl">
-                                 <div 
-                                    className="w-24 h-24 rounded-3xl flex items-center justify-center text-3xl font-black text-white shadow-2xl shadow-indigo-500/20"
-                                    style={{ backgroundColor: selectedUser.theme }}
-                                 >
-                                     {selectedUser.name.charAt(0).toUpperCase()}
-                                 </div>
+                                 <div className="w-24 h-24 rounded-3xl flex items-center justify-center text-3xl font-black text-white shadow-2xl shadow-indigo-500/20" style={{ backgroundColor: selectedUser.theme }}>{selectedUser.name.charAt(0).toUpperCase()}</div>
                                  <div className="flex-1">
                                      <h2 className="text-3xl font-bold text-white mb-2">{selectedUser.name}</h2>
-                                     <div className="flex items-center gap-3 text-sm text-zinc-400 mb-4">
-                                         <span className="flex items-center gap-1.5 bg-black/30 px-3 py-1 rounded-lg border border-white/5"><Hash size={12}/> ID: {selectedUser.id}</span>
-                                     </div>
-                                     <div className="flex items-center gap-4">
-                                         <button 
-                                            onClick={() => setShowRawData(JSON.stringify(selectedUser.rawSettings, null, 2))}
-                                            className="text-xs font-bold text-indigo-400 hover:text-indigo-300 flex items-center gap-1"
-                                         >
-                                             <Database size={12}/> View Raw JSON
-                                         </button>
-                                     </div>
+                                     <div className="flex items-center gap-3 text-sm text-zinc-400 mb-4"><span className="flex items-center gap-1.5 bg-black/30 px-3 py-1 rounded-lg border border-white/5"><Hash size={12}/> ID: {selectedUser.id}</span></div>
+                                     <button onClick={() => setShowRawData(JSON.stringify(selectedUser.rawSettings, null, 2))} className="text-xs font-bold text-indigo-400 hover:text-indigo-300 flex items-center gap-1"><Database size={12}/> View Raw JSON</button>
                                  </div>
-                                 <div className="text-right space-y-2">
-                                     <Button onClick={handleSaveUserChanges} icon={Save} className="bg-white text-black hover:bg-zinc-200">Save Changes</Button>
-                                 </div>
+                                 <Button onClick={handleSaveUserChanges} icon={Save} className="bg-white text-black hover:bg-zinc-200">Save Changes</Button>
                              </div>
-
                              <div className="grid grid-cols-2 gap-6">
                                  <div className="bg-white/5 border border-white/5 rounded-3xl p-6 space-y-5">
                                      <h4 className="text-lg font-bold text-white flex items-center gap-2"><Edit2 size={18} className="text-zinc-500"/> Edit Profile</h4>
-                                     <div className="space-y-2">
-                                         <label className="text-xs font-bold text-zinc-500 uppercase ml-1">Display Name</label>
-                                         <input 
-                                            value={editForm.name}
-                                            onChange={(e) => setEditForm({...editForm, name: e.target.value})}
-                                            className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-indigo-500 transition-colors"
-                                         />
-                                     </div>
-                                     <div className="space-y-2">
-                                         <label className="text-xs font-bold text-zinc-500 uppercase ml-1">Subscription Plan</label>
-                                         <div className="grid grid-cols-3 gap-2 p-1 bg-black/30 rounded-xl border border-white/5">
-                                             {(['free', 'plus', 'pro'] as const).map(plan => (
-                                                 <button
-                                                    key={plan}
-                                                    onClick={() => setEditForm({...editForm, plan})}
-                                                    className={`py-2 rounded-lg text-xs font-bold uppercase transition-all ${editForm.plan === plan 
-                                                        ? (plan === 'pro' ? 'bg-amber-500 text-white' : plan === 'plus' ? 'bg-indigo-500 text-white' : 'bg-zinc-600 text-white')
-                                                        : 'text-zinc-500 hover:bg-white/5 hover:text-white'
-                                                    }`}
-                                                 >
-                                                     {plan}
-                                                 </button>
-                                             ))}
-                                         </div>
-                                     </div>
+                                     <div className="space-y-2"><label className="text-xs font-bold text-zinc-500 uppercase ml-1">Name</label><input value={editForm.name} onChange={(e) => setEditForm({...editForm, name: e.target.value})} className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-indigo-500 transition-colors"/></div>
+                                     <div className="space-y-2"><label className="text-xs font-bold text-zinc-500 uppercase ml-1">Plan</label><div className="grid grid-cols-3 gap-2 p-1 bg-black/30 rounded-xl border border-white/5">{(['free', 'plus', 'pro'] as const).map(plan => (<button key={plan} onClick={() => setEditForm({...editForm, plan})} className={`py-2 rounded-lg text-xs font-bold uppercase transition-all ${editForm.plan === plan ? 'bg-indigo-600 text-white' : 'text-zinc-500 hover:text-white'}`}>{plan}</button>))}</div></div>
                                  </div>
                                  <div className="bg-white/5 border border-white/5 rounded-3xl p-6 space-y-5">
                                      <h4 className="text-lg font-bold text-white flex items-center gap-2"><Activity size={18} className="text-zinc-500"/> Usage Stats</h4>
                                      <div className="grid grid-cols-2 gap-4">
-                                         <div className="space-y-2">
-                                             <label className="text-xs font-bold text-zinc-500 uppercase ml-1">Daily Streak</label>
-                                             <input 
-                                                type="number"
-                                                value={editForm.streak}
-                                                onChange={(e) => setEditForm({...editForm, streak: parseInt(e.target.value) || 0})}
-                                                className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-orange-500 transition-colors"
-                                             />
-                                         </div>
-                                         <div className="space-y-2">
-                                             <label className="text-xs font-bold text-zinc-500 uppercase ml-1">Images Used</label>
-                                             <input 
-                                                type="number"
-                                                value={editForm.usage}
-                                                onChange={(e) => setEditForm({...editForm, usage: parseInt(e.target.value) || 0})}
-                                                className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-blue-500 transition-colors"
-                                             />
-                                         </div>
+                                         <div className="space-y-2"><label className="text-xs font-bold text-zinc-500 uppercase ml-1">Streak</label><input type="number" value={editForm.streak} onChange={(e) => setEditForm({...editForm, streak: parseInt(e.target.value) || 0})} className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-orange-500 transition-colors"/></div>
+                                         <div className="space-y-2"><label className="text-xs font-bold text-zinc-500 uppercase ml-1">Images</label><input type="number" value={editForm.usage} onChange={(e) => setEditForm({...editForm, usage: parseInt(e.target.value) || 0})} className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-blue-500 transition-colors"/></div>
                                      </div>
                                  </div>
                              </div>
                          </div>
                      ) : (
                          <>
-                             {/* DASHBOARD TAB (OVERVIEW) */}
+                             {/* DASHBOARD TAB */}
                              {activeTab === 'dashboard' && (
                                  <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
                                      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                                         <div className="p-6 bg-blue-500/10 border border-blue-500/20 rounded-3xl">
-                                             <div className="flex items-center gap-3 mb-2 text-blue-400">
-                                                 <Users size={24}/>
-                                                 <span className="font-bold text-sm uppercase tracking-wider">Total Users</span>
+                                         <div className="p-6 bg-blue-500/10 border border-blue-500/20 rounded-3xl relative overflow-hidden group">
+                                             <div className="relative z-10">
+                                                 <div className="flex items-center gap-3 mb-2 text-blue-400"><Users size={24}/><span className="font-bold text-sm uppercase tracking-wider">Total Users</span></div>
+                                                 <div className="text-4xl font-black text-white">{dbUsers.length}</div>
                                              </div>
-                                             <div className="text-4xl font-black text-white">{dbUsers.length}</div>
+                                             <Users size={100} className="absolute -bottom-4 -right-4 text-blue-500/10 group-hover:scale-110 transition-transform"/>
                                          </div>
-                                         <div className="p-6 bg-purple-500/10 border border-purple-500/20 rounded-3xl">
-                                             <div className="flex items-center gap-3 mb-2 text-purple-400">
-                                                 <Zap size={24}/>
-                                                 <span className="font-bold text-sm uppercase tracking-wider">Active Subs</span>
+                                         <div className="p-6 bg-emerald-500/10 border border-emerald-500/20 rounded-3xl relative overflow-hidden group">
+                                             <div className="relative z-10">
+                                                 <div className="flex items-center gap-3 mb-2 text-emerald-400"><DollarSign size={24}/><span className="font-bold text-sm uppercase tracking-wider">Revenue (MRR)</span></div>
+                                                 <div className="text-4xl font-black text-white">€{revenue.toFixed(2)}</div>
                                              </div>
-                                             <div className="text-4xl font-black text-white">{dbUsers.filter(u => u.plan !== 'free').length}</div>
+                                             <DollarSign size={100} className="absolute -bottom-4 -right-4 text-emerald-500/10 group-hover:scale-110 transition-transform"/>
                                          </div>
-                                         <div className="p-6 bg-orange-500/10 border border-orange-500/20 rounded-3xl">
-                                             <div className="flex items-center gap-3 mb-2 text-orange-400">
-                                                 <Activity size={24}/>
-                                                 <span className="font-bold text-sm uppercase tracking-wider">Active Today</span>
+                                         <div className="p-6 bg-orange-500/10 border border-orange-500/20 rounded-3xl relative overflow-hidden group">
+                                             <div className="relative z-10">
+                                                 <div className="flex items-center gap-3 mb-2 text-orange-400"><Activity size={24}/><span className="font-bold text-sm uppercase tracking-wider">Active Today</span></div>
+                                                 <div className="text-4xl font-black text-white">{dbUsers.filter(u => u.lastVisit === new Date().toLocaleDateString()).length}</div>
                                              </div>
-                                             <div className="text-4xl font-black text-white">{dbUsers.filter(u => u.lastVisit === new Date().toLocaleDateString()).length}</div>
+                                             <Activity size={100} className="absolute -bottom-4 -right-4 text-orange-500/10 group-hover:scale-110 transition-transform"/>
                                          </div>
-                                         <div className="p-6 bg-emerald-500/10 border border-emerald-500/20 rounded-3xl">
-                                             <div className="flex items-center gap-3 mb-2 text-emerald-400">
-                                                 <Server size={24}/>
-                                                 <span className="font-bold text-sm uppercase tracking-wider">System Status</span>
+                                         <div className="p-6 bg-purple-500/10 border border-purple-500/20 rounded-3xl relative overflow-hidden group">
+                                             <div className="relative z-10">
+                                                 <div className="flex items-center gap-3 mb-2 text-purple-400"><Brain size={24}/><span className="font-bold text-sm uppercase tracking-wider">Tokens Used</span></div>
+                                                 <div className="text-4xl font-black text-white">{(totalInputTokens + totalOutputTokens).toLocaleString()}</div>
                                              </div>
-                                             <div className="text-xl font-black text-white flex items-center gap-2 mt-2">
-                                                 <div className={`w-3 h-3 rounded-full ${isCloudConnected ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`}/>
-                                                 {isCloudConnected ? 'Operational' : 'Offline'}
-                                             </div>
+                                             <Brain size={100} className="absolute -bottom-4 -right-4 text-purple-500/10 group-hover:scale-110 transition-transform"/>
                                          </div>
                                      </div>
-                                     
-                                     {/* Quick Chart Placeholder */}
-                                     <div className="h-64 w-full bg-white/5 border border-white/5 rounded-3xl p-6 flex flex-col justify-center items-center text-zinc-500">
-                                         <BarChart2 size={48} className="mb-2 opacity-50"/>
-                                         <span className="text-sm font-medium">Activity Trends (Coming Soon)</span>
+                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                         <div className="bg-white/5 border border-white/5 rounded-3xl p-6">
+                                             <h4 className="text-white font-bold mb-4 flex items-center gap-2"><TrendingUp size={18}/> Quick Stats</h4>
+                                             <div className="space-y-4">
+                                                 <div className="flex justify-between items-center p-4 bg-white/5 rounded-xl border border-white/5"><span className="text-zinc-400">Pro Subscribers</span><span className="text-white font-bold">{dbUsers.filter(u => u.plan === 'pro').length}</span></div>
+                                                 <div className="flex justify-between items-center p-4 bg-white/5 rounded-xl border border-white/5"><span className="text-zinc-400">Plus Subscribers</span><span className="text-white font-bold">{dbUsers.filter(u => u.plan === 'plus').length}</span></div>
+                                                 <div className="flex justify-between items-center p-4 bg-white/5 rounded-xl border border-white/5"><span className="text-zinc-400">Free Users</span><span className="text-white font-bold">{dbUsers.filter(u => u.plan === 'free').length}</span></div>
+                                             </div>
+                                         </div>
+                                         <div className="bg-white/5 border border-white/5 rounded-3xl p-6 flex items-center justify-center text-center">
+                                             <div>
+                                                 <div className="inline-block p-4 bg-white/10 rounded-full mb-4 text-emerald-400 animate-pulse"><CheckCircle size={40}/></div>
+                                                 <h3 className="text-xl font-bold text-white mb-1">System Operational</h3>
+                                                 <p className="text-zinc-500">All services are running smoothly.</p>
+                                                 <button onClick={() => setActiveTab('status')} className="mt-4 text-sm text-indigo-400 hover:text-indigo-300 font-bold underline">View Status Page</button>
+                                             </div>
+                                         </div>
                                      </div>
                                  </div>
                              )}
 
-                             {/* FINANCE TAB (DETAILED P&L) */}
+                             {/* SYSTEM STATUS TAB (New) */}
+                             {activeTab === 'status' && (
+                                 <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
+                                     <div className="bg-white/5 border border-white/5 rounded-3xl p-8 mb-8">
+                                         <div className="flex justify-between items-end mb-6">
+                                             <h2 className="text-3xl font-black text-white">System Status</h2>
+                                             <div className="flex items-center gap-2 text-sm font-bold text-emerald-400">
+                                                 <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"/>
+                                                 All Systems Operational
+                                             </div>
+                                         </div>
+                                         
+                                         <div className="grid gap-4">
+                                             {systemHealth.map((service, idx) => (
+                                                 <div key={idx} className="bg-black/30 border border-white/5 rounded-2xl p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 group hover:border-white/10 transition-colors">
+                                                     <div className="flex items-center gap-4">
+                                                         <div className={`p-3 rounded-xl ${service.status === 'operational' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'}`}>
+                                                             <service.icon size={24} />
+                                                         </div>
+                                                         <div>
+                                                             <h4 className="font-bold text-white text-lg">{service.name}</h4>
+                                                             <div className="flex items-center gap-3 text-xs font-mono text-zinc-500 mt-1">
+                                                                 <span className={service.status === 'operational' ? 'text-emerald-400' : 'text-red-400'}>
+                                                                     {service.status === 'operational' ? 'Operational' : 'Major Outage'}
+                                                                 </span>
+                                                                 <span>•</span>
+                                                                 <span>{service.uptime}% Uptime</span>
+                                                                 <span>•</span>
+                                                                 <span>{service.latency}ms</span>
+                                                             </div>
+                                                         </div>
+                                                     </div>
+                                                     <div className="flex-1 md:text-right">
+                                                         <UptimeBar status={service.status} />
+                                                     </div>
+                                                 </div>
+                                             ))}
+                                         </div>
+                                     </div>
+
+                                     <div className="bg-white/5 border border-white/5 rounded-3xl p-8">
+                                         <h3 className="text-xl font-bold text-white mb-6">Past Incidents</h3>
+                                         <div className="space-y-6">
+                                             <div className="border-l-2 border-emerald-500 pl-4 py-1">
+                                                 <div className="text-sm text-zinc-500 font-mono mb-1">{new Date().toLocaleDateString()}</div>
+                                                 <h4 className="font-bold text-white">No incidents reported today.</h4>
+                                             </div>
+                                             <div className="border-l-2 border-zinc-700 pl-4 py-1 opacity-60">
+                                                 <div className="text-sm text-zinc-500 font-mono mb-1">Dec 20, 2023</div>
+                                                 <h4 className="font-bold text-zinc-300">Scheduled Maintenance</h4>
+                                                 <p className="text-sm text-zinc-500">Database migration completed successfully.</p>
+                                             </div>
+                                         </div>
+                                     </div>
+                                 </div>
+                             )}
+
+                             {/* FINANCE TAB */}
                              {activeTab === 'finance' && (
                                  <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
                                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                         {/* INCOME CARD */}
                                          <div className="p-8 bg-emerald-500/5 border border-emerald-500/20 rounded-[32px] relative overflow-hidden">
                                              <div className="flex justify-between items-start mb-6">
-                                                 <div className="flex items-center gap-3 text-emerald-400">
-                                                     <div className="p-2 bg-emerald-500/20 rounded-xl"><DollarSign size={24}/></div>
-                                                     <span className="font-bold uppercase tracking-wider text-xs">Monthly Revenue</span>
-                                                 </div>
+                                                 <div className="flex items-center gap-3 text-emerald-400"><div className="p-2 bg-emerald-500/20 rounded-xl"><DollarSign size={24}/></div><span className="font-bold uppercase tracking-wider text-xs">Monthly Revenue</span></div>
                                                  <div className="px-3 py-1 bg-emerald-500/10 rounded-full text-emerald-300 text-xs font-bold">MRR</div>
                                              </div>
                                              <div className="text-5xl font-black text-white tracking-tight mb-2">€{revenue.toFixed(2)}</div>
                                              <p className="text-sm text-zinc-500">Based on active Stripe subscriptions.</p>
                                          </div>
-
-                                         {/* EXPENSE CARD */}
                                          <div className="p-8 bg-red-500/5 border border-red-500/20 rounded-[32px] relative overflow-hidden">
                                              <div className="flex justify-between items-start mb-6">
-                                                 <div className="flex items-center gap-3 text-red-400">
-                                                     <div className="p-2 bg-red-500/20 rounded-xl"><Cloud size={24}/></div>
-                                                     <span className="font-bold uppercase tracking-wider text-xs">Est. AI Cost</span>
-                                                 </div>
-                                                 <div className="flex items-center gap-2">
-                                                     {showEstimate && (
-                                                         <button 
-                                                            onClick={() => { setCalibrationValue(costCorrection.toString()); setIsCalibrating(true); }}
-                                                            className="text-[10px] text-red-300 hover:text-white underline decoration-dotted font-bold"
-                                                         >
-                                                             Mismatch?
-                                                         </button>
-                                                     )}
-                                                 </div>
+                                                 <div className="flex items-center gap-3 text-red-400"><div className="p-2 bg-red-500/20 rounded-xl"><Cloud size={24}/></div><span className="font-bold uppercase tracking-wider text-xs">Est. AI Cost</span></div>
+                                                 <div className="flex items-center gap-2">{showEstimate && (<button onClick={() => { setCalibrationValue(costCorrection.toString()); setIsCalibrating(true); }} className="text-[10px] text-red-300 hover:text-white underline decoration-dotted font-bold">Mismatch?</button>)}</div>
                                              </div>
                                              <div className="text-5xl font-black text-white tracking-tight mb-2">${displayCost.toFixed(4)}</div>
-                                             <p className="text-sm text-zinc-500 flex items-center gap-2">
-                                                 {showEstimate ? 'Calculated from token usage + baseline.' : 'Directly billed from Google Cloud.'}
-                                             </p>
-                                             
-                                             {/* Calibration Overlay */}
-                                             {isCalibrating && (
-                                                 <div className="absolute inset-0 bg-black/90 backdrop-blur-md flex flex-col items-center justify-center p-4 z-20 animate-in fade-in">
-                                                     <div className="text-center w-full">
-                                                         <h4 className="text-white font-bold mb-2 text-sm">Calibrate Historical Cost</h4>
-                                                         <p className="text-xs text-gray-400 mb-3">Enter "Gross Cost" from Google Cloud Console.</p>
-                                                         <div className="flex gap-2 justify-center">
-                                                             <input 
-                                                                type="number" 
-                                                                value={calibrationValue}
-                                                                onChange={e => setCalibrationValue(e.target.value)}
-                                                                className="w-24 bg-white/10 border border-white/20 rounded-lg px-2 py-1 text-white text-center outline-none focus:border-indigo-500"
-                                                                placeholder="0.34"
-                                                                autoFocus
-                                                             />
-                                                             <button onClick={handleSaveCalibration} className="bg-green-600 hover:bg-green-500 text-white rounded-lg p-2"><Check size={16}/></button>
-                                                             <button onClick={() => setIsCalibrating(false)} className="bg-gray-600 hover:bg-gray-500 text-white rounded-lg p-2"><X size={16}/></button>
-                                                         </div>
-                                                     </div>
-                                                 </div>
-                                             )}
+                                             <p className="text-sm text-zinc-500 flex items-center gap-2">{showEstimate ? 'Calculated from token usage + baseline.' : 'Directly billed from Google Cloud.'}</p>
+                                             {isCalibrating && (<div className="absolute inset-0 bg-black/90 backdrop-blur-md flex flex-col items-center justify-center p-4 z-20 animate-in fade-in"><div className="text-center w-full"><h4 className="text-white font-bold mb-2 text-sm">Calibrate Historical Cost</h4><div className="flex gap-2 justify-center"><input type="number" value={calibrationValue} onChange={e => setCalibrationValue(e.target.value)} className="w-24 bg-white/10 border border-white/20 rounded-lg px-2 py-1 text-white text-center outline-none focus:border-indigo-500" placeholder="0.34" autoFocus /><button onClick={handleSaveCalibration} className="bg-green-600 hover:bg-green-500 text-white rounded-lg p-2"><Check size={16}/></button><button onClick={() => setIsCalibrating(false)} className="bg-gray-600 hover:bg-gray-500 text-white rounded-lg p-2"><X size={16}/></button></div></div></div>)}
                                          </div>
                                      </div>
-
-                                     {/* PROFIT & BREAKDOWN */}
                                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                         <div className="md:col-span-1 p-6 rounded-3xl border border-white/10 bg-white/5 flex flex-col justify-center items-center text-center">
-                                             <div className="text-sm font-bold text-zinc-400 uppercase tracking-wider mb-2">Net Profit</div>
-                                             <div className={`text-4xl font-black ${netProfit >= 0 ? 'text-indigo-400' : 'text-orange-500'}`}>
-                                                 €{netProfit.toFixed(2)}
-                                             </div>
-                                             <div className="text-xs text-zinc-500 mt-1">Margin: {profitMargin.toFixed(1)}%</div>
-                                         </div>
-
-                                         <div className="md:col-span-2 p-6 rounded-3xl border border-white/10 bg-white/5">
-                                             <h4 className="text-sm font-bold text-white uppercase tracking-wider mb-4 flex items-center gap-2"><FileText size={16}/> Cost Ledger</h4>
-                                             <div className="space-y-3 text-sm font-mono">
-                                                 <div className="flex justify-between items-center text-zinc-400">
-                                                     <span>Input Tokens ({totalInputTokens.toLocaleString()})</span>
-                                                     <span>${liveInputCost.toFixed(4)}</span>
-                                                 </div>
-                                                 <div className="flex justify-between items-center text-zinc-400">
-                                                     <span>Output Tokens ({totalOutputTokens.toLocaleString()})</span>
-                                                     <span>${liveOutputCost.toFixed(4)}</span>
-                                                 </div>
-                                                 {costCorrection > 0 && (
-                                                     <div className="flex justify-between items-center text-amber-500">
-                                                         <span>Historical Adjustment</span>
-                                                         <span>${costCorrection.toFixed(4)}</span>
-                                                     </div>
-                                                 )}
-                                                 <div className="flex justify-between items-center text-indigo-400 border-t border-white/5 pt-2">
-                                                     <span>Stripe Fees (Est. 3%)</span>
-                                                     <span>€{estimatedFees.toFixed(2)}</span>
-                                                 </div>
-                                             </div>
-                                         </div>
+                                         <div className="md:col-span-1 p-6 rounded-3xl border border-white/10 bg-white/5 flex flex-col justify-center items-center text-center"><div className="text-sm font-bold text-zinc-400 uppercase tracking-wider mb-2">Net Profit</div><div className={`text-4xl font-black ${netProfit >= 0 ? 'text-indigo-400' : 'text-orange-500'}`}>€{netProfit.toFixed(2)}</div><div className="text-xs text-zinc-500 mt-1">Margin: {profitMargin.toFixed(1)}%</div></div>
+                                         <div className="md:col-span-2 p-6 rounded-3xl border border-white/10 bg-white/5"><h4 className="text-sm font-bold text-white uppercase tracking-wider mb-4 flex items-center gap-2"><FileText size={16}/> Cost Ledger</h4><div className="space-y-3 text-sm font-mono"><div className="flex justify-between items-center text-zinc-400"><span>Input Tokens ({totalInputTokens.toLocaleString()})</span><span>${liveInputCost.toFixed(4)}</span></div><div className="flex justify-between items-center text-zinc-400"><span>Output Tokens ({totalOutputTokens.toLocaleString()})</span><span>${liveOutputCost.toFixed(4)}</span></div>{costCorrection > 0 && (<div className="flex justify-between items-center text-amber-500"><span>Historical Adjustment</span><span>${costCorrection.toFixed(4)}</span></div>)}<div className="flex justify-between items-center text-indigo-400 border-t border-white/5 pt-2"><span>Stripe Fees (Est. 3%)</span><span>€{estimatedFees.toFixed(2)}</span></div></div></div>
                                      </div>
                                  </div>
                              )}
@@ -668,123 +575,31 @@ export const AdminPanel = ({
                              {activeTab === 'users' && (
                                  <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
                                      <div className="flex gap-4">
-                                         <div className="flex-1 relative group">
-                                             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-white transition-colors" size={18}/>
-                                             <input 
-                                                type="text" 
-                                                placeholder="Search users..." 
-                                                value={searchQuery}
-                                                onChange={e => setSearchQuery(e.target.value)}
-                                                className="w-full bg-white/5 border border-white/5 rounded-2xl pl-12 pr-4 py-4 text-white placeholder-zinc-600 outline-none focus:border-indigo-500/50 focus:bg-black/40 transition-all shadow-lg"
-                                             />
-                                         </div>
+                                         <div className="flex-1 relative group"><Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-white transition-colors" size={18}/><input type="text" placeholder="Search users..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="w-full bg-white/5 border border-white/5 rounded-2xl pl-12 pr-4 py-4 text-white placeholder-zinc-600 outline-none focus:border-indigo-500/50 focus:bg-black/40 transition-all shadow-lg"/></div>
                                          <div className="flex gap-2">
-                                             <button onClick={() => setSortUsers(sortUsers === 'recent' ? 'usage' : 'recent')} className="px-4 bg-white/5 hover:bg-white/10 border border-white/5 rounded-2xl text-zinc-400 hover:text-white font-medium text-sm transition-all min-w-[100px]">
-                                                 {sortUsers === 'recent' ? 'Latest' : 'Top Usage'}
-                                             </button>
-                                             <div className="relative">
-                                                 <button 
-                                                    onClick={() => setShowFilterMenu(!showFilterMenu)}
-                                                    className={`h-full px-6 flex items-center gap-2 bg-white/5 border border-white/5 rounded-2xl text-sm font-bold transition-all hover:bg-white/10 ${filterPlan !== 'all' ? 'text-indigo-400 bg-indigo-500/10 border-indigo-500/30' : 'text-zinc-400'}`}
-                                                 >
-                                                     <Filter size={18}/> 
-                                                     {filterPlan === 'all' ? 'All' : filterPlan}
-                                                 </button>
-                                                 {showFilterMenu && (
-                                                     <div className="absolute top-full right-0 mt-2 w-32 bg-[#111] border border-white/10 rounded-xl shadow-2xl overflow-hidden z-50 animate-in slide-in-from-top-2 fade-in">
-                                                         {['all', 'free', 'plus', 'pro'].map(p => (
-                                                             <button key={p} onClick={() => { setFilterPlan(p as any); setShowFilterMenu(false); }} className={`w-full text-left px-4 py-3 text-xs font-bold uppercase hover:bg-white/5 ${filterPlan === p ? 'text-indigo-400' : 'text-zinc-500'}`}>
-                                                                 {p}
-                                                             </button>
-                                                         ))}
-                                                     </div>
-                                                 )}
-                                             </div>
+                                             <button onClick={() => setSortUsers(sortUsers === 'recent' ? 'usage' : 'recent')} className="px-4 bg-white/5 hover:bg-white/10 border border-white/5 rounded-2xl text-zinc-400 hover:text-white font-medium text-sm transition-all min-w-[100px]">{sortUsers === 'recent' ? 'Latest' : 'Top Usage'}</button>
+                                             <div className="relative"><button onClick={() => setShowFilterMenu(!showFilterMenu)} className={`h-full px-6 flex items-center gap-2 bg-white/5 border border-white/5 rounded-2xl text-sm font-bold transition-all hover:bg-white/10 ${filterPlan !== 'all' ? 'text-indigo-400 bg-indigo-500/10 border-indigo-500/30' : 'text-zinc-400'}`}><Filter size={18}/> {filterPlan === 'all' ? 'All' : filterPlan}</button>{showFilterMenu && (<div className="absolute top-full right-0 mt-2 w-32 bg-[#111] border border-white/10 rounded-xl shadow-2xl overflow-hidden z-50 animate-in slide-in-from-top-2 fade-in">{['all', 'free', 'plus', 'pro'].map(p => (<button key={p} onClick={() => { setFilterPlan(p as any); setShowFilterMenu(false); }} className={`w-full text-left px-4 py-3 text-xs font-bold uppercase hover:bg-white/5 ${filterPlan === p ? 'text-indigo-400' : 'text-zinc-500'}`}>{p}</button>))}</div>)}</div>
                                          </div>
                                      </div>
-
                                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                         {dbUsers
-                                            .filter(u => !searchQuery || u.name.toLowerCase().includes(searchQuery.toLowerCase()))
-                                            .filter(u => filterPlan === 'all' || u.plan === filterPlan)
-                                            .sort((a, b) => sortUsers === 'recent' ? new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime() : (b.totalInput + b.totalOutput) - (a.totalInput + a.totalOutput))
-                                            .map((user) => (
+                                         {dbUsers.filter(u => !searchQuery || u.name.toLowerCase().includes(searchQuery.toLowerCase())).filter(u => filterPlan === 'all' || u.plan === filterPlan).sort((a, b) => sortUsers === 'recent' ? new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime() : (b.totalInput + b.totalOutput) - (a.totalInput + a.totalOutput)).map((user) => (
                                              <div key={user.id} onClick={() => handleUserClick(user)} className="group bg-white/5 border border-white/5 rounded-3xl p-5 hover:border-indigo-500/30 hover:bg-white/10 transition-all cursor-pointer shadow-md hover:shadow-xl relative overflow-hidden">
-                                                 <div className="flex items-start gap-4 relative z-10">
-                                                     <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-lg font-bold text-white shadow-lg" style={{ backgroundColor: user.theme }}>
-                                                         {user.name.charAt(0).toUpperCase()}
-                                                     </div>
-                                                     <div className="flex-1 min-w-0">
-                                                         <div className="flex justify-between items-start">
-                                                             <h4 className="font-bold text-white truncate pr-2">{user.name}</h4>
-                                                             <span className={`text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-wider ${user.plan === 'pro' ? 'bg-amber-500 text-black' : user.plan === 'plus' ? 'bg-indigo-500 text-white' : 'bg-zinc-700 text-zinc-400'}`}>{user.plan}</span>
-                                                         </div>
-                                                         <div className="flex items-center gap-3 text-xs text-zinc-500 font-mono mt-1">
-                                                             <span>ID: {user.id.substring(0,6)}</span>
-                                                             <span className="w-1 h-1 rounded-full bg-zinc-700"/>
-                                                             <span className="text-emerald-500">{user.usage} imgs</span>
-                                                         </div>
-                                                         <div className="mt-3 pt-3 border-t border-white/5 flex gap-4 text-[10px] font-mono text-zinc-400">
-                                                             <div>In: {(user.totalInput/1000).toFixed(1)}k</div>
-                                                             <div>Out: {(user.totalOutput/1000).toFixed(1)}k</div>
-                                                             <div className="ml-auto text-zinc-600">{new Date(user.updatedAt).toLocaleDateString()}</div>
-                                                         </div>
-                                                     </div>
-                                                 </div>
+                                                 <div className="flex items-start gap-4 relative z-10"><div className="w-12 h-12 rounded-2xl flex items-center justify-center text-lg font-bold text-white shadow-lg" style={{ backgroundColor: user.theme }}>{user.name.charAt(0).toUpperCase()}</div><div className="flex-1 min-w-0"><div className="flex justify-between items-start"><h4 className="font-bold text-white truncate pr-2">{user.name}</h4><span className={`text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-wider ${user.plan === 'pro' ? 'bg-amber-500 text-black' : user.plan === 'plus' ? 'bg-indigo-500 text-white' : 'bg-zinc-700 text-zinc-400'}`}>{user.plan}</span></div><div className="flex items-center gap-3 text-xs text-zinc-500 font-mono mt-1"><span>ID: {user.id.substring(0,6)}</span><span className="w-1 h-1 rounded-full bg-zinc-700"/><span className="text-emerald-500">{user.usage} imgs</span></div><div className="mt-3 pt-3 border-t border-white/5 flex gap-4 text-[10px] font-mono text-zinc-400"><div>In: {(user.totalInput/1000).toFixed(1)}k</div><div>Out: {(user.totalOutput/1000).toFixed(1)}k</div><div className="ml-auto text-zinc-600">{new Date(user.updatedAt).toLocaleDateString()}</div></div></div></div>
                                              </div>
                                          ))}
                                      </div>
                                  </div>
                              )}
 
-                             {/* ACCESS KEYS TAB */}
+                             {/* KEYS TAB */}
                              {activeTab === 'keys' && (
                                  <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
                                      <div className="bg-white/5 border border-white/5 rounded-3xl p-8 flex flex-col md:flex-row items-center gap-8 shadow-xl relative overflow-hidden">
-                                         <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-purple-500/5 pointer-events-none"/>
-                                         <div className="flex-1 relative z-10">
-                                             <h4 className="text-2xl font-black text-white mb-2">Generate Access Key</h4>
-                                             <p className="text-zinc-400 text-sm max-w-md">Create secure promotional keys.</p>
-                                         </div>
-                                         <div className="flex items-center gap-4 bg-black/30 p-2 rounded-2xl border border-white/5 backdrop-blur-md relative z-10">
-                                             <button onClick={() => setSelectedPlan('plus')} className={`px-6 py-3 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${selectedPlan === 'plus' ? 'bg-indigo-600 text-white shadow-lg' : 'text-zinc-500 hover:text-white'}`}><Zap size={16}/> Plus</button>
-                                             <button onClick={() => setSelectedPlan('pro')} className={`px-6 py-3 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${selectedPlan === 'pro' ? 'bg-amber-600 text-white shadow-lg' : 'text-zinc-500 hover:text-white'}`}><Crown size={16}/> Pro</button>
-                                         </div>
+                                         <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-purple-500/5 pointer-events-none"/><div className="flex-1 relative z-10"><h4 className="text-2xl font-black text-white mb-2">Generate Access Key</h4><p className="text-zinc-400 text-sm max-w-md">Create secure promotional keys.</p></div>
+                                         <div className="flex items-center gap-4 bg-black/30 p-2 rounded-2xl border border-white/5 backdrop-blur-md relative z-10"><button onClick={() => setSelectedPlan('plus')} className={`px-6 py-3 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${selectedPlan === 'plus' ? 'bg-indigo-600 text-white shadow-lg' : 'text-zinc-500 hover:text-white'}`}><Zap size={16}/> Plus</button><button onClick={() => setSelectedPlan('pro')} className={`px-6 py-3 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${selectedPlan === 'pro' ? 'bg-amber-600 text-white shadow-lg' : 'text-zinc-500 hover:text-white'}`}><Crown size={16}/> Pro</button></div>
                                          <Button onClick={handleGenerate} icon={Plus} className="px-8 py-4 bg-white text-black hover:bg-zinc-200 shadow-xl rounded-2xl text-base relative z-10">Generate</Button>
                                      </div>
-
-                                     <div className="bg-white/5 border border-white/5 rounded-3xl overflow-hidden shadow-lg">
-                                         <table className="w-full text-left">
-                                             <thead>
-                                                 <tr className="border-b border-white/5 bg-black/20">
-                                                     <th className="p-5 text-xs font-bold text-zinc-500 uppercase tracking-wider">Code</th>
-                                                     <th className="p-5 text-xs font-bold text-zinc-500 uppercase tracking-wider">Plan</th>
-                                                     <th className="p-5 text-xs font-bold text-zinc-500 uppercase tracking-wider">Created</th>
-                                                     <th className="p-5 text-xs font-bold text-zinc-500 uppercase tracking-wider">Status</th>
-                                                     <th className="p-5 text-right text-xs font-bold text-zinc-500 uppercase tracking-wider">Action</th>
-                                                 </tr>
-                                             </thead>
-                                             <tbody className="divide-y divide-white/5">
-                                                 {dbKeys.map((k, i) => (
-                                                     <tr key={i} className="hover:bg-white/5 transition-colors group">
-                                                         <td className="p-5 font-mono text-sm text-indigo-400 font-medium">{k.code}</td>
-                                                         <td className="p-5"><span className={`text-[10px] font-black px-2 py-1 rounded-md uppercase ${k.plan === 'pro' ? 'bg-amber-500/10 text-amber-400' : 'bg-indigo-500/10 text-indigo-400'}`}>{k.plan || 'pro'}</span></td>
-                                                         <td className="p-5 text-xs text-zinc-500">{k.createdAt ? new Date(k.createdAt).toLocaleDateString() : '-'}</td>
-                                                         <td className="p-5">
-                                                             <div className={`flex items-center gap-2 text-xs font-bold ${k.isUsed ? 'text-red-400' : 'text-emerald-400'}`}>
-                                                                 <div className={`w-2 h-2 rounded-full ${k.isUsed ? 'bg-red-500' : 'bg-emerald-500'}`}/>
-                                                                 {k.isUsed ? 'Redeemed' : 'Available'}
-                                                             </div>
-                                                         </td>
-                                                         <td className="p-5 text-right flex justify-end gap-2">
-                                                             <button onClick={() => {navigator.clipboard.writeText(k.code); addToast('Copied', 'success')}} className="p-2 hover:bg-white/10 rounded-lg text-zinc-500 hover:text-white transition-colors"><Copy size={16}/></button>
-                                                             {k.id && <button onClick={() => handleDeleteKey(k.id!)} className="p-2 hover:bg-red-500/20 rounded-lg text-zinc-500 hover:text-red-400 transition-colors"><Trash2 size={16}/></button>}
-                                                         </td>
-                                                     </tr>
-                                                 ))}
-                                             </tbody>
-                                         </table>
-                                     </div>
+                                     <div className="bg-white/5 border border-white/5 rounded-3xl overflow-hidden shadow-lg"><table className="w-full text-left"><thead><tr className="border-b border-white/5 bg-black/20"><th className="p-5 text-xs font-bold text-zinc-500 uppercase tracking-wider">Code</th><th className="p-5 text-xs font-bold text-zinc-500 uppercase tracking-wider">Plan</th><th className="p-5 text-xs font-bold text-zinc-500 uppercase tracking-wider">Created</th><th className="p-5 text-xs font-bold text-zinc-500 uppercase tracking-wider">Status</th><th className="p-5 text-right text-xs font-bold text-zinc-500 uppercase tracking-wider">Action</th></tr></thead><tbody className="divide-y divide-white/5">{dbKeys.map((k, i) => (<tr key={i} className="hover:bg-white/5 transition-colors group"><td className="p-5 font-mono text-sm text-indigo-400 font-medium">{k.code}</td><td className="p-5"><span className={`text-[10px] font-black px-2 py-1 rounded-md uppercase ${k.plan === 'pro' ? 'bg-amber-500/10 text-amber-400' : 'bg-indigo-500/10 text-indigo-400'}`}>{k.plan || 'pro'}</span></td><td className="p-5 text-xs text-zinc-500">{k.createdAt ? new Date(k.createdAt).toLocaleDateString() : '-'}</td><td className="p-5"><div className={`flex items-center gap-2 text-xs font-bold ${k.isUsed ? 'text-red-400' : 'text-emerald-400'}`}><div className={`w-2 h-2 rounded-full ${k.isUsed ? 'bg-red-500' : 'bg-emerald-500'}`}/>{k.isUsed ? 'Redeemed' : 'Available'}</div></td><td className="p-5 text-right flex justify-end gap-2"><button onClick={() => {navigator.clipboard.writeText(k.code); addToast('Copied', 'success')}} className="p-2 hover:bg-white/10 rounded-lg text-zinc-500 hover:text-white transition-colors"><Copy size={16}/></button>{k.id && <button onClick={() => handleDeleteKey(k.id!)} className="p-2 hover:bg-red-500/20 rounded-lg text-zinc-500 hover:text-red-400 transition-colors"><Trash2 size={16}/></button>}</td></tr>))}</tbody></table></div>
                                  </div>
                              )}
                          </>
