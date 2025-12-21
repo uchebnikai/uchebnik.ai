@@ -5,11 +5,13 @@ import {
   RefreshCw, Search, Filter, Trash2, Plus, Zap, Crown, 
   ChevronRight, Edit2, Save, MoreHorizontal, Database, 
   Terminal, Calendar, ArrowUpRight, ArrowLeft, Mail,
-  Clock, Hash, AlertTriangle, Check, Layers
+  Clock, Hash, AlertTriangle, Check, Layers, DollarSign,
+  TrendingUp, TrendingDown, PieChart, Wallet
 } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { supabase } from '../../supabaseClient';
 import { UserPlan } from '../../types';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
 interface GeneratedKey {
   code: string;
@@ -24,9 +26,17 @@ interface AdminUser {
   streak: number;
   lastVisit: string;
   theme: string;
-  usage: number;
+  usage: number; // Daily Image Count
   rawSettings: any;
   updatedAt: string;
+}
+
+interface FinancialData {
+    balance: number; // in cents
+    pending: number; // in cents
+    currency: string;
+    totalGrossRecent: number; // in cents
+    mrr: number; // in cents
 }
 
 interface AdminPanelProps {
@@ -42,6 +52,10 @@ interface AdminPanelProps {
   addToast: (msg: string, type: 'success' | 'error' | 'info') => void;
 }
 
+// Cost Constants (Estimates based on Gemini pricing)
+const COST_PER_IMAGE = 0.004; // $0.004 per image (approx)
+const COST_PER_MSG_AVG = 0.0005; // Average cost per text interaction (blended input/output tokens)
+
 export const AdminPanel = ({
   showAdminAuth,
   setShowAdminAuth,
@@ -55,9 +69,10 @@ export const AdminPanel = ({
   addToast
 }: AdminPanelProps) => {
     
-    const [activeTab, setActiveTab] = useState<'dashboard' | 'keys' | 'users'>('dashboard');
+    const [activeTab, setActiveTab] = useState<'dashboard' | 'keys' | 'users' | 'finance'>('dashboard');
     const [dbKeys, setDbKeys] = useState<any[]>([]);
     const [dbUsers, setDbUsers] = useState<AdminUser[]>([]);
+    const [financials, setFinancials] = useState<FinancialData | null>(null);
     const [loadingData, setLoadingData] = useState(false);
     const [selectedPlan, setSelectedPlan] = useState<'plus' | 'pro'>('pro');
     const [searchQuery, setSearchQuery] = useState('');
@@ -86,12 +101,12 @@ export const AdminPanel = ({
         setLoadingData(true);
         try {
             // Fetch Users
-            if (activeTab === 'users' || activeTab === 'dashboard') {
+            if (activeTab === 'users' || activeTab === 'dashboard' || activeTab === 'finance') {
                 const { data: users, error } = await supabase
                     .from('profiles')
                     .select('*')
                     .order('updated_at', { ascending: false })
-                    .limit(50);
+                    .limit(100); // Increased limit for better stats
                 
                 if (!error && users) {
                     const mappedUsers: AdminUser[] = users.map((u: any) => {
@@ -124,6 +139,17 @@ export const AdminPanel = ({
                     .limit(50);
                 if (!error && keys) setDbKeys(keys);
             }
+
+            // Fetch Finance
+            if (activeTab === 'finance' || activeTab === 'dashboard') {
+                const { data, error } = await supabase.functions.invoke('get-financial-stats');
+                if (!error && data) {
+                    setFinancials(data);
+                } else {
+                    console.error("Finance fetch error:", error);
+                }
+            }
+
         } catch (e) {
             console.error("Admin Fetch Error:", e);
             addToast("Грешка при зареждане на данни", 'error');
@@ -204,6 +230,42 @@ export const AdminPanel = ({
         return d.getDate() === now.getDate() && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
     }).length;
 
+    // --- Financial Calculations ---
+    const calculateCosts = () => {
+        // 1. Image Generation Costs
+        const totalDailyImages = dbUsers.reduce((acc, user) => acc + (user.usage || 0), 0);
+        // Estimate monthly image usage based on daily snapshot (x30)
+        const estimatedMonthlyImages = totalDailyImages * 30;
+        const imageCost = estimatedMonthlyImages * COST_PER_IMAGE;
+
+        // 2. Text/Reasoning Costs (Estimation)
+        // Assume avg 15 messages per active user per day
+        const estimatedDailyMessages = activeToday * 15; 
+        const estimatedMonthlyMessages = estimatedDailyMessages * 30;
+        const textCost = estimatedMonthlyMessages * COST_PER_MSG_AVG;
+
+        const totalEstimatedMonthlyCost = imageCost + textCost;
+
+        return {
+            dailyImages: totalDailyImages,
+            monthlyImages: estimatedMonthlyImages,
+            imageCost,
+            textCost,
+            totalCost: totalEstimatedMonthlyCost
+        };
+    };
+
+    const costs = calculateCosts();
+    const revenue = financials ? financials.mrr / 100 : 0; // Convert cents to dollars/euros
+    const profit = revenue - costs.totalCost;
+    const margin = revenue > 0 ? (profit / revenue) * 100 : 0;
+
+    const chartData = [
+        { name: 'Revenue (MRR)', value: revenue, color: '#10b981' },
+        { name: 'API Costs (Est)', value: costs.totalCost, color: '#ef4444' },
+        { name: 'Net Profit', value: profit, color: '#6366f1' },
+    ];
+
     if (showAdminAuth) {
       return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-xl p-4 animate-in fade-in">
@@ -265,13 +327,16 @@ export const AdminPanel = ({
                     </div>
                     <div>
                         <h2 className="font-bold text-white text-sm">Admin Panel</h2>
-                        <div className="text-[10px] text-zinc-500 font-mono">v2.1 • Secure</div>
+                        <div className="text-[10px] text-zinc-500 font-mono">v2.2 • Finance</div>
                     </div>
                 </div>
                 
                 <nav className="space-y-2 flex-1">
                     <button onClick={() => {setActiveTab('dashboard'); setSelectedUser(null);}} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTab === 'dashboard' ? 'bg-white/10 text-white border border-white/5' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}>
                         <Activity size={18}/> Dashboard
+                    </button>
+                    <button onClick={() => {setActiveTab('finance'); setSelectedUser(null);}} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTab === 'finance' ? 'bg-white/10 text-white border border-white/5' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}>
+                        <DollarSign size={18}/> Finance & Costs
                     </button>
                     <button onClick={() => {setActiveTab('users'); setSelectedUser(null);}} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTab === 'users' ? 'bg-white/10 text-white border border-white/5' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}>
                         <Users size={18}/> User Accounts
@@ -320,6 +385,7 @@ export const AdminPanel = ({
                      {/* USER DETAILS VIEW */}
                      {selectedUser && editForm ? (
                          <div className="max-w-4xl mx-auto space-y-6 animate-in slide-in-from-right fade-in duration-300">
+                             {/* ... (User Detail View Code - Unchanged) ... */}
                              {/* Top Info Card */}
                              <div className="bg-white/5 border border-white/5 rounded-3xl p-8 flex items-center gap-8 shadow-xl">
                                  <div 
@@ -432,71 +498,128 @@ export const AdminPanel = ({
                                          <div className="p-6 bg-white/5 border border-white/5 rounded-3xl hover:border-white/10 transition-colors">
                                              <div className="flex justify-between items-start mb-4">
                                                  <div className="p-3 bg-indigo-500/20 text-indigo-400 rounded-2xl"><Users size={20}/></div>
-                                                 <span className="text-xs text-zinc-500 font-mono bg-black/30 px-2 py-1 rounded-lg border border-white/5">+2 today</span>
+                                                 <span className="text-xs text-zinc-500 font-mono bg-black/30 px-2 py-1 rounded-lg border border-white/5">DB</span>
                                              </div>
                                              <div className="text-3xl font-black text-white">{totalUsers}</div>
-                                             <div className="text-xs text-zinc-500 mt-1 font-medium">Total Users</div>
+                                             <div className="text-xs text-zinc-500 mt-1 font-medium">Total Registered</div>
                                          </div>
                                          <div className="p-6 bg-white/5 border border-white/5 rounded-3xl hover:border-white/10 transition-colors">
                                              <div className="flex justify-between items-start mb-4">
-                                                 <div className="p-3 bg-amber-500/20 text-amber-400 rounded-2xl"><Crown size={20}/></div>
-                                                 <span className="text-xs text-zinc-500 font-mono bg-black/30 px-2 py-1 rounded-lg border border-white/5">{(proUsers / (totalUsers || 1) * 100).toFixed(0)}% ratio</span>
+                                                 <div className="p-3 bg-emerald-500/20 text-emerald-400 rounded-2xl"><DollarSign size={20}/></div>
+                                                 <span className="text-xs text-zinc-500 font-mono bg-black/30 px-2 py-1 rounded-lg border border-white/5">Stripe</span>
                                              </div>
-                                             <div className="text-3xl font-black text-white">{proUsers}</div>
-                                             <div className="text-xs text-zinc-500 mt-1 font-medium">Pro Subscribers</div>
+                                             <div className="text-3xl font-black text-white">€{revenue.toFixed(2)}</div>
+                                             <div className="text-xs text-zinc-500 mt-1 font-medium">Monthly Recurring Revenue</div>
                                          </div>
                                          <div className="p-6 bg-white/5 border border-white/5 rounded-3xl hover:border-white/10 transition-colors">
                                              <div className="flex justify-between items-start mb-4">
-                                                 <div className="p-3 bg-purple-500/20 text-purple-400 rounded-2xl"><Zap size={20}/></div>
+                                                 <div className="p-3 bg-red-500/20 text-red-400 rounded-2xl"><TrendingDown size={20}/></div>
+                                                 <span className="text-xs text-zinc-500 font-mono bg-black/30 px-2 py-1 rounded-lg border border-white/5">Est.</span>
                                              </div>
-                                             <div className="text-3xl font-black text-white">{plusUsers}</div>
-                                             <div className="text-xs text-zinc-500 mt-1 font-medium">Plus Subscribers</div>
+                                             <div className="text-3xl font-black text-white">€{costs.totalCost.toFixed(2)}</div>
+                                             <div className="text-xs text-zinc-500 mt-1 font-medium">Est. API Usage Cost</div>
                                          </div>
-                                         <div className="p-6 bg-white/5 border border-white/5 rounded-3xl hover:border-white/10 transition-colors">
-                                             <div className="flex justify-between items-start mb-4">
-                                                 <div className="p-3 bg-emerald-500/20 text-emerald-400 rounded-2xl"><Activity size={20}/></div>
+                                         <div className="p-6 bg-white/5 border border-white/5 rounded-3xl hover:border-white/10 transition-colors relative overflow-hidden">
+                                             <div className={`absolute right-0 bottom-0 p-8 opacity-10 ${profit > 0 ? 'text-emerald-500' : 'text-red-500'}`}><Wallet size={100}/></div>
+                                             <div className="flex justify-between items-start mb-4 relative z-10">
+                                                 <div className={`p-3 rounded-2xl ${profit > 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}`}><TrendingUp size={20}/></div>
+                                                 <span className="text-xs text-zinc-500 font-mono bg-black/30 px-2 py-1 rounded-lg border border-white/5">Net</span>
                                              </div>
-                                             <div className="text-3xl font-black text-white">{activeToday}</div>
-                                             <div className="text-xs text-zinc-500 mt-1 font-medium">Active Today</div>
+                                             <div className={`text-3xl font-black relative z-10 ${profit > 0 ? 'text-white' : 'text-red-400'}`}>€{profit.toFixed(2)}</div>
+                                             <div className="text-xs text-zinc-500 mt-1 font-medium relative z-10">Net Profit (Margin: {margin.toFixed(1)}%)</div>
                                          </div>
                                      </div>
 
-                                     <div className="grid grid-cols-2 gap-6">
-                                         {/* Recent Keys */}
-                                         <div className="bg-white/5 border border-white/5 rounded-3xl p-6">
-                                             <h4 className="text-white font-bold mb-4 flex items-center gap-2"><Key size={16} className="text-indigo-500"/> Recent Keys</h4>
-                                             <div className="space-y-2">
-                                                 {dbKeys.slice(0, 5).map((k, i) => (
-                                                     <div key={i} className="flex justify-between items-center p-3 bg-black/20 rounded-xl border border-white/5 hover:border-white/10 transition-colors">
-                                                         <code className="text-xs font-mono text-zinc-300 bg-black/40 px-2 py-1 rounded">{k.code}</code>
-                                                         <span className={`text-[10px] px-2 py-0.5 rounded uppercase font-bold ${k.is_used ? 'bg-red-500/10 text-red-400 border border-red-500/20' : 'bg-green-500/10 text-green-400 border border-green-500/20'}`}>
-                                                             {k.is_used ? 'Used' : 'Active'}
-                                                         </span>
+                                     {/* Charts Row */}
+                                     <div className="h-64 w-full bg-white/5 border border-white/5 rounded-3xl p-6">
+                                         <h4 className="text-white font-bold mb-4 flex items-center gap-2 text-sm uppercase tracking-wider text-zinc-500">Financial Overview</h4>
+                                         <ResponsiveContainer width="100%" height="100%">
+                                             <BarChart data={chartData} layout="vertical">
+                                                 <CartesianGrid strokeDasharray="3 3" stroke="#333" horizontal={false} />
+                                                 <XAxis type="number" stroke="#666" tick={{fontSize: 10}}/>
+                                                 <YAxis type="category" dataKey="name" stroke="#999" width={120} tick={{fontSize: 12}}/>
+                                                 <Tooltip 
+                                                    contentStyle={{backgroundColor: '#18181b', borderColor: '#333', borderRadius: '12px'}} 
+                                                    itemStyle={{color: '#fff'}}
+                                                    cursor={{fill: 'rgba(255,255,255,0.05)'}}
+                                                 />
+                                                 <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={32}>
+                                                     {chartData.map((entry, index) => (
+                                                         <Cell key={`cell-${index}`} fill={entry.color} />
+                                                     ))}
+                                                 </Bar>
+                                             </BarChart>
+                                         </ResponsiveContainer>
+                                     </div>
+                                 </div>
+                             )}
+
+                             {/* FINANCE DETAIL TAB */}
+                             {activeTab === 'finance' && (
+                                 <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
+                                     <div className="grid grid-cols-3 gap-6">
+                                         <div className="col-span-2 bg-white/5 border border-white/5 rounded-3xl p-8">
+                                             <h4 className="text-2xl font-black text-white mb-6 flex items-center gap-3">
+                                                 <DollarSign size={24} className="text-emerald-500"/> Revenue Breakdown
+                                             </h4>
+                                             <div className="grid grid-cols-2 gap-8">
+                                                 <div className="space-y-2">
+                                                     <div className="text-sm text-zinc-500 uppercase font-bold tracking-wider">Available Balance</div>
+                                                     <div className="text-4xl font-mono text-white">
+                                                         €{((financials?.balance || 0) / 100).toFixed(2)}
                                                      </div>
-                                                 ))}
+                                                     <div className="text-xs text-zinc-600">Pending: €{((financials?.pending || 0) / 100).toFixed(2)}</div>
+                                                 </div>
+                                                 <div className="space-y-2">
+                                                     <div className="text-sm text-zinc-500 uppercase font-bold tracking-wider">Total Gross (Recent)</div>
+                                                     <div className="text-4xl font-mono text-white">
+                                                         €{((financials?.totalGrossRecent || 0) / 100).toFixed(2)}
+                                                     </div>
+                                                     <div className="text-xs text-zinc-600">Based on last 100 charges</div>
+                                                 </div>
+                                                 <div className="space-y-2 pt-6 border-t border-white/5 col-span-2">
+                                                     <div className="text-sm text-zinc-500 uppercase font-bold tracking-wider">Monthly Recurring Revenue (MRR)</div>
+                                                     <div className="text-5xl font-black text-emerald-400">
+                                                         €{((financials?.mrr || 0) / 100).toFixed(2)}
+                                                     </div>
+                                                     <div className="text-xs text-zinc-600">Projected based on active subscriptions</div>
+                                                 </div>
                                              </div>
                                          </div>
 
-                                         {/* Recent Users */}
-                                         <div className="bg-white/5 border border-white/5 rounded-3xl p-6">
-                                             <h4 className="text-white font-bold mb-4 flex items-center gap-2"><Users size={16} className="text-emerald-500"/> Newest Members</h4>
-                                             <div className="space-y-2">
-                                                 {dbUsers.slice(0, 5).map((u, i) => (
-                                                     <button 
-                                                        key={i} 
-                                                        onClick={() => handleUserClick(u)}
-                                                        className="w-full flex justify-between items-center p-3 bg-black/20 rounded-xl border border-white/5 hover:bg-white/5 hover:border-white/10 transition-all text-left group"
-                                                     >
-                                                         <div className="flex items-center gap-3">
-                                                             <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-sm" style={{backgroundColor: u.theme}}>{u.name[0]}</div>
-                                                             <div>
-                                                                 <div className="text-xs font-bold text-white group-hover:text-indigo-400 transition-colors">{u.name}</div>
-                                                                 <div className="text-[10px] text-zinc-500 uppercase">{u.plan}</div>
-                                                             </div>
-                                                         </div>
-                                                         <ChevronRight size={14} className="text-zinc-600 group-hover:text-white transition-colors"/>
-                                                     </button>
-                                                 ))}
+                                         <div className="bg-white/5 border border-white/5 rounded-3xl p-8 bg-gradient-to-b from-red-500/5 to-transparent">
+                                             <h4 className="text-xl font-bold text-white mb-6 flex items-center gap-3">
+                                                 <TrendingDown size={24} className="text-red-500"/> "Money Losing"
+                                             </h4>
+                                             <div className="space-y-6">
+                                                 <div>
+                                                     <div className="flex justify-between items-end mb-1">
+                                                         <span className="text-sm text-zinc-400">GenAI Images</span>
+                                                         <span className="text-white font-mono">{costs.dailyImages} today</span>
+                                                     </div>
+                                                     <div className="h-2 w-full bg-black/50 rounded-full overflow-hidden">
+                                                         <div className="h-full bg-purple-500 w-3/4 opacity-50"/> 
+                                                     </div>
+                                                     <div className="text-right text-xs text-red-400 mt-1">Est. €{costs.imageCost.toFixed(2)} / mo</div>
+                                                 </div>
+
+                                                 <div>
+                                                     <div className="flex justify-between items-end mb-1">
+                                                         <span className="text-sm text-zinc-400">Active User Interactions</span>
+                                                         <span className="text-white font-mono">{activeToday} users</span>
+                                                     </div>
+                                                     <div className="text-right text-xs text-red-400 mt-1">Est. €{costs.textCost.toFixed(2)} / mo</div>
+                                                 </div>
+
+                                                 <div className="pt-6 border-t border-white/5">
+                                                     <div className="text-sm text-zinc-500 uppercase font-bold tracking-wider">Total Est. Cost</div>
+                                                     <div className="text-3xl font-black text-red-500">
+                                                         €{costs.totalCost.toFixed(2)}
+                                                     </div>
+                                                     <div className="text-[10px] text-zinc-600 mt-2 leading-relaxed">
+                                                         *Calculated using Gemini Flash pricing (€0.10/1M in, €0.40/1M out) + Image gen (€0.004). Actuals via Google Cloud Console.
+                                                     </div>
+                                                 </div>
                                              </div>
                                          </div>
                                      </div>
