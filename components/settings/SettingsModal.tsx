@@ -34,7 +34,7 @@ interface SettingsModalProps {
   userPlan: UserPlan;
 }
 
-type SettingsTab = 'account' | 'appearance' | 'ai' | 'system' | 'data' | 'referrals';
+type SettingsTab = 'account' | 'appearance' | 'ai' | 'system' | 'data';
 
 const PRESET_COLORS = ['#6366f1', '#ec4899', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#14b8a6'];
 
@@ -83,13 +83,6 @@ export const SettingsModal = ({
   const isCustomColor = !PRESET_COLORS.includes(userSettings.themeColor);
   const isCustomBackground = userSettings.customBackground && !PRESET_BACKGROUNDS.includes(userSettings.customBackground);
 
-  const referralLink = userSettings.referralCode ? `${window.location.origin}/?ref=${userSettings.referralCode}` : 'Loading...';
-
-  const handleCopyReferral = () => {
-      navigator.clipboard.writeText(referralLink);
-      addToast(t('referral_link_copied', userSettings.language) || "Link copied!", 'success');
-  };
-
   const handleManageSubscription = async () => {
       setLoadingPortal(true);
       try {
@@ -125,7 +118,6 @@ export const SettingsModal = ({
 
   const tabs = [
     { id: 'account', label: t('profile', userSettings.language), icon: User },
-    { id: 'referrals', label: t('referrals', userSettings.language) || 'Referrals', icon: Gift },
     { id: 'appearance', label: t('personalization', userSettings.language), icon: Palette },
     { id: 'ai', label: t('ai_settings', userSettings.language), icon: Sparkles },
     { id: 'system', label: 'Система', icon: Settings },
@@ -255,63 +247,6 @@ export const SettingsModal = ({
 
                       <div className="flex justify-end pt-4">
                           <Button onClick={handleUpdateAccount} className="px-8 py-3 rounded-xl shadow-lg shadow-indigo-500/20" icon={Check}>{t('save_changes', userSettings.language)}</Button>
-                      </div>
-                  </div>
-              )}
-
-              {/* REFERRALS TAB */}
-              {activeTab === 'referrals' && (
-                  <div className={`space-y-8 max-w-2xl mx-auto ${FADE_IN}`}>
-                      <div>
-                          <h3 className="text-3xl font-black text-zinc-900 dark:text-white mb-2 flex items-center gap-3">
-                              {t('referrals', userSettings.language) || 'Покани Приятел'} <Gift size={24} className="text-amber-500"/>
-                          </h3>
-                          <p className="text-gray-500">Поканете приятели и вземете безплатен Pro достъп!</p>
-                      </div>
-
-                      <div className="bg-gradient-to-br from-amber-500 to-orange-600 rounded-3xl p-8 text-white relative overflow-hidden shadow-2xl shadow-orange-500/30">
-                          <div className="relative z-10">
-                              <h4 className="text-2xl font-black mb-2">🎁 Вземи 3 Дни Pro</h4>
-                              <p className="text-orange-100 mb-6 max-w-sm">
-                                  За всеки приятел, който се регистрира и потвърди имейла си през твоя линк.
-                              </p>
-                              
-                              <div className="bg-white/20 backdrop-blur-md rounded-2xl p-4 flex items-center gap-4 border border-white/20">
-                                  <div className="flex-1 truncate font-mono text-sm">
-                                      {referralLink}
-                                  </div>
-                                  <button 
-                                      onClick={handleCopyReferral}
-                                      className="bg-white text-orange-600 hover:bg-orange-50 px-4 py-2 rounded-xl font-bold text-xs flex items-center gap-2 transition-colors shadow-sm"
-                                  >
-                                      <Copy size={14}/> {t('copy', userSettings.language) || 'Копирай'}
-                                  </button>
-                              </div>
-                          </div>
-                          
-                          {/* Decor */}
-                          <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-white/20 rounded-full blur-2xl"/>
-                          <div className="absolute top-10 right-10 opacity-20">
-                              <Gift size={120} />
-                          </div>
-                      </div>
-
-                      <div className="space-y-4">
-                          <h4 className="font-bold text-gray-900 dark:text-white">Как работи?</h4>
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                              <div className="p-4 bg-gray-50 dark:bg-white/5 rounded-2xl border border-gray-200 dark:border-white/10">
-                                  <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 flex items-center justify-center font-bold mb-3">1</div>
-                                  <p className="text-sm text-gray-600 dark:text-gray-300">Изпрати линка на приятел.</p>
-                              </div>
-                              <div className="p-4 bg-gray-50 dark:bg-white/5 rounded-2xl border border-gray-200 dark:border-white/10">
-                                  <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 flex items-center justify-center font-bold mb-3">2</div>
-                                  <p className="text-sm text-gray-600 dark:text-gray-300">Приятелят се регистрира.</p>
-                              </div>
-                              <div className="p-4 bg-gray-50 dark:bg-white/5 rounded-2xl border border-gray-200 dark:border-white/10">
-                                  <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 flex items-center justify-center font-bold mb-3">3</div>
-                                  <p className="text-sm text-gray-600 dark:text-gray-300">Получаваш 3 дни Pro автоматично!</p>
-                              </div>
-                          </div>
                       </div>
                   </div>
               )}

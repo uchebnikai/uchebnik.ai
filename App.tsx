@@ -29,6 +29,7 @@ import { ConfirmModal } from './components/ui/ConfirmModal';
 import { AdminPanel } from './components/admin/AdminPanel';
 import { UpgradeModal } from './components/subscription/UpgradeModal';
 import { SettingsModal } from './components/settings/SettingsModal';
+import { ReferralModal } from './components/referrals/ReferralModal';
 import { HistoryDrawer } from './components/history/HistoryDrawer';
 import { VoiceCallOverlay } from './components/voice/VoiceCallOverlay';
 import { Sidebar } from './components/layout/Sidebar';
@@ -79,6 +80,7 @@ export const App = () => {
   const [historyDrawerOpen, setHistoryDrawerOpen] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(true); 
   const [showSettings, setShowSettings] = useState(false);
+  const [showReferralModal, setShowReferralModal] = useState(false);
   
   const [homeView, setHomeView] = useState<HomeViewType>('landing');
 
@@ -497,6 +499,7 @@ export const App = () => {
               const oldExpiry = userSettings.proExpiresAt;
               const newExpiry = remoteData.pro_expires_at;
               
+              // Only toast if expiry INCREASED (got reward)
               if (newExpiry && (!oldExpiry || new Date(newExpiry) > new Date(oldExpiry))) {
                   addToast(t('referral_reward_toast', userSettings.language) || "Friend verified! You earned 3 days of Pro! 🎉", 'success');
                   if (userSettings.sound) {
@@ -1542,6 +1545,7 @@ export const App = () => {
             userMeta={userMeta}
             session={session}
             setShowUnlockModal={setShowUnlockModal}
+            setShowReferralModal={setShowReferralModal}
             setShowSettings={setShowSettings}
             handleLogout={handleLogout}
             setShowAuthModal={setShowAuthModal}
@@ -1728,6 +1732,12 @@ export const App = () => {
             handleDeleteAllChats={handleDeleteAllChats}
             addToast={addToast}
             userPlan={userPlan}
+        />
+        <ReferralModal 
+            isOpen={showReferralModal} 
+            onClose={() => setShowReferralModal(false)}
+            userSettings={userSettings}
+            addToast={addToast}
         />
         <Lightbox image={zoomedImage} onClose={() => setZoomedImage(null)} />
         

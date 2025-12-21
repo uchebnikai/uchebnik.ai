@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { MessageSquare, Trash2, Plus, School, GraduationCap, Briefcase, ChevronDown, User, Settings, CreditCard, HelpCircle, LogOut, ArrowRight, ChevronUp, FileText, Flame, CloudOff, RefreshCw, Cloud, PanelLeftClose, PanelLeftOpen, LayoutDashboard, Landmark, Zap, Lock, LogIn, Snowflake } from 'lucide-react';
+import { MessageSquare, Trash2, Plus, School, GraduationCap, Briefcase, ChevronDown, User, Settings, CreditCard, HelpCircle, LogOut, ArrowRight, ChevronUp, FileText, Flame, CloudOff, RefreshCw, Cloud, PanelLeftClose, PanelLeftOpen, LayoutDashboard, Landmark, Zap, Lock, LogIn, Snowflake, Gift } from 'lucide-react';
 import { DynamicIcon } from '../ui/DynamicIcon';
 import { SUBJECTS } from '../../constants';
 import { SubjectId, AppMode, Session, UserRole, UserSettings, UserPlan, SubjectConfig, HomeViewType } from '../../types';
@@ -27,6 +27,7 @@ interface SidebarProps {
   userMeta: any;
   session: any;
   setShowUnlockModal: (val: boolean) => void;
+  setShowReferralModal: (val: boolean) => void; // New Prop
   setShowSettings: (val: boolean) => void;
   handleLogout: () => void;
   setShowAuthModal: (val: boolean) => void;
@@ -60,6 +61,7 @@ export const Sidebar = ({
   userMeta,
   session,
   setShowUnlockModal,
+  setShowReferralModal,
   setShowSettings,
   handleLogout,
   setShowAuthModal,
@@ -459,6 +461,33 @@ export const Sidebar = ({
                   </div>
                   {isNearLimit && <p className="text-[10px] text-red-500 mt-1 font-medium animate-pulse">Лимитът наближава!</p>}
                </div>
+             )}
+
+             {/* Referral Button - Highly Visible */}
+             {session && !collapsed && (
+               <button onClick={() => setShowReferralModal(true)} className={`w-full mb-1 group relative overflow-hidden rounded-2xl p-4 text-left shadow-lg transition-all hover:scale-[1.02] active:scale-[0.98] bg-gradient-to-r from-amber-500 to-orange-500 text-white`}>
+                  <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20" />
+                  <div className="relative z-10 flex items-center justify-between">
+                     <div>
+                        <h3 className="font-bold text-sm tracking-tight flex items-center gap-2">
+                            {t('referrals', userSettings.language) || "Покани Приятел"}
+                        </h3>
+                        <p className="text-[10px] font-medium opacity-90">Вземи безплатен Pro</p>
+                     </div>
+                     <div className="w-8 h-8 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center border border-white/20">
+                        <Gift size={16} />
+                     </div>
+                  </div>
+               </button>
+             )}
+             
+             {/* Small Referral Icon - Collapsed */}
+             {session && collapsed && (
+                 <button onClick={() => setShowReferralModal(true)} className="w-full flex justify-center mb-1 group relative">
+                     <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white shadow-lg">
+                         <Gift size={18}/>
+                     </div>
+                 </button>
              )}
 
              {/* Upgrade Plan Card - ONLY IF LOGGED IN */}
