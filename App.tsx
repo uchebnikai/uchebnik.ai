@@ -267,11 +267,30 @@ export const App = () => {
     };
     handleAuthRedirects();
 
-    const syncProfile = (session: SupabaseSession | null) => {
+    const syncProfile = async (session: SupabaseSession | null) => {
         setSession(session);
         setAuthLoading(false);
         if (session) {
             setShowAuthModal(false);
+            
+            // Handle Pending Referral from LocalStorage (Google Auth Fix)
+            const pendingRefCode = localStorage.getItem('uchebnik_invite_code');
+            if (pendingRefCode) {
+                try {
+                    // We update user_metadata to trigger potential backend logic for referral attribution
+                    const { error } = await supabase.auth.updateUser({
+                        data: { referral_code: pendingRefCode }
+                    });
+                    
+                    if (!error) {
+                        localStorage.removeItem('uchebnik_invite_code'); // One-time use
+                        addToast("Referral code redeemed successfully!", 'success');
+                    }
+                } catch (e) {
+                    console.error("Failed to redeem referral code", e);
+                }
+            }
+
         } else {
             setSessions([]);
             setSyncStatus('synced');
@@ -1677,7 +1696,7 @@ export const App = () => {
                     handleCopy={handleCopy}
                     copiedId={copiedId}
                     handleShare={handleShare}
-                    loadingSubject={!!loadingSubjects[activeSubject.id]}
+                    loadingSubject={!!activeSubject && !!loadingSubjects[activeSubject.id]}
                     activeSubject={activeSubject}
                     messagesEndRef={messagesEndRef}
                 />
@@ -1687,7 +1706,7 @@ export const App = () => {
                     setReplyingTo={setReplyingTo}
                     userSettings={userSettings}
                     fileInputRef={fileInputRef}
-                    loadingSubject={!!loadingSubjects[activeSubject.id]}
+                    loadingSubject={!!activeSubject && !!loadingSubjects[activeSubject.id]}
                     handleImageUpload={handleImageUpload}
                     toggleListening={toggleListening}
                     isListening={isListening}
@@ -1703,7 +1722,55 @@ export const App = () => {
         )}
       </main>
 
-        {/* Modals moved outside of main to properly overlay sidebar */}
+      <Lightbox image={zoomedImage} onClose={() => setZoomedImage(null)} />
+      
+      <SettingsModal 
+        showSettings={showSettings} 
+        setShowSettings={setShowSettings}
+        userMeta={userMeta}
+        editProfile={editProfile}
+        setEditProfile={setEditProfile}
+        handleUpdateAccount={handleUpdateAccount}
+        handleAvatarUpload={handleAvatarUpload}
+        userSettings={userSettings}
+        setUserSettings={setUserSettings}
+        isPremium={isPremium}
+        isDarkMode={isDarkMode}
+        setIsDarkMode={setIsDarkMode}
+        handleBackgroundUpload={handleBackgroundUpload}
+        handleDeleteAllChats={handleDeleteAllChats}
+        addToast={addToast}
+        userPlan={userPlan}
+      />
+
+      <UpgradeModal 
+        showUnlockModal={showUnlockModal} 
+        setShowUnlockModal={setShowUnlockModal}
+        targetPlan={targetPlan}
+        setTargetPlan={setTargetPlan}
+        unlockKeyInput={unlockKeyInput}
+        setUnlockKeyInput={setUnlockKeyInput}
+        handleUnlockSubmit={handleUnlockSubmit}
+        userPlan={userPlan}
+        addToast={addToast}
+      />
+
+      <ReferralModal
+        isOpen={showReferralModal}
+        onClose={() => setShowReferralModal(false)}
+        userSettings={userSettings}
+        addToast={addToast}
+      />
+
+      <ConfirmModal 
+        isOpen={!!confirmModal}
+        title={confirmModal?.title || ''}
+        message={confirmModal?.message || ''}
+        onConfirm={confirmModal?.onConfirm || (() => {})}
+        onCancel={() => setConfirmModal(null)}
+      />
+
+      {showAdminPanel && (
         <AdminPanel 
             showAdminAuth={showAdminAuth}
             setShowAdminAuth={setShowAdminAuth}
@@ -1716,59 +1783,19 @@ export const App = () => {
             generatedKeys={generatedKeys}
             addToast={addToast}
         />
-        <UpgradeModal 
-            showUnlockModal={showUnlockModal}
-            setShowUnlockModal={setShowUnlockModal}
-            targetPlan={targetPlan}
-            setTargetPlan={setTargetPlan}
-            unlockKeyInput={unlockKeyInput}
-            setUnlockKeyInput={setUnlockKeyInput}
-            handleUnlockSubmit={handleUnlockSubmit}
-            userPlan={userPlan}
-            addToast={addToast}
-        />
-        <SettingsModal 
-            showSettings={showSettings}
-            setShowSettings={setShowSettings}
-            userMeta={userMeta}
-            editProfile={editProfile}
-            setEditProfile={setEditProfile}
-            handleUpdateAccount={handleUpdateAccount}
-            handleAvatarUpload={handleAvatarUpload}
-            userSettings={userSettings}
-            setUserSettings={setUserSettings}
-            isPremium={isPremium}
-            isDarkMode={isDarkMode}
-            setIsDarkMode={setIsDarkMode}
-            handleBackgroundUpload={handleBackgroundUpload}
-            handleDeleteAllChats={handleDeleteAllChats}
-            addToast={addToast}
-            userPlan={userPlan}
-        />
-        <ReferralModal 
-            isOpen={showReferralModal} 
-            onClose={() => setShowReferralModal(false)}
-            userSettings={userSettings}
-            addToast={addToast}
-        />
-        <Lightbox image={zoomedImage} onClose={() => setZoomedImage(null)} />
-        
-        <ConfirmModal 
-            isOpen={!!confirmModal}
-            title={confirmModal?.title || ''}
-            message={confirmModal?.message || ''}
-            onConfirm={confirmModal?.onConfirm || (() => {})}
-            onCancel={() => setConfirmModal(null)}
-        />
+      )}
 
-      <div className="fixed top-4 right-4 z-[100] flex flex-col gap-2 pointer-events-none">
-        {toasts.map(t => (
-          <div key={t.id} className={`${TOAST_CONTAINER} ${t.type === 'error' ? TOAST_ERROR : t.type === 'success' ? TOAST_SUCCESS : TOAST_INFO}`}>
-             {t.type === 'error' ? <AlertCircle size={18}/> : t.type === 'success' ? <CheckCircle size={18}/> : t.message.includes('Friend verified') ? <Gift size={18} className="text-amber-500" /> : <Info size={18}/>}
-             <span className="font-medium text-sm">{t.message}</span>
-          </div>
-        ))}
+      {/* Toasts Container */}
+      <div className="fixed bottom-6 right-6 z-[150] flex flex-col gap-2 pointer-events-none">
+          {toasts.map(toast => (
+              <div key={toast.id} className={`${TOAST_CONTAINER} ${toast.type === 'error' ? TOAST_ERROR : toast.type === 'success' ? TOAST_SUCCESS : TOAST_INFO}`}>
+                  {toast.type === 'error' ? <AlertCircle size={18}/> : toast.type === 'success' ? <CheckCircle size={18}/> : <Info size={18}/>}
+                  <span className="text-sm font-medium">{toast.message}</span>
+                  <button onClick={() => setToasts(prev => prev.filter(t => t.id !== toast.id))} className="ml-auto opacity-50 hover:opacity-100 pointer-events-auto"><X size={14}/></button>
+              </div>
+          ))}
       </div>
+
     </div>
   );
 };
