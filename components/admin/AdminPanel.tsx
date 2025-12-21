@@ -8,7 +8,8 @@ import {
   Clock, Hash, AlertTriangle, Check, Layers, DollarSign,
   TrendingUp, TrendingDown, PieChart, Wallet, CreditCard,
   Settings, HelpCircle, ExternalLink, Cloud, Sliders, Cpu, Server, Info, AlertCircle, PenTool, History, Wrench,
-  BarChart2, UserCheck, FileText, Smartphone, Wifi, Globe, HardDrive, Lock, Brain, LayoutDashboard
+  BarChart2, UserCheck, FileText, Smartphone, Wifi, Globe, HardDrive, Lock, Brain, LayoutDashboard,
+  RotateCcw, CalendarDays, Coins
 } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { supabase } from '../../supabaseClient';
@@ -29,16 +30,20 @@ interface GeneratedKey {
 
 interface AdminUser {
   id: string;
+  email?: string;
   name: string;
+  avatar?: string;
   plan: UserPlan;
   streak: number;
   lastVisit: string;
+  createdAt: string;
   theme: string;
   usage: number; 
   rawSettings: any;
   updatedAt: string;
   totalInput: number;
   totalOutput: number;
+  stripeId?: string;
 }
 
 interface FinancialData {
@@ -162,18 +167,25 @@ export const AdminPanel = ({
                             setCostCorrection(settings?.stats?.costCorrection || 0);
                         }
 
+                        // Try to find avatar in settings if standard field is empty (rare case)
+                        const avatarUrl = u.avatar_url || settings?.avatar || '';
+
                         return {
                             id: u.id,
+                            email: u.email, 
                             name: settings?.userName || 'Anonymous',
+                            avatar: avatarUrl,
                             plan: settings?.plan || 'free',
                             streak: settings?.stats?.streak || 0,
                             usage: settings?.stats?.dailyImageCount || 0,
                             lastVisit: settings?.stats?.lastVisit || new Date(u.updated_at).toLocaleDateString(),
+                            createdAt: u.created_at || u.updated_at, // Use updated_at as fallback if created_at is missing
                             theme: u.theme_color || '#6366f1',
                             rawSettings: settings,
                             updatedAt: u.updated_at,
                             totalInput: uIn,
-                            totalOutput: uOut
+                            totalOutput: uOut,
+                            stripeId: u.stripe_customer_id
                         };
                     });
                     setDbUsers(mappedUsers);
@@ -304,6 +316,7 @@ export const AdminPanel = ({
         if (!selectedUser || !editForm) return;
         try {
             const currentSettings = selectedUser.rawSettings || {};
+            // Role removed from updates
             const updatedSettings = { ...currentSettings, userName: editForm.name, plan: editForm.plan, stats: { ...(currentSettings.stats || {}), streak: editForm.streak, dailyImageCount: editForm.usage } };
             const { error } = await supabase.from('profiles').update({ settings: updatedSettings, updated_at: new Date().toISOString() }).eq('id', selectedUser.id);
             if (error) throw error;
@@ -316,6 +329,7 @@ export const AdminPanel = ({
 
     const handleUserClick = (user: AdminUser) => {
         setSelectedUser(user);
+        // Removed role from edit form
         setEditForm({ name: user.name, plan: user.plan, streak: user.streak, usage: user.usage });
     };
 
@@ -401,7 +415,7 @@ export const AdminPanel = ({
                     </div>
                     <div>
                         <h2 className="font-bold text-white text-sm">Control Center</h2>
-                        <div className="text-[10px] text-zinc-500 font-mono">v3.2 • Monitoring</div>
+                        <div className="text-[10px] text-zinc-500 font-mono">v3.3 • Monitoring</div>
                     </div>
                 </div>
                 
@@ -443,9 +457,9 @@ export const AdminPanel = ({
                          <div>
                              <h3 className="text-xl font-bold text-white capitalize flex items-center gap-2">
                                  {activeTab === 'status' ? <div className={`w-2 h-2 rounded-full animate-pulse ${systemHealth.some(s => s.status === 'outage') ? 'bg-red-500' : 'bg-green-500'}`}/> : null}
-                                 {selectedUser ? selectedUser.name : (activeTab === 'status' ? 'System Status' : activeTab.charAt(0).toUpperCase() + activeTab.slice(1))}
+                                 {selectedUser ? 'User Profile' : (activeTab === 'status' ? 'System Status' : activeTab.charAt(0).toUpperCase() + activeTab.slice(1))}
                              </h3>
-                             <p className="text-xs text-zinc-500 mt-0.5">{selectedUser ? 'Viewing User Details' : 'System Administration Console'}</p>
+                             <p className="text-xs text-zinc-500 mt-0.5">{selectedUser ? `Viewing details for ${selectedUser.name}` : 'System Administration Console'}</p>
                          </div>
                      </div>
                      <div className="flex items-center gap-3">
@@ -460,28 +474,143 @@ export const AdminPanel = ({
                      
                      {/* USER DETAIL MODAL REPLACEMENT */}
                      {selectedUser && editForm ? (
-                         <div className="max-w-4xl mx-auto space-y-6 animate-in slide-in-from-right fade-in duration-300">
-                             {/* ... Same User Detail Edit View ... */}
-                             <div className="bg-white/5 border border-white/5 rounded-3xl p-8 flex items-center gap-8 shadow-xl">
-                                 <div className="w-24 h-24 rounded-3xl flex items-center justify-center text-3xl font-black text-white shadow-2xl shadow-indigo-500/20" style={{ backgroundColor: selectedUser.theme }}>{selectedUser.name.charAt(0).toUpperCase()}</div>
-                                 <div className="flex-1">
-                                     <h2 className="text-3xl font-bold text-white mb-2">{selectedUser.name}</h2>
-                                     <div className="flex items-center gap-3 text-sm text-zinc-400 mb-4"><span className="flex items-center gap-1.5 bg-black/30 px-3 py-1 rounded-lg border border-white/5"><Hash size={12}/> ID: {selectedUser.id}</span></div>
-                                     <button onClick={() => setShowRawData(JSON.stringify(selectedUser.rawSettings, null, 2))} className="text-xs font-bold text-indigo-400 hover:text-indigo-300 flex items-center gap-1"><Database size={12}/> View Raw JSON</button>
+                         <div className="max-w-5xl mx-auto space-y-6 animate-in slide-in-from-right fade-in duration-300">
+                             
+                             {/* Profile Header */}
+                             <div className="bg-white/5 border border-white/10 rounded-3xl p-8 relative overflow-hidden group">
+                                 <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 to-transparent pointer-events-none"/>
+                                 <div className="relative z-10 flex flex-col md:flex-row gap-8 items-start">
+                                     <div className="w-32 h-32 rounded-full border-4 border-white/10 overflow-hidden shadow-2xl relative bg-black/20">
+                                         {selectedUser.avatar ? (
+                                             <img src={selectedUser.avatar} className="w-full h-full object-cover"/>
+                                         ) : (
+                                             <div className="w-full h-full flex items-center justify-center text-4xl font-black text-white" style={{ backgroundColor: selectedUser.theme }}>
+                                                 {selectedUser.name.charAt(0).toUpperCase()}
+                                             </div>
+                                         )}
+                                         <div className="absolute bottom-0 inset-x-0 h-10 bg-gradient-to-t from-black/60 to-transparent flex items-end justify-center pb-2">
+                                             <div className={`w-3 h-3 rounded-full ${selectedUser.streak > 0 ? 'bg-green-500' : 'bg-zinc-500'} border-2 border-black`}/>
+                                         </div>
+                                     </div>
+                                     
+                                     <div className="flex-1 space-y-2">
+                                         <div className="flex items-center gap-3">
+                                             <h2 className="text-4xl font-black text-white">{selectedUser.name}</h2>
+                                             <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${
+                                                 selectedUser.plan === 'pro' ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' : 
+                                                 selectedUser.plan === 'plus' ? 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30' : 
+                                                 'bg-zinc-800 text-zinc-400 border-white/10'
+                                             }`}>
+                                                 {selectedUser.plan}
+                                             </span>
+                                         </div>
+                                         <div className="flex flex-col gap-1 text-sm text-zinc-400">
+                                             <div className="flex items-center gap-2"><Mail size={14}/> {selectedUser.email || 'Email not visible'}</div>
+                                             <div className="flex items-center gap-2 font-mono"><Hash size={14}/> {selectedUser.id}</div>
+                                             {selectedUser.stripeId && <div className="flex items-center gap-2 font-mono text-xs text-indigo-400"><CreditCard size={12}/> {selectedUser.stripeId}</div>}
+                                         </div>
+                                     </div>
+
+                                     <div className="flex flex-col gap-3">
+                                         <Button onClick={handleSaveUserChanges} icon={Save} className="bg-white text-black hover:bg-zinc-200 shadow-xl w-full justify-center">Save Changes</Button>
+                                         <div className="flex gap-2">
+                                             <button onClick={() => setEditForm({...editForm, usage: 0})} className="p-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-zinc-400 hover:text-white transition-colors" title="Reset Daily Usage">
+                                                 <RotateCcw size={18}/>
+                                             </button>
+                                             <button onClick={() => setShowRawData(JSON.stringify(selectedUser.rawSettings, null, 2))} className="p-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-zinc-400 hover:text-white transition-colors" title="View JSON">
+                                                 <Database size={18}/>
+                                             </button>
+                                         </div>
+                                     </div>
                                  </div>
-                                 <Button onClick={handleSaveUserChanges} icon={Save} className="bg-white text-black hover:bg-zinc-200">Save Changes</Button>
                              </div>
-                             <div className="grid grid-cols-2 gap-6">
-                                 <div className="bg-white/5 border border-white/5 rounded-3xl p-6 space-y-5">
-                                     <h4 className="text-lg font-bold text-white flex items-center gap-2"><Edit2 size={18} className="text-zinc-500"/> Edit Profile</h4>
-                                     <div className="space-y-2"><label className="text-xs font-bold text-zinc-500 uppercase ml-1">Name</label><input value={editForm.name} onChange={(e) => setEditForm({...editForm, name: e.target.value})} className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-indigo-500 transition-colors"/></div>
-                                     <div className="space-y-2"><label className="text-xs font-bold text-zinc-500 uppercase ml-1">Plan</label><div className="grid grid-cols-3 gap-2 p-1 bg-black/30 rounded-xl border border-white/5">{(['free', 'plus', 'pro'] as const).map(plan => (<button key={plan} onClick={() => setEditForm({...editForm, plan})} className={`py-2 rounded-lg text-xs font-bold uppercase transition-all ${editForm.plan === plan ? 'bg-indigo-600 text-white' : 'text-zinc-500 hover:text-white'}`}>{plan}</button>))}</div></div>
+
+                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                 {/* Edit Column */}
+                                 <div className="md:col-span-1 space-y-6">
+                                     <div className="bg-white/5 border border-white/10 rounded-3xl p-6 space-y-5">
+                                         <h4 className="text-lg font-bold text-white flex items-center gap-2"><Edit2 size={18} className="text-indigo-500"/> Edit Profile</h4>
+                                         
+                                         <div className="space-y-2">
+                                             <label className="text-xs font-bold text-zinc-500 uppercase ml-1">Full Name</label>
+                                             <input value={editForm.name} onChange={(e) => setEditForm({...editForm, name: e.target.value})} className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-indigo-500 transition-colors"/>
+                                         </div>
+
+                                         <div className="space-y-2">
+                                             <label className="text-xs font-bold text-zinc-500 uppercase ml-1">Plan</label>
+                                             <div className="grid grid-cols-3 gap-2 p-1 bg-black/30 rounded-xl border border-white/10">
+                                                 {(['free', 'plus', 'pro'] as const).map(plan => (
+                                                     <button key={plan} onClick={() => setEditForm({...editForm, plan})} className={`py-2 rounded-lg text-xs font-bold uppercase transition-all ${editForm.plan === plan ? 'bg-indigo-600 text-white' : 'text-zinc-500 hover:text-white'}`}>
+                                                         {plan}
+                                                     </button>
+                                                 ))}
+                                             </div>
+                                         </div>
+
+                                         <div className="grid grid-cols-2 gap-4">
+                                             <div className="space-y-2">
+                                                 <label className="text-xs font-bold text-zinc-500 uppercase ml-1">Streak</label>
+                                                 <input type="number" value={editForm.streak} onChange={(e) => setEditForm({...editForm, streak: parseInt(e.target.value) || 0})} className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-orange-500 transition-colors text-center"/>
+                                             </div>
+                                             <div className="space-y-2">
+                                                 <label className="text-xs font-bold text-zinc-500 uppercase ml-1">Usage</label>
+                                                 <input type="number" value={editForm.usage} onChange={(e) => setEditForm({...editForm, usage: parseInt(e.target.value) || 0})} className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-blue-500 transition-colors text-center"/>
+                                             </div>
+                                         </div>
+                                     </div>
                                  </div>
-                                 <div className="bg-white/5 border border-white/5 rounded-3xl p-6 space-y-5">
-                                     <h4 className="text-lg font-bold text-white flex items-center gap-2"><Activity size={18} className="text-zinc-500"/> Usage Stats</h4>
+
+                                 {/* Stats Column */}
+                                 <div className="md:col-span-2 space-y-6">
                                      <div className="grid grid-cols-2 gap-4">
-                                         <div className="space-y-2"><label className="text-xs font-bold text-zinc-500 uppercase ml-1">Streak</label><input type="number" value={editForm.streak} onChange={(e) => setEditForm({...editForm, streak: parseInt(e.target.value) || 0})} className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-orange-500 transition-colors"/></div>
-                                         <div className="space-y-2"><label className="text-xs font-bold text-zinc-500 uppercase ml-1">Images</label><input type="number" value={editForm.usage} onChange={(e) => setEditForm({...editForm, usage: parseInt(e.target.value) || 0})} className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-blue-500 transition-colors"/></div>
+                                         <div className="p-5 bg-white/5 border border-white/10 rounded-2xl">
+                                             <div className="flex items-center gap-3 text-zinc-400 mb-2"><Coins size={20}/><span className="text-xs font-bold uppercase">Estimated Cost</span></div>
+                                             <div className="text-2xl font-mono font-bold text-emerald-400">
+                                                 ${((selectedUser.totalInput / 1000000 * PRICE_INPUT_1M) + (selectedUser.totalOutput / 1000000 * PRICE_OUTPUT_1M)).toFixed(5)}
+                                             </div>
+                                         </div>
+                                         <div className="p-5 bg-white/5 border border-white/10 rounded-2xl">
+                                             <div className="flex items-center gap-3 text-zinc-400 mb-2"><Brain size={20}/><span className="text-xs font-bold uppercase">Total Tokens</span></div>
+                                             <div className="text-2xl font-mono font-bold text-indigo-400">
+                                                 {(selectedUser.totalInput + selectedUser.totalOutput).toLocaleString()}
+                                             </div>
+                                         </div>
+                                         <div className="p-5 bg-white/5 border border-white/10 rounded-2xl">
+                                             <div className="flex items-center gap-3 text-zinc-400 mb-2"><CalendarDays size={20}/><span className="text-xs font-bold uppercase">Member Since</span></div>
+                                             <div className="text-lg font-bold text-white">
+                                                 {new Date(selectedUser.createdAt).toLocaleDateString()}
+                                             </div>
+                                         </div>
+                                         <div className="p-5 bg-white/5 border border-white/10 rounded-2xl">
+                                             <div className="flex items-center gap-3 text-zinc-400 mb-2"><Activity size={20}/><span className="text-xs font-bold uppercase">Last Active</span></div>
+                                             <div className="text-lg font-bold text-white">
+                                                 {selectedUser.lastVisit}
+                                             </div>
+                                         </div>
+                                     </div>
+
+                                     <div className="bg-white/5 border border-white/10 rounded-3xl p-6">
+                                         <h4 className="text-lg font-bold text-white mb-4 flex items-center gap-2"><BarChart2 size={18} className="text-zinc-500"/> Token Breakdown</h4>
+                                         <div className="space-y-4">
+                                             <div>
+                                                 <div className="flex justify-between text-xs mb-1">
+                                                     <span className="text-zinc-400">Input Tokens</span>
+                                                     <span className="text-white font-mono">{selectedUser.totalInput.toLocaleString()}</span>
+                                                 </div>
+                                                 <div className="h-2 bg-black/40 rounded-full overflow-hidden">
+                                                     <div className="h-full bg-blue-500" style={{ width: `${(selectedUser.totalInput / (selectedUser.totalInput + selectedUser.totalOutput || 1)) * 100}%` }}/>
+                                                 </div>
+                                             </div>
+                                             <div>
+                                                 <div className="flex justify-between text-xs mb-1">
+                                                     <span className="text-zinc-400">Output Tokens</span>
+                                                     <span className="text-white font-mono">{selectedUser.totalOutput.toLocaleString()}</span>
+                                                 </div>
+                                                 <div className="h-2 bg-black/40 rounded-full overflow-hidden">
+                                                     <div className="h-full bg-purple-500" style={{ width: `${(selectedUser.totalOutput / (selectedUser.totalInput + selectedUser.totalOutput || 1)) * 100}%` }}/>
+                                                 </div>
+                                             </div>
+                                         </div>
                                      </div>
                                  </div>
                              </div>
@@ -632,16 +761,36 @@ export const AdminPanel = ({
                              {activeTab === 'users' && (
                                  <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
                                      <div className="flex gap-4">
-                                         <div className="flex-1 relative group"><Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-white transition-colors" size={18}/><input type="text" placeholder="Search users..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="w-full bg-white/5 border border-white/5 rounded-2xl pl-12 pr-4 py-4 text-white placeholder-zinc-600 outline-none focus:border-indigo-500/50 focus:bg-black/40 transition-all shadow-lg"/></div>
+                                         <div className="flex-1 relative group"><Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-white transition-colors" size={18}/><input type="text" placeholder="Search users by name, email or ID..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="w-full bg-white/5 border border-white/5 rounded-2xl pl-12 pr-4 py-4 text-white placeholder-zinc-600 outline-none focus:border-indigo-500/50 focus:bg-black/40 transition-all shadow-lg"/></div>
                                          <div className="flex gap-2">
                                              <button onClick={() => setSortUsers(sortUsers === 'recent' ? 'usage' : 'recent')} className="px-4 bg-white/5 hover:bg-white/10 border border-white/5 rounded-2xl text-zinc-400 hover:text-white font-medium text-sm transition-all min-w-[100px]">{sortUsers === 'recent' ? 'Latest' : 'Top Usage'}</button>
                                              <div className="relative"><button onClick={() => setShowFilterMenu(!showFilterMenu)} className={`h-full px-6 flex items-center gap-2 bg-white/5 border border-white/5 rounded-2xl text-sm font-bold transition-all hover:bg-white/10 ${filterPlan !== 'all' ? 'text-indigo-400 bg-indigo-500/10 border-indigo-500/30' : 'text-zinc-400'}`}><Filter size={18}/> {filterPlan === 'all' ? 'All' : filterPlan}</button>{showFilterMenu && (<div className="absolute top-full right-0 mt-2 w-32 bg-[#111] border border-white/10 rounded-xl shadow-2xl overflow-hidden z-50 animate-in slide-in-from-top-2 fade-in">{['all', 'free', 'plus', 'pro'].map(p => (<button key={p} onClick={() => { setFilterPlan(p as any); setShowFilterMenu(false); }} className={`w-full text-left px-4 py-3 text-xs font-bold uppercase hover:bg-white/5 ${filterPlan === p ? 'text-indigo-400' : 'text-zinc-500'}`}>{p}</button>))}</div>)}</div>
                                          </div>
                                      </div>
                                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                         {dbUsers.filter(u => !searchQuery || u.name.toLowerCase().includes(searchQuery.toLowerCase())).filter(u => filterPlan === 'all' || u.plan === filterPlan).sort((a, b) => sortUsers === 'recent' ? new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime() : (b.totalInput + b.totalOutput) - (a.totalInput + a.totalOutput)).map((user) => (
+                                         {dbUsers.filter(u => !searchQuery || u.name.toLowerCase().includes(searchQuery.toLowerCase()) || (u.email && u.email.toLowerCase().includes(searchQuery.toLowerCase())) || u.id.includes(searchQuery)).filter(u => filterPlan === 'all' || u.plan === filterPlan).sort((a, b) => sortUsers === 'recent' ? new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime() : (b.totalInput + b.totalOutput) - (a.totalInput + a.totalOutput)).map((user) => (
                                              <div key={user.id} onClick={() => handleUserClick(user)} className="group bg-white/5 border border-white/5 rounded-3xl p-5 hover:border-indigo-500/30 hover:bg-white/10 transition-all cursor-pointer shadow-md hover:shadow-xl relative overflow-hidden">
-                                                 <div className="flex items-start gap-4 relative z-10"><div className="w-12 h-12 rounded-2xl flex items-center justify-center text-lg font-bold text-white shadow-lg" style={{ backgroundColor: user.theme }}>{user.name.charAt(0).toUpperCase()}</div><div className="flex-1 min-w-0"><div className="flex justify-between items-start"><h4 className="font-bold text-white truncate pr-2">{user.name}</h4><span className={`text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-wider ${user.plan === 'pro' ? 'bg-amber-500 text-black' : user.plan === 'plus' ? 'bg-indigo-500 text-white' : 'bg-zinc-700 text-zinc-400'}`}>{user.plan}</span></div><div className="flex items-center gap-3 text-xs text-zinc-500 font-mono mt-1"><span>ID: {user.id.substring(0,6)}</span><span className="w-1 h-1 rounded-full bg-zinc-700"/><span className="text-emerald-500">{user.usage} imgs</span></div><div className="mt-3 pt-3 border-t border-white/5 flex gap-4 text-[10px] font-mono text-zinc-400"><div>In: {(user.totalInput/1000).toFixed(1)}k</div><div>Out: {(user.totalOutput/1000).toFixed(1)}k</div><div className="ml-auto text-zinc-600">{new Date(user.updatedAt).toLocaleDateString()}</div></div></div></div>
+                                                 <div className="flex items-start gap-4 relative z-10">
+                                                     <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-lg font-bold text-white shadow-lg overflow-hidden relative" style={{ backgroundColor: user.theme }}>
+                                                         {user.avatar ? <img src={user.avatar} className="w-full h-full object-cover"/> : user.name.charAt(0).toUpperCase()}
+                                                     </div>
+                                                     <div className="flex-1 min-w-0">
+                                                         <div className="flex justify-between items-start">
+                                                             <h4 className="font-bold text-white truncate pr-2">{user.name}</h4>
+                                                             <span className={`text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-wider ${user.plan === 'pro' ? 'bg-amber-500 text-black' : user.plan === 'plus' ? 'bg-indigo-500 text-white' : 'bg-zinc-700 text-zinc-400'}`}>{user.plan}</span>
+                                                         </div>
+                                                         <div className="flex items-center gap-3 text-xs text-zinc-500 font-mono mt-1">
+                                                             <span>ID: {user.id.substring(0,6)}</span>
+                                                             <span className="w-1 h-1 rounded-full bg-zinc-700"/>
+                                                             <span className="text-emerald-500">{user.usage} imgs</span>
+                                                         </div>
+                                                         <div className="mt-3 pt-3 border-t border-white/5 flex gap-4 text-[10px] font-mono text-zinc-400">
+                                                             <div>In: {(user.totalInput/1000).toFixed(1)}k</div>
+                                                             <div>Out: {(user.totalOutput/1000).toFixed(1)}k</div>
+                                                             <div className="ml-auto text-zinc-600">{new Date(user.updatedAt).toLocaleDateString()}</div>
+                                                         </div>
+                                                     </div>
+                                                 </div>
                                              </div>
                                          ))}
                                      </div>
