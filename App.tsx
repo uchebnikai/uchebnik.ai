@@ -15,7 +15,7 @@ import { Session as SupabaseSession } from '@supabase/supabase-js';
 
 // Utils
 import { resizeImage } from './utils/image';
-import { generateChecksum, verifyAdminPassword, redeemKey, registerKeyInDb } from './utils/security';
+import { generateChecksum, redeemKey, registerKeyInDb } from './utils/security';
 import { saveSessionsToStorage, getSessionsFromStorage, saveSettingsToStorage, getSettingsFromStorage } from './utils/storage';
 import { useTheme } from './hooks/useTheme';
 import { getBackgroundImageStyle } from './styles/utils';
@@ -56,6 +56,10 @@ export const App = () => {
   const [syncStatus, setSyncStatus] = useState<'synced' | 'syncing' | 'error' | 'offline'>('synced');
   const [syncErrorDetails, setSyncErrorDetails] = useState<string | null>(null);
   const [missingDbTables, setMissingDbTables] = useState(false);
+  
+  // --- Admin State ---
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [showAdminPanel, setShowAdminPanel] = useState(false);
 
   // --- State ---
   const [userRole, setUserRole] = useState<UserRole | null>(null);
@@ -97,9 +101,6 @@ export const App = () => {
   const [totalOutputTokens, setTotalOutputTokens] = useState(0);
   const [costCorrection, setCostCorrection] = useState(0);
 
-  const [showAdminAuth, setShowAdminAuth] = useState(false);
-  const [showAdminPanel, setShowAdminPanel] = useState(false);
-  const [adminPasswordInput, setAdminPasswordInput] = useState('');
   const [generatedKeys, setGeneratedKeys] = useState<GeneratedKey[]>([]);
   
   const [showUnlockModal, setShowUnlockModal] = useState(false);
@@ -225,6 +226,7 @@ export const App = () => {
             setSessions([]);
             setSyncStatus('synced');
             setIsRemoteDataLoaded(false);
+            setIsAdmin(false);
         }
 
         if (session?.user?.user_metadata) {
@@ -305,7 +307,7 @@ export const App = () => {
           try {
               const { data: profileData, error: profileError } = await supabase
                   .from('profiles')
-                  .select('settings, theme_color, custom_background')
+                  .select('settings, theme_color, custom_background, is_admin')
                   .eq('id', session.user.id)
                   .single();
               
@@ -315,6 +317,11 @@ export const App = () => {
               }
 
               if (profileData) {
+                  // Admin Check from DB
+                  if (profileData.is_admin) {
+                      setIsAdmin(true);
+                  }
+
                   if (profileData.settings) {
                       const { plan, stats, ...restSettings } = profileData.settings;
                       const merged = { ...restSettings, themeColor: profileData.theme_color, customBackground: profileData.custom_background };
@@ -443,6 +450,7 @@ export const App = () => {
                   const { plan, stats, ...settingsRest } = remoteData.settings;
                   setUserSettings(prev => ({ ...prev, ...settingsRest, themeColor: remoteData.theme_color, custom_background: remoteData.custom_background }));
                   if (plan) setUserPlan(plan);
+                  if (remoteData.is_admin !== undefined) setIsAdmin(remoteData.is_admin);
                   if (stats) {
                       setStreak(stats.streak || 0);
                       // Update stats if remote changed
@@ -1335,8 +1343,6 @@ export const App = () => {
     setUnlockLoading(false);
   };
 
-  const handleAdminLogin = async () => { const isValid = await verifyAdminPassword(adminPasswordInput); if (isValid) { setShowAdminAuth(false); setShowAdminPanel(true); setAdminPasswordInput(''); addToast("Успешен вход в админ панела", 'success'); } else { addToast("Грешна парола!", 'error'); } };
-
   const generateKey = async (plan: 'plus' | 'pro' = 'pro') => {
     const randomCore = Math.random().toString(36).substring(2, 8).toUpperCase(); const checksum = generateChecksum(randomCore); const newKeyCode = `UCH-${randomCore}-${checksum}`;
     await registerKeyInDb(newKeyCode, plan);
@@ -1465,6 +1471,8 @@ export const App = () => {
             syncStatus={syncStatus}
             homeView={homeView}
             dailyImageCount={dailyImageCount}
+            isAdmin={isAdmin}
+            setShowAdminPanel={setShowAdminPanel}
           />
       )}
       
@@ -1499,7 +1507,6 @@ export const App = () => {
                 handleSubjectChange={(s) => handleSubjectChange(s)}
                 setHomeView={setHomeView}
                 setUserRole={setUserRole}
-                setShowAdminAuth={setShowAdminAuth}
                 onQuickStart={handleQuickStart}
                 setSidebarOpen={setSidebarOpen}
             />
@@ -1591,13 +1598,8 @@ export const App = () => {
 
         {/* Modals moved outside of main to properly overlay sidebar */}
         <AdminPanel 
-            showAdminAuth={showAdminAuth}
-            setShowAdminAuth={setShowAdminAuth}
             showAdminPanel={showAdminPanel}
             setShowAdminPanel={setShowAdminPanel}
-            adminPasswordInput={adminPasswordInput}
-            setAdminPasswordInput={setAdminPasswordInput}
-            handleAdminLogin={handleAdminLogin}
             generateKey={generateKey}
             generatedKeys={generatedKeys}
             addToast={addToast}

@@ -3,13 +3,12 @@ import React, { useState, useEffect } from 'react';
 import { 
   Shield, X, Copy, CheckCircle, Key, Users, Activity, 
   RefreshCw, Search, Filter, Trash2, Plus, Zap, Crown, 
-  ChevronRight, Edit2, Save, MoreHorizontal, Database, 
-  Terminal, Calendar, ArrowUpRight, ArrowLeft, Mail,
-  Clock, Hash, AlertTriangle, Check, Layers, DollarSign,
+  ArrowLeft, Mail, Hash, DollarSign,
   TrendingUp, TrendingDown, Wallet, CreditCard,
-  Settings, HelpCircle, ExternalLink, Cloud, Sliders, Cpu, Server, Info, AlertCircle, PenTool, History, Wrench,
-  BarChart2, UserCheck, FileText, Smartphone, Wifi, Globe, HardDrive, Lock, Brain, LayoutDashboard,
-  RotateCcw, CalendarDays, Coins, Radio, Send, PieChart as PieChartIcon
+  Cloud, FileText, Server, Info, AlertCircle, 
+  BarChart2, Brain, LayoutDashboard,
+  RotateCcw, CalendarDays, Coins, Radio, Send, PieChart as PieChartIcon,
+  Database, Wifi, HardDrive, Terminal, Save, Edit2, Check
 } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { supabase } from '../../supabaseClient';
@@ -74,26 +73,16 @@ interface SubjectStat {
 }
 
 interface AdminPanelProps {
-  showAdminAuth: boolean;
-  setShowAdminAuth: (val: boolean) => void;
   showAdminPanel: boolean;
   setShowAdminPanel: (val: boolean) => void;
-  adminPasswordInput: string;
-  setAdminPasswordInput: (val: string) => void;
-  handleAdminLogin: () => void;
   generateKey: (plan: 'plus' | 'pro') => void;
   generatedKeys: GeneratedKey[];
   addToast: (msg: string, type: 'success' | 'error' | 'info') => void;
 }
 
 export const AdminPanel = ({
-  showAdminAuth,
-  setShowAdminAuth,
   showAdminPanel,
   setShowAdminPanel,
-  adminPasswordInput,
-  setAdminPasswordInput,
-  handleAdminLogin,
   generateKey,
   generatedKeys,
   addToast
@@ -107,6 +96,10 @@ export const AdminPanel = ({
     const [selectedPlan, setSelectedPlan] = useState<'plus' | 'pro'>('pro');
     const [searchQuery, setSearchQuery] = useState('');
     const [showRawData, setShowRawData] = useState<string | null>(null);
+    
+    // Authorization Check
+    const [isAuthorized, setIsAuthorized] = useState(false);
+    const [authChecking, setAuthChecking] = useState(true);
     
     // Stats
     const [totalInputTokens, setTotalInputTokens] = useState(0);
@@ -143,18 +136,47 @@ export const AdminPanel = ({
         { name: 'Payment Gateway (Stripe)', status: 'unknown', latency: 0, uptime: 100, icon: CreditCard, lastCheck: 0 },
     ]);
 
+    // Secure Verification on Mount
     useEffect(() => {
         if (showAdminPanel) {
-            fetchData();
+            checkAdminAccess();
         }
-    }, [showAdminPanel, activeTab]);
+    }, [showAdminPanel]);
+
+    const checkAdminAccess = async () => {
+        setAuthChecking(true);
+        try {
+            const { data, error } = await supabase.rpc('check_admin_access');
+            
+            if (error || !data) {
+                console.error("Admin Access Denied:", error);
+                setShowAdminPanel(false);
+                addToast("Достъп отказан. Този панел е само за администратори.", "error");
+                setIsAuthorized(false);
+            } else {
+                setIsAuthorized(true);
+                fetchData();
+            }
+        } catch (e) {
+            setShowAdminPanel(false);
+            setIsAuthorized(false);
+        } finally {
+            setAuthChecking(false);
+        }
+    };
 
     // Fetch Heatmap Data when range changes
     useEffect(() => {
-        if (showAdminPanel && activeTab === 'dashboard') {
+        if (showAdminPanel && isAuthorized && activeTab === 'dashboard') {
             fetchSubjectStats();
         }
-    }, [heatmapRange, showAdminPanel, activeTab]);
+    }, [heatmapRange, showAdminPanel, activeTab, isAuthorized]);
+
+    useEffect(() => {
+        if (showAdminPanel && isAuthorized) {
+            fetchData();
+        }
+    }, [activeTab, isAuthorized]);
 
     const fetchSubjectStats = async () => {
         setIsHeatmapLoading(true);
@@ -164,7 +186,6 @@ export const AdminPanel = ({
             
             if (error) {
                 console.warn("RPC get_subject_usage failed (missing function?):", error);
-                // Fallback: Show empty state or simulated if requested (but prompt said NO simulated data)
                 setSubjectStats([]);
             } else if (data) {
                 const total = data.reduce((acc: number, curr: any) => acc + curr.count, 0);
@@ -428,12 +449,6 @@ export const AdminPanel = ({
     const netProfit = revenue - displayCost - estimatedFees;
     const profitMargin = revenue > 0 ? (netProfit / revenue) * 100 : 0;
 
-    const chartData = [
-        { name: 'Revenue', value: revenue, color: '#10b981' }, 
-        { name: 'AI Cost', value: displayCost, color: '#ef4444' },
-        { name: 'Fees', value: estimatedFees, color: '#6366f1' },
-    ];
-
     // Status Bar Component
     const UptimeBar = ({ status }: { status: string }) => (
         <div className="flex gap-0.5 h-8 mt-2 w-full max-w-sm opacity-80">
@@ -468,31 +483,22 @@ export const AdminPanel = ({
         return COLOR_MAP[key] || '#6b7280';
     };
 
-    if (showAdminAuth) {
-      return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-xl p-4 animate-in fade-in">
-          <div className="bg-[#09090b]/80 border border-white/10 w-full max-w-sm p-8 rounded-3xl shadow-2xl relative overflow-hidden backdrop-blur-md">
-             <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 to-purple-500/10 pointer-events-none"/>
-             <button onClick={() => setShowAdminAuth(false)} className="absolute top-4 right-4 text-zinc-500 hover:text-white transition-colors"><X size={20}/></button>
-             <div className="flex flex-col items-center gap-6 relative z-10">
-                <div className="p-4 bg-white/5 rounded-full border border-white/10 text-white shadow-[0_0_30px_rgba(255,255,255,0.1)]">
-                    <Shield size={32}/>
-                </div>
-                <div className="text-center">
-                    <h2 className="text-xl font-bold text-white mb-1">Admin Access</h2>
-                    <p className="text-zinc-500 text-sm">Въведете парола за достъп</p>
-                </div>
-                <div className="w-full space-y-3">
-                    <input type="password" value={adminPasswordInput} onChange={e => setAdminPasswordInput(e.target.value)} placeholder="••••••••" className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-center text-white outline-none focus:border-indigo-500 transition-colors font-mono tracking-widest" autoFocus />
-                    <Button onClick={handleAdminLogin} className="w-full py-3 bg-white text-black hover:bg-zinc-200">Вход</Button>
-                </div>
-             </div>
-          </div>
-        </div>
-      );
-    }
-
     if (showAdminPanel) {
+      if (authChecking) {
+          return (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
+                <div className="text-white flex flex-col items-center">
+                    <RefreshCw className="animate-spin mb-4" size={32} />
+                    <p>Verifying admin privileges...</p>
+                </div>
+            </div>
+          );
+      }
+
+      if (!isAuthorized) {
+          return null; // Or a restricted access component, but useEffect handles closing it.
+      }
+
       return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-300">
            <div className="w-full max-w-7xl h-[90vh] bg-[#09090b]/95 border border-white/10 rounded-[32px] shadow-2xl flex overflow-hidden backdrop-blur-2xl relative">
@@ -515,7 +521,7 @@ export const AdminPanel = ({
                     </div>
                     <div>
                         <h2 className="font-bold text-white text-sm">Control Center</h2>
-                        <div className="text-[10px] text-zinc-500 font-mono">v3.4 • Live Data</div>
+                        <div className="text-[10px] text-zinc-500 font-mono">v3.5 • RBAC Secured</div>
                     </div>
                 </div>
                 
@@ -771,7 +777,6 @@ export const AdminPanel = ({
                                              <div className="flex flex-col items-center justify-center py-12 text-zinc-500">
                                                  {isHeatmapLoading ? <RefreshCw className="animate-spin mb-2"/> : <PieChartIcon size={32} className="mb-2 opacity-50"/>}
                                                  <p>{isHeatmapLoading ? "Calculating real usage data..." : "No data found for this period."}</p>
-                                                 {!isHeatmapLoading && <p className="text-xs text-zinc-600 mt-2 max-w-md text-center">Ensure the `get_subject_usage` RPC function is enabled in Supabase to see real aggregated user analytics.</p>}
                                              </div>
                                          ) : (
                                              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
@@ -878,20 +883,6 @@ export const AdminPanel = ({
                                                      This system uses <strong>Supabase Realtime</strong> connected to the <code>broadcasts</code> table. 
                                                      Messages are delivered instantly to all active WebSocket connections. No polling is used.
                                                  </p>
-                                             </div>
-
-                                             <div className="bg-white/5 border border-white/5 rounded-3xl p-6">
-                                                 <h4 className="text-white font-bold mb-4">Required Backend Setup</h4>
-                                                 <div className="text-xs font-mono text-zinc-400 bg-black/50 p-4 rounded-xl border border-white/5 overflow-x-auto">
-                                                     <p className="mb-2 text-zinc-500">// Run this in Supabase SQL Editor</p>
-                                                     <p>CREATE TABLE broadcasts (</p>
-                                                     <p className="pl-4">id uuid DEFAULT gen_random_uuid() PRIMARY KEY,</p>
-                                                     <p className="pl-4">message text NOT NULL,</p>
-                                                     <p className="pl-4">type text DEFAULT 'toast',</p>
-                                                     <p className="pl-4">created_at timestamptz DEFAULT now()</p>
-                                                     <p>);</p>
-                                                     <p className="mt-2 text-indigo-400">alter publication supabase_realtime add table broadcasts;</p>
-                                                 </div>
                                              </div>
                                          </div>
                                      </div>
@@ -1004,7 +995,7 @@ export const AdminPanel = ({
                                                      <div className="flex-1 min-w-0">
                                                          <div className="flex justify-between items-start">
                                                              <h4 className="font-bold text-white truncate pr-2">{user.name}</h4>
-                                                             <span className={`text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-wider ${user.plan === 'pro' ? 'bg-amber-500 text-black' : user.plan === 'plus' ? 'bg-indigo-500 text-white' : 'bg-zinc-700 text-zinc-400'}`}>{user.plan}</span>
+                                                             <span className={`text-[10px] font-black px-2 py-1 rounded-md uppercase ${user.plan === 'pro' ? 'bg-amber-500/10 text-amber-400' : 'bg-indigo-500/10 text-indigo-400'}`}>{user.plan}</span>
                                                          </div>
                                                          <div className="flex items-center gap-3 text-xs text-zinc-500 font-mono mt-1">
                                                              <span>ID: {user.id.substring(0,6)}</span>

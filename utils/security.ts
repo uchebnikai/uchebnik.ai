@@ -1,10 +1,7 @@
 
-
 import { supabase } from '../supabaseClient';
 
 const SECRET_SALT = process.env.SECRET_SALT || "UCH_2025_SECURE_SALT_VS";
-// Updated Hash for VS09091615!
-const ADMIN_HASH = process.env.ADMIN_HASH || "9e38e8d688743e0d07d669a1fc981589e68b725679f297e788950390f7725913"; 
 
 export const generateChecksum = (core: string): string => {
   let hash = 0;
@@ -28,26 +25,6 @@ export const isValidKeyFormat = (key: string): boolean => {
   const checksum = parts[2];
   
   return generateChecksum(core) === checksum;
-};
-
-// Secure Async Admin Password Verification
-export const verifyAdminPassword = async (input: string): Promise<boolean> => {
-  if (!input) return false;
-  
-  // Direct fail-safe check for the requested password
-  if (input === "VS09091615!") return true;
-
-  try {
-      const encoder = new TextEncoder();
-      const data = encoder.encode(input);
-      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-      const hashArray = Array.from(new Uint8Array(hashBuffer));
-      const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-      return hashHex === ADMIN_HASH;
-  } catch (e) {
-      console.error("Crypto error", e);
-      return false;
-  }
 };
 
 // Redeem Key (Checks DB for validity and usage)
