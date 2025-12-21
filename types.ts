@@ -190,9 +190,8 @@ export interface UserSettings {
   fontFamily: FontFamily;
   christmasMode?: boolean; 
   preferredVoice: string; 
-  referralCode?: string; 
-  proExpiresAt?: string; 
-  lastUserAgent?: string; // New: Stores the browser string for admin analytics
+  referralCode?: string; // New: Unique code for this user
+  proExpiresAt?: string; // New: ISO Date string
   stats?: {
       streak?: number;
       dailyImageCount?: number;
@@ -200,6 +199,6 @@ export interface UserSettings {
       lastVisit?: string;
       totalInputTokens?: number;
       totalOutputTokens?: number;
-      costCorrection?: number; 
+      costCorrection?: number; // New field for manual cost calibration
   };
 }
