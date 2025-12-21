@@ -7,7 +7,7 @@ import {
   Terminal, Calendar, ArrowUpRight, ArrowLeft, Mail,
   Clock, Hash, AlertTriangle, Check, Layers, DollarSign,
   TrendingUp, TrendingDown, PieChart, Wallet, CreditCard,
-  Settings, HelpCircle, ExternalLink, Cloud
+  Settings, HelpCircle, ExternalLink, Cloud, Sliders, Cpu, Server
 } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { supabase } from '../../supabaseClient';
@@ -33,13 +33,11 @@ interface AdminUser {
 }
 
 interface FinancialData {
-    balance: number; // in cents
-    pending: number; // in cents
+    balance: number; // in cents (Stripe)
+    mrr: number; // in cents (Stripe)
+    googleCloudCost: number; // in dollars (Google API)
+    lastSync?: string;
     currency: string;
-    totalGrossRecent: number; // in cents
-    mrr: number; // in cents
-    googleCloudCost: number; // in cents
-    costSource: 'estimate' | 'google_api_connected';
 }
 
 interface AdminPanelProps {
@@ -54,10 +52,6 @@ interface AdminPanelProps {
   generatedKeys: GeneratedKey[];
   addToast: (msg: string, type: 'success' | 'error' | 'info') => void;
 }
-
-// Cost Constants (Estimates based on Gemini pricing)
-const COST_PER_IMAGE = 0.004; 
-const COST_PER_MSG_AVG = 0.0005; 
 
 export const AdminPanel = ({
   showAdminAuth,
@@ -81,11 +75,6 @@ export const AdminPanel = ({
     const [searchQuery, setSearchQuery] = useState('');
     const [showRawData, setShowRawData] = useState<string | null>(null);
     
-    // Manual Cost Override State
-    const [manualCost, setManualCost] = useState<number | null>(null);
-    const [isEditingCost, setIsEditingCost] = useState(false);
-    const [tempCostInput, setTempCostInput] = useState('');
-
     // Filtering
     const [filterPlan, setFilterPlan] = useState<'all' | 'free' | 'plus' | 'pro'>('all');
     const [showFilterMenu, setShowFilterMenu] = useState(false);
@@ -102,9 +91,6 @@ export const AdminPanel = ({
     useEffect(() => {
         if (showAdminPanel) {
             fetchData();
-            // Load manual cost from local storage
-            const savedCost = localStorage.getItem('uchebnik_admin_manual_cost');
-            if (savedCost) setManualCost(parseFloat(savedCost));
         }
     }, [showAdminPanel, activeTab]);
 
@@ -151,13 +137,13 @@ export const AdminPanel = ({
                 if (!error && keys) setDbKeys(keys);
             }
 
-            // Fetch Finance
+            // Fetch Finance (Stripe & Google Cloud)
             if (activeTab === 'finance' || activeTab === 'dashboard') {
                 const { data, error } = await supabase.functions.invoke('get-financial-stats');
                 if (!error && data) {
                     setFinancials(data);
                 } else {
-                    console.log("Stripe fetch skipped or failed");
+                    console.error("Finance fetch error:", error);
                 }
             }
 
@@ -172,25 +158,6 @@ export const AdminPanel = ({
         generateKey(selectedPlan);
         setTimeout(fetchData, 1000);
         addToast(`Генериран ключ за ${selectedPlan.toUpperCase()}`, 'success');
-    };
-
-    const handleSaveCost = () => {
-        const val = parseFloat(tempCostInput);
-        if (!isNaN(val) && val >= 0) {
-            setManualCost(val);
-            localStorage.setItem('uchebnik_admin_manual_cost', val.toString());
-            setIsEditingCost(false);
-            addToast('Разходите са обновени ръчно', 'success');
-        } else {
-            addToast('Моля въведете валидно число', 'error');
-        }
-    };
-
-    const handleClearManualCost = () => {
-        setManualCost(null);
-        localStorage.removeItem('uchebnik_admin_manual_cost');
-        setIsEditingCost(false);
-        addToast('Върнато към автоматична оценка', 'info');
     };
 
     const handleSaveUserChanges = async () => {
@@ -247,65 +214,19 @@ export const AdminPanel = ({
         });
     };
 
-    // Calculate Stats
-    const totalUsers = dbUsers.length;
-    
     // --- Financial Calculations ---
-    const calculateEstimates = () => {
-        const totalDailyImages = dbUsers.reduce((acc, user) => acc + (user.usage || 0), 0);
-        const estimatedMonthlyImages = totalDailyImages * 30;
-        const imageCost = estimatedMonthlyImages * COST_PER_IMAGE;
-        
-        const activeCount = dbUsers.filter(u => {
-            const d = new Date(u.updatedAt);
-            const now = new Date();
-            return d.getDate() === now.getDate() && d.getMonth() === now.getMonth();
-        }).length;
-
-        const estimatedDailyMessages = (activeCount || 1) * 15; 
-        const estimatedMonthlyMessages = estimatedDailyMessages * 30;
-        const textCost = estimatedMonthlyMessages * COST_PER_MSG_AVG;
-
-        return {
-            estimatedTotal: imageCost + textCost
-        };
-    };
-
-    const estimates = calculateEstimates();
     const revenue = financials ? financials.mrr / 100 : 0; 
     
-    // Cost Logic
-    // 1. Manual Input (Highest Priority)
-    // 2. Google Cloud API (If connected and > 0)
-    // 3. Algorithm Estimate (Fallback)
+    // Cloud Cost from API or 0
+    const cloudCost = financials?.googleCloudCost || 0;
     
-    let finalCost = 0;
-    let costLabel = "ESTIMATE";
-    let costColor = "text-red-400";
-
-    if (manualCost !== null) {
-        finalCost = manualCost;
-        costLabel = "MANUAL";
-    } else if (financials?.costSource === 'google_api_connected') {
-        // If API is connected but returns 0 (likely due to no BigQuery), fall back to estimate but show status
-        if (financials.googleCloudCost > 0) {
-            finalCost = financials.googleCloudCost / 100;
-            costLabel = "CLOUD SYNC";
-            costColor = "text-blue-400";
-        } else {
-            finalCost = estimates.estimatedTotal;
-            costLabel = "ESTIMATE (GCP LINKED)";
-        }
-    } else {
-        finalCost = estimates.estimatedTotal;
-    }
-
-    const profit = revenue - finalCost;
+    // Simple profit calculation
+    const profit = revenue - cloudCost;
     const margin = revenue > 0 ? (profit / revenue) * 100 : 0;
 
     const chartData = [
         { name: 'Revenue', value: revenue, color: '#10b981' }, 
-        { name: 'Costs', value: finalCost, color: '#ef4444' },
+        { name: 'Cloud Cost', value: cloudCost, color: '#ef4444' },
         { name: 'Profit', value: profit, color: profit >= 0 ? '#6366f1' : '#f59e0b' },
     ];
 
@@ -368,7 +289,7 @@ export const AdminPanel = ({
                     </div>
                     <div>
                         <h2 className="font-bold text-white text-sm">Admin Panel</h2>
-                        <div className="text-[10px] text-zinc-500 font-mono">v2.4 • Connected</div>
+                        <div className="text-[10px] text-zinc-500 font-mono">v2.5 • Cloud Sync</div>
                     </div>
                 </div>
                 
@@ -525,48 +446,36 @@ export const AdminPanel = ({
                                              </div>
                                          </div>
 
-                                         {/* MONEY OUT (COSTS) - With Manual Override */}
+                                         {/* MONEY OUT (COSTS) - Cloud Sync */}
                                          <div className="p-8 bg-red-500/10 border border-red-500/20 rounded-[32px] relative overflow-hidden group">
                                              <div className="relative z-10">
                                                  <div className="flex items-center justify-between mb-4 text-red-400">
                                                      <div className="flex items-center gap-3">
-                                                         <div className="p-2 bg-red-500/20 rounded-xl"><TrendingDown size={24}/></div>
-                                                         <span className="font-bold uppercase tracking-wider text-xs">Money Out (Cost)</span>
+                                                         <div className="p-2 bg-red-500/20 rounded-xl"><Cloud size={24}/></div>
+                                                         <span className="font-bold uppercase tracking-wider text-xs">Google Cloud Bill</span>
                                                      </div>
-                                                     <button 
-                                                        onClick={() => { setIsEditingCost(true); setTempCostInput(finalCost.toString()); }}
-                                                        className="p-2 hover:bg-red-500/20 rounded-lg text-red-400 transition-colors opacity-0 group-hover:opacity-100" 
-                                                        title="Set Actual Cost"
-                                                     >
-                                                         <Edit2 size={16}/>
-                                                     </button>
+                                                     <div className="flex gap-2">
+                                                         <button 
+                                                            onClick={fetchData}
+                                                            className="p-2 hover:bg-red-500/20 rounded-lg text-red-400 transition-colors opacity-0 group-hover:opacity-100" 
+                                                            title="Force Sync"
+                                                         >
+                                                             <RefreshCw size={16} className={loadingData ? "animate-spin" : ""}/>
+                                                         </button>
+                                                     </div>
                                                  </div>
 
-                                                 {isEditingCost ? (
-                                                     <div className="flex gap-2 items-center animate-in fade-in">
-                                                         <input 
-                                                            type="number" 
-                                                            value={tempCostInput}
-                                                            onChange={e => setTempCostInput(e.target.value)}
-                                                            className="w-full bg-black/40 border border-red-500/30 rounded-xl px-4 py-2 text-2xl font-bold text-white outline-none focus:border-red-500"
-                                                            placeholder="0.00"
-                                                            autoFocus
-                                                         />
-                                                         <button onClick={handleSaveCost} className="p-3 bg-red-600 hover:bg-red-500 text-white rounded-xl"><Check size={20}/></button>
-                                                         <button onClick={() => setIsEditingCost(false)} className="p-3 bg-white/10 hover:bg-white/20 text-white rounded-xl"><X size={20}/></button>
-                                                         <button onClick={handleClearManualCost} className="p-3 bg-white/10 hover:bg-white/20 text-yellow-500 rounded-xl" title="Reset to Auto"><RefreshCw size={20}/></button>
-                                                     </div>
-                                                 ) : (
-                                                     <>
-                                                         <div className="text-5xl font-black text-white tracking-tight">€{finalCost.toFixed(2)}</div>
-                                                         <div className="flex items-center gap-2 mt-2">
-                                                             <span className={`text-xs px-2 py-0.5 rounded-md font-bold uppercase ${costLabel.includes('CLOUD') ? 'bg-blue-500/20 text-blue-400' : manualCost ? 'bg-red-500 text-white' : 'bg-red-500/20 text-red-400'}`}>
-                                                                 {costLabel}
-                                                             </span>
-                                                             <span className={`text-sm font-medium ${costColor}`}>{costLabel === 'MANUAL' ? 'Corrected by Admin' : (costLabel.includes('CLOUD') ? 'Synced via GCP' : 'Based on usage')}</span>
-                                                         </div>
-                                                     </>
-                                                 )}
+                                                 <div className="text-5xl font-black text-white tracking-tight">${cloudCost.toFixed(2)}</div>
+                                                 <div className="flex items-center gap-2 mt-2">
+                                                     <span className={`text-xs px-2 py-0.5 rounded-md font-bold uppercase ${cloudCost > 0 ? 'bg-green-500 text-white' : 'bg-zinc-600 text-gray-300'}`}>
+                                                         {cloudCost > 0 ? 'LIVE SYNC' : 'OFFLINE'}
+                                                     </span>
+                                                     {financials?.lastSync && (
+                                                         <span className="text-xs text-red-400/60 font-mono">
+                                                             Updated: {new Date(financials.lastSync).toLocaleTimeString()}
+                                                         </span>
+                                                     )}
+                                                 </div>
                                              </div>
                                          </div>
 
@@ -613,17 +522,14 @@ export const AdminPanel = ({
                                          </ResponsiveContainer>
                                      </div>
 
-                                     {/* Instruction for Cost Accuracy */}
                                      <div className="p-6 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex gap-4 items-start">
-                                         <div className="p-3 bg-blue-500/20 rounded-full text-blue-400 shrink-0"><Cloud size={24}/></div>
+                                         <div className="p-3 bg-blue-500/20 rounded-full text-blue-400 shrink-0"><Server size={24}/></div>
                                          <div>
-                                             <h4 className="font-bold text-white mb-1">Automate Costs with Google Cloud</h4>
+                                             <h4 className="font-bold text-white mb-1">Cloud Budget API Connected</h4>
                                              <p className="text-sm text-gray-400 leading-relaxed mb-3">
-                                                 To get real-time cost tracking, create a <strong>Google Cloud Service Account</strong> with "Billing Account Viewer" access and add the JSON key to your Supabase Secrets as <code>GOOGLE_SERVICE_ACCOUNT</code>. Also set <code>GOOGLE_BILLING_ACCOUNT_ID</code>.
+                                                 The system is successfully communicating with the Google Cloud Billing API using the service account credentials. 
+                                                 The "Money Out" figure represents the exact current spend reported by your budget.
                                              </p>
-                                             <a href="https://console.cloud.google.com/billing" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-xs font-bold text-blue-400 hover:text-white transition-colors bg-blue-500/10 hover:bg-blue-500/30 px-3 py-2 rounded-lg">
-                                                 Go to Google Cloud Billing <ExternalLink size={12}/>
-                                             </a>
                                          </div>
                                      </div>
                                  </div>

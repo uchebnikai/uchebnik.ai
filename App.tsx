@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { GoogleGenAI, LiveServerMessage, Modality } from "@google/genai";
 import { SubjectConfig, SubjectId, AppMode, Message, Slide, UserSettings, Session, UserPlan, UserRole, HomeViewType } from './types';
@@ -90,6 +91,10 @@ export const App = () => {
   const [userPlan, setUserPlan] = useState<UserPlan>('free');
   const [dailyImageCount, setDailyImageCount] = useState(0);
   const [streak, setStreak] = useState(0);
+  
+  // NEW: Token Stats State
+  const [totalInputTokens, setTotalInputTokens] = useState(0);
+  const [totalOutputTokens, setTotalOutputTokens] = useState(0);
 
   const [showAdminAuth, setShowAdminAuth] = useState(false);
   const [showAdminPanel, setShowAdminPanel] = useState(false);
@@ -183,7 +188,6 @@ export const App = () => {
   useEffect(() => {
       document.body.classList.remove('font-dyslexic', 'font-mono');
       if (userSettings.fontFamily === 'dyslexic') {
-          // In a real app, you would import OpenDyslexic here. Simulating with Comic Sans / fallback for now or need to add CSS
           document.body.style.fontFamily = '"Comic Sans MS", "Chalkboard SE", sans-serif'; 
       } else if (userSettings.fontFamily === 'mono') {
           document.body.classList.add('font-mono');
@@ -282,7 +286,7 @@ export const App = () => {
                   if (profileData.settings) {
                       const { plan, stats, ...restSettings } = profileData.settings;
                       const merged = { ...restSettings, themeColor: profileData.theme_color, customBackground: profileData.custom_background };
-                      // Ensure language is set
+                      
                       if (!merged.language) merged.language = 'bg';
                       if (!merged.teachingStyle) merged.teachingStyle = 'normal';
                       if (!merged.customPersona) merged.customPersona = '';
@@ -293,6 +297,10 @@ export const App = () => {
                       if (plan) setUserPlan(plan);
                       if (stats) {
                           setStreak(stats.streak || 0);
+                          // Restore Token Stats
+                          setTotalInputTokens(stats.totalInputTokens || 0);
+                          setTotalOutputTokens(stats.totalOutputTokens || 0);
+                          
                           const today = new Date().toDateString();
                           if (stats.lastImageDate === today) {
                               setDailyImageCount(stats.dailyImageCount || 0);
@@ -431,7 +439,15 @@ export const App = () => {
       syncSettingsTimer.current = setTimeout(async () => {
           const fullSettingsPayload = {
               ...userSettings, plan: userPlan,
-              stats: { streak, dailyImageCount, lastImageDate: localStorage.getItem('uchebnik_image_date'), lastVisit: localStorage.getItem('uchebnik_last_visit') }
+              stats: { 
+                  streak, 
+                  dailyImageCount, 
+                  lastImageDate: localStorage.getItem('uchebnik_image_date'), 
+                  lastVisit: localStorage.getItem('uchebnik_last_visit'),
+                  // Persist Tokens
+                  totalInputTokens,
+                  totalOutputTokens
+              }
           };
           const { error } = await supabase.from('profiles').upsert({
               id: session.user.id, settings: fullSettingsPayload, theme_color: userSettings.themeColor, custom_background: userSettings.customBackground, updated_at: new Date().toISOString()
@@ -439,7 +455,7 @@ export const App = () => {
           if (error && error.code === '42P01') { setMissingDbTables(true); }
       }, 1000);
       return () => { if(syncSettingsTimer.current) clearTimeout(syncSettingsTimer.current); };
-  }, [userSettings, userPlan, streak, dailyImageCount, session?.user?.id, isRemoteDataLoaded, missingDbTables]);
+  }, [userSettings, userPlan, streak, dailyImageCount, totalInputTokens, totalOutputTokens, session?.user?.id, isRemoteDataLoaded, missingDbTables]);
 
   // Window Resize
   useEffect(() => {
@@ -880,6 +896,12 @@ export const App = () => {
 
       if (controller.signal.aborted) return "";
 
+      // UPDATE STATS WITH REAL TOKENS
+      if (response.usage) {
+          setTotalInputTokens(prev => prev + response.usage!.inputTokens);
+          setTotalOutputTokens(prev => prev + response.usage!.outputTokens);
+      }
+
       if (currentImgs.length > 0) { incrementImageCount(currentImgs.length); }
       setSessions(prev => prev.map(s => {
           if (s.id === sessId) {
@@ -897,7 +919,8 @@ export const App = () => {
                           geometryData: response.geometryData, 
                           imageAnalysis: response.imageAnalysis, 
                           sources: response.sources, 
-                          isStreaming: false 
+                          isStreaming: false,
+                          usage: response.usage // Save usage history
                       };
                   }
                   return m;

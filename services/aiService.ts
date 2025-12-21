@@ -1,6 +1,6 @@
 
 import { GoogleGenAI, GenerateContentResponse, Tool } from "@google/genai";
-import { AppMode, SubjectId, Slide, ChartData, GeometryData, Message, TestData, TeachingStyle, SearchSource } from "../types";
+import { AppMode, SubjectId, Slide, ChartData, GeometryData, Message, TestData, TeachingStyle, SearchSource, TokenUsage } from "../types";
 import { getSystemPrompt, SUBJECTS } from "../constants";
 import { Language } from '../utils/translations';
 
@@ -49,8 +49,6 @@ export const generateResponse = async (
 
   const subjectConfig = SUBJECTS.find(s => s.id === subjectId);
   const subjectName = subjectConfig ? subjectConfig.name : "Unknown Subject";
-  
-  // Use the passed preferredModel, defaulting only if undefined
   const modelName = preferredModel || 'gemini-2.5-flash';
   
   console.log(`[AI Service] Generating response using model: ${modelName} for subject: ${subjectName}`);
@@ -60,7 +58,6 @@ export const generateResponse = async (
   const imageKeywords = /(draw|paint|generate image|create a picture|make an image|нарисувай|рисувай|генерирай изображение|генерирай снимка|направи снимка|изображение на)/i;
   const isImageRequest = (subjectId === SubjectId.ART && mode === AppMode.DRAW) || imageKeywords.test(promptText);
 
-  // Get localized system prompt based on mode, language, and teaching style
   let systemInstruction = getSystemPrompt(isImageRequest ? 'DRAW' : mode, language, teachingStyle, customPersona);
   let forceJson = false;
 
@@ -75,9 +72,7 @@ export const generateResponse = async (
   try {
       const ai = new GoogleGenAI({ apiKey });
       
-      // Construct history contents (text only to save tokens/bandwidth)
       const historyContents: any[] = [];
-      
       history.filter(msg => !msg.isError && msg.text && msg.type !== 'image_generated' && msg.type !== 'slides').forEach(msg => {
           let content = msg.text;
           if (msg.imageAnalysis) {
@@ -89,9 +84,7 @@ export const generateResponse = async (
           });
       });
 
-      // Construct current message parts
       const currentParts: any[] = [];
-      
       let finalUserPrompt = promptText;
       
       if (mode === AppMode.TEACHER_TEST) {
@@ -115,16 +108,12 @@ export const generateResponse = async (
       }
       currentParts.push({ text: finalUserPrompt });
 
-      // Configure tools
       const tools: Tool[] = [];
-      
-      // Enable Google Search for Gemini 3 on specific subjects for better accuracy
       if (modelName.includes('gemini-3') && 
          (subjectId === SubjectId.GENERAL || subjectId === SubjectId.HISTORY || subjectId === SubjectId.GEOGRAPHY)) {
           tools.push({ googleSearch: {} });
       }
 
-      // Create chat session
       const chat = ai.chats.create({
           model: modelName,
           config: {
@@ -134,39 +123,27 @@ export const generateResponse = async (
           history: historyContents
       });
 
-      // Stream response
       const result = await chat.sendMessageStream({ message: currentParts });
       
       let finalContent = "";
       let fullText = "";
       let sources: SearchSource[] = [];
+      let tokenUsage: TokenUsage | undefined;
 
       for await (const chunk of result) {
-          // Check for abort signal
           if (signal?.aborted) {
               break;
           }
 
-          // Handle Text
           const chunkText = chunk.text;
           if (chunkText) {
               fullText += chunkText;
-              
-              // Robust think tag handling:
-              // 1. Remove complete <think>...</think> blocks
-              // 2. Remove open <think>... at the end of the string
-              // This prevents the "flash" of answer if the answer was somehow interpreted as part of a think block,
-              // though strictly speaking, think tags should be distinct.
-              // The regex (?:<\/think>|$) ensures we match until end if not closed.
               finalContent = fullText.replace(/<think>[\s\S]*?(?:<\/think>|$)/gi, "").trim();
-              
               if (onStreamUpdate) {
                   onStreamUpdate(finalContent, "");
               }
           }
 
-          // Handle Grounding (Sources)
-          // The SDK returns groundingMetadata in the candidates or root chunk
           const grounding = chunk.candidates?.[0]?.groundingMetadata || (chunk as any).groundingMetadata;
           if (grounding && grounding.groundingChunks) {
               const webChunks = grounding.groundingChunks
@@ -175,17 +152,24 @@ export const generateResponse = async (
                       title: c.web.title || "Web Source",
                       uri: c.web.uri
                   }));
-              
-              // Dedup sources based on URI
               webChunks.forEach((s: SearchSource) => {
                   if (!sources.some(existing => existing.uri === s.uri)) {
                       sources.push(s);
                   }
               });
           }
+          
+          // Capture Usage Metadata from the stream
+          // The SDK provides this on the chunk if available
+          if (chunk.usageMetadata) {
+              tokenUsage = {
+                  inputTokens: chunk.usageMetadata.promptTokenCount || 0,
+                  outputTokens: chunk.usageMetadata.candidatesTokenCount || 0,
+                  totalTokens: chunk.usageMetadata.totalTokenCount || 0
+              };
+          }
       }
 
-      // Final cleanup
       let processedText = fullText.replace(/<think>[\s\S]*?(?:<\/think>|$)/gi, "").trim();
 
       if (mode === AppMode.PRESENTATION) {
@@ -200,7 +184,8 @@ export const generateResponse = async (
                      type: 'slides',
                      slidesData: slides,
                      timestamp: Date.now(),
-                     reasoning: ""
+                     reasoning: "",
+                     usage: tokenUsage
                  };
              }
          } catch (e) { console.error("Presentation JSON parse error", e); }
@@ -218,7 +203,8 @@ export const generateResponse = async (
                      type: 'test_generated',
                      testData: testData,
                      timestamp: Date.now(),
-                     reasoning: ""
+                     reasoning: "",
+                     usage: tokenUsage
                  };
              }
           } catch (e) { console.error("Test JSON parse error", e); }
@@ -252,7 +238,8 @@ export const generateResponse = async (
           geometryData: geometryData,
           timestamp: Date.now(),
           reasoning: "",
-          sources: sources.length > 0 ? sources : undefined
+          sources: sources.length > 0 ? sources : undefined,
+          usage: tokenUsage
       };
 
   } catch (error: any) {
@@ -262,10 +249,6 @@ export const generateResponse = async (
 
       if (errorMessage.includes("429")) {
           displayMessage = "⚠️ Достигнат е лимитът на заявките към Google Gemini. Моля, опитайте по-късно.";
-      } else if (errorMessage.includes("401") || errorMessage.includes("API key")) {
-          displayMessage = "⚠️ Невалиден Google API ключ.";
-      } else if (errorMessage.includes("503") || errorMessage.includes("500")) {
-          displayMessage = "⚠️ Сървърът на Google AI е временно недостъпен. Моля, опитайте след малко.";
       }
 
       return {
