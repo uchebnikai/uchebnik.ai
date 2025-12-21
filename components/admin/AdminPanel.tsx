@@ -850,13 +850,7 @@ export const AdminPanel = ({
                                                     <div className={`px-4 py-3 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap break-words ${msg.role === 'user' ? 'bg-indigo-600 text-white rounded-br-none' : 'bg-white/10 text-zinc-200 rounded-bl-none border border-white/5'}`}>
                                                         {msg.text}
                                                         {msg.images && msg.images.length > 0 && (
-                                                            <div className={`grid grid-cols-2 gap-2 ${msg.text ? 'mt-3' : ''}`}>
-                                                                {msg.images.map((img, idx) => (
-                                                                    <a key={idx} href={img} target="_blank" rel="noopener noreferrer" className="block relative aspect-square rounded-lg overflow-hidden bg-black/20 hover:opacity-80 transition-opacity">
-                                                                        <img src={img} className="w-full h-full object-cover" alt="attachment"/>
-                                                                    </a>
-                                                                ))}
-                                                            </div>
+                                                            <div className="mt-2 text-xs opacity-70 italic">[Image attached]</div>
                                                         )}
                                                     </div>
                                                     <span className="text-[10px] text-zinc-600 mt-1 px-1">
