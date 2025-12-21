@@ -20,8 +20,6 @@ interface MessageListProps {
   setZoomedImage: (img: string) => void;
   handleRate: (id: string, rating: 'up' | 'down') => void;
   handleReply: (msg: Message) => void;
-  handleSpeak: (text: string, id: string) => void;
-  speakingMessageId: string | null;
   handleCopy: (text: string, id: string) => void;
   copiedId: string | null;
   handleShare: (text: string) => void;
@@ -57,8 +55,6 @@ export const MessageList = ({
   setZoomedImage,
   handleRate,
   handleReply,
-  handleSpeak,
-  speakingMessageId,
   handleCopy,
   copiedId,
   handleShare,
@@ -226,7 +222,6 @@ export const MessageList = ({
                            </>
                         )}
                         <button onClick={() => handleReply(msg)} className="p-2 text-gray-400 hover:text-indigo-500 dark:hover:text-indigo-400 transition-colors" title="Отговор"><Reply size={14} className="lg:w-4 lg:h-4"/></button>
-                        <button onClick={() => handleSpeak(msg.text, msg.id)} className={`p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 transition-colors ${speakingMessageId === msg.id ? 'text-indigo-500 animate-pulse' : 'text-gray-400'}`}>{speakingMessageId === msg.id ? <Square size={14} fill="currentColor"/> : <Volume2 size={14} className="lg:w-4 lg:h-4"/>}</button>
                         <button onClick={() => handleCopy(msg.text, msg.id)} className="p-2 text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">{copiedId === msg.id ? <Check size={14} className="text-green-500"/> : <Copy size={14} className="lg:w-4 lg:h-4"/>}</button>
                         <button onClick={() => handleShare(msg.text)} className="p-2 text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"><Share2 size={14} className="lg:w-4 lg:h-4"/></button>
                      </div>

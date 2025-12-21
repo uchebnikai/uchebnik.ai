@@ -28,7 +28,7 @@ export const VoiceCallOverlay = ({
     
     if (!isVoiceCallActive) return null;
     
-    const [showVoiceMenu, setShowVoiceMenu] = React.useState(false);
+    // Removed voice menu logic as voice selection is now only in settings
 
     return (
       <div className="fixed inset-0 z-[70] bg-black/95 flex flex-col items-center justify-center p-8 animate-in fade-in duration-500 overflow-hidden">
@@ -69,25 +69,7 @@ export const VoiceCallOverlay = ({
         {/* Controls Toolbar */}
         <div className="flex items-center gap-6 z-10">
            
-           <div className="relative">
-                <button onClick={() => setShowVoiceMenu(!showVoiceMenu)} className="p-6 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-full text-white transition-colors border border-white/10 flex items-center gap-2">
-                    <Volume2 size={32}/>
-                </button>
-                
-                {showVoiceMenu && (
-                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-4 bg-zinc-900 border border-white/10 rounded-xl p-2 w-48 shadow-2xl animate-in slide-in-from-bottom-2">
-                        {VOICES.map(voice => (
-                            <button
-                                key={voice.id}
-                                onClick={() => { onChangeVoice(voice.id); setShowVoiceMenu(false); }}
-                                className={`w-full text-left px-4 py-3 rounded-lg text-sm font-medium transition-colors ${userSettings.preferredVoice === voice.id ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:bg-white/10'}`}
-                            >
-                                {voice.name}
-                            </button>
-                        ))}
-                    </div>
-                )}
-           </div>
+           {/* Voice Selection Removed - Use Settings instead */}
 
            <button onClick={() => setVoiceMuted(!voiceMuted)} className={`p-6 rounded-full transition-all backdrop-blur-md border border-white/10 ${voiceMuted ? 'bg-red-500 text-white' : 'bg-white/10 text-white hover:bg-white/20'}`}>
               {voiceMuted ? <MicOff size={32}/> : <Mic size={32}/>}

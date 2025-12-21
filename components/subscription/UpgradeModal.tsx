@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { X, ArrowLeft, Zap, Crown, CheckCircle, Loader2, ArrowUp, Layers, Star } from 'lucide-react';
+import { X, ArrowLeft, Zap, Crown, CheckCircle, Loader2, ArrowUp, Layers, Star, XCircle } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { UserPlan } from '../../types';
 import { supabase } from '../../supabaseClient';
@@ -143,8 +143,8 @@ export const UpgradeModal = ({
                         <CheckCircle size={18} className="text-gray-400 shrink-0 mt-0.5"/> 
                         <span>Стандартен AI интелект</span>
                     </div>
-                    <div className="flex items-start gap-3 text-sm font-medium text-gray-600 dark:text-gray-400">
-                        <CheckCircle size={18} className="text-gray-400 shrink-0 mt-0.5"/> 
+                    <div className="flex items-start gap-3 text-sm font-medium text-gray-600 dark:text-gray-400 opacity-60">
+                        <XCircle size={18} className="text-gray-400 shrink-0 mt-0.5"/> 
                         <span>Гласов режим (Разговори)</span>
                     </div>
                     <div className="flex items-start gap-3 text-sm font-medium text-gray-600 dark:text-gray-400">
@@ -185,6 +185,10 @@ export const UpgradeModal = ({
                     <div className="flex items-start gap-3 text-sm font-bold text-zinc-800 dark:text-white">
                         <CheckCircle size={18} className="text-indigo-500 shrink-0 mt-0.5"/> 
                         <span>12 снимки дневно</span>
+                    </div>
+                    <div className="flex items-start gap-3 text-sm font-bold text-zinc-800 dark:text-white">
+                        <CheckCircle size={18} className="text-indigo-500 shrink-0 mt-0.5"/> 
+                        <span>Гласов режим (Разговори)</span>
                     </div>
                     <div className="flex items-start gap-3 text-sm font-bold text-zinc-800 dark:text-white">
                         <CheckCircle size={18} className="text-indigo-500 shrink-0 mt-0.5"/> 

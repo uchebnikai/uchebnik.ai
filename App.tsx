@@ -3,7 +3,7 @@ import { GoogleGenAI, LiveServerMessage, Modality } from "@google/genai";
 import { SubjectConfig, SubjectId, AppMode, Message, Slide, UserSettings, Session, UserPlan, UserRole, HomeViewType } from './types';
 import { SUBJECTS, VOICES, DEFAULT_VOICE } from './constants';
 import { generateResponse } from './services/aiService';
-import { generateSpeech, createBlob } from './services/audioService';
+import { createBlob } from './services/audioService';
 import { supabase } from './supabaseClient';
 import { Auth } from './components/auth/Auth';
 import { 
@@ -75,7 +75,6 @@ export const App = () => {
   const [historyDrawerOpen, setHistoryDrawerOpen] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(true); 
   const [showSettings, setShowSettings] = useState(false);
-  const [speakingMessageId, setSpeakingMessageId] = useState<string | null>(null);
   
   const [homeView, setHomeView] = useState<HomeViewType>('landing');
 
@@ -159,7 +158,6 @@ export const App = () => {
   const loadingSubjectsRef = useRef(loadingSubjects);
   
   // Audio Playback Refs
-  const audioSourceRef = useRef<AudioBufferSourceNode | null>(null);
   const isPlayingAudioRef = useRef(false);
   
   // AbortController for stopping generation
@@ -609,7 +607,6 @@ export const App = () => {
   useEffect(() => {
     return () => {
       endVoiceCall();
-      if(audioSourceRef.current) { audioSourceRef.current.stop(); }
     }
   }, []);
 
@@ -760,10 +757,6 @@ export const App = () => {
         setIsListening(false);
     }
     
-    // Stop audio
-    if (audioSourceRef.current) {
-        audioSourceRef.current.stop();
-    }
     setSpeakingMessageId(null);
   };
 
@@ -1009,48 +1002,17 @@ export const App = () => {
     });
   };
 
-  const handleSpeak = async (txt: string, id: string) => { 
-    if(speakingMessageId === id) { 
-        if (audioSourceRef.current) {
-            audioSourceRef.current.stop();
-            audioSourceRef.current = null;
-        }
-        setSpeakingMessageId(null); 
-        return; 
-    } 
-    
-    setSpeakingMessageId(id); 
-    
-    try {
-        const clean = txt.replace(/[*#`_\[\]]/g, '').replace(/\$\$.*?\$\$/g, 'формула').replace(/http\S+/g, '');
-        const audioBuffer = await generateSpeech(clean, userSettings.preferredVoice);
-        
-        if (audioBuffer) {
-            const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-            const source = ctx.createBufferSource();
-            source.buffer = audioBuffer;
-            source.connect(ctx.destination);
-            source.onended = () => setSpeakingMessageId(null);
-            source.start();
-            audioSourceRef.current = source;
-        } else {
-            // Fallback if API fails
-            const u = new SpeechSynthesisUtterance(clean);
-            u.lang = userSettings.language === 'en' ? 'en-US' : 'bg-BG';
-            u.onend = () => setSpeakingMessageId(null);
-            window.speechSynthesis.speak(u);
-        }
-    } catch (e) {
-        console.error("Speech Error", e);
-        setSpeakingMessageId(null);
-    }
-  };
-
   // --- Gemini Live API Logic ---
   
   const startVoiceCall = async () => { 
     if (!session) { setShowAuthModal(true); return; } 
     
+    // Check plan restriction - Call feature is Plus/Pro only
+    if (userPlan === 'free') {
+        setShowUnlockModal(true);
+        return;
+    }
+
     // Check permission first
     try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -1504,8 +1466,6 @@ export const App = () => {
                     setZoomedImage={setZoomedImage}
                     handleRate={handleRate}
                     handleReply={handleReply}
-                    handleSpeak={handleSpeak}
-                    speakingMessageId={speakingMessageId}
                     handleCopy={handleCopy}
                     copiedId={copiedId}
                     handleShare={handleShare}
