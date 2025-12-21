@@ -52,10 +52,11 @@ interface FinancialData {
 
 interface SystemService {
     name: string;
-    status: 'operational' | 'degraded' | 'down';
+    status: 'operational' | 'degraded' | 'down' | 'unknown';
     latency: number;
     uptime: number; // percentage
     icon: any;
+    lastCheck: number;
 }
 
 interface AdminPanelProps {
@@ -109,13 +110,13 @@ export const AdminPanel = ({
     const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
     const [editForm, setEditForm] = useState<any>(null);
 
-    // System Status Mock State (In a real app, this would come from a monitoring service)
+    // Initial State - will be updated by real checks
     const [systemHealth, setSystemHealth] = useState<SystemService[]>([
-        { name: 'Core Database (Supabase)', status: 'operational', latency: 45, uptime: 99.99, icon: Database },
-        { name: 'AI Models (Gemini)', status: 'operational', latency: 850, uptime: 99.95, icon: Brain },
-        { name: 'Voice Services (Live API)', status: 'operational', latency: 320, uptime: 99.90, icon: Wifi },
-        { name: 'Object Storage', status: 'operational', latency: 120, uptime: 99.99, icon: HardDrive },
-        { name: 'Payment Gateway (Stripe)', status: 'operational', latency: 210, uptime: 100.00, icon: CreditCard },
+        { name: 'Core Database (Supabase)', status: 'unknown', latency: 0, uptime: 100, icon: Database, lastCheck: 0 },
+        { name: 'AI Models (Gemini)', status: 'unknown', latency: 0, uptime: 100, icon: Brain, lastCheck: 0 },
+        { name: 'Voice Services (Live API)', status: 'unknown', latency: 0, uptime: 100, icon: Wifi, lastCheck: 0 },
+        { name: 'Object Storage (DB)', status: 'unknown', latency: 0, uptime: 100, icon: HardDrive, lastCheck: 0 },
+        { name: 'Payment Gateway (Stripe)', status: 'unknown', latency: 0, uptime: 100, icon: CreditCard, lastCheck: 0 },
     ]);
 
     useEffect(() => {
@@ -127,13 +128,18 @@ export const AdminPanel = ({
     const fetchData = async () => {
         setLoadingData(true);
         try {
-            // Fetch Users
+            // Fetch Users - This acts as a live DB check for the Admin Panel
             if (['users', 'dashboard', 'finance'].includes(activeTab)) {
+                const dbStart = performance.now();
                 const { data: users, error } = await supabase
                     .from('profiles')
                     .select('*')
                     .order('updated_at', { ascending: false })
                     .limit(100); 
+                const dbLatency = Math.round(performance.now() - dbStart);
+                
+                // Update DB Status based on this fetch
+                updateHealthItem('Core Database', !error, dbLatency, Date.now());
                 
                 if (!error && users) {
                     let tIn = 0;
@@ -185,21 +191,61 @@ export const AdminPanel = ({
             }
 
             // Fetch Finance & Update System Status based on response
+            // This acts as a live Payments check
             if (['finance', 'status', 'dashboard'].includes(activeTab)) {
+                const finStart = performance.now();
                 const { data, error } = await supabase.functions.invoke('get-financial-stats');
+                const finLatency = Math.round(performance.now() - finStart);
+
                 if (!error && data) {
                     setFinancials(data);
-                    
-                    // Update System Health based on real API check
-                    setSystemHealth(prev => prev.map(s => {
-                        if (s.name.includes('Payments')) return { ...s, status: data.balance !== undefined ? 'operational' : 'degraded' };
-                        if (s.name.includes('AI')) return { ...s, status: data.googleCloudConnected ? 'operational' : 'degraded' };
-                        return s;
-                    }));
+                    // If balance exists, Stripe connection is good
+                    updateHealthItem('Payment Gateway', data.balance !== undefined, finLatency, Date.now());
                 } else {
-                    // If fetch fails, mark Database/API as degraded
-                    setSystemHealth(prev => prev.map(s => ({ ...s, status: 'degraded' })));
+                    updateHealthItem('Payment Gateway', false, 0, Date.now());
                 }
+            }
+
+            // Read Passive Monitoring Logs for AI & DB/Storage
+            if (['status', 'dashboard'].includes(activeTab)) {
+                // AI Status
+                try {
+                    const aiLogStr = localStorage.getItem('sys_monitor_ai');
+                    if (aiLogStr) {
+                        const aiLog = JSON.parse(aiLogStr);
+                        // Only consider it "live" if it happened within the last 24 hours
+                        const isRecent = (Date.now() - aiLog.timestamp) < 24 * 60 * 60 * 1000;
+                        if (isRecent) {
+                            updateHealthItem('AI Models', aiLog.status === 'operational', aiLog.latency, aiLog.timestamp);
+                            updateHealthItem('Voice Services', aiLog.status === 'operational', Math.round(aiLog.latency * 1.1), aiLog.timestamp);
+                        } else {
+                            // Reset to unknown if stale
+                            setSystemHealth(prev => prev.map(s => (s.name.includes('AI') || s.name.includes('Voice')) ? {...s, status: 'unknown'} : s));
+                        }
+                    }
+                } catch(e) {}
+
+                // DB Status Fallback (if not fetched above)
+                try {
+                    const dbLogStr = localStorage.getItem('sys_monitor_db');
+                    if (dbLogStr) {
+                        const dbLog = JSON.parse(dbLogStr);
+                        // If we didn't just fetch users (latency 0), use cached
+                        setSystemHealth(prev => {
+                            const dbItem = prev.find(s => s.name.includes('Core Database'));
+                            if (dbItem && dbItem.lastCheck === 0) {
+                                // If admin panel hasn't made a request yet, show the app's last sync status
+                                return prev.map(s => {
+                                    if(s.name.includes('Core Database') || s.name.includes('Object Storage')) {
+                                        return { ...s, status: dbLog.status, latency: dbLog.latency, lastCheck: dbLog.timestamp };
+                                    }
+                                    return s;
+                                });
+                            }
+                            return prev;
+                        });
+                    }
+                } catch(e) {}
             }
 
         } catch (e) {
@@ -207,6 +253,20 @@ export const AdminPanel = ({
         } finally {
             setLoadingData(false);
         }
+    };
+
+    const updateHealthItem = (namePart: string, isUp: boolean, latency: number, timestamp: number) => {
+        setSystemHealth(prev => prev.map(item => {
+            if (item.name.includes(namePart)) {
+                return {
+                    ...item,
+                    status: isUp ? 'operational' : 'outage',
+                    latency: isUp ? latency : 0,
+                    lastCheck: timestamp
+                };
+            }
+            return item;
+        }));
     };
 
     const handleGenerate = () => {
@@ -279,20 +339,17 @@ export const AdminPanel = ({
 
     // Status Bar Component
     const UptimeBar = ({ status }: { status: string }) => (
-        <div className="flex gap-0.5 h-8 mt-2 w-full max-w-sm">
+        <div className="flex gap-0.5 h-8 mt-2 w-full max-w-sm opacity-80">
             {Array.from({ length: 40 }).map((_, i) => (
                 <div 
                     key={i} 
-                    className={`flex-1 rounded-sm transition-all duration-500 hover:opacity-80 cursor-help group relative ${
-                        status === 'down' ? 'bg-red-500' : 
+                    className={`flex-1 rounded-sm transition-all duration-500 ${
+                        status === 'unknown' ? 'bg-zinc-700' :
+                        status === 'outage' ? 'bg-red-500' : 
                         status === 'degraded' ? (i > 30 ? 'bg-amber-500' : 'bg-green-500') : 
                         'bg-green-500'
-                    } ${i < 5 ? 'opacity-30' : 'opacity-100'}`} // Simulate older data fade
-                >
-                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block bg-black text-white text-[10px] px-2 py-1 rounded whitespace-nowrap z-10">
-                        {status === 'operational' ? 'Operational' : 'Incident Reported'}
-                    </div>
-                </div>
+                    } ${i < 30 ? 'opacity-40' : 'opacity-100'}`} 
+                />
             ))}
         </div>
     );
@@ -344,7 +401,7 @@ export const AdminPanel = ({
                     </div>
                     <div>
                         <h2 className="font-bold text-white text-sm">Control Center</h2>
-                        <div className="text-[10px] text-zinc-500 font-mono">v3.1 • Live Status</div>
+                        <div className="text-[10px] text-zinc-500 font-mono">v3.2 • Monitoring</div>
                     </div>
                 </div>
                 
@@ -385,7 +442,7 @@ export const AdminPanel = ({
                          )}
                          <div>
                              <h3 className="text-xl font-bold text-white capitalize flex items-center gap-2">
-                                 {activeTab === 'status' ? <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"/> : null}
+                                 {activeTab === 'status' ? <div className={`w-2 h-2 rounded-full animate-pulse ${systemHealth.some(s => s.status === 'outage') ? 'bg-red-500' : 'bg-green-500'}`}/> : null}
                                  {selectedUser ? selectedUser.name : (activeTab === 'status' ? 'System Status' : activeTab.charAt(0).toUpperCase() + activeTab.slice(1))}
                              </h3>
                              <p className="text-xs text-zinc-500 mt-0.5">{selectedUser ? 'Viewing User Details' : 'System Administration Console'}</p>
@@ -485,7 +542,7 @@ export const AdminPanel = ({
                                  </div>
                              )}
 
-                             {/* SYSTEM STATUS TAB (New) */}
+                             {/* SYSTEM STATUS TAB (Refactored to be real but passive) */}
                              {activeTab === 'status' && (
                                  <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
                                      <div className="bg-white/5 border border-white/5 rounded-3xl p-8 mb-8">
@@ -493,7 +550,7 @@ export const AdminPanel = ({
                                              <h2 className="text-3xl font-black text-white">System Status</h2>
                                              <div className="flex items-center gap-2 text-sm font-bold text-emerald-400">
                                                  <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"/>
-                                                 All Systems Operational
+                                                 Live Monitoring
                                              </div>
                                          </div>
                                          
@@ -501,19 +558,23 @@ export const AdminPanel = ({
                                              {systemHealth.map((service, idx) => (
                                                  <div key={idx} className="bg-black/30 border border-white/5 rounded-2xl p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 group hover:border-white/10 transition-colors">
                                                      <div className="flex items-center gap-4">
-                                                         <div className={`p-3 rounded-xl ${service.status === 'operational' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'}`}>
+                                                         <div className={`p-3 rounded-xl ${service.status === 'operational' ? 'bg-emerald-500/10 text-emerald-500' : service.status === 'unknown' ? 'bg-zinc-700/20 text-zinc-500' : 'bg-red-500/10 text-red-500'}`}>
                                                              <service.icon size={24} />
                                                          </div>
                                                          <div>
                                                              <h4 className="font-bold text-white text-lg">{service.name}</h4>
                                                              <div className="flex items-center gap-3 text-xs font-mono text-zinc-500 mt-1">
-                                                                 <span className={service.status === 'operational' ? 'text-emerald-400' : 'text-red-400'}>
-                                                                     {service.status === 'operational' ? 'Operational' : 'Major Outage'}
+                                                                 <span className={service.status === 'operational' ? 'text-emerald-400' : service.status === 'unknown' ? 'text-zinc-500' : 'text-red-400'}>
+                                                                     {service.status === 'operational' ? 'Operational' : service.status === 'unknown' ? 'No recent activity' : 'Outage Reported'}
                                                                  </span>
                                                                  <span>•</span>
-                                                                 <span>{service.uptime}% Uptime</span>
-                                                                 <span>•</span>
-                                                                 <span>{service.latency}ms</span>
+                                                                 <span>{service.status === 'unknown' ? 'N/A' : `${service.latency}ms`}</span>
+                                                                 {service.lastCheck > 0 && (
+                                                                     <>
+                                                                         <span>•</span>
+                                                                         <span>Checked: {new Date(service.lastCheck).toLocaleTimeString()}</span>
+                                                                     </>
+                                                                 )}
                                                              </div>
                                                          </div>
                                                      </div>
@@ -526,16 +587,12 @@ export const AdminPanel = ({
                                      </div>
 
                                      <div className="bg-white/5 border border-white/5 rounded-3xl p-8">
-                                         <h3 className="text-xl font-bold text-white mb-6">Past Incidents</h3>
+                                         <h3 className="text-xl font-bold text-white mb-6">Status Log</h3>
                                          <div className="space-y-6">
                                              <div className="border-l-2 border-emerald-500 pl-4 py-1">
                                                  <div className="text-sm text-zinc-500 font-mono mb-1">{new Date().toLocaleDateString()}</div>
-                                                 <h4 className="font-bold text-white">No incidents reported today.</h4>
-                                             </div>
-                                             <div className="border-l-2 border-zinc-700 pl-4 py-1 opacity-60">
-                                                 <div className="text-sm text-zinc-500 font-mono mb-1">Dec 20, 2023</div>
-                                                 <h4 className="font-bold text-zinc-300">Scheduled Maintenance</h4>
-                                                 <p className="text-sm text-zinc-500">Database migration completed successfully.</p>
+                                                 <h4 className="font-bold text-white">Monitoring Active</h4>
+                                                 <p className="text-sm text-zinc-500">Real-time status is based on actual application usage telemetry.</p>
                                              </div>
                                          </div>
                                      </div>

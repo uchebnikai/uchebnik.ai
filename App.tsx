@@ -126,7 +126,7 @@ export const App = () => {
     themeColor: '#6366f1',
     customBackground: null,
     language: 'bg',
-    teachingStyle: 'normal',
+    teachingStyle: 'normal', 
     enterToSend: true,
     fontFamily: 'inter',
     customPersona: '',
@@ -271,6 +271,7 @@ export const App = () => {
           setSyncStatus('syncing');
           setMissingDbTables(false);
           
+          const dbStart = performance.now();
           try {
               const { data: profileData, error: profileError } = await supabase
                   .from('profiles')
@@ -339,8 +340,22 @@ export const App = () => {
                   });
               }
               setSyncStatus('synced');
+              
+              // Telemetry: Log DB Success
+              localStorage.setItem('sys_monitor_db', JSON.stringify({
+                  status: 'operational',
+                  latency: Math.round(performance.now() - dbStart),
+                  timestamp: Date.now()
+              }));
+
           } catch (err) {
               console.error("Failed to load remote data", err);
+              // Telemetry: Log DB Failure
+              localStorage.setItem('sys_monitor_db', JSON.stringify({
+                  status: 'outage',
+                  latency: Math.round(performance.now() - dbStart),
+                  timestamp: Date.now()
+              }));
           } finally {
               setIsRemoteDataLoaded(true);
               isRemoteDataLoadedRef.current = true;

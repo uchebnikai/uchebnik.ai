@@ -7,6 +7,19 @@ import { Language } from '../utils/translations';
 // Helper for delay
 const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
+// Helper to log system status
+const logStatus = (status: 'operational' | 'degraded' | 'outage', latency: number) => {
+    try {
+        localStorage.setItem('sys_monitor_ai', JSON.stringify({
+            status,
+            latency,
+            timestamp: Date.now()
+        }));
+    } catch (e) {
+        // Ignore storage errors
+    }
+};
+
 // Improved JSON Extractor
 function extractJson(text: string): string | null {
   const match = text.match(/```json\n([\s\S]*?)\n```/) || text.match(/```([\s\S]*?)```/);
@@ -35,9 +48,11 @@ export const generateResponse = async (
   customPersona?: string
 ): Promise<Message> => {
   
+  const startTime = performance.now();
   const apiKey = process.env.API_KEY || "";
 
   if (!apiKey) {
+      logStatus('outage', 0);
       return {
           id: Date.now().toString(),
           role: 'model',
@@ -168,6 +183,9 @@ export const generateResponse = async (
           }
       }
 
+      // Log success latency
+      logStatus('operational', Math.round(performance.now() - startTime));
+
       let processedText = fullText.replace(/<think>[\s\S]*?(?:<\/think>|$)/gi, "").trim();
 
       if (mode === AppMode.PRESENTATION) {
@@ -241,6 +259,7 @@ export const generateResponse = async (
       };
 
   } catch (error: any) {
+      logStatus('outage', Math.round(performance.now() - startTime));
       console.error("Gemini API Error:", error);
       let errorMessage = error.message || "Unknown error";
       let displayMessage = `Възникна грешка при връзката с AI: ${errorMessage}`;
