@@ -8,7 +8,7 @@ import { createBlob as createAudioBlob } from './services/audioService'; // Rena
 import { supabase } from './supabaseClient';
 import { Auth } from './components/auth/Auth';
 import { 
-  Loader2, X, AlertCircle, CheckCircle, Info, Minimize, Database
+  Loader2, X, AlertCircle, CheckCircle, Info, Minimize, Database, Radio
 } from 'lucide-react';
 
 import { Session as SupabaseSession } from '@supabase/supabase-js';
@@ -106,6 +106,9 @@ export const App = () => {
   const [unlockKeyInput, setUnlockKeyInput] = useState('');
   const [targetPlan, setTargetPlan] = useState<UserPlan | null>(null);
   const [unlockLoading, setUnlockLoading] = useState(false);
+
+  // Broadcast Modal State
+  const [broadcastModal, setBroadcastModal] = useState<{isOpen: boolean, message: string} | null>(null);
 
   // Voice State
   const [isVoiceCallActive, setIsVoiceCallActive] = useState(false);
@@ -257,7 +260,34 @@ export const App = () => {
     return () => subscription.unsubscribe();
   }, []);
   
-  // Cloud Sync Effects
+  // Realtime Broadcast Listener
+  useEffect(() => {
+      const channel = supabase.channel('global-broadcasts')
+          .on(
+              'postgres_changes',
+              { event: 'INSERT', schema: 'public', table: 'broadcasts' },
+              (payload) => {
+                  const newBroadcast = payload.new as { message: string, type: 'toast' | 'modal' };
+                  if (newBroadcast.type === 'modal') {
+                      setBroadcastModal({ isOpen: true, message: newBroadcast.message });
+                  } else {
+                      // Custom long duration toast for system messages
+                      addToast(newBroadcast.message, 'info'); 
+                  }
+                  // Optional sound effect
+                  if (userSettings.sound) {
+                      new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3').play().catch(()=>{});
+                  }
+              }
+          )
+          .subscribe();
+
+      return () => {
+          supabase.removeChannel(channel);
+      };
+  }, [userSettings.sound]);
+
+  // Cloud Sync Effects (Rest of the file remains same, adding minimal diff around this)
   useEffect(() => {
       if (!session?.user?.id) {
           setIsRemoteDataLoaded(false);
@@ -1335,6 +1365,27 @@ export const App = () => {
     <div className="flex h-full w-full relative overflow-hidden text-foreground">
       {/* Snowfall Layer - Always mounted but controlled by internal opacity */}
       <Snowfall active={!!userSettings.christmasMode} />
+      
+      {/* Broadcast Modal */}
+      {broadcastModal && broadcastModal.isOpen && (
+          <div className="fixed inset-0 z-[250] bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in" onClick={() => setBroadcastModal(null)}>
+              <div className="bg-[#09090b] border border-indigo-500/30 w-full max-w-md p-8 rounded-[32px] shadow-2xl relative animate-in zoom-in-95" onClick={e => e.stopPropagation()}>
+                  <button onClick={() => setBroadcastModal(null)} className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors"><X size={20}/></button>
+                  <div className="flex flex-col items-center gap-6 text-center">
+                      <div className="w-16 h-16 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+                          <Radio size={32} className="text-white animate-pulse" />
+                      </div>
+                      <div className="space-y-2">
+                          <h2 className="text-2xl font-black text-white tracking-tight">System Message</h2>
+                          <div className="text-lg text-gray-300 font-medium leading-relaxed bg-white/5 p-4 rounded-xl border border-white/10">
+                              {broadcastModal.message}
+                          </div>
+                      </div>
+                      <button onClick={() => setBroadcastModal(null)} className="w-full py-3 bg-white text-black font-bold rounded-xl hover:bg-gray-200 transition-colors">Close</button>
+                  </div>
+              </div>
+          </div>
+      )}
       
       {/* Background Layers for Smooth Transitions */}
       

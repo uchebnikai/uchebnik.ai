@@ -6,15 +6,16 @@ import {
   ChevronRight, Edit2, Save, MoreHorizontal, Database, 
   Terminal, Calendar, ArrowUpRight, ArrowLeft, Mail,
   Clock, Hash, AlertTriangle, Check, Layers, DollarSign,
-  TrendingUp, TrendingDown, PieChart, Wallet, CreditCard,
+  TrendingUp, TrendingDown, Wallet, CreditCard,
   Settings, HelpCircle, ExternalLink, Cloud, Sliders, Cpu, Server, Info, AlertCircle, PenTool, History, Wrench,
   BarChart2, UserCheck, FileText, Smartphone, Wifi, Globe, HardDrive, Lock, Brain, LayoutDashboard,
-  RotateCcw, CalendarDays, Coins
+  RotateCcw, CalendarDays, Coins, Radio, Send, PieChart as PieChartIcon
 } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { supabase } from '../../supabaseClient';
-import { UserPlan } from '../../types';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, LineChart, Line, AreaChart, Area } from 'recharts';
+import { UserPlan, UserRole } from '../../types';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, LineChart, Line, AreaChart, Area, PieChart, Pie, Legend } from 'recharts';
+import { SUBJECTS } from '../../constants';
 
 // Pricing Constants (Gemini 2.5 Flash)
 const PRICE_INPUT_1M = 0.075;
@@ -64,6 +65,14 @@ interface SystemService {
     lastCheck: number;
 }
 
+interface SubjectStat {
+    subject_id: string;
+    count: number;
+    percentage: number;
+    name: string;
+    color: string;
+}
+
 interface AdminPanelProps {
   showAdminAuth: boolean;
   setShowAdminAuth: (val: boolean) => void;
@@ -90,7 +99,7 @@ export const AdminPanel = ({
   addToast
 }: AdminPanelProps) => {
     
-    const [activeTab, setActiveTab] = useState<'dashboard' | 'status' | 'finance' | 'users' | 'keys'>('dashboard');
+    const [activeTab, setActiveTab] = useState<'dashboard' | 'status' | 'finance' | 'users' | 'keys' | 'broadcast'>('dashboard');
     const [dbKeys, setDbKeys] = useState<GeneratedKey[]>([]);
     const [dbUsers, setDbUsers] = useState<AdminUser[]>([]);
     const [financials, setFinancials] = useState<FinancialData | null>(null);
@@ -111,6 +120,16 @@ export const AdminPanel = ({
     const [showFilterMenu, setShowFilterMenu] = useState(false);
     const [sortUsers, setSortUsers] = useState<'recent' | 'usage'>('recent');
 
+    // Heatmap State
+    const [subjectStats, setSubjectStats] = useState<SubjectStat[]>([]);
+    const [heatmapRange, setHeatmapRange] = useState<7 | 30 | 1>(7);
+    const [isHeatmapLoading, setIsHeatmapLoading] = useState(false);
+
+    // Broadcast State
+    const [broadcastMsg, setBroadcastMsg] = useState('');
+    const [broadcastType, setBroadcastType] = useState<'toast' | 'modal'>('toast');
+    const [isBroadcasting, setIsBroadcasting] = useState(false);
+
     // User Details
     const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
     const [editForm, setEditForm] = useState<any>(null);
@@ -129,6 +148,70 @@ export const AdminPanel = ({
             fetchData();
         }
     }, [showAdminPanel, activeTab]);
+
+    // Fetch Heatmap Data when range changes
+    useEffect(() => {
+        if (showAdminPanel && activeTab === 'dashboard') {
+            fetchSubjectStats();
+        }
+    }, [heatmapRange, showAdminPanel, activeTab]);
+
+    const fetchSubjectStats = async () => {
+        setIsHeatmapLoading(true);
+        try {
+            // Using RPC function to get aggregate stats from JSONB column
+            const { data, error } = await supabase.rpc('get_subject_usage', { days_lookback: heatmapRange });
+            
+            if (error) {
+                console.warn("RPC get_subject_usage failed (missing function?):", error);
+                // Fallback: Show empty state or simulated if requested (but prompt said NO simulated data)
+                setSubjectStats([]);
+            } else if (data) {
+                const total = data.reduce((acc: number, curr: any) => acc + curr.count, 0);
+                const stats: SubjectStat[] = data.map((item: any) => {
+                    const subjectConfig = SUBJECTS.find(s => s.id === item.subject_id);
+                    return {
+                        subject_id: item.subject_id,
+                        count: item.count,
+                        percentage: total > 0 ? (item.count / total) * 100 : 0,
+                        name: subjectConfig?.name || item.subject_id,
+                        color: subjectConfig?.color.replace('bg-', '') || 'gray-500' // Simple color extraction
+                    };
+                });
+                setSubjectStats(stats);
+            }
+        } catch (e) {
+            console.error("Heatmap Fetch Error", e);
+        } finally {
+            setIsHeatmapLoading(false);
+        }
+    };
+
+    const handleSendBroadcast = async () => {
+        if (!broadcastMsg.trim()) return;
+        setIsBroadcasting(true);
+        try {
+            // 1. Insert into DB to trigger Realtime for all clients
+            const { error } = await supabase.from('broadcasts').insert({
+                message: broadcastMsg,
+                type: broadcastType
+            });
+
+            if (error) throw error;
+            
+            setBroadcastMsg('');
+            addToast('Съобщението е изпратено успешно!', 'success');
+        } catch (e: any) {
+            console.error("Broadcast failed:", e);
+            if (e.code === '42P01') {
+                addToast('Грешка: Таблица "broadcasts" липсва.', 'error');
+            } else {
+                addToast('Грешка при изпращане.', 'error');
+            }
+        } finally {
+            setIsBroadcasting(false);
+        }
+    };
 
     const fetchData = async () => {
         setLoadingData(true);
@@ -368,6 +451,23 @@ export const AdminPanel = ({
         </div>
     );
 
+    // Color map for charts
+    const COLOR_MAP: any = {
+        'indigo-500': '#6366f1',
+        'blue-500': '#3b82f6',
+        'red-500': '#ef4444',
+        'emerald-500': '#10b981',
+        'amber-500': '#f59e0b',
+        'gray-500': '#6b7280',
+        'pink-500': '#ec4899',
+        'purple-500': '#8b5cf6',
+    };
+
+    const getHexColor = (tailwindClass: string) => {
+        const key = tailwindClass.split('-')[1] ? `${tailwindClass.split('-')[1]}-500` : 'gray-500';
+        return COLOR_MAP[key] || '#6b7280';
+    };
+
     if (showAdminAuth) {
       return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-xl p-4 animate-in fade-in">
@@ -415,7 +515,7 @@ export const AdminPanel = ({
                     </div>
                     <div>
                         <h2 className="font-bold text-white text-sm">Control Center</h2>
-                        <div className="text-[10px] text-zinc-500 font-mono">v3.3 • Monitoring</div>
+                        <div className="text-[10px] text-zinc-500 font-mono">v3.4 • Live Data</div>
                     </div>
                 </div>
                 
@@ -425,6 +525,9 @@ export const AdminPanel = ({
                     </button>
                     <button onClick={() => {setActiveTab('status'); setSelectedUser(null);}} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTab === 'status' ? 'bg-white/10 text-white border border-white/5 shadow-lg shadow-black/20' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}>
                         <Activity size={18}/> System Status
+                    </button>
+                    <button onClick={() => {setActiveTab('broadcast'); setSelectedUser(null);}} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTab === 'broadcast' ? 'bg-white/10 text-white border border-white/5 shadow-lg shadow-black/20' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}>
+                        <Radio size={18}/> Broadcast
                     </button>
                     <button onClick={() => {setActiveTab('finance'); setSelectedUser(null);}} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTab === 'finance' ? 'bg-white/10 text-white border border-white/5 shadow-lg shadow-black/20' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}>
                         <DollarSign size={18}/> Finance & P&L
@@ -463,7 +566,7 @@ export const AdminPanel = ({
                          </div>
                      </div>
                      <div className="flex items-center gap-3">
-                         <button onClick={fetchData} className="p-2 hover:bg-white/10 rounded-lg text-zinc-400 hover:text-white transition-colors" title="Refresh Data">
+                         <button onClick={() => {fetchData(); if(activeTab==='dashboard') fetchSubjectStats();}} className="p-2 hover:bg-white/10 rounded-lg text-zinc-400 hover:text-white transition-colors" title="Refresh Data">
                              <RefreshCw size={18} className={loadingData ? 'animate-spin' : ''}/>
                          </button>
                      </div>
@@ -650,21 +753,145 @@ export const AdminPanel = ({
                                              <Brain size={100} className="absolute -bottom-4 -right-4 text-purple-500/10 group-hover:scale-110 transition-transform"/>
                                          </div>
                                      </div>
-                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                         <div className="bg-white/5 border border-white/5 rounded-3xl p-6">
-                                             <h4 className="text-white font-bold mb-4 flex items-center gap-2"><TrendingUp size={18}/> Quick Stats</h4>
-                                             <div className="space-y-4">
-                                                 <div className="flex justify-between items-center p-4 bg-white/5 rounded-xl border border-white/5"><span className="text-zinc-400">Pro Subscribers</span><span className="text-white font-bold">{dbUsers.filter(u => u.plan === 'pro').length}</span></div>
-                                                 <div className="flex justify-between items-center p-4 bg-white/5 rounded-xl border border-white/5"><span className="text-zinc-400">Plus Subscribers</span><span className="text-white font-bold">{dbUsers.filter(u => u.plan === 'plus').length}</span></div>
-                                                 <div className="flex justify-between items-center p-4 bg-white/5 rounded-xl border border-white/5"><span className="text-zinc-400">Free Users</span><span className="text-white font-bold">{dbUsers.filter(u => u.plan === 'free').length}</span></div>
+
+                                     {/* Subject Popularity Heatmap */}
+                                     <div className="bg-white/5 border border-white/5 rounded-3xl p-8 relative overflow-hidden">
+                                         <div className="flex justify-between items-center mb-6">
+                                             <h3 className="text-xl font-bold text-white flex items-center gap-2"><PieChartIcon size={20} className="text-indigo-500"/> Subject Popularity Heatmap</h3>
+                                             <div className="flex bg-black/30 p-1 rounded-xl border border-white/5">
+                                                 {[1, 7, 30].map(d => (
+                                                     <button key={d} onClick={() => setHeatmapRange(d as any)} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${heatmapRange === d ? 'bg-indigo-600 text-white' : 'text-zinc-500 hover:text-white'}`}>
+                                                         {d === 1 ? 'Today' : `${d} Days`}
+                                                     </button>
+                                                 ))}
                                              </div>
                                          </div>
-                                         <div className="bg-white/5 border border-white/5 rounded-3xl p-6 flex items-center justify-center text-center">
-                                             <div>
-                                                 <div className="inline-block p-4 bg-white/10 rounded-full mb-4 text-emerald-400 animate-pulse"><CheckCircle size={40}/></div>
-                                                 <h3 className="text-xl font-bold text-white mb-1">System Operational</h3>
-                                                 <p className="text-zinc-500">All services are running smoothly.</p>
-                                                 <button onClick={() => setActiveTab('status')} className="mt-4 text-sm text-indigo-400 hover:text-indigo-300 font-bold underline">View Status Page</button>
+                                         
+                                         {subjectStats.length === 0 ? (
+                                             <div className="flex flex-col items-center justify-center py-12 text-zinc-500">
+                                                 {isHeatmapLoading ? <RefreshCw className="animate-spin mb-2"/> : <PieChartIcon size={32} className="mb-2 opacity-50"/>}
+                                                 <p>{isHeatmapLoading ? "Calculating real usage data..." : "No data found for this period."}</p>
+                                                 {!isHeatmapLoading && <p className="text-xs text-zinc-600 mt-2 max-w-md text-center">Ensure the `get_subject_usage` RPC function is enabled in Supabase to see real aggregated user analytics.</p>}
+                                             </div>
+                                         ) : (
+                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                                                 <div className="h-64">
+                                                     <ResponsiveContainer width="100%" height="100%">
+                                                         <PieChart>
+                                                             <Pie 
+                                                                 data={subjectStats} 
+                                                                 dataKey="count" 
+                                                                 nameKey="name" 
+                                                                 cx="50%" 
+                                                                 cy="50%" 
+                                                                 outerRadius={80} 
+                                                                 innerRadius={50} 
+                                                                 stroke="none"
+                                                             >
+                                                                 {subjectStats.map((entry, index) => (
+                                                                     <Cell key={`cell-${index}`} fill={getHexColor(entry.color)} />
+                                                                 ))}
+                                                             </Pie>
+                                                             <Tooltip contentStyle={{backgroundColor: '#111', borderColor: '#333', borderRadius: '8px'}} itemStyle={{color: '#fff'}} formatter={(val: number) => [`${val} sessions`, 'Usage']}/>
+                                                         </PieChart>
+                                                     </ResponsiveContainer>
+                                                 </div>
+                                                 <div className="grid grid-cols-1 gap-2 max-h-64 overflow-y-auto custom-scrollbar">
+                                                     {subjectStats.map((stat, i) => (
+                                                         <div key={i} className="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/5 hover:bg-white/10 transition-colors">
+                                                             <div className="flex items-center gap-3">
+                                                                 <div className={`w-3 h-3 rounded-full bg-${stat.color.replace('bg-', '')}`} style={{backgroundColor: getHexColor(stat.color)}}></div>
+                                                                 <span className="text-sm font-bold text-zinc-200">{stat.name}</span>
+                                                             </div>
+                                                             <div className="text-right">
+                                                                 <div className="text-sm font-mono font-bold text-white">{stat.percentage.toFixed(1)}%</div>
+                                                                 <div className="text-xs text-zinc-500">{stat.count} sessions</div>
+                                                             </div>
+                                                         </div>
+                                                     ))}
+                                                 </div>
+                                             </div>
+                                         )}
+                                     </div>
+                                 </div>
+                             )}
+
+                             {/* BROADCAST TAB */}
+                             {activeTab === 'broadcast' && (
+                                 <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
+                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                         <div className="bg-white/5 border border-white/5 rounded-3xl p-8 shadow-xl">
+                                             <div className="flex items-center gap-4 mb-6">
+                                                 <div className="p-3 bg-red-500/10 rounded-xl text-red-500 border border-red-500/20"><Radio size={24}/></div>
+                                                 <div>
+                                                     <h3 className="text-2xl font-bold text-white">Global Broadcast</h3>
+                                                     <p className="text-zinc-500 text-sm">Send real-time messages to all online users.</p>
+                                                 </div>
+                                             </div>
+
+                                             <div className="space-y-6">
+                                                 <div className="space-y-2">
+                                                     <label className="text-xs font-bold text-zinc-500 uppercase ml-1">Message</label>
+                                                     <textarea 
+                                                         value={broadcastMsg}
+                                                         onChange={(e) => setBroadcastMsg(e.target.value)}
+                                                         placeholder="Attention all users: Maintenance scheduled for..."
+                                                         className="w-full bg-black/30 border border-white/10 rounded-2xl p-4 text-white outline-none focus:border-indigo-500 transition-all min-h-[120px] resize-none"
+                                                     />
+                                                 </div>
+
+                                                 <div className="space-y-2">
+                                                     <label className="text-xs font-bold text-zinc-500 uppercase ml-1">Type</label>
+                                                     <div className="grid grid-cols-2 gap-3">
+                                                         <button 
+                                                             onClick={() => setBroadcastType('toast')}
+                                                             className={`p-4 rounded-xl border flex flex-col items-center gap-2 transition-all ${broadcastType === 'toast' ? 'bg-indigo-500/10 border-indigo-500 text-indigo-400' : 'bg-black/20 border-white/5 text-zinc-500 hover:bg-white/5'}`}
+                                                         >
+                                                             <AlertCircle size={24}/>
+                                                             <span className="font-bold text-sm">Toast Notification</span>
+                                                         </button>
+                                                         <button 
+                                                             onClick={() => setBroadcastType('modal')}
+                                                             className={`p-4 rounded-xl border flex flex-col items-center gap-2 transition-all ${broadcastType === 'modal' ? 'bg-red-500/10 border-red-500 text-red-400' : 'bg-black/20 border-white/5 text-zinc-500 hover:bg-white/5'}`}
+                                                         >
+                                                             <Radio size={24}/>
+                                                             <span className="font-bold text-sm">Fullscreen Modal</span>
+                                                         </button>
+                                                     </div>
+                                                 </div>
+
+                                                 <Button 
+                                                     onClick={handleSendBroadcast} 
+                                                     disabled={isBroadcasting || !broadcastMsg.trim()}
+                                                     className={`w-full py-4 text-base shadow-xl ${broadcastType === 'modal' ? 'bg-red-600 hover:bg-red-500 shadow-red-500/20' : 'bg-indigo-600 hover:bg-indigo-500 shadow-indigo-500/20'}`}
+                                                     icon={Send}
+                                                 >
+                                                     {isBroadcasting ? 'Sending...' : 'Send Broadcast'}
+                                                 </Button>
+                                             </div>
+                                         </div>
+
+                                         <div className="space-y-6">
+                                             <div className="bg-blue-500/10 border border-blue-500/20 rounded-3xl p-6">
+                                                 <h4 className="text-blue-400 font-bold mb-2 flex items-center gap-2"><Info size={18}/> Technical Note</h4>
+                                                 <p className="text-sm text-blue-200/80 leading-relaxed">
+                                                     This system uses <strong>Supabase Realtime</strong> connected to the <code>broadcasts</code> table. 
+                                                     Messages are delivered instantly to all active WebSocket connections. No polling is used.
+                                                 </p>
+                                             </div>
+
+                                             <div className="bg-white/5 border border-white/5 rounded-3xl p-6">
+                                                 <h4 className="text-white font-bold mb-4">Required Backend Setup</h4>
+                                                 <div className="text-xs font-mono text-zinc-400 bg-black/50 p-4 rounded-xl border border-white/5 overflow-x-auto">
+                                                     <p className="mb-2 text-zinc-500">// Run this in Supabase SQL Editor</p>
+                                                     <p>CREATE TABLE broadcasts (</p>
+                                                     <p className="pl-4">id uuid DEFAULT gen_random_uuid() PRIMARY KEY,</p>
+                                                     <p className="pl-4">message text NOT NULL,</p>
+                                                     <p className="pl-4">type text DEFAULT 'toast',</p>
+                                                     <p className="pl-4">created_at timestamptz DEFAULT now()</p>
+                                                     <p>);</p>
+                                                     <p className="mt-2 text-indigo-400">alter publication supabase_realtime add table broadcasts;</p>
+                                                 </div>
                                              </div>
                                          </div>
                                      </div>
