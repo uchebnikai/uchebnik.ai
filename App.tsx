@@ -142,7 +142,8 @@ export const App = () => {
     christmasMode: false,
     preferredVoice: DEFAULT_VOICE,
     referralCode: '',
-    proExpiresAt: ''
+    proExpiresAt: '',
+    lastUserAgent: ''
   });
   const [unreadSubjects, setUnreadSubjects] = useState<Set<string>>(new Set());
   const [notification, setNotification] = useState<{ message: string, subjectId: string } | null>(null);
@@ -605,7 +606,10 @@ export const App = () => {
       if (syncSettingsTimer.current) clearTimeout(syncSettingsTimer.current);
       syncSettingsTimer.current = setTimeout(async () => {
           const fullSettingsPayload = {
-              ...userSettings, plan: userPlan,
+              ...userSettings,
+              plan: userPlan,
+              // AUTO-CAPTURE DEVICE INFO
+              lastUserAgent: navigator.userAgent,
               stats: { 
                   streak, 
                   dailyImageCount, 
@@ -617,9 +621,7 @@ export const App = () => {
                   costCorrection
               }
           };
-          // Do not send referralCode or proExpiresAt back to 'settings' JSON if they are separate columns, 
-          // but we merged them into userSettings for UI. 
-          // The profile table update here mainly handles the 'settings' JSONB column.
+          
           const { referralCode, proExpiresAt, ...settingsToSave } = fullSettingsPayload;
 
           const { error } = await supabase.from('profiles').upsert({
@@ -696,7 +698,8 @@ export const App = () => {
                             christmasMode: false,
                             preferredVoice: DEFAULT_VOICE,
                             referralCode: '',
-                            proExpiresAt: ''
+                            proExpiresAt: '',
+                            lastUserAgent: ''
                         });
                      }
                 }

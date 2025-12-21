@@ -9,7 +9,7 @@ import {
   TrendingUp, TrendingDown, Wallet, CreditCard,
   Settings, HelpCircle, ExternalLink, Cloud, Sliders, Cpu, Server, Info, AlertCircle, PenTool, History, Wrench,
   BarChart2, UserCheck, FileText, Smartphone, Wifi, Globe, HardDrive, Lock, Brain, LayoutDashboard,
-  RotateCcw, CalendarDays, Coins, Radio, Send, PieChart as PieChartIcon, MessageSquare
+  RotateCcw, CalendarDays, Coins, Radio, Send, PieChart as PieChartIcon, MessageSquare, Monitor
 } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { supabase } from '../../supabaseClient';
@@ -47,6 +47,7 @@ interface AdminUser {
   totalOutput: number;
   stripeId?: string;
   proExpiresAt?: string;
+  deviceType?: 'Mobile' | 'Desktop' | 'Tablet' | 'Unknown';
 }
 
 interface FinancialData {
@@ -72,6 +73,12 @@ interface SubjectStat {
     count: number;
     percentage: number;
     name: string;
+    color: string;
+}
+
+interface DeviceStat {
+    name: string;
+    value: number;
     color: string;
 }
 
@@ -126,6 +133,9 @@ export const AdminPanel = ({
     const [subjectStats, setSubjectStats] = useState<SubjectStat[]>([]);
     const [heatmapRange, setHeatmapRange] = useState<number>(7);
     const [isHeatmapLoading, setIsHeatmapLoading] = useState(false);
+    
+    // Device Stats
+    const [deviceStats, setDeviceStats] = useState<DeviceStat[]>([]);
 
     // Broadcast State
     const [broadcastMsg, setBroadcastMsg] = useState('');
@@ -273,6 +283,10 @@ export const AdminPanel = ({
                 if (!error && users) {
                     let tIn = 0;
                     let tOut = 0;
+                    
+                    let mobileCount = 0;
+                    let desktopCount = 0;
+                    
                     const { data: { user: currentUser } } = await supabase.auth.getUser();
                     
                     const mappedUsers: AdminUser[] = users.map((u: any) => {
@@ -293,6 +307,22 @@ export const AdminPanel = ({
 
                         // Try to find avatar in settings if standard field is empty (rare case)
                         const avatarUrl = u.avatar_url || settings?.avatar || '';
+                        
+                        // Parse User Agent
+                        let deviceType: 'Mobile' | 'Desktop' | 'Unknown' = 'Unknown';
+                        const ua = settings?.lastUserAgent;
+                        if (ua) {
+                            if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua)) {
+                                deviceType = 'Mobile';
+                                mobileCount++;
+                            } else {
+                                deviceType = 'Desktop';
+                                desktopCount++;
+                            }
+                        } else {
+                            // Assume Desktop default or split evenly? No, keep unknown out of stats or assume desktop
+                            // Let's count nulls as "Unknown" for stats
+                        }
 
                         return {
                             id: u.id,
@@ -303,19 +333,26 @@ export const AdminPanel = ({
                             streak: settings?.stats?.streak || 0,
                             usage: settings?.stats?.dailyImageCount || 0,
                             lastVisit: settings?.stats?.lastVisit || new Date(u.updated_at).toLocaleDateString(),
-                            createdAt: u.created_at || u.updated_at, // Use updated_at as fallback if created_at is missing
+                            createdAt: u.created_at || u.updated_at, 
                             theme: u.theme_color || '#6366f1',
                             rawSettings: settings,
                             updatedAt: u.updated_at,
                             totalInput: uIn,
                             totalOutput: uOut,
                             stripeId: u.stripe_customer_id,
-                            proExpiresAt: u.pro_expires_at
+                            proExpiresAt: u.pro_expires_at,
+                            deviceType: deviceType
                         };
                     });
                     setDbUsers(mappedUsers);
                     setTotalInputTokens(tIn);
                     setTotalOutputTokens(tOut);
+                    
+                    // Set Device Stats
+                    setDeviceStats([
+                        { name: 'Mobile', value: mobileCount, color: '#ec4899' },
+                        { name: 'Desktop', value: desktopCount, color: '#6366f1' }
+                    ]);
                 }
             }
 
@@ -711,6 +748,10 @@ export const AdminPanel = ({
                                              <div className="flex items-center gap-2 truncate"><Mail size={14}/> {selectedUser.email || 'Email not visible'}</div>
                                              <div className="flex items-center gap-2 font-mono truncate"><Hash size={14}/> {selectedUser.id}</div>
                                              {selectedUser.stripeId && <div className="flex items-center gap-2 font-mono text-xs text-indigo-400 truncate"><CreditCard size={12}/> {selectedUser.stripeId}</div>}
+                                             <div className="flex items-center gap-2 text-xs text-zinc-500">
+                                                 {selectedUser.deviceType === 'Mobile' ? <Smartphone size={12}/> : <Monitor size={12}/>} 
+                                                 {selectedUser.deviceType || 'Unknown Device'}
+                                             </div>
                                              {isUserOnline(selectedUser.updatedAt) ? (
                                                  <div className="flex items-center gap-2 text-xs font-bold text-green-400 animate-pulse"><div className="w-2 h-2 rounded-full bg-green-500"/> ONLINE NOW</div>
                                              ) : (
@@ -901,27 +942,29 @@ export const AdminPanel = ({
                                          </div>
                                      </div>
 
-                                     {/* Subject Popularity Heatmap */}
-                                     <div className="bg-white/5 border border-white/5 rounded-3xl p-6 md:p-8 relative overflow-hidden">
-                                         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-                                             <h3 className="text-xl font-bold text-white flex items-center gap-2"><PieChartIcon size={20} className="text-indigo-500"/> Популярност на предметите</h3>
-                                             <div className="flex bg-black/30 p-1 rounded-xl border border-white/5 overflow-x-auto max-w-full">
-                                                 {[1, 7, 30, 36500].map(d => (
-                                                     <button key={d} onClick={() => setHeatmapRange(d)} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${heatmapRange === d ? 'bg-indigo-600 text-white' : 'text-zinc-500 hover:text-white'}`}>
-                                                         {d === 1 ? 'Днес' : d === 36500 ? 'Общо' : `${d} Дни`}
-                                                     </button>
-                                                 ))}
-                                             </div>
-                                         </div>
+                                     {/* Charts Grid */}
+                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                          
-                                         {subjectStats.length === 0 ? (
-                                             <div className="flex flex-col items-center justify-center py-12 text-zinc-500">
-                                                 {isHeatmapLoading ? <RefreshCw className="animate-spin mb-2"/> : <PieChartIcon size={32} className="mb-2 opacity-50"/>}
-                                                 <p>{isHeatmapLoading ? "Зареждане на данни..." : "Няма данни за този период."}</p>
+                                         {/* Subject Popularity Heatmap */}
+                                         <div className="bg-white/5 border border-white/5 rounded-3xl p-6 md:p-8 relative overflow-hidden">
+                                             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                                                 <h3 className="text-xl font-bold text-white flex items-center gap-2"><PieChartIcon size={20} className="text-indigo-500"/> Популярност</h3>
+                                                 <div className="flex bg-black/30 p-1 rounded-xl border border-white/5 overflow-x-auto max-w-full">
+                                                     {[1, 7, 30, 36500].map(d => (
+                                                         <button key={d} onClick={() => setHeatmapRange(d)} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${heatmapRange === d ? 'bg-indigo-600 text-white' : 'text-zinc-500 hover:text-white'}`}>
+                                                             {d === 1 ? 'Днес' : d === 36500 ? 'Общо' : `${d} Дни`}
+                                                         </button>
+                                                     ))}
+                                                 </div>
                                              </div>
-                                         ) : (
-                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-                                                 <div className="h-64">
+                                             
+                                             {subjectStats.length === 0 ? (
+                                                 <div className="flex flex-col items-center justify-center py-12 text-zinc-500 h-64">
+                                                     {isHeatmapLoading ? <RefreshCw className="animate-spin mb-2"/> : <PieChartIcon size={32} className="mb-2 opacity-50"/>}
+                                                     <p>{isHeatmapLoading ? "Зареждане на данни..." : "Няма данни за този период."}</p>
+                                                 </div>
+                                             ) : (
+                                                 <div className="h-64 relative">
                                                      <ResponsiveContainer width="100%" height="100%">
                                                          <PieChart>
                                                              <Pie 
@@ -941,23 +984,59 @@ export const AdminPanel = ({
                                                              <Tooltip contentStyle={{backgroundColor: '#111', borderColor: '#333', borderRadius: '8px'}} itemStyle={{color: '#fff'}} formatter={(val: number) => [`${val} сесии`, 'Използване']}/>
                                                          </PieChart>
                                                      </ResponsiveContainer>
-                                                 </div>
-                                                 <div className="grid grid-cols-1 gap-2 max-h-64 overflow-y-auto custom-scrollbar">
-                                                     {subjectStats.map((stat, i) => (
-                                                         <div key={i} className="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/5 hover:bg-white/10 transition-colors">
-                                                             <div className="flex items-center gap-3">
-                                                                 <div className="w-3 h-3 rounded-full" style={{backgroundColor: getHexColor(stat.color)}}></div>
-                                                                 <span className="text-sm font-bold text-zinc-200">{stat.name}</span>
-                                                             </div>
-                                                             <div className="text-right">
-                                                                 <div className="text-sm font-mono font-bold text-white">{stat.percentage.toFixed(1)}%</div>
-                                                                 <div className="text-xs text-zinc-500">{stat.count} сесии</div>
-                                                             </div>
+                                                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                                         <div className="text-center">
+                                                             <div className="text-2xl font-bold text-white">{subjectStats.reduce((a,b) => a+b.count, 0)}</div>
+                                                             <div className="text-xs text-zinc-500">Сесии</div>
                                                          </div>
-                                                     ))}
+                                                     </div>
                                                  </div>
+                                             )}
+                                         </div>
+
+                                         {/* Device Stats Pie Chart */}
+                                         <div className="bg-white/5 border border-white/5 rounded-3xl p-6 md:p-8 relative overflow-hidden">
+                                             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                                                 <h3 className="text-xl font-bold text-white flex items-center gap-2"><Smartphone size={20} className="text-pink-500"/> Устройства</h3>
                                              </div>
-                                         )}
+                                             
+                                             {deviceStats.length === 0 ? (
+                                                 <div className="flex flex-col items-center justify-center py-12 text-zinc-500 h-64">
+                                                     <PieChartIcon size={32} className="mb-2 opacity-50"/>
+                                                     <p>Няма данни за устройства.</p>
+                                                 </div>
+                                             ) : (
+                                                 <div className="h-64 relative">
+                                                     <ResponsiveContainer width="100%" height="100%">
+                                                         <PieChart>
+                                                             <Pie 
+                                                                 data={deviceStats} 
+                                                                 dataKey="value" 
+                                                                 nameKey="name" 
+                                                                 cx="50%" 
+                                                                 cy="50%" 
+                                                                 outerRadius={80} 
+                                                                 innerRadius={50}
+                                                                 paddingAngle={5}
+                                                                 stroke="none"
+                                                             >
+                                                                 {deviceStats.map((entry, index) => (
+                                                                     <Cell key={`cell-${index}`} fill={entry.color} />
+                                                                 ))}
+                                                             </Pie>
+                                                             <Tooltip contentStyle={{backgroundColor: '#111', borderColor: '#333', borderRadius: '8px'}} itemStyle={{color: '#fff'}} />
+                                                             <Legend verticalAlign="bottom" height={36} iconType="circle" />
+                                                         </PieChart>
+                                                     </ResponsiveContainer>
+                                                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none mb-8">
+                                                         <div className="text-center">
+                                                             <div className="text-2xl font-bold text-white">{dbUsers.length}</div>
+                                                             <div className="text-xs text-zinc-500">Users</div>
+                                                         </div>
+                                                     </div>
+                                                 </div>
+                                             )}
+                                         </div>
                                      </div>
                                  </div>
                              )}
