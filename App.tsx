@@ -4,7 +4,7 @@ import { GoogleGenAI, LiveServerMessage, Modality } from "@google/genai";
 import { SubjectConfig, SubjectId, AppMode, Message, Slide, UserSettings, Session, UserPlan, UserRole, HomeViewType } from './types';
 import { SUBJECTS, VOICES, DEFAULT_VOICE } from './constants';
 import { generateResponse } from './services/aiService';
-import { createBlob as createAudioBlob } from './services/audioService'; // Renamed import to avoid conflict
+import { createBlob as createAudioBlob } from './services/audioService'; 
 import { supabase } from './supabaseClient';
 import { Auth } from './components/auth/Auth';
 import { AuthSuccess } from './components/auth/AuthSuccess';
@@ -267,11 +267,37 @@ export const App = () => {
     };
     handleAuthRedirects();
 
-    const syncProfile = (session: SupabaseSession | null) => {
+    const syncProfile = async (session: SupabaseSession | null) => {
         setSession(session);
         setAuthLoading(false);
         if (session) {
             setShowAuthModal(false);
+            
+            // Handle deferred referral code (e.g. from Google Sign In)
+            // If the user signed up via Google, they didn't pass metadata at creation.
+            // We apply it here.
+            const storedRefCode = localStorage.getItem('uchebnik_invite_code');
+            if (storedRefCode) {
+                // Check if user already has a referral code applied (prevent re-use)
+                const currentRef = session.user.user_metadata.referral_code;
+                if (!currentRef) {
+                    // Update user metadata with the referral code
+                    const { error } = await supabase.auth.updateUser({
+                        data: { referral_code: storedRefCode }
+                    });
+                    
+                    if (!error) {
+                        addToast(t('referral_applied', userSettings.language) || "Referral code applied!", "success");
+                        localStorage.removeItem('uchebnik_invite_code');
+                    } else {
+                        console.error("Failed to apply referral code:", error);
+                    }
+                } else {
+                    // Already has one or was handled by signup
+                    localStorage.removeItem('uchebnik_invite_code');
+                }
+            }
+
         } else {
             setSessions([]);
             setSyncStatus('synced');
@@ -1725,6 +1751,7 @@ export const App = () => {
             setUnlockKeyInput={setUnlockKeyInput}
             handleUnlockSubmit={handleUnlockSubmit}
             userPlan={userPlan}
+            userSettings={userSettings}
             addToast={addToast}
         />
         <SettingsModal 

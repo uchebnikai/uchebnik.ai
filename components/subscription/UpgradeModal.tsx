@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { X, ArrowLeft, Zap, Crown, CheckCircle, Loader2, ArrowUp, Layers, Star, XCircle } from 'lucide-react';
 import { Button } from '../ui/Button';
-import { UserPlan } from '../../types';
+import { UserPlan, UserSettings } from '../../types';
 import { supabase } from '../../supabaseClient';
 import { STRIPE_PRICES } from '../../constants';
 
@@ -15,6 +15,7 @@ interface UpgradeModalProps {
   setUnlockKeyInput: (val: string) => void;
   handleUnlockSubmit: () => void;
   userPlan: UserPlan;
+  userSettings: UserSettings;
   addToast: (msg: string, type: 'success' | 'error' | 'info') => void;
 }
 
@@ -27,6 +28,7 @@ export const UpgradeModal = ({
   setUnlockKeyInput,
   handleUnlockSubmit,
   userPlan,
+  userSettings,
   addToast
 }: UpgradeModalProps) => {
     
@@ -115,12 +117,21 @@ export const UpgradeModal = ({
       <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/60 backdrop-blur-xl p-4 animate-in fade-in overflow-y-auto">
         <div className="w-full max-w-6xl space-y-6 md:space-y-8 animate-in zoom-in-95 duration-300 my-auto">
            
-           <div className="flex justify-between items-start">
+           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                <div className="space-y-1 md:space-y-2">
                    <h2 className="text-3xl md:text-5xl font-black text-white tracking-tight drop-shadow-lg font-display">Избери своя план</h2>
-                   <p className="text-sm md:text-lg text-white/70 font-medium">Инвестирай в успеха си с Uchebnik AI</p>
+                   <div className="flex flex-col md:flex-row gap-2 md:gap-4 md:items-center">
+                        <p className="text-sm md:text-lg text-white/70 font-medium">Инвестирай в успеха си с Uchebnik AI</p>
+                        {userSettings.proExpiresAt && (
+                            <div className="px-3 py-1 bg-amber-500/20 border border-amber-500/30 rounded-full backdrop-blur-sm">
+                                <p className="text-xs text-amber-300 font-bold tracking-wide">
+                                    Активен Pro до: {new Date(userSettings.proExpiresAt).toLocaleDateString()}
+                                </p>
+                            </div>
+                        )}
+                   </div>
                </div>
-               <button onClick={() => setShowUnlockModal(false)} className="p-2 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors backdrop-blur-md border border-white/10"><X size={24}/></button>
+               <button onClick={() => setShowUnlockModal(false)} className="p-2 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors backdrop-blur-md border border-white/10 absolute top-4 right-4 md:static"><X size={24}/></button>
            </div>
 
            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 items-stretch mt-2 md:mt-4 pb-8 md:pb-0">

@@ -108,14 +108,6 @@ export const ReferralModal = ({ isOpen, onClose, userSettings, addToast }: Refer
                 </div>
             </div>
         </div>
-        
-        {userSettings.proExpiresAt && (
-            <div className="bg-amber-500/10 border-t border-amber-500/20 p-4 text-center">
-                <p className="text-xs text-amber-300 font-medium">
-                    Активен Pro до: {new Date(userSettings.proExpiresAt).toLocaleDateString()}
-                </p>
-            </div>
-        )}
       </div>
     </div>
   );
