@@ -80,6 +80,7 @@ export const SettingsModal = ({
   const [isLangOpen, setIsLangOpen] = useState(false);
 
   const isCustomColor = !PRESET_COLORS.includes(userSettings.themeColor);
+  const isCustomBackground = userSettings.customBackground && !PRESET_BACKGROUNDS.includes(userSettings.customBackground);
 
   const handleManageSubscription = async () => {
       setLoadingPortal(true);
@@ -401,13 +402,37 @@ export const SettingsModal = ({
                            </div>
                            
                            <div className={`grid grid-cols-2 md:grid-cols-4 gap-3 ${!isPremium ? 'pointer-events-none' : ''}`}>
-                               {/* Upload Button */}
+                               {/* Upload Button / Custom Slot */}
                                <div 
                                    onClick={() => isPremium && backgroundInputRef.current?.click()}
-                                   className="aspect-video rounded-xl border-2 border-dashed border-gray-300 dark:border-white/10 hover:border-indigo-500 dark:hover:border-indigo-500 transition-all cursor-pointer flex flex-col items-center justify-center gap-2 group bg-gray-50 dark:bg-black/20"
+                                   className={`aspect-video rounded-xl border-2 transition-all cursor-pointer flex flex-col items-center justify-center gap-2 group relative overflow-hidden ${
+                                        isCustomBackground
+                                        ? 'border-indigo-500 ring-2 ring-indigo-500/30' 
+                                        : 'border-dashed border-gray-300 dark:border-white/10 hover:border-indigo-500 dark:hover:border-indigo-500 bg-gray-50 dark:bg-black/20'
+                                   }`}
                                >
-                                   <div className="p-2 bg-white dark:bg-white/5 rounded-full shadow-sm group-hover:scale-110 transition-transform"><Upload size={18}/></div>
-                                   <span className="text-xs font-bold text-gray-500 group-hover:text-indigo-500">Upload</span>
+                                   {isCustomBackground ? (
+                                       <>
+                                           <img src={userSettings.customBackground!} className="absolute inset-0 w-full h-full object-cover" alt="Custom Background" />
+                                           <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors z-10" />
+                                           
+                                           <div className="absolute inset-0 flex items-center justify-center z-20">
+                                                <div className="bg-indigo-500 text-white rounded-full p-1 shadow-lg transform group-hover:scale-0 transition-transform duration-200">
+                                                    <Check size={16} />
+                                                </div>
+                                           </div>
+
+                                           <div className="absolute inset-0 flex flex-col items-center justify-center z-20 opacity-0 group-hover:opacity-100 transition-all duration-200 transform scale-95 group-hover:scale-100">
+                                                <div className="p-2 bg-white/20 backdrop-blur-md rounded-full shadow-sm mb-2"><Upload size={20} className="text-white"/></div>
+                                                <span className="text-xs font-bold text-white shadow-sm">Промени</span>
+                                           </div>
+                                       </>
+                                   ) : (
+                                       <>
+                                           <div className="p-2 bg-white dark:bg-white/5 rounded-full shadow-sm group-hover:scale-110 transition-transform"><Upload size={18}/></div>
+                                           <span className="text-xs font-bold text-gray-500 group-hover:text-indigo-500">Upload</span>
+                                       </>
+                                   )}
                                    <input type="file" ref={backgroundInputRef} onChange={handleBackgroundUpload} className="hidden" accept="image/*"/>
                                </div>
 
