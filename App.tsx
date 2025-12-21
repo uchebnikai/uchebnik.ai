@@ -35,6 +35,7 @@ import { ChatHeader } from './components/chat/ChatHeader';
 import { MessageList } from './components/chat/MessageList';
 import { ChatInputArea } from './components/chat/ChatInputArea';
 import { TermsOfService, PrivacyPolicy, CookiePolicy, About, Contact } from './components/pages/StaticPages';
+import { Snowfall } from './components/ui/Snowfall';
 
 interface GeneratedKey {
   code: string;
@@ -119,7 +120,8 @@ export const App = () => {
     teachingStyle: 'normal',
     enterToSend: true,
     fontFamily: 'inter',
-    customPersona: ''
+    customPersona: '',
+    christmasMode: false
   });
   const [unreadSubjects, setUnreadSubjects] = useState<Set<string>>(new Set());
   const [notification, setNotification] = useState<{ message: string, subjectId: string } | null>(null);
@@ -279,6 +281,7 @@ export const App = () => {
                       if (!merged.language) merged.language = 'bg';
                       if (!merged.teachingStyle) merged.teachingStyle = 'normal';
                       if (!merged.customPersona) merged.customPersona = '';
+                      if (merged.christmasMode === undefined) merged.christmasMode = false;
                       
                       setUserSettings(prev => ({ ...prev, ...merged }));
                       if (plan) setUserPlan(plan);
@@ -491,7 +494,8 @@ export const App = () => {
                             teachingStyle: 'normal', 
                             enterToSend: true,
                             fontFamily: 'inter',
-                            customPersona: ''
+                            customPersona: '',
+                            christmasMode: false
                         });
                      }
                 }
@@ -1186,18 +1190,35 @@ export const App = () => {
 
   return (
     <div className="flex h-full w-full relative overflow-hidden text-foreground">
+      {/* Snowfall Layer - Always mounted but controlled by internal opacity */}
+      <Snowfall active={!!userSettings.christmasMode} />
+      
+      {/* Background Layers for Smooth Transitions */}
+      
+      {/* 1. Base Gradient Layer (Default) */}
+      {!userSettings.customBackground && (
+        <div className={`fixed inset-0 z-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-indigo-200/20 via-background to-background dark:from-indigo-900/20 dark:via-background dark:to-background pointer-events-none transition-all duration-1000 ${focusMode ? 'brightness-[0.4]' : ''} ${userSettings.christmasMode ? 'opacity-0' : 'opacity-100'}`}></div>
+      )}
+
+      {/* 2. Custom User Background Layer */}
       {userSettings.customBackground && (
          <div 
-           className={`fixed inset-0 z-0 bg-cover bg-center pointer-events-none transition-all duration-500 ${focusMode ? 'brightness-[0.2] grayscale' : ''}`}
+           className={`fixed inset-0 z-0 bg-cover bg-center pointer-events-none transition-all duration-1000 ${focusMode ? 'brightness-[0.2] grayscale' : ''} ${userSettings.christmasMode ? 'opacity-0' : 'opacity-100'}`}
            style={getBackgroundImageStyle(userSettings.customBackground)}
          />
       )}
 
-      {!userSettings.customBackground && (
+      {/* 3. Christmas Background Layer (Overlay) */}
+      <div 
+        className={`fixed inset-0 z-0 bg-cover bg-center pointer-events-none transition-all duration-1000 ${focusMode ? 'brightness-[0.2] grayscale' : ''} ${userSettings.christmasMode ? 'opacity-100' : 'opacity-0'}`}
+        style={{ backgroundImage: `url('https://i.ibb.co/WNmGnfdC/Gemini-Generated-Image-g5c7r7g5c7r7g5c7.png')` }}
+      />
+
+      {/* Decorative Orbs (Only visible on Default BG) */}
+      {!userSettings.customBackground && !userSettings.christmasMode && (
         <>
-            <div className={`fixed inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-indigo-200/20 via-background to-background dark:from-indigo-900/20 dark:via-background dark:to-background pointer-events-none z-0 transition-all duration-500 ${focusMode ? 'brightness-[0.4]' : ''}`}></div>
-            <div className={`fixed top-[-10%] right-[-5%] w-[500px] h-[500px] bg-indigo-500/10 dark:bg-indigo-500/20 rounded-full blur-[120px] pointer-events-none z-0 animate-pulse-slow transition-opacity ${focusMode ? 'opacity-20' : ''}`} />
-            <div className={`fixed bottom-[-10%] left-[-5%] w-[400px] h-[400px] bg-purple-500/10 dark:bg-purple-500/20 rounded-full blur-[100px] pointer-events-none z-0 animate-pulse-slow delay-1000 transition-opacity ${focusMode ? 'opacity-20' : ''}`} />
+            <div className={`fixed top-[-10%] right-[-5%] w-[500px] h-[500px] bg-indigo-500/10 dark:bg-indigo-500/20 rounded-full blur-[120px] pointer-events-none z-0 animate-pulse-slow transition-opacity ${focusMode ? 'opacity-20' : 'opacity-100'}`} />
+            <div className={`fixed bottom-[-10%] left-[-5%] w-[400px] h-[400px] bg-purple-500/10 dark:bg-purple-500/20 rounded-full blur-[100px] pointer-events-none z-0 animate-pulse-slow delay-1000 transition-opacity ${focusMode ? 'opacity-20' : 'opacity-100'}`} />
         </>
       )}
       
@@ -1223,6 +1244,7 @@ export const App = () => {
             sidebarOpen={sidebarOpen}
             setSidebarOpen={setSidebarOpen}
             userSettings={userSettings}
+            setUserSettings={setUserSettings}
             userPlan={userPlan}
             activeSubject={activeSubject}
             setActiveSubject={setActiveSubject}

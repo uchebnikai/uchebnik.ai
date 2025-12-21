@@ -1,11 +1,16 @@
+
 import { useEffect } from 'react';
 import { UserSettings } from '../types';
 import { hexToRgb, rgbToHsl, hslToRgb, adjustBrightness } from '../styles/theme';
 
 export const useTheme = (userSettings: UserSettings) => {
   useEffect(() => {
-    if (userSettings.themeColor) {
-      const rgb = hexToRgb(userSettings.themeColor);
+    // If Christmas mode is enabled, override with Red theme (#ef4444)
+    // Otherwise use user's theme color
+    const themeColor = userSettings.christmasMode ? '#ef4444' : userSettings.themeColor;
+
+    if (themeColor) {
+      const rgb = hexToRgb(themeColor);
       const root = document.documentElement;
       
       // Update primary palette variables
@@ -22,9 +27,16 @@ export const useTheme = (userSettings: UserSettings) => {
       root.style.setProperty('--primary-950', adjustBrightness(rgb, -50));
 
       // Calculate Accent Color (Hue Shift)
-      const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
-      const accentHsl = { ...hsl, h: (hsl.h + 35) % 360 }; // +35 degree shift
-      const accentRgb = hslToRgb(accentHsl.h, accentHsl.s, accentHsl.l);
+      // For Christmas: Shift to Green if Primary is Red
+      let accentRgb;
+      if (userSettings.christmasMode) {
+          // Force Emerald Green for Christmas Accent
+          accentRgb = hexToRgb('#10b981'); 
+      } else {
+          const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
+          const accentHsl = { ...hsl, h: (hsl.h + 35) % 360 }; // +35 degree shift
+          accentRgb = hslToRgb(accentHsl.h, accentHsl.s, accentHsl.l);
+      }
 
       // Update accent palette variables
       root.style.setProperty('--accent-50', adjustBrightness(accentRgb, 90));
@@ -41,10 +53,18 @@ export const useTheme = (userSettings: UserSettings) => {
     }
 
     // Toggle custom-bg-active class
-    if (userSettings.customBackground) {
+    if (userSettings.customBackground || userSettings.christmasMode) {
       document.body.classList.add('custom-bg-active');
     } else {
       document.body.classList.remove('custom-bg-active');
     }
-  }, [userSettings.themeColor, userSettings.customBackground]);
+    
+    // Toggle christmas-mode class for specific overrides (like snow Z-index or fonts)
+    if (userSettings.christmasMode) {
+        document.body.classList.add('christmas-mode');
+    } else {
+        document.body.classList.remove('christmas-mode');
+    }
+
+  }, [userSettings.themeColor, userSettings.customBackground, userSettings.christmasMode]);
 };
