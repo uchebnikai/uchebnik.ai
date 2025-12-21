@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { X, Gift, Copy, CheckCircle, Users, Crown, Zap, MessageCircle } from 'lucide-react';
+import { X, Gift, Copy, CheckCircle, Users, Crown, Zap, MessageCircle, ArrowUp } from 'lucide-react';
 import { UserSettings } from '../../types';
 import { t } from '../../utils/translations';
 import { MODAL_ENTER } from '../../animations/transitions';
@@ -58,22 +58,39 @@ export const ReferralModal = ({ isOpen, onClose, userSettings, addToast }: Refer
                     <Crown size={14} fill="currentColor"/> Какво печелиш с Pro?
                 </h3>
                 
-                <div className="grid grid-cols-2 gap-y-3 gap-x-2">
-                    <div className="flex items-center gap-2.5">
-                        <div className="p-1 bg-amber-500/20 rounded-full text-amber-500"><Zap size={12} fill="currentColor"/></div>
-                        <span className="text-sm font-medium text-zinc-200">Неограничени снимки</span>
+                <div className="space-y-3">
+                    <div className="flex items-center gap-2 text-xs font-bold text-zinc-400 pb-2 border-b border-white/10">
+                        <div className="p-1 bg-amber-500/20 rounded-full text-amber-500">
+                            <ArrowUp size={12} />
+                        </div>
+                        <span>Всичко от Free и Plus плана</span>
                     </div>
-                    <div className="flex items-center gap-2.5">
-                        <div className="p-1 bg-amber-500/20 rounded-full text-amber-500"><Crown size={12} fill="currentColor"/></div>
-                        <span className="text-sm font-medium text-zinc-200">Най-мощният AI</span>
-                    </div>
-                    <div className="flex items-center gap-2.5">
-                        <div className="p-1 bg-amber-500/20 rounded-full text-amber-500"><MessageCircle size={12} fill="currentColor"/></div>
-                        <span className="text-sm font-medium text-zinc-200">Гласов режим</span>
-                    </div>
-                    <div className="flex items-center gap-2.5">
-                        <div className="p-1 bg-amber-500/20 rounded-full text-amber-500"><CheckCircle size={12} /></div>
-                        <span className="text-sm font-medium text-zinc-200">AI Роли & Персони</span>
+                    
+                    <div className="grid grid-cols-2 gap-y-2 gap-x-2">
+                         <div className="flex items-center gap-2">
+                            <CheckCircle size={14} className="text-amber-500 shrink-0"/>
+                            <span className="text-xs font-medium text-zinc-200">Неограничени снимки</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <CheckCircle size={14} className="text-amber-500 shrink-0"/>
+                            <span className="text-xs font-medium text-zinc-200">Ultimate AI Модел</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <CheckCircle size={14} className="text-amber-500 shrink-0"/>
+                            <span className="text-xs font-medium text-zinc-200">Гласов режим</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <CheckCircle size={14} className="text-amber-500 shrink-0"/>
+                            <span className="text-xs font-medium text-zinc-200">AI Роли</span>
+                        </div>
+                         <div className="flex items-center gap-2">
+                            <CheckCircle size={14} className="text-amber-500 shrink-0"/>
+                            <span className="text-xs font-medium text-zinc-200">Google Търсене</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <CheckCircle size={14} className="text-amber-500 shrink-0"/>
+                            <span className="text-xs font-medium text-zinc-200">Приоритетна помощ</span>
+                        </div>
                     </div>
                 </div>
             </div>
