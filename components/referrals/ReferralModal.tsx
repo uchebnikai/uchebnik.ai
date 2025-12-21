@@ -45,7 +45,7 @@ export const ReferralModal = ({ isOpen, onClose, userSettings, addToast }: Refer
 
             <h2 className="text-3xl font-black text-white mb-2 tracking-tight">Покани Приятел</h2>
             <p className="text-zinc-400 mb-8 max-w-xs">
-                Подари на приятел 3 дни Pro план и получи същото, когато се регистрира!
+                Покани приятел и получи 3 дни Pro план безплатно, когато той се регистрира!
             </p>
 
             <div className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 flex items-center gap-3 mb-8">
@@ -72,7 +72,7 @@ export const ReferralModal = ({ isOpen, onClose, userSettings, addToast }: Refer
                 </div>
                 <div className="bg-white/5 border border-white/5 rounded-2xl p-4 flex flex-col items-center gap-2">
                     <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-400 to-orange-600 text-white flex items-center justify-center shadow-lg shadow-orange-500/20"><CheckCircle size={16}/></div>
-                    <span className="text-xs font-bold text-white">И двамата печелите!</span>
+                    <span className="text-xs font-bold text-white">Ти печелиш!</span>
                 </div>
             </div>
         </div>
