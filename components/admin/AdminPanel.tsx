@@ -7,7 +7,7 @@ import {
   Terminal, Calendar, ArrowUpRight, ArrowLeft, Mail,
   Clock, Hash, AlertTriangle, Check, Layers, DollarSign,
   TrendingUp, TrendingDown, PieChart, Wallet, CreditCard,
-  Settings, HelpCircle, ExternalLink, Cloud, Sliders, Cpu, Server, Info, AlertCircle
+  Settings, HelpCircle, ExternalLink, Cloud, Sliders, Cpu, Server, Info, AlertCircle, PenTool
 } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { supabase } from '../../supabaseClient';
@@ -76,6 +76,14 @@ export const AdminPanel = ({
     const [searchQuery, setSearchQuery] = useState('');
     const [showRawData, setShowRawData] = useState<string | null>(null);
     const [totalTokensUsage, setTotalTokensUsage] = useState(0);
+    
+    // Baseline Cost Adjustment (For historical data)
+    const [baselineCost, setBaselineCost] = useState<number>(() => {
+        const saved = localStorage.getItem('uchebnik_finance_baseline');
+        return saved ? parseFloat(saved) : 0;
+    });
+    const [isEditingBaseline, setIsEditingBaseline] = useState(false);
+    const [tempBaseline, setTempBaseline] = useState(baselineCost.toString());
     
     // Filtering
     const [filterPlan, setFilterPlan] = useState<'all' | 'free' | 'plus' | 'pro'>('all');
@@ -223,6 +231,18 @@ export const AdminPanel = ({
             usage: user.usage
         });
     };
+    
+    const handleSaveBaseline = () => {
+        const val = parseFloat(tempBaseline);
+        if (!isNaN(val) && val >= 0) {
+            setBaselineCost(val);
+            localStorage.setItem('uchebnik_finance_baseline', val.toString());
+            setIsEditingBaseline(false);
+            addToast('Baseline cost updated', 'success');
+        } else {
+            addToast('Invalid amount', 'error');
+        }
+    };
 
     // --- Financial Calculations ---
     const revenue = financials ? financials.mrr / 100 : 0; 
@@ -235,9 +255,9 @@ export const AdminPanel = ({
     // 1M Tokens = 1,000,000.
     const tokenCostEstimate = (totalTokensUsage / 1000000) * 0.15;
     
-    // Logic: If Google Bill is 0 (Free Tier/Credits), show Estimate as "Gross Value".
+    // Logic: If Google Bill is 0 (Free Tier/Credits), show Estimate + Baseline as "Gross Value".
     const showEstimate = billedCloudCost === 0;
-    const effectiveCost = showEstimate ? tokenCostEstimate : billedCloudCost;
+    const effectiveCost = showEstimate ? (tokenCostEstimate + baselineCost) : billedCloudCost;
     
     // Profit based on effective cost (Gross View)
     const profit = revenue - effectiveCost;
@@ -308,7 +328,7 @@ export const AdminPanel = ({
                     </div>
                     <div>
                         <h2 className="font-bold text-white text-sm">Admin Panel</h2>
-                        <div className="text-[10px] text-zinc-500 font-mono">v2.5 • Cloud Sync</div>
+                        <div className="text-[10px] text-zinc-500 font-mono">v2.6 • Smart Cost</div>
                     </div>
                 </div>
                 
@@ -472,7 +492,7 @@ export const AdminPanel = ({
                                                      <div className="flex items-center gap-3">
                                                          <div className="p-2 bg-red-500/20 rounded-xl"><Cloud size={24}/></div>
                                                          <span className="font-bold uppercase tracking-wider text-xs">
-                                                             {showEstimate ? 'Gross Value' : 'Net Bill'}
+                                                             {showEstimate ? 'Total Value (Est)' : 'Net Bill'}
                                                          </span>
                                                      </div>
                                                      <div className="flex gap-2">
@@ -488,7 +508,7 @@ export const AdminPanel = ({
 
                                                  <div className="text-5xl font-black text-white tracking-tight flex items-baseline gap-2">
                                                      <span>${effectiveCost.toFixed(4)}</span>
-                                                     {showEstimate && <span className="text-lg text-red-400/60 font-bold">(Est)</span>}
+                                                     {showEstimate && <span className="text-lg text-red-400/60 font-bold hidden xl:inline">(Est)</span>}
                                                  </div>
                                                  
                                                  <div className="flex flex-col gap-1 mt-3">
@@ -505,8 +525,8 @@ export const AdminPanel = ({
                                                      
                                                      {/* Breakdown Subtext */}
                                                      <div className="flex items-center justify-between text-xs font-mono text-zinc-500 mt-1">
-                                                         <span>Bill: ${billedCloudCost.toFixed(2)}</span>
                                                          <span>Tokens: {totalTokensUsage.toLocaleString()}</span>
+                                                         {baselineCost > 0 && <span className="text-amber-500">Base: ${baselineCost.toFixed(2)}</span>}
                                                      </div>
                                                  </div>
                                              </div>
@@ -555,22 +575,47 @@ export const AdminPanel = ({
                                          </ResponsiveContainer>
                                      </div>
 
-                                     <div className="p-6 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex gap-4 items-start">
+                                     <div className="p-6 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex gap-4 items-start relative">
                                          <div className="p-3 bg-blue-500/20 rounded-full text-blue-400 shrink-0"><Info size={24}/></div>
                                          <div>
                                              <h4 className="font-bold text-white mb-1">
-                                                 {showEstimate ? 'Smart Cost Tracking: Gross Value Mode' : 'Live Billing Mode'}
+                                                 Smart Cost Tracking: {showEstimate ? 'Estimated Value' : 'Billed'}
                                              </h4>
                                              <p className="text-sm text-gray-400 leading-relaxed mb-3">
                                                  {showEstimate 
-                                                    ? `Your Google Cloud Bill is currently $0.00 (likely covered by free tier credits). The system is displaying the ESTIMATED GROSS VALUE ($${tokenCostEstimate.toFixed(4)}) based on ${totalTokensUsage.toLocaleString()} tracked tokens. This represents the "Real Cost" before credits.`
-                                                    : `Displaying exact billed amount from Google Cloud Budget API. Any free tier credits have already been deducted by Google.`
+                                                    ? `Since your Google Cloud Bill is $0.00 (likely due to free tier credits), the system is displaying the TOTAL VALUE ($${effectiveCost.toFixed(4)}) based on tracked tokens (${totalTokensUsage.toLocaleString()}) + your historical baseline.`
+                                                    : `Displaying exact billed amount from Google Cloud Budget API.`
                                                  }
                                              </p>
                                              {showEstimate && (
                                                  <div className="flex items-center gap-2 text-xs text-blue-300 font-mono bg-blue-500/10 px-3 py-1.5 rounded-lg w-fit border border-blue-500/20">
-                                                     <Server size={12}/> Token Count: {totalTokensUsage} (Input + Output)
+                                                     <Server size={12}/> Live Tokens Cost: ${(tokenCostEstimate).toFixed(4)}
                                                  </div>
+                                             )}
+                                         </div>
+                                         
+                                         {/* Edit Baseline Toggle */}
+                                         <div className="absolute top-4 right-4">
+                                             {isEditingBaseline ? (
+                                                 <div className="flex items-center gap-2 bg-black/50 p-1.5 rounded-xl border border-white/10 backdrop-blur-md">
+                                                     <input 
+                                                        type="number" 
+                                                        value={tempBaseline}
+                                                        onChange={(e) => setTempBaseline(e.target.value)}
+                                                        className="w-20 bg-transparent text-white text-sm px-2 outline-none"
+                                                        autoFocus
+                                                     />
+                                                     <button onClick={handleSaveBaseline} className="p-1 bg-green-500/20 text-green-400 rounded-lg hover:bg-green-500/40"><Check size={14}/></button>
+                                                     <button onClick={() => setIsEditingBaseline(false)} className="p-1 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/40"><X size={14}/></button>
+                                                 </div>
+                                             ) : (
+                                                 <button 
+                                                    onClick={() => { setTempBaseline(baselineCost.toString()); setIsEditingBaseline(true); }}
+                                                    className="p-2 text-gray-500 hover:text-white transition-colors" 
+                                                    title="Adjust Historical Baseline"
+                                                 >
+                                                     <PenTool size={14}/>
+                                                 </button>
                                              )}
                                          </div>
                                      </div>
