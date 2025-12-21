@@ -197,5 +197,6 @@ export interface UserSettings {
       lastVisit?: string;
       totalInputTokens?: number;
       totalOutputTokens?: number;
+      costCorrection?: number; // New field for manual cost calibration
   };
 }

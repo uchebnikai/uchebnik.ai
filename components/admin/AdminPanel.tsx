@@ -7,7 +7,7 @@ import {
   Terminal, Calendar, ArrowUpRight, ArrowLeft, Mail,
   Clock, Hash, AlertTriangle, Check, Layers, DollarSign,
   TrendingUp, TrendingDown, PieChart, Wallet, CreditCard,
-  Settings, HelpCircle, ExternalLink, Cloud, Sliders, Cpu, Server, Info, AlertCircle, PenTool, History
+  Settings, HelpCircle, ExternalLink, Cloud, Sliders, Cpu, Server, Info, AlertCircle, PenTool, History, Wrench
 } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { supabase } from '../../supabaseClient';
@@ -75,21 +75,15 @@ export const AdminPanel = ({
     const [selectedPlan, setSelectedPlan] = useState<'plus' | 'pro'>('pro');
     const [searchQuery, setSearchQuery] = useState('');
     const [showRawData, setShowRawData] = useState<string | null>(null);
-    const [totalTokensUsage, setTotalTokensUsage] = useState(0);
     
-    // Baseline Cost Adjustment (For historical data)
-    const [baselineCost, setBaselineCost] = useState<number>(() => {
-        const saved = localStorage.getItem('uchebnik_finance_baseline');
-        return saved ? parseFloat(saved) : 0;
-    });
-    const [baselineTokens, setBaselineTokens] = useState<number>(() => {
-        const saved = localStorage.getItem('uchebnik_token_baseline');
-        return saved ? parseInt(saved) : 0;
-    });
-
-    const [isEditingBaseline, setIsEditingBaseline] = useState(false);
-    const [tempBaselineCost, setTempBaselineCost] = useState(baselineCost.toString());
-    const [tempBaselineTokens, setTempBaselineTokens] = useState(baselineTokens.toString());
+    // Detailed Token Stats
+    const [totalInputTokens, setTotalInputTokens] = useState(0);
+    const [totalOutputTokens, setTotalOutputTokens] = useState(0);
+    
+    // Cost Correction (Calibration)
+    const [costCorrection, setCostCorrection] = useState(0);
+    const [isCalibrating, setIsCalibrating] = useState(false);
+    const [calibrationValue, setCalibrationValue] = useState('');
     
     // Filtering
     const [filterPlan, setFilterPlan] = useState<'all' | 'free' | 'plus' | 'pro'>('all');
@@ -122,16 +116,28 @@ export const AdminPanel = ({
                     .limit(100); 
                 
                 if (!error && users) {
-                    let totalToks = 0;
+                    let tIn = 0;
+                    let tOut = 0;
+                    
+                    // Also grab the current user's cost correction if available
+                    // We assume the admin user is viewing this, so we check *their* profile for the global correction value
+                    // In a real multi-tenant app, this would be a system setting table. Here we use the current user's profile metadata.
+                    const { data: { user: currentUser } } = await supabase.auth.getUser();
+                    
                     const mappedUsers: AdminUser[] = users.map((u: any) => {
                         let settings = u.settings;
                         if (typeof settings === 'string') {
                             try { settings = JSON.parse(settings); } catch (e) {}
                         }
                         
-                        // Accumulate token usage from all users
                         if (settings?.stats) {
-                            totalToks += (settings.stats.totalInputTokens || 0) + (settings.stats.totalOutputTokens || 0);
+                            tIn += (settings.stats.totalInputTokens || 0);
+                            tOut += (settings.stats.totalOutputTokens || 0);
+                            
+                            // Load calibration from current user's profile
+                            if (currentUser && u.id === currentUser.id) {
+                                setCostCorrection(settings.stats.costCorrection || 0);
+                            }
                         }
 
                         return {
@@ -147,7 +153,8 @@ export const AdminPanel = ({
                         };
                     });
                     setDbUsers(mappedUsers);
-                    setTotalTokensUsage(totalToks);
+                    setTotalInputTokens(tIn);
+                    setTotalOutputTokens(tOut);
                 }
             }
 
@@ -182,6 +189,33 @@ export const AdminPanel = ({
         generateKey(selectedPlan);
         setTimeout(fetchData, 1000);
         addToast(`Генериран ключ за ${selectedPlan.toUpperCase()}`, 'success');
+    };
+
+    const handleSaveCalibration = async () => {
+        const val = parseFloat(calibrationValue);
+        if (!isNaN(val) && val >= 0) {
+            setCostCorrection(val);
+            setIsCalibrating(false);
+            
+            // Persist to DB via current user profile update
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                const { data: profile } = await supabase.from('profiles').select('settings').eq('id', user.id).single();
+                if (profile) {
+                    const newSettings = {
+                        ...profile.settings,
+                        stats: {
+                            ...(profile.settings?.stats || {}),
+                            costCorrection: val
+                        }
+                    };
+                    await supabase.from('profiles').update({ settings: newSettings }).eq('id', user.id);
+                    addToast('Calibration saved successfully', 'success');
+                }
+            }
+        } else {
+            addToast('Invalid amount', 'error');
+        }
     };
 
     const handleSaveUserChanges = async () => {
@@ -237,50 +271,35 @@ export const AdminPanel = ({
             usage: user.usage
         });
     };
-    
-    const handleSaveBaseline = () => {
-        const costVal = parseFloat(tempBaselineCost);
-        const tokenVal = parseInt(tempBaselineTokens);
-        
-        if (!isNaN(costVal) && costVal >= 0 && !isNaN(tokenVal) && tokenVal >= 0) {
-            setBaselineCost(costVal);
-            setBaselineTokens(tokenVal);
-            localStorage.setItem('uchebnik_finance_baseline', costVal.toString());
-            localStorage.setItem('uchebnik_token_baseline', tokenVal.toString());
-            setIsEditingBaseline(false);
-            addToast('Historical data synced successfully', 'success');
-        } else {
-            addToast('Invalid numbers', 'error');
-        }
-    };
 
     // --- Financial Calculations ---
     const revenue = financials ? financials.mrr / 100 : 0; 
     
-    // Cloud Cost Logic
     const billedCloudCost = financials?.googleCloudCost || 0;
     const isCloudConnected = financials?.googleCloudConnected || false;
     
-    // Estimate based on tokens (Avg $0.15 per 1M tokens - Blended Price for Flash)
-    // 1M Tokens = 1,000,000.
-    const tokenCostEstimate = (totalTokensUsage / 1000000) * 0.15;
+    // Precise Pricing Model (Gemini 2.5 Flash)
+    // Input: $0.075 / 1M
+    // Output: $0.30 / 1M
+    const liveInputCost = (totalInputTokens / 1000000) * 0.075;
+    const liveOutputCost = (totalOutputTokens / 1000000) * 0.30;
+    const estimatedLiveUsage = liveInputCost + liveOutputCost;
     
-    // Logic: If Google Bill is 0 (Free Tier/Credits), show Estimate + Baseline as "Gross Value".
+    // Logic: If Google Bill is 0 (Free Tier), use Calibration + Estimate
+    // This allows the user to manually "set" the historical cost ($0.34) and then track automatically from there.
     const showEstimate = billedCloudCost === 0;
     
-    // Total Value = (Baseline Historical Cost) + (Current Session Estimate)
-    const effectiveCost = showEstimate ? (tokenCostEstimate + baselineCost) : billedCloudCost;
+    // Effective Cost Logic:
+    // If Bill is > 0, trust the Bill.
+    // If Bill is 0, use Max(LocalEstimate + Correction, Bill) to show at least something if tracking active.
+    const displayCost = showEstimate ? (estimatedLiveUsage + costCorrection) : billedCloudCost;
     
-    // Total Tokens Display
-    const effectiveTokens = totalTokensUsage + baselineTokens;
-    
-    // Profit based on effective cost (Gross View)
-    const profit = revenue - effectiveCost;
+    const profit = revenue - displayCost;
     const margin = revenue > 0 ? (profit / revenue) * 100 : 0;
 
     const chartData = [
         { name: 'Revenue', value: revenue, color: '#10b981' }, 
-        { name: 'Total Value', value: effectiveCost, color: '#ef4444' },
+        { name: 'AI Cost', value: displayCost, color: '#ef4444' },
         { name: 'Net Bill', value: billedCloudCost, color: '#f59e0b' },
     ];
 
@@ -343,7 +362,7 @@ export const AdminPanel = ({
                     </div>
                     <div>
                         <h2 className="font-bold text-white text-sm">Admin Panel</h2>
-                        <div className="text-[10px] text-zinc-500 font-mono">v2.7 • Smart Cost</div>
+                        <div className="text-[10px] text-zinc-500 font-mono">v2.8 • Auto Sync</div>
                     </div>
                 </div>
                 
@@ -507,23 +526,24 @@ export const AdminPanel = ({
                                                      <div className="flex items-center gap-3">
                                                          <div className="p-2 bg-red-500/20 rounded-xl"><Cloud size={24}/></div>
                                                          <span className="font-bold uppercase tracking-wider text-xs">
-                                                             {showEstimate ? 'Total Value (Gross)' : 'Net Bill'}
+                                                             AI Usage Cost
                                                          </span>
                                                      </div>
                                                      <div className="flex gap-2">
-                                                         <button 
-                                                            onClick={fetchData}
-                                                            className="p-2 hover:bg-red-500/20 rounded-lg text-red-400 transition-colors opacity-0 group-hover:opacity-100" 
-                                                            title="Force Sync"
-                                                         >
-                                                             <RefreshCw size={16} className={loadingData ? "animate-spin" : ""}/>
-                                                         </button>
+                                                         {showEstimate && (
+                                                             <button 
+                                                                onClick={() => { setCalibrationValue(costCorrection.toString()); setIsCalibrating(true); }}
+                                                                className="text-[10px] text-red-300 hover:text-white underline decoration-dotted transition-colors font-bold"
+                                                             >
+                                                                 Mismatch?
+                                                             </button>
+                                                         )}
                                                      </div>
                                                  </div>
 
                                                  <div className="text-5xl font-black text-white tracking-tight flex items-baseline gap-2">
-                                                     <span>${effectiveCost.toFixed(4)}</span>
-                                                     {showEstimate && !baselineCost && <span className="text-lg text-red-400/60 font-bold hidden xl:inline">(Live)</span>}
+                                                     <span>${displayCost.toFixed(4)}</span>
+                                                     {showEstimate && costCorrection === 0 && <span className="text-lg text-red-400/60 font-bold hidden xl:inline">(Est)</span>}
                                                  </div>
                                                  
                                                  <div className="flex flex-col gap-1 mt-3">
@@ -540,10 +560,32 @@ export const AdminPanel = ({
                                                      
                                                      {/* Breakdown Subtext */}
                                                      <div className="flex items-center justify-between text-xs font-mono text-zinc-500 mt-1">
-                                                         <span>Tokens: {effectiveTokens.toLocaleString()}</span>
-                                                         {baselineCost > 0 && <span className="text-amber-500">Base: ${baselineCost.toFixed(2)}</span>}
+                                                         <span>Live: ${estimatedLiveUsage.toFixed(4)}</span>
+                                                         {costCorrection > 0 && <span className="text-amber-500">Base: ${costCorrection.toFixed(2)}</span>}
                                                      </div>
                                                  </div>
+                                                 
+                                                 {/* Calibration Input Overlay */}
+                                                 {isCalibrating && (
+                                                     <div className="absolute inset-0 bg-black/90 backdrop-blur-md flex flex-col items-center justify-center p-4 z-20 animate-in fade-in">
+                                                         <div className="text-center w-full">
+                                                             <h4 className="text-white font-bold mb-2 text-sm">Calibrate Total Cost</h4>
+                                                             <p className="text-xs text-gray-400 mb-3">Enter the "Gross Cost" value you see in Google Cloud Console.</p>
+                                                             <div className="flex gap-2 justify-center">
+                                                                 <input 
+                                                                    type="number" 
+                                                                    value={calibrationValue}
+                                                                    onChange={e => setCalibrationValue(e.target.value)}
+                                                                    className="w-24 bg-white/10 border border-white/20 rounded-lg px-2 py-1 text-white text-center outline-none focus:border-indigo-500"
+                                                                    placeholder="0.34"
+                                                                    autoFocus
+                                                                 />
+                                                                 <button onClick={handleSaveCalibration} className="bg-green-600 hover:bg-green-500 text-white rounded-lg p-2"><Check size={16}/></button>
+                                                                 <button onClick={() => setIsCalibrating(false)} className="bg-gray-600 hover:bg-gray-500 text-white rounded-lg p-2"><X size={16}/></button>
+                                                             </div>
+                                                         </div>
+                                                     </div>
+                                                 )}
                                              </div>
                                          </div>
 
@@ -594,68 +636,23 @@ export const AdminPanel = ({
                                          <div className="p-3 bg-blue-500/20 rounded-full text-blue-400 shrink-0"><Info size={24}/></div>
                                          <div className="flex-1">
                                              <h4 className="font-bold text-white mb-1">
-                                                 Smart Cost Tracking: {showEstimate ? 'Total Gross Value' : 'Billed'}
+                                                 Smart Cost Tracking
                                              </h4>
                                              <p className="text-sm text-gray-400 leading-relaxed mb-3">
                                                  {showEstimate 
-                                                    ? `Since your Google Cloud Bill is $0.00 (Free Tier/Credits), the system calculates TOTAL VALUE based on tracked tokens (${totalTokensUsage.toLocaleString()}) + any historical baseline you input.`
+                                                    ? `Since your Google Cloud Bill is $0.00 (Free Tier), the system calculates Total Cost by adding live usage estimates to your historical baseline.`
                                                     : `Displaying exact billed amount from Google Cloud Budget API.`
                                                  }
                                              </p>
                                              {showEstimate && (
                                                  <div className="flex flex-wrap items-center gap-2 text-xs font-mono mt-1">
                                                      <div className="text-blue-300 bg-blue-500/10 px-3 py-1.5 rounded-lg border border-blue-500/20">
-                                                         Live Session: ${(tokenCostEstimate).toFixed(4)} ({totalTokensUsage})
+                                                         Live Tokens: {(totalInputTokens + totalOutputTokens).toLocaleString()}
                                                      </div>
-                                                     {baselineCost > 0 && (
-                                                         <div className="text-amber-300 bg-amber-500/10 px-3 py-1.5 rounded-lg border border-amber-500/20">
-                                                             Baseline: ${baselineCost} ({baselineTokens})
-                                                         </div>
-                                                     )}
-                                                 </div>
-                                             )}
-                                         </div>
-                                         
-                                         {/* Edit Baseline Toggle */}
-                                         <div className="absolute top-4 right-4">
-                                             {isEditingBaseline ? (
-                                                 <div className="flex flex-col gap-2 bg-black/80 p-3 rounded-xl border border-white/10 backdrop-blur-md shadow-xl z-10 w-48">
-                                                     <div className="space-y-1">
-                                                         <label className="text-[10px] text-gray-400 uppercase font-bold">Historical Cost ($)</label>
-                                                         <input 
-                                                            type="number" 
-                                                            value={tempBaselineCost}
-                                                            onChange={(e) => setTempBaselineCost(e.target.value)}
-                                                            className="w-full bg-white/10 text-white text-sm px-2 py-1 rounded outline-none border border-white/5 focus:border-indigo-500"
-                                                            placeholder="0.34"
-                                                         />
-                                                     </div>
-                                                     <div className="space-y-1">
-                                                         <label className="text-[10px] text-gray-400 uppercase font-bold">Historical Tokens</label>
-                                                         <input 
-                                                            type="number" 
-                                                            value={tempBaselineTokens}
-                                                            onChange={(e) => setTempBaselineTokens(e.target.value)}
-                                                            className="w-full bg-white/10 text-white text-sm px-2 py-1 rounded outline-none border border-white/5 focus:border-indigo-500"
-                                                            placeholder="25000"
-                                                         />
-                                                     </div>
-                                                     <div className="flex gap-2 mt-1">
-                                                         <button onClick={handleSaveBaseline} className="flex-1 bg-green-600 hover:bg-green-500 text-white py-1 rounded text-xs font-bold">Save</button>
-                                                         <button onClick={() => setIsEditingBaseline(false)} className="flex-1 bg-red-600/50 hover:bg-red-600 text-white py-1 rounded text-xs font-bold">Cancel</button>
+                                                     <div className="text-emerald-300 bg-emerald-500/10 px-3 py-1.5 rounded-lg border border-emerald-500/20">
+                                                         In: {totalInputTokens.toLocaleString()} | Out: {totalOutputTokens.toLocaleString()}
                                                      </div>
                                                  </div>
-                                             ) : (
-                                                 <button 
-                                                    onClick={() => { 
-                                                        setTempBaselineCost(baselineCost.toString()); 
-                                                        setTempBaselineTokens(baselineTokens.toString()); 
-                                                        setIsEditingBaseline(true); 
-                                                    }}
-                                                    className="flex items-center gap-2 px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-xs font-bold text-gray-400 hover:text-white transition-colors" 
-                                                 >
-                                                     <History size={14}/> Sync History
-                                                 </button>
                                              )}
                                          </div>
                                      </div>

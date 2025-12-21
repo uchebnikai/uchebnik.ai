@@ -95,6 +95,7 @@ export const App = () => {
   // NEW: Token Stats State
   const [totalInputTokens, setTotalInputTokens] = useState(0);
   const [totalOutputTokens, setTotalOutputTokens] = useState(0);
+  const [costCorrection, setCostCorrection] = useState(0);
 
   const [showAdminAuth, setShowAdminAuth] = useState(false);
   const [showAdminPanel, setShowAdminPanel] = useState(false);
@@ -300,6 +301,7 @@ export const App = () => {
                           // Restore Token Stats
                           setTotalInputTokens(stats.totalInputTokens || 0);
                           setTotalOutputTokens(stats.totalOutputTokens || 0);
+                          setCostCorrection(stats.costCorrection || 0);
                           
                           const today = new Date().toDateString();
                           if (stats.lastImageDate === today) {
@@ -398,6 +400,9 @@ export const App = () => {
                   if (plan) setUserPlan(plan);
                   if (stats) {
                       setStreak(stats.streak || 0);
+                      // Update stats if remote changed
+                      if (stats.costCorrection !== undefined) setCostCorrection(stats.costCorrection);
+                      
                       const today = new Date().toDateString();
                       if (stats.lastImageDate === today) {
                           setDailyImageCount(stats.dailyImageCount || 0);
@@ -444,9 +449,10 @@ export const App = () => {
                   dailyImageCount, 
                   lastImageDate: localStorage.getItem('uchebnik_image_date'), 
                   lastVisit: localStorage.getItem('uchebnik_last_visit'),
-                  // Persist Tokens
+                  // Persist Tokens and Cost Correction
                   totalInputTokens,
-                  totalOutputTokens
+                  totalOutputTokens,
+                  costCorrection
               }
           };
           const { error } = await supabase.from('profiles').upsert({
@@ -455,7 +461,7 @@ export const App = () => {
           if (error && error.code === '42P01') { setMissingDbTables(true); }
       }, 1000);
       return () => { if(syncSettingsTimer.current) clearTimeout(syncSettingsTimer.current); };
-  }, [userSettings, userPlan, streak, dailyImageCount, totalInputTokens, totalOutputTokens, session?.user?.id, isRemoteDataLoaded, missingDbTables]);
+  }, [userSettings, userPlan, streak, dailyImageCount, totalInputTokens, totalOutputTokens, costCorrection, session?.user?.id, isRemoteDataLoaded, missingDbTables]);
 
   // Window Resize
   useEffect(() => {
