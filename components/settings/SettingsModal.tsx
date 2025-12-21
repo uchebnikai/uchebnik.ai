@@ -5,8 +5,7 @@ import {
   ImageIcon, Edit2, Cpu, ChevronDown, Database, Trash2, 
   ArrowRight, Settings, CreditCard, Loader2, Globe, 
   Layout, Smartphone, Monitor, Sparkles, LogOut, Volume2, 
-  Keyboard, Type, Download, Zap, Brain, MessageCircle,
-  Play, Square
+  Keyboard, Type, Download, Zap, Brain, MessageCircle
 } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { UserSettings, UserPlan } from '../../types';
@@ -15,7 +14,6 @@ import { MODAL_ENTER, FADE_IN } from '../../animations/transitions';
 import { supabase } from '../../supabaseClient';
 import { LANGUAGES, t } from '../../utils/translations';
 import { VOICES } from '../../constants';
-import { generateSpeech } from '../../services/audioService';
 
 interface SettingsModalProps {
   showSettings: boolean;
@@ -82,12 +80,6 @@ export const SettingsModal = ({
   const [loadingPortal, setLoadingPortal] = useState(false);
   const [isLangOpen, setIsLangOpen] = useState(false);
 
-  // Voice Preview State
-  const [previewVoiceId, setPreviewVoiceId] = useState<string | null>(null);
-  const [isPlayingPreview, setIsPlayingPreview] = useState(false);
-  const previewAudioContext = useRef<AudioContext | null>(null);
-  const previewSource = useRef<AudioBufferSourceNode | null>(null);
-
   const isCustomColor = !PRESET_COLORS.includes(userSettings.themeColor);
   const isCustomBackground = userSettings.customBackground && !PRESET_BACKGROUNDS.includes(userSettings.customBackground);
 
@@ -120,55 +112,6 @@ export const SettingsModal = ({
       downloadAnchorNode.click();
       downloadAnchorNode.remove();
       addToast("Данните са експортирани успешно.", "success");
-  };
-
-  const handlePreviewVoice = async (voiceId: string) => {
-    // Stop any current playback
-    if (previewSource.current) {
-        previewSource.current.stop();
-        previewSource.current = null;
-    }
-    if (previewAudioContext.current) {
-        previewAudioContext.current.close();
-        previewAudioContext.current = null;
-    }
-
-    // Toggle off if clicking the same voice that is playing
-    if (previewVoiceId === voiceId && isPlayingPreview) {
-        setPreviewVoiceId(null);
-        setIsPlayingPreview(false);
-        return;
-    }
-
-    setPreviewVoiceId(voiceId);
-    setIsPlayingPreview(true); // Acts as "loading" state until audio starts
-
-    try {
-        const text = "Здравей! Аз съм твоят гласов асистент.";
-        const buffer = await generateSpeech(text, voiceId);
-        
-        if (buffer) {
-             const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-             previewAudioContext.current = ctx;
-             const source = ctx.createBufferSource();
-             source.buffer = buffer;
-             source.connect(ctx.destination);
-             source.onended = () => {
-                 setIsPlayingPreview(false);
-                 setPreviewVoiceId(null);
-             };
-             source.start();
-             previewSource.current = source;
-        } else {
-             setIsPlayingPreview(false);
-             setPreviewVoiceId(null);
-        }
-    } catch (e) {
-        console.error(e);
-        setIsPlayingPreview(false);
-        setPreviewVoiceId(null);
-        addToast("Неуспешно възпроизвеждане на глас.", "error");
-    }
   };
 
   if (!showSettings) return null;
@@ -614,15 +557,6 @@ export const SettingsModal = ({
                                           } ${!isPremium ? 'cursor-not-allowed' : ''}`}
                                       >
                                           {voice.name}
-                                      </button>
-                                      
-                                      {/* Voice Preview Button */}
-                                      <button 
-                                          onClick={(e) => { e.stopPropagation(); handlePreviewVoice(voice.id); }}
-                                          className={`absolute top-1.5 right-1.5 p-1.5 rounded-lg transition-colors ${previewVoiceId === voice.id && isPlayingPreview ? 'bg-indigo-500 text-white' : 'text-gray-400 hover:text-indigo-500 bg-white/50 dark:bg-black/50 hover:bg-white dark:hover:bg-black'}`}
-                                          title="Прослушай глас"
-                                      >
-                                          {previewVoiceId === voice.id && isPlayingPreview ? <Square size={12} fill="currentColor"/> : <Play size={12} fill="currentColor"/>}
                                       </button>
                                   </div>
                               ))}
