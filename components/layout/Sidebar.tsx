@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { MessageSquare, Trash2, Plus, School, GraduationCap, Briefcase, ChevronDown, User, Settings, CreditCard, HelpCircle, LogOut, ArrowRight, ChevronUp, FileText, Flame, CloudOff, RefreshCw, Cloud, PanelLeftClose, PanelLeftOpen, LayoutDashboard, Landmark, Zap, Lock, LogIn, Snowflake, Shield } from 'lucide-react';
+import { MessageSquare, Trash2, Plus, School, GraduationCap, Briefcase, ChevronDown, User, Settings, CreditCard, HelpCircle, LogOut, ArrowRight, ChevronUp, FileText, Flame, CloudOff, RefreshCw, Cloud, PanelLeftClose, PanelLeftOpen, LayoutDashboard, Landmark, Zap, Lock, LogIn, Snowflake } from 'lucide-react';
 import { DynamicIcon } from '../ui/DynamicIcon';
 import { SUBJECTS } from '../../constants';
 import { SubjectId, AppMode, Session, UserRole, UserSettings, UserPlan, SubjectConfig, HomeViewType } from '../../types';
@@ -10,7 +10,7 @@ interface SidebarProps {
   sidebarOpen: boolean;
   setSidebarOpen: (val: boolean) => void;
   userSettings: UserSettings;
-  setUserSettings: (val: any) => void; 
+  setUserSettings: (val: any) => void; // Added setter
   userPlan: UserPlan;
   activeSubject: SubjectConfig | null;
   setActiveSubject: (subject: SubjectConfig | null) => void;
@@ -37,8 +37,6 @@ interface SidebarProps {
   syncStatus?: 'synced' | 'syncing' | 'error' | 'offline';
   homeView: HomeViewType;
   dailyImageCount?: number; 
-  isAdmin?: boolean;
-  setShowAdminPanel?: (val: boolean) => void;
 }
 
 export const Sidebar = ({
@@ -71,9 +69,7 @@ export const Sidebar = ({
   streak,
   syncStatus = 'synced',
   homeView,
-  dailyImageCount = 0,
-  isAdmin = false,
-  setShowAdminPanel
+  dailyImageCount = 0
 }: SidebarProps) => {
     
     // Internal State for Folders
@@ -415,19 +411,6 @@ export const Sidebar = ({
           </div>
 
           <div className={`p-4 border-t border-white/10 bg-white/20 dark:bg-black/20 space-y-3 backdrop-blur-md flex flex-col justify-center`}>
-             {/* Admin Button - Only visible to Admins */}
-             {isAdmin && setShowAdminPanel && (
-                 <button 
-                    onClick={() => setShowAdminPanel(true)}
-                    className={`w-full flex items-center ${collapsed ? 'justify-center' : 'justify-between px-4'} py-3 rounded-2xl bg-zinc-800 text-white font-bold transition-all shadow-lg hover:bg-zinc-700 active:scale-95 group relative overflow-hidden mb-1`}
-                 >
-                     <div className="flex items-center gap-3 relative z-10">
-                         <div className="p-1 bg-white/10 rounded-lg"><Shield size={16}/></div>
-                         {!collapsed && <span className="text-sm">Admin Panel</span>}
-                     </div>
-                 </button>
-             )}
-
              {/* Christmas Toggle - Prominent & Over Login */}
              <button 
                 onClick={() => setUserSettings((prev: UserSettings) => ({...prev, christmasMode: !prev.christmasMode}))}

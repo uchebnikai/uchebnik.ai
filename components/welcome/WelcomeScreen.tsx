@@ -1,6 +1,6 @@
 
 import React, { useState, useRef } from 'react';
-import { MessageSquare, ArrowRight, School, GraduationCap, Briefcase, ArrowLeft, ArrowUpRight, Search, ImageIcon, Camera, Mic, MicOff, X, Menu, Landmark, Shield } from 'lucide-react';
+import { Shield, MessageSquare, ArrowRight, School, GraduationCap, Briefcase, ArrowLeft, ArrowUpRight, Search, ImageIcon, Camera, Mic, MicOff, X, Menu, Landmark } from 'lucide-react';
 import { SubjectConfig, UserRole, UserSettings, HomeViewType, SubjectId } from '../../types';
 import { SUBJECTS } from '../../constants';
 import { DynamicIcon } from '../ui/DynamicIcon';
@@ -17,6 +17,7 @@ interface WelcomeScreenProps {
   handleSubjectChange: (subject: SubjectConfig) => void;
   setHomeView: (view: HomeViewType) => void;
   setUserRole: (role: UserRole) => void;
+  setShowAdminAuth: (val: boolean) => void;
   onQuickStart: (message: string, images?: string[]) => void;
   setSidebarOpen: (val: boolean) => void;
 }
@@ -28,6 +29,7 @@ export const WelcomeScreen = ({
   handleSubjectChange,
   setHomeView,
   setUserRole,
+  setShowAdminAuth,
   onQuickStart,
   setSidebarOpen
 }: WelcomeScreenProps) => {
@@ -149,7 +151,9 @@ export const WelcomeScreen = ({
                 <Menu size={20} />
             </button>
 
-            {/* Removed public Admin Shield Button */}
+            <button onClick={() => setShowAdminAuth(true)} className="absolute top-0 right-0 p-2 text-gray-300 hover:text-indigo-500 transition-colors z-50">
+                <Shield size={16} />
+            </button>
 
             <div className="text-center mb-6 md:mb-10 space-y-3 px-2 w-full mt-4 md:mt-0 shrink-0">
                 <h1 className="text-4xl md:text-6xl lg:text-8xl font-black text-transparent bg-clip-text bg-gradient-to-br from-zinc-900 to-zinc-500 dark:from-white dark:to-zinc-500 tracking-tighter leading-[1.1] md:leading-[1] font-display">
