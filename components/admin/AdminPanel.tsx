@@ -7,7 +7,7 @@ import {
   Terminal, Calendar, ArrowUpRight, ArrowLeft, Mail,
   Clock, Hash, AlertTriangle, Check, Layers, DollarSign,
   TrendingUp, TrendingDown, PieChart, Wallet, CreditCard,
-  Settings, HelpCircle, ExternalLink, Cloud, Sliders, Cpu, Server, Info
+  Settings, HelpCircle, ExternalLink, Cloud, Sliders, Cpu, Server, Info, AlertCircle
 } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { supabase } from '../../supabaseClient';
@@ -231,14 +231,13 @@ export const AdminPanel = ({
     const billedCloudCost = financials?.googleCloudCost || 0;
     const isCloudConnected = financials?.googleCloudConnected || false;
     
-    // Estimate based on tokens (Avg $0.15 per 1M tokens)
+    // Estimate based on tokens (Avg $0.15 per 1M tokens - Blended Price)
+    // 1M Tokens = 1,000,000.
     const tokenCostEstimate = (totalTokensUsage / 1000000) * 0.15;
     
-    // Determine which cost to show
-    // If Bill is > 0, show Bill.
-    // If Bill is 0 (Free Tier), show Token Estimate as "Gross Value".
-    const effectiveCost = billedCloudCost > 0 ? billedCloudCost : tokenCostEstimate;
-    const isEstimate = billedCloudCost === 0;
+    // Logic: If Google Bill is 0 (Free Tier/Credits), show Estimate as "Gross Value".
+    const showEstimate = billedCloudCost === 0;
+    const effectiveCost = showEstimate ? tokenCostEstimate : billedCloudCost;
     
     // Profit based on effective cost (Gross View)
     const profit = revenue - effectiveCost;
@@ -246,8 +245,8 @@ export const AdminPanel = ({
 
     const chartData = [
         { name: 'Revenue', value: revenue, color: '#10b981' }, 
-        { name: 'AI Cost', value: effectiveCost, color: '#ef4444' },
-        { name: 'Profit', value: profit, color: profit >= 0 ? '#6366f1' : '#f59e0b' },
+        { name: 'AI Value', value: effectiveCost, color: '#ef4444' },
+        { name: 'Net Bill', value: billedCloudCost, color: '#f59e0b' },
     ];
 
     if (showAdminAuth) {
@@ -459,7 +458,7 @@ export const AdminPanel = ({
                                              <div className="relative z-10">
                                                  <div className="flex items-center gap-3 mb-4 text-emerald-400">
                                                      <div className="p-2 bg-emerald-500/20 rounded-xl"><DollarSign size={24}/></div>
-                                                     <span className="font-bold uppercase tracking-wider text-xs">Money In (MRR)</span>
+                                                     <span className="font-bold uppercase tracking-wider text-xs">Revenue (MRR)</span>
                                                  </div>
                                                  <div className="text-5xl font-black text-white tracking-tight">€{revenue.toFixed(2)}</div>
                                                  <div className="text-sm text-emerald-400/60 mt-2 font-medium">Monthly Recurring Revenue</div>
@@ -473,7 +472,7 @@ export const AdminPanel = ({
                                                      <div className="flex items-center gap-3">
                                                          <div className="p-2 bg-red-500/20 rounded-xl"><Cloud size={24}/></div>
                                                          <span className="font-bold uppercase tracking-wider text-xs">
-                                                             {isEstimate ? 'Est. Gross Cost' : 'Cloud Bill'}
+                                                             {showEstimate ? 'Gross Value' : 'Net Bill'}
                                                          </span>
                                                      </div>
                                                      <div className="flex gap-2">
@@ -487,26 +486,28 @@ export const AdminPanel = ({
                                                      </div>
                                                  </div>
 
-                                                 <div className="text-5xl font-black text-white tracking-tight">
-                                                     ${effectiveCost.toFixed(2)}
+                                                 <div className="text-5xl font-black text-white tracking-tight flex items-baseline gap-2">
+                                                     <span>${effectiveCost.toFixed(4)}</span>
+                                                     {showEstimate && <span className="text-lg text-red-400/60 font-bold">(Est)</span>}
                                                  </div>
                                                  
-                                                 <div className="flex items-center gap-2 mt-2">
-                                                     <span className={`text-xs px-2 py-0.5 rounded-md font-bold uppercase ${isCloudConnected ? 'bg-green-500 text-white' : 'bg-zinc-600 text-gray-300'}`}>
-                                                         {isCloudConnected ? 'LIVE SYNC' : 'OFFLINE'}
-                                                     </span>
-                                                     
-                                                     {isEstimate && effectiveCost === 0 && (
-                                                         <span className="text-[10px] bg-white/10 text-gray-400 px-2 py-0.5 rounded-md border border-white/5">
-                                                             Waiting for usage...
+                                                 <div className="flex flex-col gap-1 mt-3">
+                                                     <div className="flex items-center justify-between">
+                                                         <span className={`text-[10px] px-2 py-0.5 rounded-md font-bold uppercase ${isCloudConnected ? 'bg-green-500/20 text-green-400' : 'bg-zinc-600 text-gray-300'}`}>
+                                                             {isCloudConnected ? 'API CONNECTED' : 'OFFLINE'}
                                                          </span>
-                                                     )}
+                                                         {financials?.lastSync && (
+                                                             <span className="text-[10px] text-red-400/60 font-mono">
+                                                                 {new Date(financials.lastSync).toLocaleTimeString()}
+                                                             </span>
+                                                         )}
+                                                     </div>
                                                      
-                                                     {financials?.lastSync && (
-                                                         <span className="text-xs text-red-400/60 font-mono ml-auto">
-                                                             {new Date(financials.lastSync).toLocaleTimeString()}
-                                                         </span>
-                                                     )}
+                                                     {/* Breakdown Subtext */}
+                                                     <div className="flex items-center justify-between text-xs font-mono text-zinc-500 mt-1">
+                                                         <span>Bill: ${billedCloudCost.toFixed(2)}</span>
+                                                         <span>Tokens: {totalTokensUsage.toLocaleString()}</span>
+                                                     </div>
                                                  </div>
                                              </div>
                                          </div>
@@ -538,7 +539,7 @@ export const AdminPanel = ({
                                                         if (active && payload && payload.length) {
                                                         return (
                                                             <div className="bg-zinc-900 border border-zinc-800 p-3 rounded-xl shadow-xl">
-                                                                <p className="text-white font-bold">{payload[0].payload.name}: €{Number(payload[0].value).toFixed(2)}</p>
+                                                                <p className="text-white font-bold">{payload[0].payload.name}: €{Number(payload[0].value).toFixed(4)}</p>
                                                             </div>
                                                         );
                                                         }
@@ -555,20 +556,20 @@ export const AdminPanel = ({
                                      </div>
 
                                      <div className="p-6 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex gap-4 items-start">
-                                         <div className="p-3 bg-blue-500/20 rounded-full text-blue-400 shrink-0"><Server size={24}/></div>
+                                         <div className="p-3 bg-blue-500/20 rounded-full text-blue-400 shrink-0"><Info size={24}/></div>
                                          <div>
                                              <h4 className="font-bold text-white mb-1">
-                                                 {isEstimate ? 'Simulated Cost Tracking (Free Tier)' : 'Live Billing Connected'}
+                                                 {showEstimate ? 'Smart Cost Tracking: Gross Value Mode' : 'Live Billing Mode'}
                                              </h4>
                                              <p className="text-sm text-gray-400 leading-relaxed mb-3">
-                                                 {isEstimate 
-                                                    ? `Since your Google Cloud Bill is $0.00 (likely due to free tier credits), the system is displaying the ESTIMATED GROSS COST based on tracked token usage (${totalTokensUsage.toLocaleString()} tokens). This shows the "Real Value" consumed.`
-                                                    : `Connected to Google Cloud Budget API. Displaying exact billed amount from your cloud console.`
+                                                 {showEstimate 
+                                                    ? `Your Google Cloud Bill is currently $0.00 (likely covered by free tier credits). The system is displaying the ESTIMATED GROSS VALUE ($${tokenCostEstimate.toFixed(4)}) based on ${totalTokensUsage.toLocaleString()} tracked tokens. This represents the "Real Cost" before credits.`
+                                                    : `Displaying exact billed amount from Google Cloud Budget API. Any free tier credits have already been deducted by Google.`
                                                  }
                                              </p>
-                                             {isEstimate && (
-                                                 <div className="flex items-center gap-2 text-xs text-blue-300 font-mono bg-blue-500/10 px-2 py-1 rounded w-fit">
-                                                     <Info size={12}/> Gross Estimate: ${tokenCostEstimate.toFixed(4)}
+                                             {showEstimate && (
+                                                 <div className="flex items-center gap-2 text-xs text-blue-300 font-mono bg-blue-500/10 px-3 py-1.5 rounded-lg w-fit border border-blue-500/20">
+                                                     <Server size={12}/> Token Count: {totalTokensUsage} (Input + Output)
                                                  </div>
                                              )}
                                          </div>

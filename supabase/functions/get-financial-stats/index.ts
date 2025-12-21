@@ -125,6 +125,7 @@ serve(async (req) => {
                     let totalSpend = 0;
                     
                     // Sum up actual spend from all budgets associated with this account
+                    // We sum up everything we find to be safe
                     for (const budget of budgetData.budgets) {
                         const spend = budget.calculatedSpend?.actualSpend;
                         if (spend) {
@@ -136,8 +137,6 @@ serve(async (req) => {
                     }
                     
                     stripeData.googleCloudCost = totalSpend;
-                } else {
-                    console.log("Connected to Google Cloud, but no budgets found.");
                 }
             }
         } catch (e) {
