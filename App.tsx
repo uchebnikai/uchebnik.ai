@@ -41,6 +41,7 @@ import { Snowfall } from './components/ui/Snowfall';
 interface GeneratedKey {
   code: string;
   isUsed: boolean;
+  plan?: 'plus' | 'pro';
 }
 
 const LIVE_MODEL = 'gemini-2.5-flash-native-audio-preview-09-2025';
@@ -251,7 +252,7 @@ export const App = () => {
     return () => subscription.unsubscribe();
   }, []);
   
-  // Cloud Sync Effects - (Existing code remains same, updated to load preferredVoice)
+  // Cloud Sync Effects
   useEffect(() => {
       if (!session?.user?.id) {
           setIsRemoteDataLoaded(false);
@@ -339,7 +340,7 @@ export const App = () => {
       loadRemoteData();
   }, [session?.user?.id]);
 
-  // Subscriptions and Saving Effects (Same as before)
+  // Subscriptions and Saving Effects
   useEffect(() => {
       if (!session?.user?.id || missingDbTables) return;
       const channel = supabase.channel(`sync-sessions:${session.user.id}`)
@@ -1262,10 +1263,10 @@ export const App = () => {
 
   const handleAdminLogin = async () => { const isValid = await verifyAdminPassword(adminPasswordInput); if (isValid) { setShowAdminAuth(false); setShowAdminPanel(true); setAdminPasswordInput(''); addToast("Успешен вход в админ панела", 'success'); } else { addToast("Грешна парола!", 'error'); } };
 
-  const generateKey = async () => {
+  const generateKey = async (plan: 'plus' | 'pro' = 'pro') => {
     const randomCore = Math.random().toString(36).substring(2, 8).toUpperCase(); const checksum = generateChecksum(randomCore); const newKeyCode = `UCH-${randomCore}-${checksum}`;
-    await registerKeyInDb(newKeyCode, 'pro');
-    const newKeyObj: GeneratedKey = { code: newKeyCode, isUsed: false };
+    await registerKeyInDb(newKeyCode, plan);
+    const newKeyObj: GeneratedKey = { code: newKeyCode, isUsed: false, plan };
     const updatedKeys = [newKeyObj, ...generatedKeys];
     setGeneratedKeys(updatedKeys);
     localStorage.setItem('uchebnik_admin_keys', JSON.stringify(updatedKeys));
