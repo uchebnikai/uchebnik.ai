@@ -187,4 +187,5 @@ export interface UserSettings {
   enterToSend: boolean;
   fontFamily: FontFamily;
   christmasMode?: boolean; // Christmas theme toggle
+  preferredVoice: string; // New: Voice selection
 }

@@ -13,6 +13,7 @@ import { getDynamicColorStyle } from '../../styles/theme';
 import { MODAL_ENTER, FADE_IN } from '../../animations/transitions';
 import { supabase } from '../../supabaseClient';
 import { LANGUAGES, t } from '../../utils/translations';
+import { VOICES } from '../../constants';
 
 interface SettingsModalProps {
   showSettings: boolean;
@@ -181,6 +182,7 @@ export const SettingsModal = ({
                           <p className="text-gray-500">Управлявайте вашата лична информация и абонамент.</p>
                       </div>
 
+                      {/* ... existing profile inputs ... */}
                       <div className="flex flex-col items-center md:items-start gap-6">
                           <div className="relative group cursor-pointer" onClick={() => avatarInputRef.current?.click()}>
                               <div className="w-28 h-28 rounded-[2rem] p-1 border-2 border-dashed border-gray-300 dark:border-white/20 hover:border-indigo-500 transition-colors">
@@ -252,7 +254,7 @@ export const SettingsModal = ({
                           <p className="text-gray-500">Направете приложението свое.</p>
                       </div>
 
-                      {/* Language with Custom Custom Dropdown for Flag Support */}
+                      {/* Language */}
                       <section className="space-y-4">
                           <label className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
                               <Globe size={18} className="text-indigo-500"/> {t('language', userSettings.language)}
@@ -305,7 +307,8 @@ export const SettingsModal = ({
                           </div>
                       </section>
 
-                      {/* Theme Colors */}
+                      {/* Theme Colors - NO CHANGES HERE */}
+                      {/* ... Existing Theme Color Section ... */}
                       <section className={`space-y-4 p-6 bg-gray-50/50 dark:bg-white/5 rounded-2xl border border-gray-200 dark:border-white/10 ${!isPremium ? 'opacity-70' : ''}`}>
                           <div className="flex justify-between items-center mb-2">
                               <label className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
@@ -393,6 +396,7 @@ export const SettingsModal = ({
                       </section>
 
                       {/* Chat Backgrounds */}
+                      {/* ... existing Chat BG section ... */}
                       <section className={`space-y-4 ${!isPremium ? 'opacity-70' : ''}`}>
                            <div className="flex justify-between items-center">
                               <label className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
@@ -402,7 +406,6 @@ export const SettingsModal = ({
                            </div>
                            
                            <div className={`grid grid-cols-2 md:grid-cols-4 gap-3 ${!isPremium ? 'pointer-events-none' : ''}`}>
-                               {/* Upload Button / Custom Slot */}
                                <div 
                                    onClick={() => isPremium && backgroundInputRef.current?.click()}
                                    className={`aspect-video rounded-xl border-2 transition-all cursor-pointer flex flex-col items-center justify-center gap-2 group relative overflow-hidden ${
@@ -436,7 +439,6 @@ export const SettingsModal = ({
                                    <input type="file" ref={backgroundInputRef} onChange={handleBackgroundUpload} className="hidden" accept="image/*"/>
                                </div>
 
-                               {/* Presets */}
                                {PRESET_BACKGROUNDS.map((bg, idx) => (
                                    <button 
                                        key={idx}
@@ -453,7 +455,6 @@ export const SettingsModal = ({
                                ))}
                            </div>
                            
-                           {/* Remove Button if background is set */}
                            {userSettings.customBackground && (
                                <div className="flex justify-end">
                                     <button 
@@ -477,6 +478,7 @@ export const SettingsModal = ({
                       </div>
 
                       {/* AI Model Selection */}
+                      {/* ... existing model selection ... */}
                       <section className="space-y-4">
                           <label className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
                               <Cpu size={18} className="text-blue-500"/> AI Модел
@@ -535,6 +537,28 @@ export const SettingsModal = ({
                           </div>
                       </section>
 
+                      {/* Voice Selection - NEW */}
+                      <section className="space-y-4">
+                          <label className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                              <Volume2 size={18} className="text-indigo-500"/> Избор на Глас
+                          </label>
+                          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                              {VOICES.map(voice => (
+                                  <button
+                                      key={voice.id}
+                                      onClick={() => setUserSettings({...userSettings, preferredVoice: voice.id})}
+                                      className={`p-3 rounded-xl text-center text-sm font-bold border transition-all ${
+                                          userSettings.preferredVoice === voice.id
+                                          ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-500 text-indigo-700 dark:text-indigo-300 shadow-sm'
+                                          : 'bg-white dark:bg-white/5 border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/10'
+                                      }`}
+                                  >
+                                      {voice.name}
+                                  </button>
+                              ))}
+                          </div>
+                      </section>
+
                       {/* Teaching Style */}
                       <section className="space-y-4">
                           <label className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
@@ -563,6 +587,7 @@ export const SettingsModal = ({
                       </section>
 
                       {/* Custom Persona (Pro Feature) */}
+                      {/* ... existing custom persona section ... */}
                       <section className={`space-y-4 p-6 bg-gradient-to-br from-indigo-50/50 to-purple-50/50 dark:from-indigo-900/10 dark:to-purple-900/10 rounded-2xl border border-indigo-200 dark:border-indigo-500/20 ${!isPro ? 'opacity-70' : ''}`}>
                           <div className="flex justify-between items-center mb-2">
                               <label className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
@@ -597,6 +622,7 @@ export const SettingsModal = ({
                           </div>
                       </section>
 
+                      {/* ... existing sections ... */}
                       <div className="grid grid-cols-1 gap-6">
                           <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl p-6 space-y-4">
                               <label className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
@@ -752,8 +778,3 @@ export const SettingsModal = ({
   </div>
   );
 };
-
-// Helper for icon size consistency
-const GraduationCap = ({size, className}: {size:number, className?:string}) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
-);

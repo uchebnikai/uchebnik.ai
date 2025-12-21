@@ -1,8 +1,9 @@
-
 import React, { useState, useEffect, useRef } from 'react';
+import { GoogleGenAI, LiveServerMessage, Modality } from "@google/genai";
 import { SubjectConfig, SubjectId, AppMode, Message, Slide, UserSettings, Session, UserPlan, UserRole, HomeViewType } from './types';
-import { SUBJECTS } from './constants';
+import { SUBJECTS, VOICES, DEFAULT_VOICE } from './constants';
 import { generateResponse } from './services/aiService';
+import { generateSpeech, createBlob } from './services/audioService';
 import { supabase } from './supabaseClient';
 import { Auth } from './components/auth/Auth';
 import { 
@@ -41,6 +42,8 @@ interface GeneratedKey {
   code: string;
   isUsed: boolean;
 }
+
+const LIVE_MODEL = 'gemini-2.5-flash-native-audio-preview-09-2025';
 
 export const App = () => {
   // --- Auth State ---
@@ -121,7 +124,8 @@ export const App = () => {
     enterToSend: true,
     fontFamily: 'inter',
     customPersona: '',
-    christmasMode: false
+    christmasMode: false,
+    preferredVoice: DEFAULT_VOICE,
   });
   const [unreadSubjects, setUnreadSubjects] = useState<Set<string>>(new Set());
   const [notification, setNotification] = useState<{ message: string, subjectId: string } | null>(null);
@@ -141,9 +145,9 @@ export const App = () => {
 
   // --- Refs ---
   const recognitionRef = useRef<any>(null);
-  const voiceCallRecognitionRef = useRef<any>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const liveSessionRef = useRef<any>(null);
   const startingTextRef = useRef<string>('');
-  const audioRef = useRef<HTMLAudioElement | null>(null);
   
   const activeSubjectRef = useRef(activeSubject);
   const sessionsRef = useRef(sessions);
@@ -153,8 +157,10 @@ export const App = () => {
   const voiceMutedRef = useRef(voiceMuted);
   const voiceCallStatusRef = useRef(voiceCallStatus);
   const loadingSubjectsRef = useRef(loadingSubjects);
-  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
-  const speakingTimeoutRef = useRef<any>(null);
+  
+  // Audio Playback Refs
+  const audioSourceRef = useRef<AudioBufferSourceNode | null>(null);
+  const isPlayingAudioRef = useRef(false);
   
   // AbortController for stopping generation
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -247,7 +253,7 @@ export const App = () => {
     return () => subscription.unsubscribe();
   }, []);
   
-  // Cloud Sync Effects
+  // Cloud Sync Effects - (Existing code remains same, updated to load preferredVoice)
   useEffect(() => {
       if (!session?.user?.id) {
           setIsRemoteDataLoaded(false);
@@ -282,6 +288,7 @@ export const App = () => {
                       if (!merged.teachingStyle) merged.teachingStyle = 'normal';
                       if (!merged.customPersona) merged.customPersona = '';
                       if (merged.christmasMode === undefined) merged.christmasMode = false;
+                      if (!merged.preferredVoice) merged.preferredVoice = DEFAULT_VOICE;
                       
                       setUserSettings(prev => ({ ...prev, ...merged }));
                       if (plan) setUserPlan(plan);
@@ -334,7 +341,7 @@ export const App = () => {
       loadRemoteData();
   }, [session?.user?.id]);
 
-  // Subscriptions
+  // Subscriptions and Saving Effects (Same as before)
   useEffect(() => {
       if (!session?.user?.id || missingDbTables) return;
       const channel = supabase.channel(`sync-sessions:${session.user.id}`)
@@ -398,7 +405,6 @@ export const App = () => {
       return () => { supabase.removeChannel(channel); };
   }, [session?.user?.id, missingDbTables]);
 
-  // Saving Effects
   useEffect(() => {
       if (!session?.user?.id || !isRemoteDataLoaded) return;
       if (missingDbTables) return; 
@@ -495,7 +501,8 @@ export const App = () => {
                             enterToSend: true,
                             fontFamily: 'inter',
                             customPersona: '',
-                            christmasMode: false
+                            christmasMode: false,
+                            preferredVoice: DEFAULT_VOICE,
                         });
                      }
                 }
@@ -549,8 +556,6 @@ export const App = () => {
         }
     };
     initData();
-    const loadVoices = () => { if (typeof window !== 'undefined' && window.speechSynthesis) window.speechSynthesis.getVoices(); };
-    if (typeof window !== 'undefined' && window.speechSynthesis) { loadVoices(); window.speechSynthesis.onvoiceschanged = loadVoices; }
   }, [session, isRemoteDataLoaded]);
 
   // Persist Data
@@ -600,16 +605,13 @@ export const App = () => {
 
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [sessions, activeSessionId, isImageProcessing, showSubjectDashboard]);
 
-  // Voice Effects
+  // Voice Call Cleanup on Unmount
   useEffect(() => {
-    voiceMutedRef.current = voiceMuted;
-    if (isVoiceCallActive) {
-      if (voiceMuted) { if (voiceCallStatus === 'listening') { voiceCallRecognitionRef.current?.stop(); } } 
-      else { if (voiceCallStatus === 'listening' || voiceCallStatus === 'idle') { startVoiceRecognition(); } }
+    return () => {
+      endVoiceCall();
+      if(audioSourceRef.current) { audioSourceRef.current.stop(); }
     }
-  }, [voiceMuted, isVoiceCallActive]);
-
-  useEffect(() => { return () => { window.speechSynthesis.cancel(); if(audioRef.current) audioRef.current.pause(); } }, []);
+  }, []);
 
   // --- Logic Helpers ---
   const checkImageLimit = (count = 1): boolean => {
@@ -632,13 +634,10 @@ export const App = () => {
     const greetingName = userSettings.userName ? `, ${userSettings.userName}` : '';
     let welcomeText = "";
     
-    // We use t() but we need the raw name/desc for the session title initially. 
-    // Session titles are stored, so they will be in the language they were created in.
     const subjectConfig = SUBJECTS.find(s => s.id === subjectId);
     const subjectName = subjectConfig ? t(`subject_${subjectId}`, userSettings.language) : "Subject";
     
     const getModeName = (m: AppMode) => {
-        // Translation keys for modes
         switch(m) {
             case AppMode.SOLVE: return t('mode_solve', userSettings.language); 
             case AppMode.LEARN: return t('mode_learn', userSettings.language);
@@ -747,7 +746,7 @@ export const App = () => {
         responseWatchdogRef.current = null;
     }
     
-    // Force stop loading state for active subject immediately
+    // Force stop loading state
     if (activeSubject) {
         setLoadingSubjects(prev => ({ ...prev, [activeSubject.id]: false }));
     }
@@ -761,8 +760,10 @@ export const App = () => {
         setIsListening(false);
     }
     
-    // Stop speaking if active
-    window.speechSynthesis.cancel();
+    // Stop audio
+    if (audioSourceRef.current) {
+        audioSourceRef.current.stop();
+    }
     setSpeakingMessageId(null);
   };
 
@@ -817,19 +818,18 @@ export const App = () => {
     const controller = new AbortController();
     abortControllerRef.current = controller;
 
-    // Watchdog logic to prevent infinite hanging
+    // Watchdog logic
     const startWatchdog = () => {
         if (responseWatchdogRef.current) clearTimeout(responseWatchdogRef.current);
         responseWatchdogRef.current = setTimeout(() => {
             if (abortControllerRef.current === controller) {
                 console.warn("AI Response Watchdog Timeout - Aborting");
                 controller.abort();
-                // Manually trigger error state in UI as the promise might stay pending or behave oddly
                 const errorMsg: Message = { id: Date.now().toString(), role: 'model', text: t('error', userSettings.language) + " (Timeout)", isError: true, timestamp: Date.now(), isStreaming: false };
                 setSessions(prev => prev.map(s => { if (s.id === sessId) { return { ...s, messages: s.messages.map(m => m.id === tempAiMsgId ? errorMsg : m) }; } return s; }));
                 setLoadingSubjects(prev => ({ ...prev, [currentSubId]: false }));
             }
-        }, 25000); // 25 seconds of silence before timeout
+        }, 25000); 
     };
 
     startWatchdog();
@@ -846,21 +846,16 @@ export const App = () => {
       const sessionMessages = currentSessionsList.find(s => s.id === sessId)?.messages || [];
       const historyForAI = [...sessionMessages, newUserMsg];
       
-      let selectedModel = 'gemini-2.5-flash'; // Default safe fallback
+      let selectedModel = 'gemini-2.5-flash'; 
 
       if (!userSettings.preferredModel || userSettings.preferredModel === 'auto') {
-          // Auto Mode: Decide based on plan
           if (userPlan === 'plus' || userPlan === 'pro') {
               selectedModel = 'gemini-3-flash-preview';
           } else {
               selectedModel = 'gemini-2.5-flash';
           }
       } else {
-          // Manual Selection Mode
           selectedModel = userSettings.preferredModel;
-          
-          // Enforce Plan Restriction: If user selected Gemini 3 manually but is on Free plan, force downgrade
-          // This handles edge cases where settings might persist after plan expiry
           if (selectedModel === 'gemini-3-flash-preview' && userPlan === 'free') {
               selectedModel = 'gemini-2.5-flash';
           }
@@ -874,7 +869,7 @@ export const App = () => {
           historyForAI, 
           selectedModel, 
           (textChunk, reasoningChunk) => {
-              startWatchdog(); // Reset watchdog on any activity
+              startWatchdog(); 
               setSessions(prev => prev.map(s => {
                   if (s.id === sessId) {
                       return { ...s, messages: s.messages.map(m => {
@@ -886,12 +881,11 @@ export const App = () => {
               }));
           },
           controller.signal,
-          userSettings.language, // Pass Language
-          userSettings.teachingStyle, // Pass Teaching Style
-          userSettings.customPersona // Pass Custom Persona
+          userSettings.language,
+          userSettings.teachingStyle, 
+          userSettings.customPersona 
       );
 
-      // Check if aborted during await (by watchdog or manual stop)
       if (controller.signal.aborted) return "";
 
       if (currentImgs.length > 0) { incrementImageCount(currentImgs.length); }
@@ -910,7 +904,7 @@ export const App = () => {
                           chartData: response.chartData, 
                           geometryData: response.geometryData, 
                           imageAnalysis: response.imageAnalysis, 
-                          sources: response.sources, // Save sources here
+                          sources: response.sources, 
                           isStreaming: false 
                       };
                   }
@@ -1015,82 +1009,227 @@ export const App = () => {
     });
   };
 
-  const speakText = (text: string, onEnd?: () => void) => {
-    window.speechSynthesis.cancel(); 
-    if(audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
-    if(speakingTimeoutRef.current) { clearTimeout(speakingTimeoutRef.current); speakingTimeoutRef.current = null; }
-    let hasEnded = false;
-    const safeOnEnd = () => { if(hasEnded) return; hasEnded = true; if(speakingTimeoutRef.current) { clearTimeout(speakingTimeoutRef.current); speakingTimeoutRef.current = null; } utteranceRef.current = null; if(onEnd) onEnd(); };
-    const estimatedDuration = Math.max(3000, (text.length / 10) * 1000 + 2000); 
-    speakingTimeoutRef.current = setTimeout(() => { safeOnEnd(); }, estimatedDuration);
-    const clean = text.replace(/[*#`_\[\]]/g, '').replace(/\$\$.*?\$\$/g, 'формула').replace(/http\S+/g, '');
-    let lang = activeSubjectRef.current?.id === SubjectId.ENGLISH ? 'en-US' : activeSubjectRef.current?.id === SubjectId.FRENCH ? 'fr-FR' : (userSettings.language === 'en' ? 'en-US' : 'bg-BG');
-    const voices = window.speechSynthesis.getVoices();
-    const v = voices.find(v => v.lang === lang) || voices.find(v => v.lang.startsWith(lang.split('-')[0]));
-    if ((!v && lang.startsWith('bg')) || !window.speechSynthesis) {
-        const a = new Audio(`https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&q=${encodeURIComponent(clean)}&tl=${lang.split('-')[0]}`);
-        audioRef.current = a; a.onended = safeOnEnd; a.onerror = (e) => { console.error("Audio error", e); safeOnEnd(); }; a.play().catch((e) => { console.error("Audio play error", e); safeOnEnd(); });
-    } else {
-        const u = new SpeechSynthesisUtterance(clean); 
-        u.lang = lang; 
-        if(v) u.voice = v; 
-        u.rate = 1.0;
-        utteranceRef.current = u; 
-        u.onend = safeOnEnd; 
-        u.onerror = (e) => { console.error("Speech Synthesis Error", e); utteranceRef.current = null; safeOnEnd(); }
-        window.speechSynthesis.speak(u);
+  const handleSpeak = async (txt: string, id: string) => { 
+    if(speakingMessageId === id) { 
+        if (audioSourceRef.current) {
+            audioSourceRef.current.stop();
+            audioSourceRef.current = null;
+        }
+        setSpeakingMessageId(null); 
+        return; 
+    } 
+    
+    setSpeakingMessageId(id); 
+    
+    try {
+        const clean = txt.replace(/[*#`_\[\]]/g, '').replace(/\$\$.*?\$\$/g, 'формула').replace(/http\S+/g, '');
+        const audioBuffer = await generateSpeech(clean, userSettings.preferredVoice);
+        
+        if (audioBuffer) {
+            const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+            const source = ctx.createBufferSource();
+            source.buffer = audioBuffer;
+            source.connect(ctx.destination);
+            source.onended = () => setSpeakingMessageId(null);
+            source.start();
+            audioSourceRef.current = source;
+        } else {
+            // Fallback if API fails
+            const u = new SpeechSynthesisUtterance(clean);
+            u.lang = userSettings.language === 'en' ? 'en-US' : 'bg-BG';
+            u.onend = () => setSpeakingMessageId(null);
+            window.speechSynthesis.speak(u);
+        }
+    } catch (e) {
+        console.error("Speech Error", e);
+        setSpeakingMessageId(null);
     }
   };
-  const handleSpeak = (txt: string, id: string) => { if(speakingMessageId === id) { window.speechSynthesis.cancel(); if(audioRef.current) audioRef.current.pause(); setSpeakingMessageId(null); return; } setSpeakingMessageId(id); speakText(txt, () => setSpeakingMessageId(null)); };
 
-  const startVoiceCall = () => { 
+  // --- Gemini Live API Logic ---
+  
+  const startVoiceCall = async () => { 
     if (!session) { setShowAuthModal(true); return; } 
+    
+    // Check permission first
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        stream.getTracks().forEach(track => track.stop()); // Just checking
+    } catch (e) {
+        addToast('Моля, разрешете достъп до микрофона.', 'error');
+        return;
+    }
+
     setIsVoiceCallActive(true); 
-    startVoiceRecognition();
+    startLiveSession();
   };
   
-  const endVoiceCall = () => { setIsVoiceCallActive(false); setVoiceCallStatus('idle'); if(voiceCallRecognitionRef.current) { voiceCallRecognitionRef.current.onend = null; voiceCallRecognitionRef.current.stop(); } window.speechSynthesis.cancel(); utteranceRef.current = null; if(speakingTimeoutRef.current) { clearTimeout(speakingTimeoutRef.current); speakingTimeoutRef.current = null; } };
-
-  const startVoiceRecognition = () => {
-     if (voiceMutedRef.current) { setVoiceCallStatus('idle'); voiceCallStatusRef.current = 'idle'; return; }
-     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-     if(!SR) { addToast('Гласовото разпознаване не се поддържа.', 'error'); endVoiceCall(); return; }
-     
-     try { if(voiceCallRecognitionRef.current) { voiceCallRecognitionRef.current.onend = null; voiceCallRecognitionRef.current.stop(); } } catch(e) {}
-     
-     const rec = new SR();
-     rec.lang = activeSubjectRef.current?.id === SubjectId.ENGLISH ? 'en-US' : activeSubjectRef.current?.id === SubjectId.FRENCH ? 'fr-FR' : (userSettings.language === 'en' ? 'en-US' : 'bg-BG');
-     rec.continuous = false; 
-     rec.interimResults = false;
-     rec.onstart = () => { if(voiceMutedRef.current) { rec.stop(); return; } setVoiceCallStatus('listening'); voiceCallStatusRef.current = 'listening'; };
-     rec.onresult = async (e: any) => {
-        if(voiceMutedRef.current) return;
-        const t = e.results[0][0].transcript;
-        if(t.trim()) {
-           setVoiceCallStatus('processing'); voiceCallStatusRef.current = 'processing';
-           const res = await handleSend(t);
-           if(res) { setVoiceCallStatus('speaking'); voiceCallStatusRef.current = 'speaking'; speakText(res, () => { if(isVoiceCallActiveRef.current) { startVoiceRecognition(); } }); } else { if(isVoiceCallActiveRef.current) { startVoiceRecognition(); } }
-        }
-     };
-     rec.onend = () => { 
-        if(isVoiceCallActiveRef.current && voiceCallStatusRef.current === 'listening' && !voiceMutedRef.current) { 
-            try { rec.start(); } catch(e){}
-        } 
-     };
-     rec.onerror = (e: any) => { 
-        console.error("Voice Recognition Error:", e.error);
-        if(e.error === 'not-allowed' || e.error === 'service-not-allowed') {
-            addToast('Гласовата услуга е заета. Моля, опитайте след малко.', 'error');
-            endVoiceCall();
-        } else if(e.error === 'no-speech' && isVoiceCallActiveRef.current && voiceCallStatusRef.current === 'listening' && !voiceMutedRef.current) { 
-            try { rec.start(); } catch(e){}
-        } 
-     }
-     voiceCallRecognitionRef.current = rec; 
-     try {
-         rec.start();
-     } catch (e) { console.error(e); }
+  const endVoiceCall = () => { 
+      setIsVoiceCallActive(false); 
+      setVoiceCallStatus('idle'); 
+      
+      // Close Live Session
+      if (liveSessionRef.current) {
+          liveSessionRef.current.close();
+          liveSessionRef.current = null;
+      }
+      
+      // Close Audio Context
+      if (audioContextRef.current) {
+          audioContextRef.current.close();
+          audioContextRef.current = null;
+      }
   };
+
+  const startLiveSession = async () => {
+      setVoiceCallStatus('listening');
+      const apiKey = process.env.API_KEY || "";
+      const ai = new GoogleGenAI({ apiKey });
+      
+      try {
+          // Initialize Audio Contexts
+          const inputAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)({sampleRate: 16000});
+          const outputAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)({sampleRate: 24000});
+          audioContextRef.current = inputAudioContext; // Store one for cleanup
+
+          const inputNode = inputAudioContext.createGain();
+          const outputNode = outputAudioContext.createGain();
+          
+          let nextStartTime = 0;
+          const sources = new Set<AudioBufferSourceNode>();
+
+          // Connect Live Session
+          const sessionPromise = ai.live.connect({
+              model: LIVE_MODEL,
+              config: {
+                  responseModalities: [Modality.AUDIO],
+                  speechConfig: {
+                      voiceConfig: {
+                          prebuiltVoiceConfig: { voiceName: userSettings.preferredVoice }
+                      }
+                  },
+                  systemInstruction: `You are a helpful assistant talking to the user about ${activeSubjectRef.current?.name || 'General Topic'}. Be concise and conversational.`
+              },
+              callbacks: {
+                  onopen: async () => {
+                      console.log("Live Session Opened");
+                      
+                      // Start Microphone Stream
+                      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                      const source = inputAudioContext.createMediaStreamSource(stream);
+                      const scriptProcessor = inputAudioContext.createScriptProcessor(4096, 1, 1);
+                      
+                      scriptProcessor.onaudioprocess = (audioProcessingEvent) => {
+                          if (voiceMutedRef.current) return;
+                          
+                          const inputData = audioProcessingEvent.inputBuffer.getChannelData(0);
+                          const pcmBlob = createBlob(inputData);
+                          
+                          sessionPromise.then((session) => {
+                              session.sendRealtimeInput({ media: pcmBlob });
+                          });
+                      };
+                      
+                      source.connect(scriptProcessor);
+                      scriptProcessor.connect(inputAudioContext.destination);
+                  },
+                  onmessage: async (message: LiveServerMessage) => {
+                      const base64Audio = message.serverContent?.modelTurn?.parts?.[0]?.inlineData?.data;
+                      
+                      if (base64Audio) {
+                          setVoiceCallStatus('speaking');
+                          nextStartTime = Math.max(nextStartTime, outputAudioContext.currentTime);
+                          
+                          const audioBuffer = await decodeAudioData(
+                              decode(base64Audio),
+                              outputAudioContext,
+                              24000,
+                              1
+                          );
+                          
+                          const source = outputAudioContext.createBufferSource();
+                          source.buffer = audioBuffer;
+                          source.connect(outputNode);
+                          source.connect(outputAudioContext.destination);
+                          
+                          source.addEventListener('ended', () => {
+                              sources.delete(source);
+                              if (sources.size === 0) setVoiceCallStatus('listening');
+                          });
+                          
+                          source.start(nextStartTime);
+                          nextStartTime += audioBuffer.duration;
+                          sources.add(source);
+                      }
+                      
+                      if (message.serverContent?.interrupted) {
+                          sources.forEach(s => { s.stop(); sources.delete(s); });
+                          nextStartTime = 0;
+                          setVoiceCallStatus('listening');
+                      }
+                  },
+                  onclose: () => {
+                      console.log("Live Session Closed");
+                      endVoiceCall();
+                  },
+                  onerror: (e) => {
+                      console.error("Live Session Error", e);
+                      addToast("Грешка при връзката с Live AI.", "error");
+                      endVoiceCall();
+                  }
+              }
+          });
+          
+          liveSessionRef.current = await sessionPromise;
+
+      } catch (e) {
+          console.error("Start Live Session Failed", e);
+          addToast("Неуспешно стартиране на разговор.", "error");
+          endVoiceCall();
+      }
+  };
+
+  // Helper functions for Live Audio (duplicated from service to ensure closure scope safety)
+  function createBlob(data: Float32Array): { data: string; mimeType: string } {
+      const l = data.length;
+      const int16 = new Int16Array(l);
+      for (let i = 0; i < l; i++) {
+          int16[i] = data[i] * 32768;
+      }
+      const bytes = new Uint8Array(int16.buffer);
+      let binary = '';
+      const len = bytes.byteLength;
+      for (let i = 0; i < len; i++) {
+          binary += String.fromCharCode(bytes[i]);
+      }
+      return {
+          data: btoa(binary),
+          mimeType: 'audio/pcm;rate=16000',
+      };
+  }
+
+  function decode(base64: string) {
+      const binaryString = atob(base64);
+      const len = binaryString.length;
+      const bytes = new Uint8Array(len);
+      for (let i = 0; i < len; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+      }
+      return bytes;
+  }
+
+  async function decodeAudioData(data: Uint8Array, ctx: AudioContext, sampleRate: number, numChannels: number): Promise<AudioBuffer> {
+      const dataInt16 = new Int16Array(data.buffer);
+      const frameCount = dataInt16.length / numChannels;
+      const buffer = ctx.createBuffer(numChannels, frameCount, sampleRate);
+      for (let channel = 0; channel < numChannels; channel++) {
+          const channelData = buffer.getChannelData(channel);
+          for (let i = 0; i < frameCount; i++) {
+              channelData[i] = dataInt16[i * numChannels + channel] / 32768.0;
+          }
+      }
+      return buffer;
+  }
 
   const toggleListening = () => {
     if (!session) { setShowAuthModal(true); return; }
@@ -1106,7 +1245,6 @@ export const App = () => {
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if(!SR) { addToast('Гласовата услуга не се поддържа от този браузър.', 'error'); return; }
     
-    // Clean up
     if (recognitionRef.current) {
         recognitionRef.current.onend = null;
         try { recognitionRef.current.stop(); } catch(e) {}
@@ -1115,7 +1253,7 @@ export const App = () => {
     const rec = new SR();
     rec.lang = activeSubject?.id === SubjectId.ENGLISH ? 'en-US' : activeSubject?.id === SubjectId.FRENCH ? 'fr-FR' : (userSettings.language === 'en' ? 'en-US' : 'bg-BG');
     rec.interimResults = true; 
-    rec.continuous = false; // iOS Safari hates continuous = true
+    rec.continuous = false;
     startingTextRef.current = inputValue;
 
     rec.onresult = (e: any) => {
@@ -1356,6 +1494,8 @@ export const App = () => {
                     setVoiceMuted={setVoiceMuted}
                     endVoiceCall={endVoiceCall}
                     activeSubject={activeSubject}
+                    userSettings={userSettings}
+                    onChangeVoice={(v) => setUserSettings({...userSettings, preferredVoice: v})}
                 />
 
                 <MessageList 
