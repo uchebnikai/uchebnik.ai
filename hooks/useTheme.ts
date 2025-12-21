@@ -5,15 +5,20 @@ import { hexToRgb, rgbToHsl, hslToRgb, adjustBrightness } from '../styles/theme'
 
 export const useTheme = (userSettings: UserSettings) => {
   useEffect(() => {
-    // If Christmas mode is enabled, override with Red theme (#ef4444)
-    // Otherwise use user's theme color
-    const themeColor = userSettings.christmasMode ? '#ef4444' : userSettings.themeColor;
+    // 1. Determine the effective theme color
+    // - If Christmas mode is on, force Red (#ef4444)
+    // - Otherwise, use user setting, or fallback to default Indigo (#6366f1) if missing
+    const themeColor = userSettings.christmasMode 
+        ? '#ef4444' 
+        : (userSettings.themeColor || '#6366f1');
 
+    // 2. Apply colors to CSS Variables
     if (themeColor) {
+      // Ensure hexToRgb handles potential edge cases internally, but we also pass a valid string here
       const rgb = hexToRgb(themeColor);
       const root = document.documentElement;
       
-      // Update primary palette variables
+      // Update primary palette variables (Shades & Tints)
       root.style.setProperty('--primary-50', adjustBrightness(rgb, 90));
       root.style.setProperty('--primary-100', adjustBrightness(rgb, 80));
       root.style.setProperty('--primary-200', adjustBrightness(rgb, 60));
@@ -26,15 +31,15 @@ export const useTheme = (userSettings: UserSettings) => {
       root.style.setProperty('--primary-900', adjustBrightness(rgb, -40));
       root.style.setProperty('--primary-950', adjustBrightness(rgb, -50));
 
-      // Calculate Accent Color (Hue Shift)
-      // For Christmas: Shift to Green if Primary is Red
+      // 3. Calculate Accent Color
+      // - If Christmas mode: Force Emerald Green (#10b981)
+      // - Otherwise: Calculate algorithmic shift (e.g., +35 hue)
       let accentRgb;
       if (userSettings.christmasMode) {
-          // Force Emerald Green for Christmas Accent
           accentRgb = hexToRgb('#10b981'); 
       } else {
           const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
-          const accentHsl = { ...hsl, h: (hsl.h + 35) % 360 }; // +35 degree shift
+          const accentHsl = { ...hsl, h: (hsl.h + 35) % 360 }; // +35 degree hue shift
           accentRgb = hslToRgb(accentHsl.h, accentHsl.s, accentHsl.l);
       }
 
@@ -52,14 +57,15 @@ export const useTheme = (userSettings: UserSettings) => {
       root.style.setProperty('--accent-950', adjustBrightness(accentRgb, -50));
     }
 
-    // Toggle custom-bg-active class
+    // 4. Handle Body Classes for Backgrounds & Special Modes
+    // 'custom-bg-active' handles glass transparency adjustments
     if (userSettings.customBackground || userSettings.christmasMode) {
       document.body.classList.add('custom-bg-active');
     } else {
       document.body.classList.remove('custom-bg-active');
     }
     
-    // Toggle christmas-mode class for specific overrides (like snow Z-index or fonts)
+    // 'christmas-mode' handles fonts, snow, etc.
     if (userSettings.christmasMode) {
         document.body.classList.add('christmas-mode');
     } else {

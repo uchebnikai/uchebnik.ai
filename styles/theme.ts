@@ -1,5 +1,7 @@
 
 export const hexToRgb = (hex: string) => {
+  if (!hex) return { r: 99, g: 102, b: 241 }; // Safety fallback
+  
   const shorthandRegex = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;
   hex = hex.replace(shorthandRegex, (m, r, g, b) => r + r + g + g + b + b);
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
