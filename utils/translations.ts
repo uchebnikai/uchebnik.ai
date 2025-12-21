@@ -128,25 +128,62 @@ const translations: Record<string, Record<string, string>> = {
   'manage_plan': { bg: 'Управление на плана', en: 'Manage Plan' },
   'unlock_potential': { bg: 'Отключи пълния потенциал', en: 'Unlock full potential' },
 
-  // Subject Fallbacks (Common ones, others fallback to key)
+  // Subjects - School
   'subject_math': { bg: 'Математика', en: 'Math' },
   'subject_bulgarian': { bg: 'Български език', en: 'Bulgarian' },
   'subject_english': { bg: 'Английски език', en: 'English' },
+  'subject_german': { bg: 'Немски език', en: 'German' },
+  'subject_russian': { bg: 'Руски език', en: 'Russian' },
+  'subject_french': { bg: 'Френски език', en: 'French' },
+  'subject_spanish': { bg: 'Испански език', en: 'Spanish' },
+  'subject_physics': { bg: 'Физика', en: 'Physics' },
+  'subject_chemistry': { bg: 'Химия', en: 'Chemistry' },
+  'subject_biology': { bg: 'Биология', en: 'Biology' },
   'subject_history': { bg: 'История', en: 'History' },
   'subject_geography': { bg: 'География', en: 'Geography' },
-  'subject_biology': { bg: 'Биология', en: 'Biology' },
-  'subject_chemistry': { bg: 'Химия', en: 'Chemistry' },
-  'subject_physics': { bg: 'Физика', en: 'Physics' },
+  'subject_music': { bg: 'Музика', en: 'Music' },
+  'subject_japanese': { bg: 'Японски език', en: 'Japanese' },
+  'subject_it': { bg: 'Информатика', en: 'IT' },
+  'subject_technologies': { bg: 'Технологии', en: 'Technologies' },
+  'subject_philosophy': { bg: 'Философия', en: 'Philosophy' },
+  'subject_citizenship': { bg: 'Гражданско', en: 'Citizenship' },
+  'subject_religion': { bg: 'Религия', en: 'Religion' },
+  'subject_art': { bg: 'Изкуство', en: 'Art' },
+  'subject_pe': { bg: 'Спорт', en: 'Sport' },
+
+  // Subjects - University
+  'subject_higher_math': { bg: 'Висша Математика', en: 'Higher Math' },
+  'subject_computer_science': { bg: 'Компютърни Науки', en: 'Computer Science' },
+  'subject_economics': { bg: 'Икономика', en: 'Economics' },
+  'subject_finance': { bg: 'Финанси', en: 'Finance' },
+  'subject_management': { bg: 'Мениджмънт', en: 'Management' },
+  'subject_law': { bg: 'Право', en: 'Law' },
+  'subject_medicine': { bg: 'Медицина', en: 'Medicine' },
+  'subject_dental_medicine': { bg: 'Дентална Медицина', en: 'Dental Medicine' },
+  'subject_pharmacy': { bg: 'Фармация', en: 'Pharmacy' },
+  'subject_veterinary_medicine': { bg: 'Ветеринарна Медицина', en: 'Veterinary Medicine' },
+  'subject_engineering': { bg: 'Инженерство', en: 'Engineering' },
+  'subject_architecture': { bg: 'Архитектура', en: 'Architecture' },
+  'subject_psychology': { bg: 'Психология', en: 'Psychology' },
+  'subject_pedagogy': { bg: 'Педагогика', en: 'Pedagogy' },
+  'subject_marketing': { bg: 'Маркетинг', en: 'Marketing' },
+  'subject_journalism': { bg: 'Журналистика', en: 'Journalism' },
+  'subject_political_science': { bg: 'Политология', en: 'Political Science' },
+  'subject_int_relations': { bg: 'М. Отношения', en: 'Int. Relations' },
+  'subject_sociology': { bg: 'Социология', en: 'Sociology' },
+  'subject_statistics': { bg: 'Статистика', en: 'Statistics' },
+  'subject_ecology': { bg: 'Екология', en: 'Ecology' },
+  'subject_tourism': { bg: 'Туризъм', en: 'Tourism' },
 };
 
 export const t = (key: string, lang: string = 'bg'): string => {
   if (!translations[key]) {
-      // Fallback for missing keys, especially subjects where we have many IDs
+      // Fallback for missing keys
       if (key.startsWith('subject_')) {
           const parts = key.split('_');
           if (parts.length > 1) {
-              // Capitalize first letter of the subject ID
-              return parts[1].charAt(0).toUpperCase() + parts[1].slice(1);
+              // Attempt to prettify the ID if no translation found
+              return parts.slice(1).map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(' ');
           }
       }
       return key;

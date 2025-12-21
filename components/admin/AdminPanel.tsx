@@ -9,11 +9,11 @@ import {
   TrendingUp, TrendingDown, Wallet, CreditCard,
   Settings, HelpCircle, ExternalLink, Cloud, Sliders, Cpu, Server, Info, AlertCircle, PenTool, History, Wrench,
   BarChart2, UserCheck, FileText, Smartphone, Wifi, Globe, HardDrive, Lock, Brain, LayoutDashboard,
-  RotateCcw, CalendarDays, Coins, Radio, Send, PieChart as PieChartIcon
+  RotateCcw, CalendarDays, Coins, Radio, Send, PieChart as PieChartIcon, MessageSquare
 } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { supabase } from '../../supabaseClient';
-import { UserPlan, UserRole } from '../../types';
+import { UserPlan, UserRole, Session } from '../../types';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, LineChart, Line, AreaChart, Area, PieChart, Pie, Legend } from 'recharts';
 import { SUBJECTS } from '../../constants';
 import { t } from '../../utils/translations';
@@ -46,6 +46,7 @@ interface AdminUser {
   totalInput: number;
   totalOutput: number;
   stripeId?: string;
+  proExpiresAt?: string;
 }
 
 interface FinancialData {
@@ -131,9 +132,12 @@ export const AdminPanel = ({
     const [broadcastType, setBroadcastType] = useState<'toast' | 'modal'>('toast');
     const [isBroadcasting, setIsBroadcasting] = useState(false);
 
-    // User Details
+    // User Details & Chat
     const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
     const [editForm, setEditForm] = useState<any>(null);
+    const [userSessions, setUserSessions] = useState<Session[]>([]);
+    const [loadingSessions, setLoadingSessions] = useState(false);
+    const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
 
     // Initial State - will be updated by real checks
     const [systemHealth, setSystemHealth] = useState<SystemService[]>([
@@ -156,6 +160,42 @@ export const AdminPanel = ({
             fetchSubjectStats();
         }
     }, [heatmapRange, showAdminPanel, activeTab]);
+
+    // Fetch User Chat History when a user is selected
+    useEffect(() => {
+        if (selectedUser) {
+            fetchUserChatHistory(selectedUser.id);
+        } else {
+            setUserSessions([]);
+            setActiveSessionId(null);
+        }
+    }, [selectedUser]);
+
+    const fetchUserChatHistory = async (userId: string) => {
+        setLoadingSessions(true);
+        try {
+            // Note: This requires RLS policy to allow Admins to read other users' user_data
+            const { data, error } = await supabase
+                .from('user_data')
+                .select('data')
+                .eq('user_id', userId)
+                .single();
+            
+            if (error) {
+                console.error("Failed to load user chat history:", error);
+                setUserSessions([]);
+            } else if (data && data.data) {
+                setUserSessions(data.data);
+                if (data.data.length > 0) {
+                    setActiveSessionId(data.data[0].id);
+                }
+            }
+        } catch (e) {
+            console.error("Chat History Error", e);
+        } finally {
+            setLoadingSessions(false);
+        }
+    };
 
     const fetchSubjectStats = async () => {
         setIsHeatmapLoading(true);
@@ -269,7 +309,8 @@ export const AdminPanel = ({
                             updatedAt: u.updated_at,
                             totalInput: uIn,
                             totalOutput: uOut,
-                            stripeId: u.stripe_customer_id
+                            stripeId: u.stripe_customer_id,
+                            proExpiresAt: u.pro_expires_at
                         };
                     });
                     setDbUsers(mappedUsers);
@@ -417,6 +458,12 @@ export const AdminPanel = ({
         setEditForm({ name: user.name, plan: user.plan, streak: user.streak, usage: user.usage });
     };
 
+    // Helper to check if user is online (active within last 5 minutes)
+    const isUserOnline = (updatedAt: string) => {
+        const diff = new Date().getTime() - new Date(updatedAt).getTime();
+        return diff < 5 * 60 * 1000;
+    };
+
     // Financials
     const revenue = financials ? financials.mrr / 100 : 0; 
     const billedCloudCost = financials?.googleCloudCost || 0;
@@ -553,7 +600,7 @@ export const AdminPanel = ({
                         </div>
                         <div>
                             <h2 className="font-bold text-white text-sm">Контролен Панел</h2>
-                            <div className="text-[10px] text-zinc-500 font-mono">v3.4 • Live</div>
+                            <div className="text-[10px] text-zinc-500 font-mono">v3.5 • Live</div>
                         </div>
                     </div>
                     <button onClick={() => setShowAdminPanel(false)} className="md:hidden p-2 text-zinc-400 hover:text-white transition-colors">
@@ -640,25 +687,35 @@ export const AdminPanel = ({
                                              </div>
                                          )}
                                          <div className="absolute bottom-0 inset-x-0 h-10 bg-gradient-to-t from-black/60 to-transparent flex items-end justify-center pb-2">
-                                             <div className={`w-3 h-3 rounded-full ${selectedUser.streak > 0 ? 'bg-green-500' : 'bg-zinc-500'} border-2 border-black`}/>
+                                             <div className={`w-3 h-3 rounded-full ${isUserOnline(selectedUser.updatedAt) ? 'bg-green-500' : 'bg-zinc-500'} border-2 border-black`}/>
                                          </div>
                                      </div>
                                      
                                      <div className="flex-1 space-y-2 w-full">
                                          <div className="flex items-center gap-3">
                                              <h2 className="text-2xl md:text-4xl font-black text-white truncate">{selectedUser.name}</h2>
-                                             <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${
-                                                 selectedUser.plan === 'pro' ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' : 
-                                                 selectedUser.plan === 'plus' ? 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30' : 
-                                                 'bg-zinc-800 text-zinc-400 border-white/10'
-                                             }`}>
-                                                 {selectedUser.plan}
-                                             </span>
+                                             <div className="flex flex-col gap-1">
+                                                 <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border text-center ${
+                                                     selectedUser.plan === 'pro' ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' : 
+                                                     selectedUser.plan === 'plus' ? 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30' : 
+                                                     'bg-zinc-800 text-zinc-400 border-white/10'
+                                                 }`}>
+                                                     {selectedUser.plan}
+                                                 </span>
+                                                 {selectedUser.proExpiresAt && (
+                                                     <span className="text-[10px] text-zinc-400">Expires: {new Date(selectedUser.proExpiresAt).toLocaleDateString()}</span>
+                                                 )}
+                                             </div>
                                          </div>
                                          <div className="flex flex-col gap-1 text-sm text-zinc-400">
                                              <div className="flex items-center gap-2 truncate"><Mail size={14}/> {selectedUser.email || 'Email not visible'}</div>
                                              <div className="flex items-center gap-2 font-mono truncate"><Hash size={14}/> {selectedUser.id}</div>
                                              {selectedUser.stripeId && <div className="flex items-center gap-2 font-mono text-xs text-indigo-400 truncate"><CreditCard size={12}/> {selectedUser.stripeId}</div>}
+                                             {isUserOnline(selectedUser.updatedAt) ? (
+                                                 <div className="flex items-center gap-2 text-xs font-bold text-green-400 animate-pulse"><div className="w-2 h-2 rounded-full bg-green-500"/> ONLINE NOW</div>
+                                             ) : (
+                                                 <div className="text-xs text-zinc-500">Last active: {new Date(selectedUser.updatedAt).toLocaleString()}</div>
+                                             )}
                                          </div>
                                      </div>
 
@@ -726,18 +783,6 @@ export const AdminPanel = ({
                                                  {(selectedUser.totalInput + selectedUser.totalOutput).toLocaleString()}
                                              </div>
                                          </div>
-                                         <div className="p-5 bg-white/5 border border-white/10 rounded-2xl">
-                                             <div className="flex items-center gap-3 text-zinc-400 mb-2"><CalendarDays size={20}/><span className="text-xs font-bold uppercase">Регистриран</span></div>
-                                             <div className="text-sm md:text-lg font-bold text-white truncate">
-                                                 {new Date(selectedUser.createdAt).toLocaleDateString()}
-                                             </div>
-                                         </div>
-                                         <div className="p-5 bg-white/5 border border-white/10 rounded-2xl">
-                                             <div className="flex items-center gap-3 text-zinc-400 mb-2"><Activity size={20}/><span className="text-xs font-bold uppercase">Активен</span></div>
-                                             <div className="text-sm md:text-lg font-bold text-white truncate">
-                                                 {selectedUser.lastVisit}
-                                             </div>
-                                         </div>
                                      </div>
 
                                      <div className="bg-white/5 border border-white/10 rounded-3xl p-6">
@@ -764,6 +809,60 @@ export const AdminPanel = ({
                                          </div>
                                      </div>
                                  </div>
+                             </div>
+
+                             {/* CHAT VIEWER */}
+                             <div className="bg-white/5 border border-white/10 rounded-3xl overflow-hidden flex flex-col h-[600px]">
+                                <div className="p-4 border-b border-white/10 bg-black/20 flex justify-between items-center">
+                                    <h4 className="font-bold text-white flex items-center gap-2"><MessageSquare size={18} className="text-indigo-500"/> Chat History</h4>
+                                    <span className="text-xs text-zinc-500 font-mono">Requires Admin RLS Policy</span>
+                                </div>
+                                
+                                <div className="flex-1 flex overflow-hidden">
+                                    {/* Sessions List */}
+                                    <div className="w-1/3 border-r border-white/5 overflow-y-auto custom-scrollbar bg-black/10">
+                                        {loadingSessions ? (
+                                            <div className="p-4 text-center text-zinc-500 text-sm"><RefreshCw size={16} className="animate-spin inline mr-2"/> Loading...</div>
+                                        ) : userSessions.length === 0 ? (
+                                            <div className="p-8 text-center text-zinc-500 text-sm">No chat history found.</div>
+                                        ) : (
+                                            userSessions.map(s => (
+                                                <button 
+                                                    key={s.id}
+                                                    onClick={() => setActiveSessionId(s.id)}
+                                                    className={`w-full text-left p-4 border-b border-white/5 hover:bg-white/5 transition-colors ${activeSessionId === s.id ? 'bg-white/10 border-l-2 border-l-indigo-500' : 'border-l-2 border-l-transparent'}`}
+                                                >
+                                                    <div className="font-bold text-sm text-white truncate mb-1">{s.title}</div>
+                                                    <div className="flex justify-between text-[10px] text-zinc-500">
+                                                        <span>{t(`subject_${s.subjectId}`, 'bg')}</span>
+                                                        <span>{new Date(s.lastModified).toLocaleDateString()}</span>
+                                                    </div>
+                                                </button>
+                                            ))
+                                        )}
+                                    </div>
+
+                                    {/* Messages View */}
+                                    <div className="w-2/3 overflow-y-auto custom-scrollbar bg-[#09090b] p-4 space-y-4">
+                                        {activeSessionId ? (
+                                            userSessions.find(s => s.id === activeSessionId)?.messages.map((msg, i) => (
+                                                <div key={msg.id} className={`flex flex-col max-w-[85%] ${msg.role === 'user' ? 'ml-auto items-end' : 'mr-auto items-start'}`}>
+                                                    <div className={`px-4 py-3 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap break-words ${msg.role === 'user' ? 'bg-indigo-600 text-white rounded-br-none' : 'bg-white/10 text-zinc-200 rounded-bl-none border border-white/5'}`}>
+                                                        {msg.text}
+                                                        {msg.images && msg.images.length > 0 && (
+                                                            <div className="mt-2 text-xs opacity-70 italic">[Image attached]</div>
+                                                        )}
+                                                    </div>
+                                                    <span className="text-[10px] text-zinc-600 mt-1 px-1">
+                                                        {new Date(msg.timestamp).toLocaleTimeString()}
+                                                    </span>
+                                                </div>
+                                            ))
+                                        ) : (
+                                            <div className="h-full flex items-center justify-center text-zinc-600 text-sm">Select a session to view messages</div>
+                                        )}
+                                    </div>
+                                </div>
                              </div>
                          </div>
                      ) : (
@@ -1033,6 +1132,7 @@ export const AdminPanel = ({
                                                  <div className="flex items-start gap-4 relative z-10">
                                                      <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-lg font-bold text-white shadow-lg overflow-hidden relative" style={{ backgroundColor: user.theme }}>
                                                          {user.avatar ? <img src={user.avatar} className="w-full h-full object-cover"/> : user.name.charAt(0).toUpperCase()}
+                                                         {isUserOnline(user.updatedAt) && <div className="absolute top-1 right-1 w-2.5 h-2.5 bg-green-500 rounded-full border border-black animate-pulse"></div>}
                                                      </div>
                                                      <div className="flex-1 min-w-0">
                                                          <div className="flex justify-between items-start">

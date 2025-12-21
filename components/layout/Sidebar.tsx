@@ -98,8 +98,8 @@ export const Sidebar = ({
     const usagePercent = Math.min((dailyImageCount / maxImages) * 100, 100);
     const isNearLimit = usagePercent >= 75;
     
-    // Check if Pro is active (either paid or referral reward)
-    const hasActivePro = userSettings.proExpiresAt && new Date(userSettings.proExpiresAt) > new Date();
+    // Hide referral if user has Plus or Pro plan (paid or reward)
+    const shouldShowReferral = userPlan === 'free';
 
     return (
       <>
@@ -466,9 +466,8 @@ export const Sidebar = ({
                </div>
              )}
 
-             {/* Referral Button - Highly Visible */}
-             {/* Hide if user has active Pro subscription via referral or payment */}
-             {session && !collapsed && !hasActivePro && (
+             {/* Referral Button - Highly Visible - Only show if shouldShowReferral is true */}
+             {session && !collapsed && shouldShowReferral && (
                <button onClick={() => setShowReferralModal(true)} className={`w-full mb-1 group relative overflow-hidden rounded-2xl p-4 text-left shadow-lg transition-all hover:scale-[1.02] active:scale-[0.98] bg-gradient-to-r from-amber-500 to-orange-500 text-white`}>
                   <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20" />
                   <div className="relative z-10 flex items-center justify-between">
@@ -486,7 +485,7 @@ export const Sidebar = ({
              )}
              
              {/* Small Referral Icon - Collapsed */}
-             {session && collapsed && !hasActivePro && (
+             {session && collapsed && shouldShowReferral && (
                  <button onClick={() => setShowReferralModal(true)} className="w-full flex justify-center mb-1 group relative">
                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white shadow-lg">
                          <Gift size={18}/>
