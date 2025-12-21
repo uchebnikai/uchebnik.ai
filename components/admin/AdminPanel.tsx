@@ -123,7 +123,7 @@ export const AdminPanel = ({
 
     // Heatmap State
     const [subjectStats, setSubjectStats] = useState<SubjectStat[]>([]);
-    const [heatmapRange, setHeatmapRange] = useState<7 | 30 | 1>(7);
+    const [heatmapRange, setHeatmapRange] = useState<number>(7);
     const [isHeatmapLoading, setIsHeatmapLoading] = useState(false);
 
     // Broadcast State
@@ -531,8 +531,8 @@ export const AdminPanel = ({
 
     if (showAdminPanel) {
       return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-300">
-           <div className="w-full max-w-7xl h-[90vh] bg-[#09090b]/95 border border-white/10 rounded-[32px] shadow-2xl flex overflow-hidden backdrop-blur-2xl relative">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md p-0 md:p-4 animate-in fade-in duration-300">
+           <div className="w-full max-w-7xl h-full md:h-[90vh] bg-[#09090b] md:bg-[#09090b]/95 border-none md:border border-white/10 rounded-none md:rounded-[32px] shadow-2xl flex flex-col md:flex-row overflow-hidden backdrop-blur-2xl relative">
              
              {/* Raw Data Modal */}
              {showRawData && (
@@ -545,39 +545,44 @@ export const AdminPanel = ({
              )}
 
              {/* Sidebar */}
-             <div className="w-72 bg-black/40 border-r border-white/5 flex flex-col p-6 backdrop-blur-xl">
-                <div className="flex items-center gap-3 px-2 mb-10">
-                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-lg shadow-indigo-500/20">
-                        <Shield size={18} fill="currentColor"/>
+             <div className="w-full md:w-72 bg-black/40 border-b md:border-b-0 md:border-r border-white/5 flex flex-col p-4 md:p-6 backdrop-blur-xl shrink-0">
+                <div className="flex items-center justify-between md:justify-start gap-3 px-2 mb-4 md:mb-10">
+                    <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-lg shadow-indigo-500/20">
+                            <Shield size={18} fill="currentColor"/>
+                        </div>
+                        <div>
+                            <h2 className="font-bold text-white text-sm">Контролен Панел</h2>
+                            <div className="text-[10px] text-zinc-500 font-mono">v3.4 • Live</div>
+                        </div>
                     </div>
-                    <div>
-                        <h2 className="font-bold text-white text-sm">Контролен Панел</h2>
-                        <div className="text-[10px] text-zinc-500 font-mono">v3.4 • Данни на живо</div>
-                    </div>
+                    <button onClick={() => setShowAdminPanel(false)} className="md:hidden p-2 text-zinc-400 hover:text-white transition-colors">
+                        <X size={20}/>
+                    </button>
                 </div>
                 
-                <nav className="space-y-1 flex-1">
-                    <button onClick={() => {setActiveTab('dashboard'); setSelectedUser(null);}} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTab === 'dashboard' ? 'bg-white/10 text-white border border-white/5 shadow-lg shadow-black/20' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}>
-                        <LayoutDashboard size={18}/> Общ преглед
+                <nav className="flex md:flex-col gap-2 overflow-x-auto md:overflow-visible pb-2 md:pb-0 no-scrollbar">
+                    <button onClick={() => {setActiveTab('dashboard'); setSelectedUser(null);}} className={`flex-shrink-0 md:w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTab === 'dashboard' ? 'bg-white/10 text-white border border-white/5 shadow-lg shadow-black/20' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}>
+                        <LayoutDashboard size={18}/> <span className="hidden md:inline">Общ преглед</span><span className="md:hidden">Табло</span>
                     </button>
-                    <button onClick={() => {setActiveTab('status'); setSelectedUser(null);}} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTab === 'status' ? 'bg-white/10 text-white border border-white/5 shadow-lg shadow-black/20' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}>
-                        <Activity size={18}/> Системен статус
+                    <button onClick={() => {setActiveTab('status'); setSelectedUser(null);}} className={`flex-shrink-0 md:w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTab === 'status' ? 'bg-white/10 text-white border border-white/5 shadow-lg shadow-black/20' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}>
+                        <Activity size={18}/> <span className="hidden md:inline">Системен статус</span><span className="md:hidden">Статус</span>
                     </button>
-                    <button onClick={() => {setActiveTab('broadcast'); setSelectedUser(null);}} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTab === 'broadcast' ? 'bg-white/10 text-white border border-white/5 shadow-lg shadow-black/20' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}>
-                        <Radio size={18}/> Съобщение
+                    <button onClick={() => {setActiveTab('broadcast'); setSelectedUser(null);}} className={`flex-shrink-0 md:w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTab === 'broadcast' ? 'bg-white/10 text-white border border-white/5 shadow-lg shadow-black/20' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}>
+                        <Radio size={18}/> <span className="hidden md:inline">Съобщение</span><span className="md:hidden">Инфо</span>
                     </button>
-                    <button onClick={() => {setActiveTab('finance'); setSelectedUser(null);}} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTab === 'finance' ? 'bg-white/10 text-white border border-white/5 shadow-lg shadow-black/20' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}>
-                        <DollarSign size={18}/> Финанси
+                    <button onClick={() => {setActiveTab('finance'); setSelectedUser(null);}} className={`flex-shrink-0 md:w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTab === 'finance' ? 'bg-white/10 text-white border border-white/5 shadow-lg shadow-black/20' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}>
+                        <DollarSign size={18}/> <span className="hidden md:inline">Финанси</span><span className="md:hidden">Пари</span>
                     </button>
-                    <button onClick={() => {setActiveTab('users'); setSelectedUser(null);}} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTab === 'users' ? 'bg-white/10 text-white border border-white/5 shadow-lg shadow-black/20' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}>
-                        <Users size={18}/> Потребители
+                    <button onClick={() => {setActiveTab('users'); setSelectedUser(null);}} className={`flex-shrink-0 md:w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTab === 'users' ? 'bg-white/10 text-white border border-white/5 shadow-lg shadow-black/20' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}>
+                        <Users size={18}/> <span className="hidden md:inline">Потребители</span><span className="md:hidden">Хора</span>
                     </button>
-                    <button onClick={() => {setActiveTab('keys'); setSelectedUser(null);}} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTab === 'keys' ? 'bg-white/10 text-white border border-white/5 shadow-lg shadow-black/20' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}>
-                        <Key size={18}/> Ключове за достъп
+                    <button onClick={() => {setActiveTab('keys'); setSelectedUser(null);}} className={`flex-shrink-0 md:w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTab === 'keys' ? 'bg-white/10 text-white border border-white/5 shadow-lg shadow-black/20' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}>
+                        <Key size={18}/> <span className="hidden md:inline">Ключове за достъп</span><span className="md:hidden">Кодове</span>
                     </button>
                 </nav>
 
-                <div className="mt-auto pt-6 border-t border-white/5">
+                <div className="mt-auto pt-6 border-t border-white/5 hidden md:block">
                     <button onClick={() => setShowAdminPanel(false)} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-red-400 hover:bg-red-500/10 transition-colors">
                         <X size={18}/> Изход
                     </button>
@@ -587,7 +592,7 @@ export const AdminPanel = ({
              {/* Main Content */}
              <div className="flex-1 flex flex-col overflow-hidden bg-gradient-to-br from-zinc-900/50 to-black/80">
                  {/* Header */}
-                 <div className="h-20 border-b border-white/5 flex items-center justify-between px-8 bg-white/5 backdrop-blur-sm">
+                 <div className="h-16 md:h-20 border-b border-white/5 flex items-center justify-between px-4 md:px-8 bg-white/5 backdrop-blur-sm shrink-0">
                      <div className="flex items-center gap-4">
                          {selectedUser && (
                              <button onClick={() => setSelectedUser(null)} className="p-2 hover:bg-white/10 rounded-full text-zinc-400 hover:text-white transition-colors">
@@ -595,9 +600,9 @@ export const AdminPanel = ({
                              </button>
                          )}
                          <div>
-                             <h3 className="text-xl font-bold text-white capitalize flex items-center gap-2">
+                             <h3 className="text-lg md:text-xl font-bold text-white capitalize flex items-center gap-2">
                                  {activeTab === 'status' ? <div className={`w-2 h-2 rounded-full animate-pulse ${systemHealth.some(s => s.status === 'outage') ? 'bg-red-500' : 'bg-green-500'}`}/> : null}
-                                 {selectedUser ? 'Профил на потребител' : 
+                                 {selectedUser ? 'Профил' : 
                                   activeTab === 'dashboard' ? 'Общ преглед' :
                                   activeTab === 'status' ? 'Системен статус' :
                                   activeTab === 'broadcast' ? 'Съобщение' :
@@ -605,7 +610,7 @@ export const AdminPanel = ({
                                   activeTab === 'users' ? 'Потребители' :
                                   'Ключове за достъп'}
                              </h3>
-                             <p className="text-xs text-zinc-500 mt-0.5">{selectedUser ? `Детайли за ${selectedUser.name}` : 'Конзола за управление'}</p>
+                             <p className="text-xs text-zinc-500 mt-0.5 hidden md:block">{selectedUser ? `Детайли за ${selectedUser.name}` : 'Конзола за управление'}</p>
                          </div>
                      </div>
                      <div className="flex items-center gap-3">
@@ -616,17 +621,17 @@ export const AdminPanel = ({
                  </div>
 
                  {/* Content Scroll Area */}
-                 <div className="flex-1 overflow-y-auto custom-scrollbar p-8">
+                 <div className="flex-1 overflow-y-auto custom-scrollbar p-4 md:p-8 pb-20 md:pb-8">
                      
                      {/* USER DETAIL MODAL REPLACEMENT */}
                      {selectedUser && editForm ? (
                          <div className="max-w-5xl mx-auto space-y-6 animate-in slide-in-from-right fade-in duration-300">
                              
                              {/* Profile Header */}
-                             <div className="bg-white/5 border border-white/10 rounded-3xl p-8 relative overflow-hidden group">
+                             <div className="bg-white/5 border border-white/10 rounded-3xl p-6 md:p-8 relative overflow-hidden group">
                                  <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 to-transparent pointer-events-none"/>
-                                 <div className="relative z-10 flex flex-col md:flex-row gap-8 items-start">
-                                     <div className="w-32 h-32 rounded-full border-4 border-white/10 overflow-hidden shadow-2xl relative bg-black/20">
+                                 <div className="relative z-10 flex flex-col md:flex-row gap-6 md:gap-8 items-start">
+                                     <div className="w-24 h-24 md:w-32 md:h-32 rounded-full border-4 border-white/10 overflow-hidden shadow-2xl relative bg-black/20 shrink-0">
                                          {selectedUser.avatar ? (
                                              <img src={selectedUser.avatar} className="w-full h-full object-cover"/>
                                          ) : (
@@ -639,9 +644,9 @@ export const AdminPanel = ({
                                          </div>
                                      </div>
                                      
-                                     <div className="flex-1 space-y-2">
+                                     <div className="flex-1 space-y-2 w-full">
                                          <div className="flex items-center gap-3">
-                                             <h2 className="text-4xl font-black text-white">{selectedUser.name}</h2>
+                                             <h2 className="text-2xl md:text-4xl font-black text-white truncate">{selectedUser.name}</h2>
                                              <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${
                                                  selectedUser.plan === 'pro' ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' : 
                                                  selectedUser.plan === 'plus' ? 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30' : 
@@ -651,20 +656,20 @@ export const AdminPanel = ({
                                              </span>
                                          </div>
                                          <div className="flex flex-col gap-1 text-sm text-zinc-400">
-                                             <div className="flex items-center gap-2"><Mail size={14}/> {selectedUser.email || 'Email not visible'}</div>
-                                             <div className="flex items-center gap-2 font-mono"><Hash size={14}/> {selectedUser.id}</div>
-                                             {selectedUser.stripeId && <div className="flex items-center gap-2 font-mono text-xs text-indigo-400"><CreditCard size={12}/> {selectedUser.stripeId}</div>}
+                                             <div className="flex items-center gap-2 truncate"><Mail size={14}/> {selectedUser.email || 'Email not visible'}</div>
+                                             <div className="flex items-center gap-2 font-mono truncate"><Hash size={14}/> {selectedUser.id}</div>
+                                             {selectedUser.stripeId && <div className="flex items-center gap-2 font-mono text-xs text-indigo-400 truncate"><CreditCard size={12}/> {selectedUser.stripeId}</div>}
                                          </div>
                                      </div>
 
-                                     <div className="flex flex-col gap-3">
-                                         <Button onClick={handleSaveUserChanges} icon={Save} className="bg-white text-black hover:bg-zinc-200 shadow-xl w-full justify-center">Запази промени</Button>
+                                     <div className="flex flex-col gap-3 w-full md:w-auto">
+                                         <Button onClick={handleSaveUserChanges} icon={Save} className="bg-white text-black hover:bg-zinc-200 shadow-xl w-full justify-center">Запази</Button>
                                          <div className="flex gap-2">
-                                             <button onClick={() => setEditForm({...editForm, usage: 0})} className="p-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-zinc-400 hover:text-white transition-colors" title="Нулирай дневното потребление">
-                                                 <RotateCcw size={18}/>
+                                             <button onClick={() => setEditForm({...editForm, usage: 0})} className="flex-1 p-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-zinc-400 hover:text-white transition-colors" title="Нулирай дневното потребление">
+                                                 <RotateCcw size={18} className="mx-auto"/>
                                              </button>
-                                             <button onClick={() => setShowRawData(JSON.stringify(selectedUser.rawSettings, null, 2))} className="p-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-zinc-400 hover:text-white transition-colors" title="View JSON">
-                                                 <Database size={18}/>
+                                             <button onClick={() => setShowRawData(JSON.stringify(selectedUser.rawSettings, null, 2))} className="flex-1 p-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-zinc-400 hover:text-white transition-colors" title="View JSON">
+                                                 <Database size={18} className="mx-auto"/>
                                              </button>
                                          </div>
                                      </div>
@@ -675,7 +680,7 @@ export const AdminPanel = ({
                                  {/* Edit Column */}
                                  <div className="md:col-span-1 space-y-6">
                                      <div className="bg-white/5 border border-white/10 rounded-3xl p-6 space-y-5">
-                                         <h4 className="text-lg font-bold text-white flex items-center gap-2"><Edit2 size={18} className="text-indigo-500"/> Редактирай профил</h4>
+                                         <h4 className="text-lg font-bold text-white flex items-center gap-2"><Edit2 size={18} className="text-indigo-500"/> Редакция</h4>
                                          
                                          <div className="space-y-2">
                                              <label className="text-xs font-bold text-zinc-500 uppercase ml-1">Име</label>
@@ -695,11 +700,11 @@ export const AdminPanel = ({
 
                                          <div className="grid grid-cols-2 gap-4">
                                              <div className="space-y-2">
-                                                 <label className="text-xs font-bold text-zinc-500 uppercase ml-1">Поредни дни</label>
+                                                 <label className="text-xs font-bold text-zinc-500 uppercase ml-1">Streak</label>
                                                  <input type="number" value={editForm.streak} onChange={(e) => setEditForm({...editForm, streak: parseInt(e.target.value) || 0})} className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-orange-500 transition-colors text-center"/>
                                              </div>
                                              <div className="space-y-2">
-                                                 <label className="text-xs font-bold text-zinc-500 uppercase ml-1">Потребление</label>
+                                                 <label className="text-xs font-bold text-zinc-500 uppercase ml-1">Usage</label>
                                                  <input type="number" value={editForm.usage} onChange={(e) => setEditForm({...editForm, usage: parseInt(e.target.value) || 0})} className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-blue-500 transition-colors text-center"/>
                                              </div>
                                          </div>
@@ -710,33 +715,33 @@ export const AdminPanel = ({
                                  <div className="md:col-span-2 space-y-6">
                                      <div className="grid grid-cols-2 gap-4">
                                          <div className="p-5 bg-white/5 border border-white/10 rounded-2xl">
-                                             <div className="flex items-center gap-3 text-zinc-400 mb-2"><Coins size={20}/><span className="text-xs font-bold uppercase">Прогнозна цена</span></div>
-                                             <div className="text-2xl font-mono font-bold text-emerald-400">
+                                             <div className="flex items-center gap-3 text-zinc-400 mb-2"><Coins size={20}/><span className="text-xs font-bold uppercase">Цена (Est)</span></div>
+                                             <div className="text-xl md:text-2xl font-mono font-bold text-emerald-400 truncate">
                                                  ${((selectedUser.totalInput / 1000000 * PRICE_INPUT_1M) + (selectedUser.totalOutput / 1000000 * PRICE_OUTPUT_1M)).toFixed(5)}
                                              </div>
                                          </div>
                                          <div className="p-5 bg-white/5 border border-white/10 rounded-2xl">
-                                             <div className="flex items-center gap-3 text-zinc-400 mb-2"><Brain size={20}/><span className="text-xs font-bold uppercase">Общо токени</span></div>
-                                             <div className="text-2xl font-mono font-bold text-indigo-400">
+                                             <div className="flex items-center gap-3 text-zinc-400 mb-2"><Brain size={20}/><span className="text-xs font-bold uppercase">Токени</span></div>
+                                             <div className="text-xl md:text-2xl font-mono font-bold text-indigo-400 truncate">
                                                  {(selectedUser.totalInput + selectedUser.totalOutput).toLocaleString()}
                                              </div>
                                          </div>
                                          <div className="p-5 bg-white/5 border border-white/10 rounded-2xl">
-                                             <div className="flex items-center gap-3 text-zinc-400 mb-2"><CalendarDays size={20}/><span className="text-xs font-bold uppercase">Регистриран на</span></div>
-                                             <div className="text-lg font-bold text-white">
+                                             <div className="flex items-center gap-3 text-zinc-400 mb-2"><CalendarDays size={20}/><span className="text-xs font-bold uppercase">Регистриран</span></div>
+                                             <div className="text-sm md:text-lg font-bold text-white truncate">
                                                  {new Date(selectedUser.createdAt).toLocaleDateString()}
                                              </div>
                                          </div>
                                          <div className="p-5 bg-white/5 border border-white/10 rounded-2xl">
-                                             <div className="flex items-center gap-3 text-zinc-400 mb-2"><Activity size={20}/><span className="text-xs font-bold uppercase">Последно активен</span></div>
-                                             <div className="text-lg font-bold text-white">
+                                             <div className="flex items-center gap-3 text-zinc-400 mb-2"><Activity size={20}/><span className="text-xs font-bold uppercase">Активен</span></div>
+                                             <div className="text-sm md:text-lg font-bold text-white truncate">
                                                  {selectedUser.lastVisit}
                                              </div>
                                          </div>
                                      </div>
 
                                      <div className="bg-white/5 border border-white/10 rounded-3xl p-6">
-                                         <h4 className="text-lg font-bold text-white mb-4 flex items-center gap-2"><BarChart2 size={18} className="text-zinc-500"/> Разпределение на токени</h4>
+                                         <h4 className="text-lg font-bold text-white mb-4 flex items-center gap-2"><BarChart2 size={18} className="text-zinc-500"/> Разпределение</h4>
                                          <div className="space-y-4">
                                              <div>
                                                  <div className="flex justify-between text-xs mb-1">
@@ -766,31 +771,31 @@ export const AdminPanel = ({
                              {/* DASHBOARD TAB */}
                              {activeTab === 'dashboard' && (
                                  <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
-                                     <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4 md:gap-6">
                                          <div className="p-6 bg-blue-500/10 border border-blue-500/20 rounded-3xl relative overflow-hidden group">
                                              <div className="relative z-10">
-                                                 <div className="flex items-center gap-3 mb-2 text-blue-400"><Users size={24}/><span className="font-bold text-sm uppercase tracking-wider">Общо потребители</span></div>
+                                                 <div className="flex items-center gap-3 mb-2 text-blue-400"><Users size={24}/><span className="font-bold text-sm uppercase tracking-wider">Общо</span></div>
                                                  <div className="text-4xl font-black text-white">{dbUsers.length}</div>
                                              </div>
                                              <Users size={100} className="absolute -bottom-4 -right-4 text-blue-500/10 group-hover:scale-110 transition-transform"/>
                                          </div>
                                          <div className="p-6 bg-emerald-500/10 border border-emerald-500/20 rounded-3xl relative overflow-hidden group">
                                              <div className="relative z-10">
-                                                 <div className="flex items-center gap-3 mb-2 text-emerald-400"><DollarSign size={24}/><span className="font-bold text-sm uppercase tracking-wider">Приходи (MRR)</span></div>
+                                                 <div className="flex items-center gap-3 mb-2 text-emerald-400"><DollarSign size={24}/><span className="font-bold text-sm uppercase tracking-wider">Приходи</span></div>
                                                  <div className="text-4xl font-black text-white">€{revenue.toFixed(2)}</div>
                                              </div>
                                              <DollarSign size={100} className="absolute -bottom-4 -right-4 text-emerald-500/10 group-hover:scale-110 transition-transform"/>
                                          </div>
                                          <div className="p-6 bg-orange-500/10 border border-orange-500/20 rounded-3xl relative overflow-hidden group">
                                              <div className="relative z-10">
-                                                 <div className="flex items-center gap-3 mb-2 text-orange-400"><Activity size={24}/><span className="font-bold text-sm uppercase tracking-wider">Активни днес</span></div>
+                                                 <div className="flex items-center gap-3 mb-2 text-orange-400"><Activity size={24}/><span className="font-bold text-sm uppercase tracking-wider">Активни</span></div>
                                                  <div className="text-4xl font-black text-white">{dbUsers.filter(u => u.lastVisit === new Date().toLocaleDateString()).length}</div>
                                              </div>
                                              <Activity size={100} className="absolute -bottom-4 -right-4 text-orange-500/10 group-hover:scale-110 transition-transform"/>
                                          </div>
                                          <div className="p-6 bg-purple-500/10 border border-purple-500/20 rounded-3xl relative overflow-hidden group">
                                              <div className="relative z-10">
-                                                 <div className="flex items-center gap-3 mb-2 text-purple-400"><Brain size={24}/><span className="font-bold text-sm uppercase tracking-wider">Използвани токени</span></div>
+                                                 <div className="flex items-center gap-3 mb-2 text-purple-400"><Brain size={24}/><span className="font-bold text-sm uppercase tracking-wider">Токени</span></div>
                                                  <div className="text-4xl font-black text-white">{(totalInputTokens + totalOutputTokens).toLocaleString()}</div>
                                              </div>
                                              <Brain size={100} className="absolute -bottom-4 -right-4 text-purple-500/10 group-hover:scale-110 transition-transform"/>
@@ -798,13 +803,13 @@ export const AdminPanel = ({
                                      </div>
 
                                      {/* Subject Popularity Heatmap */}
-                                     <div className="bg-white/5 border border-white/5 rounded-3xl p-8 relative overflow-hidden">
-                                         <div className="flex justify-between items-center mb-6">
+                                     <div className="bg-white/5 border border-white/5 rounded-3xl p-6 md:p-8 relative overflow-hidden">
+                                         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
                                              <h3 className="text-xl font-bold text-white flex items-center gap-2"><PieChartIcon size={20} className="text-indigo-500"/> Популярност на предметите</h3>
-                                             <div className="flex bg-black/30 p-1 rounded-xl border border-white/5">
-                                                 {[1, 7, 30].map(d => (
-                                                     <button key={d} onClick={() => setHeatmapRange(d as any)} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${heatmapRange === d ? 'bg-indigo-600 text-white' : 'text-zinc-500 hover:text-white'}`}>
-                                                         {d === 1 ? 'Днес' : `${d} Дни`}
+                                             <div className="flex bg-black/30 p-1 rounded-xl border border-white/5 overflow-x-auto max-w-full">
+                                                 {[1, 7, 30, 36500].map(d => (
+                                                     <button key={d} onClick={() => setHeatmapRange(d)} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${heatmapRange === d ? 'bg-indigo-600 text-white' : 'text-zinc-500 hover:text-white'}`}>
+                                                         {d === 1 ? 'Днес' : d === 36500 ? 'Общо' : `${d} Дни`}
                                                      </button>
                                                  ))}
                                              </div>
@@ -862,7 +867,7 @@ export const AdminPanel = ({
                              {activeTab === 'broadcast' && (
                                  <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
                                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                         <div className="bg-white/5 border border-white/5 rounded-3xl p-8 shadow-xl">
+                                         <div className="bg-white/5 border border-white/5 rounded-3xl p-6 md:p-8 shadow-xl">
                                              <div className="flex items-center gap-4 mb-6">
                                                  <div className="p-3 bg-red-500/10 rounded-xl text-red-500 border border-red-500/20"><Radio size={24}/></div>
                                                  <div>
@@ -929,8 +934,8 @@ export const AdminPanel = ({
                              {/* SYSTEM STATUS TAB */}
                              {activeTab === 'status' && (
                                  <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
-                                     <div className="bg-white/5 border border-white/5 rounded-3xl p-8 mb-8">
-                                         <div className="flex justify-between items-end mb-6">
+                                     <div className="bg-white/5 border border-white/5 rounded-3xl p-6 md:p-8 mb-8">
+                                         <div className="flex flex-col md:flex-row justify-between md:items-end mb-6 gap-2">
                                              <h2 className="text-3xl font-black text-white">Системен статус</h2>
                                              <div className="flex items-center gap-2 text-sm font-bold text-emerald-400">
                                                  <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"/>
@@ -1015,7 +1020,7 @@ export const AdminPanel = ({
                              {/* USERS TAB */}
                              {activeTab === 'users' && (
                                  <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
-                                     <div className="flex gap-4">
+                                     <div className="flex flex-col md:flex-row gap-4">
                                          <div className="flex-1 relative group"><Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-white transition-colors" size={18}/><input type="text" placeholder="Търсене по име, имейл или ID..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="w-full bg-white/5 border border-white/5 rounded-2xl pl-12 pr-4 py-4 text-white placeholder-zinc-600 outline-none focus:border-indigo-500/50 focus:bg-black/40 transition-all shadow-lg"/></div>
                                          <div className="flex gap-2">
                                              <button onClick={() => setSortUsers(sortUsers === 'recent' ? 'usage' : 'recent')} className="px-4 bg-white/5 hover:bg-white/10 border border-white/5 rounded-2xl text-zinc-400 hover:text-white font-medium text-sm transition-all min-w-[100px]">{sortUsers === 'recent' ? 'Последни' : 'Топ потребление'}</button>
@@ -1060,7 +1065,7 @@ export const AdminPanel = ({
                                          <div className="flex items-center gap-4 bg-black/30 p-2 rounded-2xl border border-white/5 backdrop-blur-md relative z-10"><button onClick={() => setSelectedPlan('plus')} className={`px-6 py-3 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${selectedPlan === 'plus' ? 'bg-indigo-600 text-white shadow-lg' : 'text-zinc-500 hover:text-white'}`}><Zap size={16}/> Plus</button><button onClick={() => setSelectedPlan('pro')} className={`px-6 py-3 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${selectedPlan === 'pro' ? 'bg-amber-600 text-white shadow-lg' : 'text-zinc-500 hover:text-white'}`}><Crown size={16}/> Pro</button></div>
                                          <Button onClick={handleGenerate} icon={Plus} className="px-8 py-4 bg-white text-black hover:bg-zinc-200 shadow-xl rounded-2xl text-base relative z-10">Генерирай</Button>
                                      </div>
-                                     <div className="bg-white/5 border border-white/5 rounded-3xl overflow-hidden shadow-lg"><table className="w-full text-left"><thead><tr className="border-b border-white/5 bg-black/20"><th className="p-5 text-xs font-bold text-zinc-500 uppercase tracking-wider">Код</th><th className="p-5 text-xs font-bold text-zinc-500 uppercase tracking-wider">План</th><th className="p-5 text-xs font-bold text-zinc-500 uppercase tracking-wider">Създаден</th><th className="p-5 text-xs font-bold text-zinc-500 uppercase tracking-wider">Статус</th><th className="p-5 text-right text-xs font-bold text-zinc-500 uppercase tracking-wider">Действие</th></tr></thead><tbody className="divide-y divide-white/5">{dbKeys.map((k, i) => (<tr key={i} className="hover:bg-white/5 transition-colors group"><td className="p-5 font-mono text-sm text-indigo-400 font-medium">{k.code}</td><td className="p-5"><span className={`text-[10px] font-black px-2 py-1 rounded-md uppercase ${k.plan === 'pro' ? 'bg-amber-500/10 text-amber-400' : 'bg-indigo-500/10 text-indigo-400'}`}>{k.plan || 'pro'}</span></td><td className="p-5 text-xs text-zinc-500">{k.createdAt ? new Date(k.createdAt).toLocaleDateString() : '-'}</td><td className="p-5"><div className={`flex items-center gap-2 text-xs font-bold ${k.isUsed ? 'text-red-400' : 'text-emerald-400'}`}><div className={`w-2 h-2 rounded-full ${k.isUsed ? 'bg-red-500' : 'bg-emerald-500'}`}/>{k.isUsed ? 'Използван' : 'Активен'}</div></td><td className="p-5 text-right flex justify-end gap-2"><button onClick={() => {navigator.clipboard.writeText(k.code); addToast('Copied', 'success')}} className="p-2 hover:bg-white/10 rounded-lg text-zinc-500 hover:text-white transition-colors"><Copy size={16}/></button>{k.id && <button onClick={() => handleDeleteKey(k.id!)} className="p-2 hover:bg-red-500/20 rounded-lg text-zinc-500 hover:text-red-400 transition-colors"><Trash2 size={16}/></button>}</td></tr>))}</tbody></table></div>
+                                     <div className="bg-white/5 border border-white/5 rounded-3xl overflow-hidden shadow-lg"><div className="overflow-x-auto"><table className="w-full text-left"><thead><tr className="border-b border-white/5 bg-black/20"><th className="p-5 text-xs font-bold text-zinc-500 uppercase tracking-wider">Код</th><th className="p-5 text-xs font-bold text-zinc-500 uppercase tracking-wider">План</th><th className="p-5 text-xs font-bold text-zinc-500 uppercase tracking-wider">Създаден</th><th className="p-5 text-xs font-bold text-zinc-500 uppercase tracking-wider">Статус</th><th className="p-5 text-right text-xs font-bold text-zinc-500 uppercase tracking-wider">Действие</th></tr></thead><tbody className="divide-y divide-white/5">{dbKeys.map((k, i) => (<tr key={i} className="hover:bg-white/5 transition-colors group"><td className="p-5 font-mono text-sm text-indigo-400 font-medium">{k.code}</td><td className="p-5"><span className={`text-[10px] font-black px-2 py-1 rounded-md uppercase ${k.plan === 'pro' ? 'bg-amber-500/10 text-amber-400' : 'bg-indigo-500/10 text-indigo-400'}`}>{k.plan || 'pro'}</span></td><td className="p-5 text-xs text-zinc-500">{k.createdAt ? new Date(k.createdAt).toLocaleDateString() : '-'}</td><td className="p-5"><div className={`flex items-center gap-2 text-xs font-bold ${k.isUsed ? 'text-red-400' : 'text-emerald-400'}`}><div className={`w-2 h-2 rounded-full ${k.isUsed ? 'bg-red-500' : 'bg-emerald-500'}`}/>{k.isUsed ? 'Използван' : 'Активен'}</div></td><td className="p-5 text-right flex justify-end gap-2"><button onClick={() => {navigator.clipboard.writeText(k.code); addToast('Copied', 'success')}} className="p-2 hover:bg-white/10 rounded-lg text-zinc-500 hover:text-white transition-colors"><Copy size={16}/></button>{k.id && <button onClick={() => handleDeleteKey(k.id!)} className="p-2 hover:bg-red-500/20 rounded-lg text-zinc-500 hover:text-red-400 transition-colors"><Trash2 size={16}/></button>}</td></tr>))}</tbody></table></div></div>
                                  </div>
                              )}
                          </>
