@@ -16,6 +16,7 @@ import { supabase } from '../../supabaseClient';
 import { UserPlan, UserRole } from '../../types';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, LineChart, Line, AreaChart, Area, PieChart, Pie, Legend } from 'recharts';
 import { SUBJECTS } from '../../constants';
+import { t } from '../../utils/translations';
 
 // Pricing Constants (Gemini 2.5 Flash)
 const PRICE_INPUT_1M = 0.075;
@@ -164,7 +165,7 @@ export const AdminPanel = ({
             
             if (error) {
                 console.warn("RPC get_subject_usage failed (missing function?):", error);
-                // Fallback: Show empty state or simulated if requested (but prompt said NO simulated data)
+                // Fallback: Show empty state
                 setSubjectStats([]);
             } else if (data) {
                 const total = data.reduce((acc: number, curr: any) => acc + curr.count, 0);
@@ -174,8 +175,8 @@ export const AdminPanel = ({
                         subject_id: item.subject_id,
                         count: item.count,
                         percentage: total > 0 ? (item.count / total) * 100 : 0,
-                        name: subjectConfig?.name || item.subject_id,
-                        color: subjectConfig?.color.replace('bg-', '') || 'gray-500' // Simple color extraction
+                        name: subjectConfig ? t(`subject_${subjectConfig.id}`, 'bg') : item.subject_id,
+                        color: subjectConfig?.color || 'bg-gray-500' // Use full class
                     };
                 });
                 setSubjectStats(stats);
@@ -451,20 +452,56 @@ export const AdminPanel = ({
         </div>
     );
 
-    // Color map for charts
-    const COLOR_MAP: any = {
+    // Comprehensive Color Map for all Subjects
+    const COLOR_MAP: Record<string, string> = {
         'indigo-500': '#6366f1',
+        'indigo-400': '#818cf8',
         'blue-500': '#3b82f6',
+        'blue-400': '#60a5fa',
+        'blue-600': '#2563eb',
+        'blue-700': '#1d4ed8',
+        'blue-800': '#1e40af',
         'red-500': '#ef4444',
+        'red-400': '#f87171',
+        'red-600': '#dc2626',
         'emerald-500': '#10b981',
+        'emerald-600': '#059669',
+        'emerald-700': '#047857',
         'amber-500': '#f59e0b',
-        'gray-500': '#6b7280',
+        'amber-600': '#d97706',
+        'amber-700': '#b45309',
+        'amber-800': '#92400e',
+        'yellow-500': '#eab308',
+        'orange-500': '#f97316',
+        'orange-400': '#fb923c',
+        'orange-600': '#ea580c',
+        'orange-700': '#c2410c',
+        'violet-500': '#8b5cf6',
+        'purple-400': '#c084fc',
+        'purple-500': '#a855f7',
+        'purple-600': '#9333ea',
+        'purple-700': '#7e22ce',
+        'green-500': '#22c55e',
+        'green-600': '#16a34a',
+        'green-700': '#15803d',
+        'cyan-500': '#06b6d4',
+        'cyan-700': '#0e7490',
+        'pink-400': '#f472b6',
         'pink-500': '#ec4899',
-        'purple-500': '#8b5cf6',
+        'pink-600': '#db2777',
+        'rose-400': '#fb7185',
+        'slate-500': '#64748b',
+        'slate-600': '#475569',
+        'slate-800': '#1e293b',
+        'zinc-600': '#52525b',
+        'stone-500': '#78716c',
+        'sky-600': '#0284c7',
+        'lime-600': '#65a30d',
+        'gray-500': '#6b7280',
     };
 
-    const getHexColor = (tailwindClass: string) => {
-        const key = tailwindClass.split('-')[1] ? `${tailwindClass.split('-')[1]}-500` : 'gray-500';
+    const getHexColor = (colorClass: string) => {
+        const key = colorClass.replace('bg-', '');
         return COLOR_MAP[key] || '#6b7280';
     };
 
@@ -479,7 +516,7 @@ export const AdminPanel = ({
                     <Shield size={32}/>
                 </div>
                 <div className="text-center">
-                    <h2 className="text-xl font-bold text-white mb-1">Admin Access</h2>
+                    <h2 className="text-xl font-bold text-white mb-1">Администраторски достъп</h2>
                     <p className="text-zinc-500 text-sm">Въведете парола за достъп</p>
                 </div>
                 <div className="w-full space-y-3">
@@ -514,35 +551,35 @@ export const AdminPanel = ({
                         <Shield size={18} fill="currentColor"/>
                     </div>
                     <div>
-                        <h2 className="font-bold text-white text-sm">Control Center</h2>
-                        <div className="text-[10px] text-zinc-500 font-mono">v3.4 • Live Data</div>
+                        <h2 className="font-bold text-white text-sm">Контролен Панел</h2>
+                        <div className="text-[10px] text-zinc-500 font-mono">v3.4 • Данни на живо</div>
                     </div>
                 </div>
                 
                 <nav className="space-y-1 flex-1">
                     <button onClick={() => {setActiveTab('dashboard'); setSelectedUser(null);}} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTab === 'dashboard' ? 'bg-white/10 text-white border border-white/5 shadow-lg shadow-black/20' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}>
-                        <LayoutDashboard size={18}/> Overview
+                        <LayoutDashboard size={18}/> Общ преглед
                     </button>
                     <button onClick={() => {setActiveTab('status'); setSelectedUser(null);}} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTab === 'status' ? 'bg-white/10 text-white border border-white/5 shadow-lg shadow-black/20' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}>
-                        <Activity size={18}/> System Status
+                        <Activity size={18}/> Системен статус
                     </button>
                     <button onClick={() => {setActiveTab('broadcast'); setSelectedUser(null);}} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTab === 'broadcast' ? 'bg-white/10 text-white border border-white/5 shadow-lg shadow-black/20' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}>
-                        <Radio size={18}/> Broadcast
+                        <Radio size={18}/> Съобщение
                     </button>
                     <button onClick={() => {setActiveTab('finance'); setSelectedUser(null);}} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTab === 'finance' ? 'bg-white/10 text-white border border-white/5 shadow-lg shadow-black/20' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}>
-                        <DollarSign size={18}/> Finance & P&L
+                        <DollarSign size={18}/> Финанси
                     </button>
                     <button onClick={() => {setActiveTab('users'); setSelectedUser(null);}} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTab === 'users' ? 'bg-white/10 text-white border border-white/5 shadow-lg shadow-black/20' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}>
-                        <Users size={18}/> User Base
+                        <Users size={18}/> Потребители
                     </button>
                     <button onClick={() => {setActiveTab('keys'); setSelectedUser(null);}} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTab === 'keys' ? 'bg-white/10 text-white border border-white/5 shadow-lg shadow-black/20' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}>
-                        <Key size={18}/> Access Keys
+                        <Key size={18}/> Ключове за достъп
                     </button>
                 </nav>
 
                 <div className="mt-auto pt-6 border-t border-white/5">
                     <button onClick={() => setShowAdminPanel(false)} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-red-400 hover:bg-red-500/10 transition-colors">
-                        <X size={18}/> Logout
+                        <X size={18}/> Изход
                     </button>
                 </div>
              </div>
@@ -560,13 +597,19 @@ export const AdminPanel = ({
                          <div>
                              <h3 className="text-xl font-bold text-white capitalize flex items-center gap-2">
                                  {activeTab === 'status' ? <div className={`w-2 h-2 rounded-full animate-pulse ${systemHealth.some(s => s.status === 'outage') ? 'bg-red-500' : 'bg-green-500'}`}/> : null}
-                                 {selectedUser ? 'User Profile' : (activeTab === 'status' ? 'System Status' : activeTab.charAt(0).toUpperCase() + activeTab.slice(1))}
+                                 {selectedUser ? 'Профил на потребител' : 
+                                  activeTab === 'dashboard' ? 'Общ преглед' :
+                                  activeTab === 'status' ? 'Системен статус' :
+                                  activeTab === 'broadcast' ? 'Съобщение' :
+                                  activeTab === 'finance' ? 'Финанси' :
+                                  activeTab === 'users' ? 'Потребители' :
+                                  'Ключове за достъп'}
                              </h3>
-                             <p className="text-xs text-zinc-500 mt-0.5">{selectedUser ? `Viewing details for ${selectedUser.name}` : 'System Administration Console'}</p>
+                             <p className="text-xs text-zinc-500 mt-0.5">{selectedUser ? `Детайли за ${selectedUser.name}` : 'Конзола за управление'}</p>
                          </div>
                      </div>
                      <div className="flex items-center gap-3">
-                         <button onClick={() => {fetchData(); if(activeTab==='dashboard') fetchSubjectStats();}} className="p-2 hover:bg-white/10 rounded-lg text-zinc-400 hover:text-white transition-colors" title="Refresh Data">
+                         <button onClick={() => {fetchData(); if(activeTab==='dashboard') fetchSubjectStats();}} className="p-2 hover:bg-white/10 rounded-lg text-zinc-400 hover:text-white transition-colors" title="Обнови данни">
                              <RefreshCw size={18} className={loadingData ? 'animate-spin' : ''}/>
                          </button>
                      </div>
@@ -615,9 +658,9 @@ export const AdminPanel = ({
                                      </div>
 
                                      <div className="flex flex-col gap-3">
-                                         <Button onClick={handleSaveUserChanges} icon={Save} className="bg-white text-black hover:bg-zinc-200 shadow-xl w-full justify-center">Save Changes</Button>
+                                         <Button onClick={handleSaveUserChanges} icon={Save} className="bg-white text-black hover:bg-zinc-200 shadow-xl w-full justify-center">Запази промени</Button>
                                          <div className="flex gap-2">
-                                             <button onClick={() => setEditForm({...editForm, usage: 0})} className="p-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-zinc-400 hover:text-white transition-colors" title="Reset Daily Usage">
+                                             <button onClick={() => setEditForm({...editForm, usage: 0})} className="p-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-zinc-400 hover:text-white transition-colors" title="Нулирай дневното потребление">
                                                  <RotateCcw size={18}/>
                                              </button>
                                              <button onClick={() => setShowRawData(JSON.stringify(selectedUser.rawSettings, null, 2))} className="p-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-zinc-400 hover:text-white transition-colors" title="View JSON">
@@ -632,15 +675,15 @@ export const AdminPanel = ({
                                  {/* Edit Column */}
                                  <div className="md:col-span-1 space-y-6">
                                      <div className="bg-white/5 border border-white/10 rounded-3xl p-6 space-y-5">
-                                         <h4 className="text-lg font-bold text-white flex items-center gap-2"><Edit2 size={18} className="text-indigo-500"/> Edit Profile</h4>
+                                         <h4 className="text-lg font-bold text-white flex items-center gap-2"><Edit2 size={18} className="text-indigo-500"/> Редактирай профил</h4>
                                          
                                          <div className="space-y-2">
-                                             <label className="text-xs font-bold text-zinc-500 uppercase ml-1">Full Name</label>
+                                             <label className="text-xs font-bold text-zinc-500 uppercase ml-1">Име</label>
                                              <input value={editForm.name} onChange={(e) => setEditForm({...editForm, name: e.target.value})} className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-indigo-500 transition-colors"/>
                                          </div>
 
                                          <div className="space-y-2">
-                                             <label className="text-xs font-bold text-zinc-500 uppercase ml-1">Plan</label>
+                                             <label className="text-xs font-bold text-zinc-500 uppercase ml-1">План</label>
                                              <div className="grid grid-cols-3 gap-2 p-1 bg-black/30 rounded-xl border border-white/10">
                                                  {(['free', 'plus', 'pro'] as const).map(plan => (
                                                      <button key={plan} onClick={() => setEditForm({...editForm, plan})} className={`py-2 rounded-lg text-xs font-bold uppercase transition-all ${editForm.plan === plan ? 'bg-indigo-600 text-white' : 'text-zinc-500 hover:text-white'}`}>
@@ -652,11 +695,11 @@ export const AdminPanel = ({
 
                                          <div className="grid grid-cols-2 gap-4">
                                              <div className="space-y-2">
-                                                 <label className="text-xs font-bold text-zinc-500 uppercase ml-1">Streak</label>
+                                                 <label className="text-xs font-bold text-zinc-500 uppercase ml-1">Поредни дни</label>
                                                  <input type="number" value={editForm.streak} onChange={(e) => setEditForm({...editForm, streak: parseInt(e.target.value) || 0})} className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-orange-500 transition-colors text-center"/>
                                              </div>
                                              <div className="space-y-2">
-                                                 <label className="text-xs font-bold text-zinc-500 uppercase ml-1">Usage</label>
+                                                 <label className="text-xs font-bold text-zinc-500 uppercase ml-1">Потребление</label>
                                                  <input type="number" value={editForm.usage} onChange={(e) => setEditForm({...editForm, usage: parseInt(e.target.value) || 0})} className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-blue-500 transition-colors text-center"/>
                                              </div>
                                          </div>
@@ -667,25 +710,25 @@ export const AdminPanel = ({
                                  <div className="md:col-span-2 space-y-6">
                                      <div className="grid grid-cols-2 gap-4">
                                          <div className="p-5 bg-white/5 border border-white/10 rounded-2xl">
-                                             <div className="flex items-center gap-3 text-zinc-400 mb-2"><Coins size={20}/><span className="text-xs font-bold uppercase">Estimated Cost</span></div>
+                                             <div className="flex items-center gap-3 text-zinc-400 mb-2"><Coins size={20}/><span className="text-xs font-bold uppercase">Прогнозна цена</span></div>
                                              <div className="text-2xl font-mono font-bold text-emerald-400">
                                                  ${((selectedUser.totalInput / 1000000 * PRICE_INPUT_1M) + (selectedUser.totalOutput / 1000000 * PRICE_OUTPUT_1M)).toFixed(5)}
                                              </div>
                                          </div>
                                          <div className="p-5 bg-white/5 border border-white/10 rounded-2xl">
-                                             <div className="flex items-center gap-3 text-zinc-400 mb-2"><Brain size={20}/><span className="text-xs font-bold uppercase">Total Tokens</span></div>
+                                             <div className="flex items-center gap-3 text-zinc-400 mb-2"><Brain size={20}/><span className="text-xs font-bold uppercase">Общо токени</span></div>
                                              <div className="text-2xl font-mono font-bold text-indigo-400">
                                                  {(selectedUser.totalInput + selectedUser.totalOutput).toLocaleString()}
                                              </div>
                                          </div>
                                          <div className="p-5 bg-white/5 border border-white/10 rounded-2xl">
-                                             <div className="flex items-center gap-3 text-zinc-400 mb-2"><CalendarDays size={20}/><span className="text-xs font-bold uppercase">Member Since</span></div>
+                                             <div className="flex items-center gap-3 text-zinc-400 mb-2"><CalendarDays size={20}/><span className="text-xs font-bold uppercase">Регистриран на</span></div>
                                              <div className="text-lg font-bold text-white">
                                                  {new Date(selectedUser.createdAt).toLocaleDateString()}
                                              </div>
                                          </div>
                                          <div className="p-5 bg-white/5 border border-white/10 rounded-2xl">
-                                             <div className="flex items-center gap-3 text-zinc-400 mb-2"><Activity size={20}/><span className="text-xs font-bold uppercase">Last Active</span></div>
+                                             <div className="flex items-center gap-3 text-zinc-400 mb-2"><Activity size={20}/><span className="text-xs font-bold uppercase">Последно активен</span></div>
                                              <div className="text-lg font-bold text-white">
                                                  {selectedUser.lastVisit}
                                              </div>
@@ -693,11 +736,11 @@ export const AdminPanel = ({
                                      </div>
 
                                      <div className="bg-white/5 border border-white/10 rounded-3xl p-6">
-                                         <h4 className="text-lg font-bold text-white mb-4 flex items-center gap-2"><BarChart2 size={18} className="text-zinc-500"/> Token Breakdown</h4>
+                                         <h4 className="text-lg font-bold text-white mb-4 flex items-center gap-2"><BarChart2 size={18} className="text-zinc-500"/> Разпределение на токени</h4>
                                          <div className="space-y-4">
                                              <div>
                                                  <div className="flex justify-between text-xs mb-1">
-                                                     <span className="text-zinc-400">Input Tokens</span>
+                                                     <span className="text-zinc-400">Входящи</span>
                                                      <span className="text-white font-mono">{selectedUser.totalInput.toLocaleString()}</span>
                                                  </div>
                                                  <div className="h-2 bg-black/40 rounded-full overflow-hidden">
@@ -706,7 +749,7 @@ export const AdminPanel = ({
                                              </div>
                                              <div>
                                                  <div className="flex justify-between text-xs mb-1">
-                                                     <span className="text-zinc-400">Output Tokens</span>
+                                                     <span className="text-zinc-400">Изходящи</span>
                                                      <span className="text-white font-mono">{selectedUser.totalOutput.toLocaleString()}</span>
                                                  </div>
                                                  <div className="h-2 bg-black/40 rounded-full overflow-hidden">
@@ -726,28 +769,28 @@ export const AdminPanel = ({
                                      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                                          <div className="p-6 bg-blue-500/10 border border-blue-500/20 rounded-3xl relative overflow-hidden group">
                                              <div className="relative z-10">
-                                                 <div className="flex items-center gap-3 mb-2 text-blue-400"><Users size={24}/><span className="font-bold text-sm uppercase tracking-wider">Total Users</span></div>
+                                                 <div className="flex items-center gap-3 mb-2 text-blue-400"><Users size={24}/><span className="font-bold text-sm uppercase tracking-wider">Общо потребители</span></div>
                                                  <div className="text-4xl font-black text-white">{dbUsers.length}</div>
                                              </div>
                                              <Users size={100} className="absolute -bottom-4 -right-4 text-blue-500/10 group-hover:scale-110 transition-transform"/>
                                          </div>
                                          <div className="p-6 bg-emerald-500/10 border border-emerald-500/20 rounded-3xl relative overflow-hidden group">
                                              <div className="relative z-10">
-                                                 <div className="flex items-center gap-3 mb-2 text-emerald-400"><DollarSign size={24}/><span className="font-bold text-sm uppercase tracking-wider">Revenue (MRR)</span></div>
+                                                 <div className="flex items-center gap-3 mb-2 text-emerald-400"><DollarSign size={24}/><span className="font-bold text-sm uppercase tracking-wider">Приходи (MRR)</span></div>
                                                  <div className="text-4xl font-black text-white">€{revenue.toFixed(2)}</div>
                                              </div>
                                              <DollarSign size={100} className="absolute -bottom-4 -right-4 text-emerald-500/10 group-hover:scale-110 transition-transform"/>
                                          </div>
                                          <div className="p-6 bg-orange-500/10 border border-orange-500/20 rounded-3xl relative overflow-hidden group">
                                              <div className="relative z-10">
-                                                 <div className="flex items-center gap-3 mb-2 text-orange-400"><Activity size={24}/><span className="font-bold text-sm uppercase tracking-wider">Active Today</span></div>
+                                                 <div className="flex items-center gap-3 mb-2 text-orange-400"><Activity size={24}/><span className="font-bold text-sm uppercase tracking-wider">Активни днес</span></div>
                                                  <div className="text-4xl font-black text-white">{dbUsers.filter(u => u.lastVisit === new Date().toLocaleDateString()).length}</div>
                                              </div>
                                              <Activity size={100} className="absolute -bottom-4 -right-4 text-orange-500/10 group-hover:scale-110 transition-transform"/>
                                          </div>
                                          <div className="p-6 bg-purple-500/10 border border-purple-500/20 rounded-3xl relative overflow-hidden group">
                                              <div className="relative z-10">
-                                                 <div className="flex items-center gap-3 mb-2 text-purple-400"><Brain size={24}/><span className="font-bold text-sm uppercase tracking-wider">Tokens Used</span></div>
+                                                 <div className="flex items-center gap-3 mb-2 text-purple-400"><Brain size={24}/><span className="font-bold text-sm uppercase tracking-wider">Използвани токени</span></div>
                                                  <div className="text-4xl font-black text-white">{(totalInputTokens + totalOutputTokens).toLocaleString()}</div>
                                              </div>
                                              <Brain size={100} className="absolute -bottom-4 -right-4 text-purple-500/10 group-hover:scale-110 transition-transform"/>
@@ -757,11 +800,11 @@ export const AdminPanel = ({
                                      {/* Subject Popularity Heatmap */}
                                      <div className="bg-white/5 border border-white/5 rounded-3xl p-8 relative overflow-hidden">
                                          <div className="flex justify-between items-center mb-6">
-                                             <h3 className="text-xl font-bold text-white flex items-center gap-2"><PieChartIcon size={20} className="text-indigo-500"/> Subject Popularity Heatmap</h3>
+                                             <h3 className="text-xl font-bold text-white flex items-center gap-2"><PieChartIcon size={20} className="text-indigo-500"/> Популярност на предметите</h3>
                                              <div className="flex bg-black/30 p-1 rounded-xl border border-white/5">
                                                  {[1, 7, 30].map(d => (
                                                      <button key={d} onClick={() => setHeatmapRange(d as any)} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${heatmapRange === d ? 'bg-indigo-600 text-white' : 'text-zinc-500 hover:text-white'}`}>
-                                                         {d === 1 ? 'Today' : `${d} Days`}
+                                                         {d === 1 ? 'Днес' : `${d} Дни`}
                                                      </button>
                                                  ))}
                                              </div>
@@ -770,8 +813,7 @@ export const AdminPanel = ({
                                          {subjectStats.length === 0 ? (
                                              <div className="flex flex-col items-center justify-center py-12 text-zinc-500">
                                                  {isHeatmapLoading ? <RefreshCw className="animate-spin mb-2"/> : <PieChartIcon size={32} className="mb-2 opacity-50"/>}
-                                                 <p>{isHeatmapLoading ? "Calculating real usage data..." : "No data found for this period."}</p>
-                                                 {!isHeatmapLoading && <p className="text-xs text-zinc-600 mt-2 max-w-md text-center">Ensure the `get_subject_usage` RPC function is enabled in Supabase to see real aggregated user analytics.</p>}
+                                                 <p>{isHeatmapLoading ? "Зареждане на данни..." : "Няма данни за този период."}</p>
                                              </div>
                                          ) : (
                                              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
@@ -792,7 +834,7 @@ export const AdminPanel = ({
                                                                      <Cell key={`cell-${index}`} fill={getHexColor(entry.color)} />
                                                                  ))}
                                                              </Pie>
-                                                             <Tooltip contentStyle={{backgroundColor: '#111', borderColor: '#333', borderRadius: '8px'}} itemStyle={{color: '#fff'}} formatter={(val: number) => [`${val} sessions`, 'Usage']}/>
+                                                             <Tooltip contentStyle={{backgroundColor: '#111', borderColor: '#333', borderRadius: '8px'}} itemStyle={{color: '#fff'}} formatter={(val: number) => [`${val} сесии`, 'Използване']}/>
                                                          </PieChart>
                                                      </ResponsiveContainer>
                                                  </div>
@@ -800,12 +842,12 @@ export const AdminPanel = ({
                                                      {subjectStats.map((stat, i) => (
                                                          <div key={i} className="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/5 hover:bg-white/10 transition-colors">
                                                              <div className="flex items-center gap-3">
-                                                                 <div className={`w-3 h-3 rounded-full bg-${stat.color.replace('bg-', '')}`} style={{backgroundColor: getHexColor(stat.color)}}></div>
+                                                                 <div className="w-3 h-3 rounded-full" style={{backgroundColor: getHexColor(stat.color)}}></div>
                                                                  <span className="text-sm font-bold text-zinc-200">{stat.name}</span>
                                                              </div>
                                                              <div className="text-right">
                                                                  <div className="text-sm font-mono font-bold text-white">{stat.percentage.toFixed(1)}%</div>
-                                                                 <div className="text-xs text-zinc-500">{stat.count} sessions</div>
+                                                                 <div className="text-xs text-zinc-500">{stat.count} сесии</div>
                                                              </div>
                                                          </div>
                                                      ))}
@@ -824,38 +866,38 @@ export const AdminPanel = ({
                                              <div className="flex items-center gap-4 mb-6">
                                                  <div className="p-3 bg-red-500/10 rounded-xl text-red-500 border border-red-500/20"><Radio size={24}/></div>
                                                  <div>
-                                                     <h3 className="text-2xl font-bold text-white">Global Broadcast</h3>
-                                                     <p className="text-zinc-500 text-sm">Send real-time messages to all online users.</p>
+                                                     <h3 className="text-2xl font-bold text-white">Глобално съобщение</h3>
+                                                     <p className="text-zinc-500 text-sm">Изпращане на съобщения в реално време до всички.</p>
                                                  </div>
                                              </div>
 
                                              <div className="space-y-6">
                                                  <div className="space-y-2">
-                                                     <label className="text-xs font-bold text-zinc-500 uppercase ml-1">Message</label>
+                                                     <label className="text-xs font-bold text-zinc-500 uppercase ml-1">Съобщение</label>
                                                      <textarea 
                                                          value={broadcastMsg}
                                                          onChange={(e) => setBroadcastMsg(e.target.value)}
-                                                         placeholder="Attention all users: Maintenance scheduled for..."
+                                                         placeholder="Внимание: Планирана поддръжка..."
                                                          className="w-full bg-black/30 border border-white/10 rounded-2xl p-4 text-white outline-none focus:border-indigo-500 transition-all min-h-[120px] resize-none"
                                                      />
                                                  </div>
 
                                                  <div className="space-y-2">
-                                                     <label className="text-xs font-bold text-zinc-500 uppercase ml-1">Type</label>
+                                                     <label className="text-xs font-bold text-zinc-500 uppercase ml-1">Тип</label>
                                                      <div className="grid grid-cols-2 gap-3">
                                                          <button 
                                                              onClick={() => setBroadcastType('toast')}
                                                              className={`p-4 rounded-xl border flex flex-col items-center gap-2 transition-all ${broadcastType === 'toast' ? 'bg-indigo-500/10 border-indigo-500 text-indigo-400' : 'bg-black/20 border-white/5 text-zinc-500 hover:bg-white/5'}`}
                                                          >
                                                              <AlertCircle size={24}/>
-                                                             <span className="font-bold text-sm">Toast Notification</span>
+                                                             <span className="font-bold text-sm">Известие (Toast)</span>
                                                          </button>
                                                          <button 
                                                              onClick={() => setBroadcastType('modal')}
                                                              className={`p-4 rounded-xl border flex flex-col items-center gap-2 transition-all ${broadcastType === 'modal' ? 'bg-red-500/10 border-red-500 text-red-400' : 'bg-black/20 border-white/5 text-zinc-500 hover:bg-white/5'}`}
                                                          >
                                                              <Radio size={24}/>
-                                                             <span className="font-bold text-sm">Fullscreen Modal</span>
+                                                             <span className="font-bold text-sm">Екранен прозорец</span>
                                                          </button>
                                                      </div>
                                                  </div>
@@ -866,7 +908,7 @@ export const AdminPanel = ({
                                                      className={`w-full py-4 text-base shadow-xl ${broadcastType === 'modal' ? 'bg-red-600 hover:bg-red-500 shadow-red-500/20' : 'bg-indigo-600 hover:bg-indigo-500 shadow-indigo-500/20'}`}
                                                      icon={Send}
                                                  >
-                                                     {isBroadcasting ? 'Sending...' : 'Send Broadcast'}
+                                                     {isBroadcasting ? 'Изпращане...' : 'Изпрати'}
                                                  </Button>
                                              </div>
                                          </div>
@@ -879,34 +921,20 @@ export const AdminPanel = ({
                                                      Messages are delivered instantly to all active WebSocket connections. No polling is used.
                                                  </p>
                                              </div>
-
-                                             <div className="bg-white/5 border border-white/5 rounded-3xl p-6">
-                                                 <h4 className="text-white font-bold mb-4">Required Backend Setup</h4>
-                                                 <div className="text-xs font-mono text-zinc-400 bg-black/50 p-4 rounded-xl border border-white/5 overflow-x-auto">
-                                                     <p className="mb-2 text-zinc-500">// Run this in Supabase SQL Editor</p>
-                                                     <p>CREATE TABLE broadcasts (</p>
-                                                     <p className="pl-4">id uuid DEFAULT gen_random_uuid() PRIMARY KEY,</p>
-                                                     <p className="pl-4">message text NOT NULL,</p>
-                                                     <p className="pl-4">type text DEFAULT 'toast',</p>
-                                                     <p className="pl-4">created_at timestamptz DEFAULT now()</p>
-                                                     <p>);</p>
-                                                     <p className="mt-2 text-indigo-400">alter publication supabase_realtime add table broadcasts;</p>
-                                                 </div>
-                                             </div>
                                          </div>
                                      </div>
                                  </div>
                              )}
 
-                             {/* SYSTEM STATUS TAB (Refactored to be real but passive) */}
+                             {/* SYSTEM STATUS TAB */}
                              {activeTab === 'status' && (
                                  <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
                                      <div className="bg-white/5 border border-white/5 rounded-3xl p-8 mb-8">
                                          <div className="flex justify-between items-end mb-6">
-                                             <h2 className="text-3xl font-black text-white">System Status</h2>
+                                             <h2 className="text-3xl font-black text-white">Системен статус</h2>
                                              <div className="flex items-center gap-2 text-sm font-bold text-emerald-400">
                                                  <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"/>
-                                                 Live Monitoring
+                                                 Мониторинг на живо
                                              </div>
                                          </div>
                                          
@@ -921,14 +949,14 @@ export const AdminPanel = ({
                                                              <h4 className="font-bold text-white text-lg">{service.name}</h4>
                                                              <div className="flex items-center gap-3 text-xs font-mono text-zinc-500 mt-1">
                                                                  <span className={service.status === 'operational' ? 'text-emerald-400' : service.status === 'unknown' ? 'text-zinc-500' : 'text-red-400'}>
-                                                                     {service.status === 'operational' ? 'Operational' : service.status === 'unknown' ? 'No recent activity' : 'Outage Reported'}
+                                                                     {service.status === 'operational' ? 'Работи' : service.status === 'unknown' ? 'Няма активност' : 'Проблем'}
                                                                  </span>
                                                                  <span>•</span>
                                                                  <span>{service.status === 'unknown' ? 'N/A' : `${service.latency}ms`}</span>
                                                                  {service.lastCheck > 0 && (
                                                                      <>
                                                                          <span>•</span>
-                                                                         <span>Checked: {new Date(service.lastCheck).toLocaleTimeString()}</span>
+                                                                         <span>{new Date(service.lastCheck).toLocaleTimeString()}</span>
                                                                      </>
                                                                  )}
                                                              </div>
@@ -943,12 +971,12 @@ export const AdminPanel = ({
                                      </div>
 
                                      <div className="bg-white/5 border border-white/5 rounded-3xl p-8">
-                                         <h3 className="text-xl font-bold text-white mb-6">Status Log</h3>
+                                         <h3 className="text-xl font-bold text-white mb-6">Дневник на статуса</h3>
                                          <div className="space-y-6">
                                              <div className="border-l-2 border-emerald-500 pl-4 py-1">
                                                  <div className="text-sm text-zinc-500 font-mono mb-1">{new Date().toLocaleDateString()}</div>
-                                                 <h4 className="font-bold text-white">Monitoring Active</h4>
-                                                 <p className="text-sm text-zinc-500">Real-time status is based on actual application usage telemetry.</p>
+                                                 <h4 className="font-bold text-white">Мониторингът е активен</h4>
+                                                 <p className="text-sm text-zinc-500">Статусът се базира на реална телеметрия от приложението.</p>
                                              </div>
                                          </div>
                                      </div>
@@ -961,7 +989,7 @@ export const AdminPanel = ({
                                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                          <div className="p-8 bg-emerald-500/5 border border-emerald-500/20 rounded-[32px] relative overflow-hidden">
                                              <div className="flex justify-between items-start mb-6">
-                                                 <div className="flex items-center gap-3 text-emerald-400"><div className="p-2 bg-emerald-500/20 rounded-xl"><DollarSign size={24}/></div><span className="font-bold uppercase tracking-wider text-xs">Monthly Revenue</span></div>
+                                                 <div className="flex items-center gap-3 text-emerald-400"><div className="p-2 bg-emerald-500/20 rounded-xl"><DollarSign size={24}/></div><span className="font-bold uppercase tracking-wider text-xs">Месечен приход</span></div>
                                                  <div className="px-3 py-1 bg-emerald-500/10 rounded-full text-emerald-300 text-xs font-bold">MRR</div>
                                              </div>
                                              <div className="text-5xl font-black text-white tracking-tight mb-2">€{revenue.toFixed(2)}</div>
@@ -969,17 +997,17 @@ export const AdminPanel = ({
                                          </div>
                                          <div className="p-8 bg-red-500/5 border border-red-500/20 rounded-[32px] relative overflow-hidden">
                                              <div className="flex justify-between items-start mb-6">
-                                                 <div className="flex items-center gap-3 text-red-400"><div className="p-2 bg-red-500/20 rounded-xl"><Cloud size={24}/></div><span className="font-bold uppercase tracking-wider text-xs">Est. AI Cost</span></div>
-                                                 <div className="flex items-center gap-2">{showEstimate && (<button onClick={() => { setCalibrationValue(costCorrection.toString()); setIsCalibrating(true); }} className="text-[10px] text-red-300 hover:text-white underline decoration-dotted font-bold">Mismatch?</button>)}</div>
+                                                 <div className="flex items-center gap-3 text-red-400"><div className="p-2 bg-red-500/20 rounded-xl"><Cloud size={24}/></div><span className="font-bold uppercase tracking-wider text-xs">Разход за AI</span></div>
+                                                 <div className="flex items-center gap-2">{showEstimate && (<button onClick={() => { setCalibrationValue(costCorrection.toString()); setIsCalibrating(true); }} className="text-[10px] text-red-300 hover:text-white underline decoration-dotted font-bold">Корекция?</button>)}</div>
                                              </div>
                                              <div className="text-5xl font-black text-white tracking-tight mb-2">${displayCost.toFixed(4)}</div>
-                                             <p className="text-sm text-zinc-500 flex items-center gap-2">{showEstimate ? 'Calculated from token usage + baseline.' : 'Directly billed from Google Cloud.'}</p>
+                                             <p className="text-sm text-zinc-500 flex items-center gap-2">{showEstimate ? 'Калкулирано от токени + корекция.' : 'Директно от Google Cloud Billing.'}</p>
                                              {isCalibrating && (<div className="absolute inset-0 bg-black/90 backdrop-blur-md flex flex-col items-center justify-center p-4 z-20 animate-in fade-in"><div className="text-center w-full"><h4 className="text-white font-bold mb-2 text-sm">Calibrate Historical Cost</h4><div className="flex gap-2 justify-center"><input type="number" value={calibrationValue} onChange={e => setCalibrationValue(e.target.value)} className="w-24 bg-white/10 border border-white/20 rounded-lg px-2 py-1 text-white text-center outline-none focus:border-indigo-500" placeholder="0.34" autoFocus /><button onClick={handleSaveCalibration} className="bg-green-600 hover:bg-green-500 text-white rounded-lg p-2"><Check size={16}/></button><button onClick={() => setIsCalibrating(false)} className="bg-gray-600 hover:bg-gray-500 text-white rounded-lg p-2"><X size={16}/></button></div></div></div>)}
                                          </div>
                                      </div>
                                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                         <div className="md:col-span-1 p-6 rounded-3xl border border-white/10 bg-white/5 flex flex-col justify-center items-center text-center"><div className="text-sm font-bold text-zinc-400 uppercase tracking-wider mb-2">Net Profit</div><div className={`text-4xl font-black ${netProfit >= 0 ? 'text-indigo-400' : 'text-orange-500'}`}>€{netProfit.toFixed(2)}</div><div className="text-xs text-zinc-500 mt-1">Margin: {profitMargin.toFixed(1)}%</div></div>
-                                         <div className="md:col-span-2 p-6 rounded-3xl border border-white/10 bg-white/5"><h4 className="text-sm font-bold text-white uppercase tracking-wider mb-4 flex items-center gap-2"><FileText size={16}/> Cost Ledger</h4><div className="space-y-3 text-sm font-mono"><div className="flex justify-between items-center text-zinc-400"><span>Input Tokens ({totalInputTokens.toLocaleString()})</span><span>${liveInputCost.toFixed(4)}</span></div><div className="flex justify-between items-center text-zinc-400"><span>Output Tokens ({totalOutputTokens.toLocaleString()})</span><span>${liveOutputCost.toFixed(4)}</span></div>{costCorrection > 0 && (<div className="flex justify-between items-center text-amber-500"><span>Historical Adjustment</span><span>${costCorrection.toFixed(4)}</span></div>)}<div className="flex justify-between items-center text-indigo-400 border-t border-white/5 pt-2"><span>Stripe Fees (Est. 3%)</span><span>€{estimatedFees.toFixed(2)}</span></div></div></div>
+                                         <div className="md:col-span-1 p-6 rounded-3xl border border-white/10 bg-white/5 flex flex-col justify-center items-center text-center"><div className="text-sm font-bold text-zinc-400 uppercase tracking-wider mb-2">Нетна печалба</div><div className={`text-4xl font-black ${netProfit >= 0 ? 'text-indigo-400' : 'text-orange-500'}`}>€{netProfit.toFixed(2)}</div><div className="text-xs text-zinc-500 mt-1">Марж: {profitMargin.toFixed(1)}%</div></div>
+                                         <div className="md:col-span-2 p-6 rounded-3xl border border-white/10 bg-white/5"><h4 className="text-sm font-bold text-white uppercase tracking-wider mb-4 flex items-center gap-2"><FileText size={16}/> Разходен дневник</h4><div className="space-y-3 text-sm font-mono"><div className="flex justify-between items-center text-zinc-400"><span>Входящи ({totalInputTokens.toLocaleString()})</span><span>${liveInputCost.toFixed(4)}</span></div><div className="flex justify-between items-center text-zinc-400"><span>Изходящи ({totalOutputTokens.toLocaleString()})</span><span>${liveOutputCost.toFixed(4)}</span></div>{costCorrection > 0 && (<div className="flex justify-between items-center text-amber-500"><span>Historical Adjustment</span><span>${costCorrection.toFixed(4)}</span></div>)}<div className="flex justify-between items-center text-indigo-400 border-t border-white/5 pt-2"><span>Stripe Fees (Est. 3%)</span><span>€{estimatedFees.toFixed(2)}</span></div></div></div>
                                      </div>
                                  </div>
                              )}
@@ -988,10 +1016,10 @@ export const AdminPanel = ({
                              {activeTab === 'users' && (
                                  <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
                                      <div className="flex gap-4">
-                                         <div className="flex-1 relative group"><Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-white transition-colors" size={18}/><input type="text" placeholder="Search users by name, email or ID..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="w-full bg-white/5 border border-white/5 rounded-2xl pl-12 pr-4 py-4 text-white placeholder-zinc-600 outline-none focus:border-indigo-500/50 focus:bg-black/40 transition-all shadow-lg"/></div>
+                                         <div className="flex-1 relative group"><Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-white transition-colors" size={18}/><input type="text" placeholder="Търсене по име, имейл или ID..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="w-full bg-white/5 border border-white/5 rounded-2xl pl-12 pr-4 py-4 text-white placeholder-zinc-600 outline-none focus:border-indigo-500/50 focus:bg-black/40 transition-all shadow-lg"/></div>
                                          <div className="flex gap-2">
-                                             <button onClick={() => setSortUsers(sortUsers === 'recent' ? 'usage' : 'recent')} className="px-4 bg-white/5 hover:bg-white/10 border border-white/5 rounded-2xl text-zinc-400 hover:text-white font-medium text-sm transition-all min-w-[100px]">{sortUsers === 'recent' ? 'Latest' : 'Top Usage'}</button>
-                                             <div className="relative"><button onClick={() => setShowFilterMenu(!showFilterMenu)} className={`h-full px-6 flex items-center gap-2 bg-white/5 border border-white/5 rounded-2xl text-sm font-bold transition-all hover:bg-white/10 ${filterPlan !== 'all' ? 'text-indigo-400 bg-indigo-500/10 border-indigo-500/30' : 'text-zinc-400'}`}><Filter size={18}/> {filterPlan === 'all' ? 'All' : filterPlan}</button>{showFilterMenu && (<div className="absolute top-full right-0 mt-2 w-32 bg-[#111] border border-white/10 rounded-xl shadow-2xl overflow-hidden z-50 animate-in slide-in-from-top-2 fade-in">{['all', 'free', 'plus', 'pro'].map(p => (<button key={p} onClick={() => { setFilterPlan(p as any); setShowFilterMenu(false); }} className={`w-full text-left px-4 py-3 text-xs font-bold uppercase hover:bg-white/5 ${filterPlan === p ? 'text-indigo-400' : 'text-zinc-500'}`}>{p}</button>))}</div>)}</div>
+                                             <button onClick={() => setSortUsers(sortUsers === 'recent' ? 'usage' : 'recent')} className="px-4 bg-white/5 hover:bg-white/10 border border-white/5 rounded-2xl text-zinc-400 hover:text-white font-medium text-sm transition-all min-w-[100px]">{sortUsers === 'recent' ? 'Последни' : 'Топ потребление'}</button>
+                                             <div className="relative"><button onClick={() => setShowFilterMenu(!showFilterMenu)} className={`h-full px-6 flex items-center gap-2 bg-white/5 border border-white/5 rounded-2xl text-sm font-bold transition-all hover:bg-white/10 ${filterPlan !== 'all' ? 'text-indigo-400 bg-indigo-500/10 border-indigo-500/30' : 'text-zinc-400'}`}><Filter size={18}/> {filterPlan === 'all' ? 'Всички' : filterPlan}</button>{showFilterMenu && (<div className="absolute top-full right-0 mt-2 w-32 bg-[#111] border border-white/10 rounded-xl shadow-2xl overflow-hidden z-50 animate-in slide-in-from-top-2 fade-in">{['all', 'free', 'plus', 'pro'].map(p => (<button key={p} onClick={() => { setFilterPlan(p as any); setShowFilterMenu(false); }} className={`w-full text-left px-4 py-3 text-xs font-bold uppercase hover:bg-white/5 ${filterPlan === p ? 'text-indigo-400' : 'text-zinc-500'}`}>{p}</button>))}</div>)}</div>
                                          </div>
                                      </div>
                                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1028,11 +1056,11 @@ export const AdminPanel = ({
                              {activeTab === 'keys' && (
                                  <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
                                      <div className="bg-white/5 border border-white/5 rounded-3xl p-8 flex flex-col md:flex-row items-center gap-8 shadow-xl relative overflow-hidden">
-                                         <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-purple-500/5 pointer-events-none"/><div className="flex-1 relative z-10"><h4 className="text-2xl font-black text-white mb-2">Generate Access Key</h4><p className="text-zinc-400 text-sm max-w-md">Create secure promotional keys.</p></div>
+                                         <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-purple-500/5 pointer-events-none"/><div className="flex-1 relative z-10"><h4 className="text-2xl font-black text-white mb-2">Генериране на ключ</h4><p className="text-zinc-400 text-sm max-w-md">Създаване на промоционални ключове.</p></div>
                                          <div className="flex items-center gap-4 bg-black/30 p-2 rounded-2xl border border-white/5 backdrop-blur-md relative z-10"><button onClick={() => setSelectedPlan('plus')} className={`px-6 py-3 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${selectedPlan === 'plus' ? 'bg-indigo-600 text-white shadow-lg' : 'text-zinc-500 hover:text-white'}`}><Zap size={16}/> Plus</button><button onClick={() => setSelectedPlan('pro')} className={`px-6 py-3 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${selectedPlan === 'pro' ? 'bg-amber-600 text-white shadow-lg' : 'text-zinc-500 hover:text-white'}`}><Crown size={16}/> Pro</button></div>
-                                         <Button onClick={handleGenerate} icon={Plus} className="px-8 py-4 bg-white text-black hover:bg-zinc-200 shadow-xl rounded-2xl text-base relative z-10">Generate</Button>
+                                         <Button onClick={handleGenerate} icon={Plus} className="px-8 py-4 bg-white text-black hover:bg-zinc-200 shadow-xl rounded-2xl text-base relative z-10">Генерирай</Button>
                                      </div>
-                                     <div className="bg-white/5 border border-white/5 rounded-3xl overflow-hidden shadow-lg"><table className="w-full text-left"><thead><tr className="border-b border-white/5 bg-black/20"><th className="p-5 text-xs font-bold text-zinc-500 uppercase tracking-wider">Code</th><th className="p-5 text-xs font-bold text-zinc-500 uppercase tracking-wider">Plan</th><th className="p-5 text-xs font-bold text-zinc-500 uppercase tracking-wider">Created</th><th className="p-5 text-xs font-bold text-zinc-500 uppercase tracking-wider">Status</th><th className="p-5 text-right text-xs font-bold text-zinc-500 uppercase tracking-wider">Action</th></tr></thead><tbody className="divide-y divide-white/5">{dbKeys.map((k, i) => (<tr key={i} className="hover:bg-white/5 transition-colors group"><td className="p-5 font-mono text-sm text-indigo-400 font-medium">{k.code}</td><td className="p-5"><span className={`text-[10px] font-black px-2 py-1 rounded-md uppercase ${k.plan === 'pro' ? 'bg-amber-500/10 text-amber-400' : 'bg-indigo-500/10 text-indigo-400'}`}>{k.plan || 'pro'}</span></td><td className="p-5 text-xs text-zinc-500">{k.createdAt ? new Date(k.createdAt).toLocaleDateString() : '-'}</td><td className="p-5"><div className={`flex items-center gap-2 text-xs font-bold ${k.isUsed ? 'text-red-400' : 'text-emerald-400'}`}><div className={`w-2 h-2 rounded-full ${k.isUsed ? 'bg-red-500' : 'bg-emerald-500'}`}/>{k.isUsed ? 'Redeemed' : 'Available'}</div></td><td className="p-5 text-right flex justify-end gap-2"><button onClick={() => {navigator.clipboard.writeText(k.code); addToast('Copied', 'success')}} className="p-2 hover:bg-white/10 rounded-lg text-zinc-500 hover:text-white transition-colors"><Copy size={16}/></button>{k.id && <button onClick={() => handleDeleteKey(k.id!)} className="p-2 hover:bg-red-500/20 rounded-lg text-zinc-500 hover:text-red-400 transition-colors"><Trash2 size={16}/></button>}</td></tr>))}</tbody></table></div>
+                                     <div className="bg-white/5 border border-white/5 rounded-3xl overflow-hidden shadow-lg"><table className="w-full text-left"><thead><tr className="border-b border-white/5 bg-black/20"><th className="p-5 text-xs font-bold text-zinc-500 uppercase tracking-wider">Код</th><th className="p-5 text-xs font-bold text-zinc-500 uppercase tracking-wider">План</th><th className="p-5 text-xs font-bold text-zinc-500 uppercase tracking-wider">Създаден</th><th className="p-5 text-xs font-bold text-zinc-500 uppercase tracking-wider">Статус</th><th className="p-5 text-right text-xs font-bold text-zinc-500 uppercase tracking-wider">Действие</th></tr></thead><tbody className="divide-y divide-white/5">{dbKeys.map((k, i) => (<tr key={i} className="hover:bg-white/5 transition-colors group"><td className="p-5 font-mono text-sm text-indigo-400 font-medium">{k.code}</td><td className="p-5"><span className={`text-[10px] font-black px-2 py-1 rounded-md uppercase ${k.plan === 'pro' ? 'bg-amber-500/10 text-amber-400' : 'bg-indigo-500/10 text-indigo-400'}`}>{k.plan || 'pro'}</span></td><td className="p-5 text-xs text-zinc-500">{k.createdAt ? new Date(k.createdAt).toLocaleDateString() : '-'}</td><td className="p-5"><div className={`flex items-center gap-2 text-xs font-bold ${k.isUsed ? 'text-red-400' : 'text-emerald-400'}`}><div className={`w-2 h-2 rounded-full ${k.isUsed ? 'bg-red-500' : 'bg-emerald-500'}`}/>{k.isUsed ? 'Използван' : 'Активен'}</div></td><td className="p-5 text-right flex justify-end gap-2"><button onClick={() => {navigator.clipboard.writeText(k.code); addToast('Copied', 'success')}} className="p-2 hover:bg-white/10 rounded-lg text-zinc-500 hover:text-white transition-colors"><Copy size={16}/></button>{k.id && <button onClick={() => handleDeleteKey(k.id!)} className="p-2 hover:bg-red-500/20 rounded-lg text-zinc-500 hover:text-red-400 transition-colors"><Trash2 size={16}/></button>}</td></tr>))}</tbody></table></div>
                                  </div>
                              )}
                          </>
