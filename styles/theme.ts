@@ -1,3 +1,4 @@
+
 export const hexToRgb = (hex: string) => {
   const shorthandRegex = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;
   hex = hex.replace(shorthandRegex, (m, r, g, b) => r + r + g + g + b + b);
@@ -51,12 +52,30 @@ export const hslToRgb = (h: number, s: number, l: number) => {
 };
 
 export const adjustBrightness = (col: {r:number, g:number, b:number}, percent: number) => {
-    let R = col.r * (1 + percent / 100);
-    let G = col.g * (1 + percent / 100);
-    let B = col.b * (1 + percent / 100);
-    R = Math.round(R < 255 ? R : 255);
-    G = Math.round(G < 255 ? G : 255);
-    B = Math.round(B < 255 ? B : 255);
+    let R, G, B;
+
+    if (percent > 0) {
+        // Tint: Mix with White
+        // percent 100 = full white, 0 = original
+        // Using formula: color + (255 - color) * percentage
+        const factor = percent / 100;
+        R = col.r + (255 - col.r) * factor;
+        G = col.g + (255 - col.g) * factor;
+        B = col.b + (255 - col.b) * factor;
+    } else {
+        // Shade: Mix with Black
+        // percent -100 = full black, 0 = original
+        // Using formula: color * (1 + percent/100) -> since percent is negative, it reduces
+        const factor = 1 + (percent / 100);
+        R = col.r * factor;
+        G = col.g * factor;
+        B = col.b * factor;
+    }
+
+    R = Math.round(Math.max(0, Math.min(255, R)));
+    G = Math.round(Math.max(0, Math.min(255, G)));
+    B = Math.round(Math.max(0, Math.min(255, B)));
+    
     return `${R} ${G} ${B}`;
 };
 

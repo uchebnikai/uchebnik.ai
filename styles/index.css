@@ -34,31 +34,9 @@
   --foreground: 0 0% 98%;
 }
 
-/* Christmas Theme Overrides */
+/* Christmas Theme Overrides - Now handled dynamically via JS to prevent sticking */
 body.christmas-mode {
-  --primary-50: 254 242 242; /* Red 50 */
-  --primary-100: 254 226 226;
-  --primary-200: 254 202 202;
-  --primary-300: 252 165 165;
-  --primary-400: 248 113 113;
-  --primary-500: 239 68 68; /* Red 500 */
-  --primary-600: 220 38 38;
-  --primary-700: 185 28 28;
-  --primary-800: 153 27 27;
-  --primary-900: 127 29 29;
-  --primary-950: 69 10 10;
-
-  --accent-50: 236 253 245; /* Emerald 50 */
-  --accent-100: 209 250 229;
-  --accent-200: 167 243 208;
-  --accent-300: 110 231 183;
-  --accent-400: 52 211 153;
-  --accent-500: 16 185 129; /* Emerald 500 */
-  --accent-600: 5 150 105;
-  --accent-700: 4 120 87;
-  --accent-800: 6 95 70;
-  --accent-900: 6 78 59;
-  --accent-950: 2 44 34;
+  /* Variables are now injected into :root by useTheme.ts to ensure proper resetting */
 }
 
 body {
