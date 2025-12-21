@@ -6,7 +6,8 @@ import {
   ChevronRight, Edit2, Save, MoreHorizontal, Database, 
   Terminal, Calendar, ArrowUpRight, ArrowLeft, Mail,
   Clock, Hash, AlertTriangle, Check, Layers, DollarSign,
-  TrendingUp, TrendingDown, PieChart, Wallet
+  TrendingUp, TrendingDown, PieChart, Wallet, CreditCard,
+  Settings, HelpCircle, ExternalLink
 } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { supabase } from '../../supabaseClient';
@@ -53,8 +54,8 @@ interface AdminPanelProps {
 }
 
 // Cost Constants (Estimates based on Gemini pricing)
-const COST_PER_IMAGE = 0.004; // $0.004 per image (approx)
-const COST_PER_MSG_AVG = 0.0005; // Average cost per text interaction (blended input/output tokens)
+const COST_PER_IMAGE = 0.004; 
+const COST_PER_MSG_AVG = 0.0005; 
 
 export const AdminPanel = ({
   showAdminAuth,
@@ -78,6 +79,11 @@ export const AdminPanel = ({
     const [searchQuery, setSearchQuery] = useState('');
     const [showRawData, setShowRawData] = useState<string | null>(null);
     
+    // Manual Cost Override State
+    const [manualCost, setManualCost] = useState<number | null>(null);
+    const [isEditingCost, setIsEditingCost] = useState(false);
+    const [tempCostInput, setTempCostInput] = useState('');
+
     // Filtering
     const [filterPlan, setFilterPlan] = useState<'all' | 'free' | 'plus' | 'pro'>('all');
     const [showFilterMenu, setShowFilterMenu] = useState(false);
@@ -94,6 +100,9 @@ export const AdminPanel = ({
     useEffect(() => {
         if (showAdminPanel) {
             fetchData();
+            // Load manual cost from local storage
+            const savedCost = localStorage.getItem('uchebnik_admin_manual_cost');
+            if (savedCost) setManualCost(parseFloat(savedCost));
         }
     }, [showAdminPanel, activeTab]);
 
@@ -106,7 +115,7 @@ export const AdminPanel = ({
                     .from('profiles')
                     .select('*')
                     .order('updated_at', { ascending: false })
-                    .limit(100); // Increased limit for better stats
+                    .limit(100); 
                 
                 if (!error && users) {
                     const mappedUsers: AdminUser[] = users.map((u: any) => {
@@ -146,13 +155,13 @@ export const AdminPanel = ({
                 if (!error && data) {
                     setFinancials(data);
                 } else {
-                    console.error("Finance fetch error:", error);
+                    // Fail silently or log, don't break UI
+                    console.log("Stripe fetch skipped or failed (check Edge Function logs)");
                 }
             }
 
         } catch (e) {
             console.error("Admin Fetch Error:", e);
-            addToast("Грешка при зареждане на данни", 'error');
         } finally {
             setLoadingData(false);
         }
@@ -164,11 +173,29 @@ export const AdminPanel = ({
         addToast(`Генериран ключ за ${selectedPlan.toUpperCase()}`, 'success');
     };
 
+    const handleSaveCost = () => {
+        const val = parseFloat(tempCostInput);
+        if (!isNaN(val) && val >= 0) {
+            setManualCost(val);
+            localStorage.setItem('uchebnik_admin_manual_cost', val.toString());
+            setIsEditingCost(false);
+            addToast('Разходите са обновени ръчно', 'success');
+        } else {
+            addToast('Моля въведете валидно число', 'error');
+        }
+    };
+
+    const handleClearManualCost = () => {
+        setManualCost(null);
+        localStorage.removeItem('uchebnik_admin_manual_cost');
+        setIsEditingCost(false);
+        addToast('Върнато към автоматична оценка', 'info');
+    };
+
     const handleSaveUserChanges = async () => {
         if (!selectedUser || !editForm) return;
 
         try {
-            // Deep merge updates into existing settings
             const currentSettings = selectedUser.rawSettings || {};
             const updatedSettings = {
                 ...currentSettings,
@@ -191,7 +218,6 @@ export const AdminPanel = ({
 
             if (error) throw error;
 
-            // Update local state
             const updatedUser: AdminUser = {
                 ...selectedUser,
                 name: editForm.name,
@@ -202,7 +228,7 @@ export const AdminPanel = ({
             };
 
             setDbUsers(prev => prev.map(u => u.id === selectedUser.id ? updatedUser : u));
-            setSelectedUser(updatedUser); // Keep viewing updated user
+            setSelectedUser(updatedUser); 
             addToast('Промените са запазени успешно!', 'success');
         } catch (e) {
             console.error("Update Error:", e);
@@ -222,48 +248,41 @@ export const AdminPanel = ({
 
     // Calculate Stats
     const totalUsers = dbUsers.length;
-    const proUsers = dbUsers.filter(u => u.plan === 'pro').length;
-    const plusUsers = dbUsers.filter(u => u.plan === 'plus').length;
-    const activeToday = dbUsers.filter(u => {
-        const d = new Date(u.updatedAt);
-        const now = new Date();
-        return d.getDate() === now.getDate() && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-    }).length;
-
+    
     // --- Financial Calculations ---
-    const calculateCosts = () => {
-        // 1. Image Generation Costs
+    const calculateEstimates = () => {
         const totalDailyImages = dbUsers.reduce((acc, user) => acc + (user.usage || 0), 0);
-        // Estimate monthly image usage based on daily snapshot (x30)
         const estimatedMonthlyImages = totalDailyImages * 30;
         const imageCost = estimatedMonthlyImages * COST_PER_IMAGE;
+        
+        // Active today is roughly accurate for recent usage
+        const activeCount = dbUsers.filter(u => {
+            const d = new Date(u.updatedAt);
+            const now = new Date();
+            return d.getDate() === now.getDate() && d.getMonth() === now.getMonth();
+        }).length;
 
-        // 2. Text/Reasoning Costs (Estimation)
-        // Assume avg 15 messages per active user per day
-        const estimatedDailyMessages = activeToday * 15; 
+        const estimatedDailyMessages = (activeCount || 1) * 15; 
         const estimatedMonthlyMessages = estimatedDailyMessages * 30;
         const textCost = estimatedMonthlyMessages * COST_PER_MSG_AVG;
 
-        const totalEstimatedMonthlyCost = imageCost + textCost;
-
         return {
-            dailyImages: totalDailyImages,
-            monthlyImages: estimatedMonthlyImages,
-            imageCost,
-            textCost,
-            totalCost: totalEstimatedMonthlyCost
+            estimatedTotal: imageCost + textCost
         };
     };
 
-    const costs = calculateCosts();
-    const revenue = financials ? financials.mrr / 100 : 0; // Convert cents to dollars/euros
-    const profit = revenue - costs.totalCost;
+    const estimates = calculateEstimates();
+    const revenue = financials ? financials.mrr / 100 : 0; 
+    
+    // Use manual cost if provided, otherwise use estimate
+    const finalCost = manualCost !== null ? manualCost : estimates.estimatedTotal;
+    const profit = revenue - finalCost;
     const margin = revenue > 0 ? (profit / revenue) * 100 : 0;
 
     const chartData = [
-        { name: 'Revenue (MRR)', value: revenue, color: '#10b981' },
-        { name: 'API Costs (Est)', value: costs.totalCost, color: '#ef4444' },
-        { name: 'Net Profit', value: profit, color: '#6366f1' },
+        { name: 'Revenue', value: revenue, color: '#10b981' }, // Green
+        { name: 'Costs', value: finalCost, color: '#ef4444' }, // Red
+        { name: 'Profit', value: profit, color: profit >= 0 ? '#6366f1' : '#f59e0b' }, // Indigo or Amber if negative
     ];
 
     if (showAdminAuth) {
@@ -272,7 +291,6 @@ export const AdminPanel = ({
           <div className="bg-[#09090b]/80 border border-white/10 w-full max-w-sm p-8 rounded-3xl shadow-2xl relative overflow-hidden backdrop-blur-md">
              <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 to-purple-500/10 pointer-events-none"/>
              <button onClick={() => setShowAdminAuth(false)} className="absolute top-4 right-4 text-zinc-500 hover:text-white transition-colors"><X size={20}/></button>
-             
              <div className="flex flex-col items-center gap-6 relative z-10">
                 <div className="p-4 bg-white/5 rounded-full border border-white/10 text-white shadow-[0_0_30px_rgba(255,255,255,0.1)]">
                     <Shield size={32}/>
@@ -281,7 +299,6 @@ export const AdminPanel = ({
                     <h2 className="text-xl font-bold text-white mb-1">Admin Access</h2>
                     <p className="text-zinc-500 text-sm">Въведете парола за достъп</p>
                 </div>
-                
                 <div className="w-full space-y-3">
                     <input 
                     type="password" 
@@ -327,19 +344,19 @@ export const AdminPanel = ({
                     </div>
                     <div>
                         <h2 className="font-bold text-white text-sm">Admin Panel</h2>
-                        <div className="text-[10px] text-zinc-500 font-mono">v2.2 • Finance</div>
+                        <div className="text-[10px] text-zinc-500 font-mono">v2.3 • Finance</div>
                     </div>
                 </div>
                 
                 <nav className="space-y-2 flex-1">
                     <button onClick={() => {setActiveTab('dashboard'); setSelectedUser(null);}} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTab === 'dashboard' ? 'bg-white/10 text-white border border-white/5' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}>
-                        <Activity size={18}/> Dashboard
+                        <Activity size={18}/> Overview
                     </button>
                     <button onClick={() => {setActiveTab('finance'); setSelectedUser(null);}} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTab === 'finance' ? 'bg-white/10 text-white border border-white/5' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}>
-                        <DollarSign size={18}/> Finance & Costs
+                        <DollarSign size={18}/> Finance (P&L)
                     </button>
                     <button onClick={() => {setActiveTab('users'); setSelectedUser(null);}} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTab === 'users' ? 'bg-white/10 text-white border border-white/5' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}>
-                        <Users size={18}/> User Accounts
+                        <Users size={18}/> Users
                     </button>
                     <button onClick={() => {setActiveTab('keys'); setSelectedUser(null);}} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTab === 'keys' ? 'bg-white/10 text-white border border-white/5' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}>
                         <Key size={18}/> Access Keys
@@ -348,7 +365,7 @@ export const AdminPanel = ({
 
                 <div className="mt-auto pt-6 border-t border-white/5">
                     <button onClick={() => setShowAdminPanel(false)} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-red-400 hover:bg-red-500/10 transition-colors">
-                        <X size={18}/> Close Panel
+                        <X size={18}/> Logout
                     </button>
                 </div>
              </div>
@@ -369,10 +386,6 @@ export const AdminPanel = ({
                          </div>
                      </div>
                      <div className="flex items-center gap-3">
-                         <div className="flex items-center gap-2 bg-black/40 border border-white/5 rounded-lg px-3 py-1.5">
-                             <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"/>
-                             <span className="text-xs font-mono text-zinc-400">DB Connected</span>
-                         </div>
                          <button onClick={fetchData} className="p-2 hover:bg-white/10 rounded-lg text-zinc-400 hover:text-white transition-colors" title="Refresh Data">
                              <RefreshCw size={18} className={loadingData ? 'animate-spin' : ''}/>
                          </button>
@@ -385,8 +398,7 @@ export const AdminPanel = ({
                      {/* USER DETAILS VIEW */}
                      {selectedUser && editForm ? (
                          <div className="max-w-4xl mx-auto space-y-6 animate-in slide-in-from-right fade-in duration-300">
-                             {/* ... (User Detail View Code - Unchanged) ... */}
-                             {/* Top Info Card */}
+                             {/* ... (User Detail View Code) ... */}
                              <div className="bg-white/5 border border-white/5 rounded-3xl p-8 flex items-center gap-8 shadow-xl">
                                  <div 
                                     className="w-24 h-24 rounded-3xl flex items-center justify-center text-3xl font-black text-white shadow-2xl shadow-indigo-500/20"
@@ -398,7 +410,6 @@ export const AdminPanel = ({
                                      <h2 className="text-3xl font-bold text-white mb-2">{selectedUser.name}</h2>
                                      <div className="flex items-center gap-3 text-sm text-zinc-400 mb-4">
                                          <span className="flex items-center gap-1.5 bg-black/30 px-3 py-1 rounded-lg border border-white/5"><Hash size={12}/> ID: {selectedUser.id}</span>
-                                         <span className="flex items-center gap-1.5 bg-black/30 px-3 py-1 rounded-lg border border-white/5"><Calendar size={12}/> Last Seen: {selectedUser.lastVisit}</span>
                                      </div>
                                      <div className="flex items-center gap-4">
                                          <button 
@@ -418,7 +429,6 @@ export const AdminPanel = ({
                                  {/* Edit Details */}
                                  <div className="bg-white/5 border border-white/5 rounded-3xl p-6 space-y-5">
                                      <h4 className="text-lg font-bold text-white flex items-center gap-2"><Edit2 size={18} className="text-zinc-500"/> Edit Profile</h4>
-                                     
                                      <div className="space-y-2">
                                          <label className="text-xs font-bold text-zinc-500 uppercase ml-1">Display Name</label>
                                          <input 
@@ -427,7 +437,6 @@ export const AdminPanel = ({
                                             className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-indigo-500 transition-colors"
                                          />
                                      </div>
-
                                      <div className="space-y-2">
                                          <label className="text-xs font-bold text-zinc-500 uppercase ml-1">Subscription Plan</label>
                                          <div className="grid grid-cols-3 gap-2 p-1 bg-black/30 rounded-xl border border-white/5">
@@ -446,43 +455,27 @@ export const AdminPanel = ({
                                          </div>
                                      </div>
                                  </div>
-
                                  {/* Edit Stats */}
                                  <div className="bg-white/5 border border-white/5 rounded-3xl p-6 space-y-5">
                                      <h4 className="text-lg font-bold text-white flex items-center gap-2"><Activity size={18} className="text-zinc-500"/> Usage Stats</h4>
-                                     
                                      <div className="grid grid-cols-2 gap-4">
                                          <div className="space-y-2">
                                              <label className="text-xs font-bold text-zinc-500 uppercase ml-1">Daily Streak</label>
-                                             <div className="relative">
-                                                 <input 
-                                                    type="number"
-                                                    value={editForm.streak}
-                                                    onChange={(e) => setEditForm({...editForm, streak: parseInt(e.target.value) || 0})}
-                                                    className="w-full bg-black/30 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-white outline-none focus:border-orange-500 transition-colors"
-                                                 />
-                                                 <div className="absolute left-3 top-1/2 -translate-y-1/2 text-orange-500"><Zap size={16} fill="currentColor"/></div>
-                                             </div>
+                                             <input 
+                                                type="number"
+                                                value={editForm.streak}
+                                                onChange={(e) => setEditForm({...editForm, streak: parseInt(e.target.value) || 0})}
+                                                className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-orange-500 transition-colors"
+                                             />
                                          </div>
                                          <div className="space-y-2">
-                                             <label className="text-xs font-bold text-zinc-500 uppercase ml-1">Images Used (Today)</label>
-                                             <div className="relative">
-                                                 <input 
-                                                    type="number"
-                                                    value={editForm.usage}
-                                                    onChange={(e) => setEditForm({...editForm, usage: parseInt(e.target.value) || 0})}
-                                                    className="w-full bg-black/30 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-white outline-none focus:border-blue-500 transition-colors"
-                                                 />
-                                                 <div className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-500"><Layers size={16}/></div>
-                                             </div>
-                                         </div>
-                                     </div>
-
-                                     <div className="p-4 rounded-xl bg-yellow-500/10 border border-yellow-500/20 flex gap-3 items-start">
-                                         <AlertTriangle size={18} className="text-yellow-500 shrink-0 mt-0.5"/>
-                                         <div>
-                                             <h5 className="text-sm font-bold text-yellow-500">Warning</h5>
-                                             <p className="text-xs text-yellow-500/80 leading-relaxed mt-1">Changing these values directly affects the user's experience. Ensure data accuracy before saving.</p>
+                                             <label className="text-xs font-bold text-zinc-500 uppercase ml-1">Images Used</label>
+                                             <input 
+                                                type="number"
+                                                value={editForm.usage}
+                                                onChange={(e) => setEditForm({...editForm, usage: parseInt(e.target.value) || 0})}
+                                                className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-blue-500 transition-colors"
+                                             />
                                          </div>
                                      </div>
                                  </div>
@@ -490,60 +483,106 @@ export const AdminPanel = ({
                          </div>
                      ) : (
                          <>
-                             {/* DASHBOARD VIEW */}
-                             {activeTab === 'dashboard' && (
+                             {/* DASHBOARD & FINANCE COMBINED VIEW */}
+                             {(activeTab === 'dashboard' || activeTab === 'finance') && (
                                  <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
-                                     {/* Stats Grid */}
-                                     <div className="grid grid-cols-4 gap-6">
-                                         <div className="p-6 bg-white/5 border border-white/5 rounded-3xl hover:border-white/10 transition-colors">
-                                             <div className="flex justify-between items-start mb-4">
-                                                 <div className="p-3 bg-indigo-500/20 text-indigo-400 rounded-2xl"><Users size={20}/></div>
-                                                 <span className="text-xs text-zinc-500 font-mono bg-black/30 px-2 py-1 rounded-lg border border-white/5">DB</span>
+                                     {/* Summary Cards */}
+                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                         
+                                         {/* MONEY IN (REVENUE) */}
+                                         <div className="p-8 bg-emerald-500/10 border border-emerald-500/20 rounded-[32px] relative overflow-hidden">
+                                             <div className="relative z-10">
+                                                 <div className="flex items-center gap-3 mb-4 text-emerald-400">
+                                                     <div className="p-2 bg-emerald-500/20 rounded-xl"><DollarSign size={24}/></div>
+                                                     <span className="font-bold uppercase tracking-wider text-xs">Money In (MRR)</span>
+                                                 </div>
+                                                 <div className="text-5xl font-black text-white tracking-tight">€{revenue.toFixed(2)}</div>
+                                                 <div className="text-sm text-emerald-400/60 mt-2 font-medium">Monthly Recurring Revenue</div>
                                              </div>
-                                             <div className="text-3xl font-black text-white">{totalUsers}</div>
-                                             <div className="text-xs text-zinc-500 mt-1 font-medium">Total Registered</div>
                                          </div>
-                                         <div className="p-6 bg-white/5 border border-white/5 rounded-3xl hover:border-white/10 transition-colors">
-                                             <div className="flex justify-between items-start mb-4">
-                                                 <div className="p-3 bg-emerald-500/20 text-emerald-400 rounded-2xl"><DollarSign size={20}/></div>
-                                                 <span className="text-xs text-zinc-500 font-mono bg-black/30 px-2 py-1 rounded-lg border border-white/5">Stripe</span>
+
+                                         {/* MONEY OUT (COSTS) - With Manual Override */}
+                                         <div className="p-8 bg-red-500/10 border border-red-500/20 rounded-[32px] relative overflow-hidden group">
+                                             <div className="relative z-10">
+                                                 <div className="flex items-center justify-between mb-4 text-red-400">
+                                                     <div className="flex items-center gap-3">
+                                                         <div className="p-2 bg-red-500/20 rounded-xl"><TrendingDown size={24}/></div>
+                                                         <span className="font-bold uppercase tracking-wider text-xs">Money Out (Cost)</span>
+                                                     </div>
+                                                     <button 
+                                                        onClick={() => { setIsEditingCost(true); setTempCostInput(finalCost.toString()); }}
+                                                        className="p-2 hover:bg-red-500/20 rounded-lg text-red-400 transition-colors opacity-0 group-hover:opacity-100" 
+                                                        title="Set Actual Cost"
+                                                     >
+                                                         <Edit2 size={16}/>
+                                                     </button>
+                                                 </div>
+
+                                                 {isEditingCost ? (
+                                                     <div className="flex gap-2 items-center animate-in fade-in">
+                                                         <input 
+                                                            type="number" 
+                                                            value={tempCostInput}
+                                                            onChange={e => setTempCostInput(e.target.value)}
+                                                            className="w-full bg-black/40 border border-red-500/30 rounded-xl px-4 py-2 text-2xl font-bold text-white outline-none focus:border-red-500"
+                                                            placeholder="0.00"
+                                                            autoFocus
+                                                         />
+                                                         <button onClick={handleSaveCost} className="p-3 bg-red-600 hover:bg-red-500 text-white rounded-xl"><Check size={20}/></button>
+                                                         <button onClick={() => setIsEditingCost(false)} className="p-3 bg-white/10 hover:bg-white/20 text-white rounded-xl"><X size={20}/></button>
+                                                         <button onClick={handleClearManualCost} className="p-3 bg-white/10 hover:bg-white/20 text-yellow-500 rounded-xl" title="Reset to Auto"><RefreshCw size={20}/></button>
+                                                     </div>
+                                                 ) : (
+                                                     <>
+                                                         <div className="text-5xl font-black text-white tracking-tight">€{finalCost.toFixed(2)}</div>
+                                                         <div className="flex items-center gap-2 mt-2">
+                                                             {manualCost !== null ? (
+                                                                 <span className="text-xs bg-red-500 text-white px-2 py-0.5 rounded-md font-bold">MANUAL INPUT</span>
+                                                             ) : (
+                                                                 <span className="text-xs bg-red-500/20 text-red-400 px-2 py-0.5 rounded-md font-bold">ESTIMATE</span>
+                                                             )}
+                                                             <span className="text-sm text-red-400/60 font-medium">{manualCost !== null ? 'Corrected by Admin' : 'Based on usage'}</span>
+                                                         </div>
+                                                     </>
+                                                 )}
                                              </div>
-                                             <div className="text-3xl font-black text-white">€{revenue.toFixed(2)}</div>
-                                             <div className="text-xs text-zinc-500 mt-1 font-medium">Monthly Recurring Revenue</div>
                                          </div>
-                                         <div className="p-6 bg-white/5 border border-white/5 rounded-3xl hover:border-white/10 transition-colors">
-                                             <div className="flex justify-between items-start mb-4">
-                                                 <div className="p-3 bg-red-500/20 text-red-400 rounded-2xl"><TrendingDown size={20}/></div>
-                                                 <span className="text-xs text-zinc-500 font-mono bg-black/30 px-2 py-1 rounded-lg border border-white/5">Est.</span>
+
+                                         {/* NET PROFIT */}
+                                         <div className={`p-8 rounded-[32px] relative overflow-hidden border ${profit >= 0 ? 'bg-indigo-500/10 border-indigo-500/20' : 'bg-orange-500/10 border-orange-500/20'}`}>
+                                             <div className="relative z-10">
+                                                 <div className={`flex items-center gap-3 mb-4 ${profit >= 0 ? 'text-indigo-400' : 'text-orange-400'}`}>
+                                                     <div className={`p-2 rounded-xl ${profit >= 0 ? 'bg-indigo-500/20' : 'bg-orange-500/20'}`}><Wallet size={24}/></div>
+                                                     <span className="font-bold uppercase tracking-wider text-xs">Net Profit</span>
+                                                 </div>
+                                                 <div className={`text-5xl font-black tracking-tight ${profit >= 0 ? 'text-white' : 'text-orange-500'}`}>€{profit.toFixed(2)}</div>
+                                                 <div className={`text-sm mt-2 font-medium ${profit >= 0 ? 'text-indigo-400/60' : 'text-orange-400/60'}`}>Margin: {margin.toFixed(1)}%</div>
                                              </div>
-                                             <div className="text-3xl font-black text-white">€{costs.totalCost.toFixed(2)}</div>
-                                             <div className="text-xs text-zinc-500 mt-1 font-medium">Est. API Usage Cost</div>
-                                         </div>
-                                         <div className="p-6 bg-white/5 border border-white/5 rounded-3xl hover:border-white/10 transition-colors relative overflow-hidden">
-                                             <div className={`absolute right-0 bottom-0 p-8 opacity-10 ${profit > 0 ? 'text-emerald-500' : 'text-red-500'}`}><Wallet size={100}/></div>
-                                             <div className="flex justify-between items-start mb-4 relative z-10">
-                                                 <div className={`p-3 rounded-2xl ${profit > 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}`}><TrendingUp size={20}/></div>
-                                                 <span className="text-xs text-zinc-500 font-mono bg-black/30 px-2 py-1 rounded-lg border border-white/5">Net</span>
-                                             </div>
-                                             <div className={`text-3xl font-black relative z-10 ${profit > 0 ? 'text-white' : 'text-red-400'}`}>€{profit.toFixed(2)}</div>
-                                             <div className="text-xs text-zinc-500 mt-1 font-medium relative z-10">Net Profit (Margin: {margin.toFixed(1)}%)</div>
                                          </div>
                                      </div>
 
-                                     {/* Charts Row */}
-                                     <div className="h-64 w-full bg-white/5 border border-white/5 rounded-3xl p-6">
-                                         <h4 className="text-white font-bold mb-4 flex items-center gap-2 text-sm uppercase tracking-wider text-zinc-500">Financial Overview</h4>
+                                     {/* Charts */}
+                                     <div className="h-80 w-full bg-white/5 border border-white/5 rounded-3xl p-8">
+                                         <h4 className="text-white font-bold mb-6 flex items-center gap-2 text-sm uppercase tracking-wider text-zinc-500">Financial Overview</h4>
                                          <ResponsiveContainer width="100%" height="100%">
-                                             <BarChart data={chartData} layout="vertical">
+                                             <BarChart data={chartData} layout="vertical" margin={{top: 0, right: 30, left: 30, bottom: 0}}>
                                                  <CartesianGrid strokeDasharray="3 3" stroke="#333" horizontal={false} />
-                                                 <XAxis type="number" stroke="#666" tick={{fontSize: 10}}/>
-                                                 <YAxis type="category" dataKey="name" stroke="#999" width={120} tick={{fontSize: 12}}/>
+                                                 <XAxis type="number" stroke="#666" tick={{fontSize: 10}} hide/>
+                                                 <YAxis type="category" dataKey="name" stroke="#999" width={100} tick={{fontSize: 14, fontWeight: 'bold', fill: '#fff'}} axisLine={false} tickLine={false}/>
                                                  <Tooltip 
-                                                    contentStyle={{backgroundColor: '#18181b', borderColor: '#333', borderRadius: '12px'}} 
-                                                    itemStyle={{color: '#fff'}}
                                                     cursor={{fill: 'rgba(255,255,255,0.05)'}}
+                                                    content={({ active, payload }) => {
+                                                        if (active && payload && payload.length) {
+                                                        return (
+                                                            <div className="bg-zinc-900 border border-zinc-800 p-3 rounded-xl shadow-xl">
+                                                                <p className="text-white font-bold">{payload[0].payload.name}: €{Number(payload[0].value).toFixed(2)}</p>
+                                                            </div>
+                                                        );
+                                                        }
+                                                        return null;
+                                                    }}
                                                  />
-                                                 <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={32}>
+                                                 <Bar dataKey="value" radius={[0, 8, 8, 0]} barSize={40}>
                                                      {chartData.map((entry, index) => (
                                                          <Cell key={`cell-${index}`} fill={entry.color} />
                                                      ))}
@@ -551,76 +590,18 @@ export const AdminPanel = ({
                                              </BarChart>
                                          </ResponsiveContainer>
                                      </div>
-                                 </div>
-                             )}
 
-                             {/* FINANCE DETAIL TAB */}
-                             {activeTab === 'finance' && (
-                                 <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
-                                     <div className="grid grid-cols-3 gap-6">
-                                         <div className="col-span-2 bg-white/5 border border-white/5 rounded-3xl p-8">
-                                             <h4 className="text-2xl font-black text-white mb-6 flex items-center gap-3">
-                                                 <DollarSign size={24} className="text-emerald-500"/> Revenue Breakdown
-                                             </h4>
-                                             <div className="grid grid-cols-2 gap-8">
-                                                 <div className="space-y-2">
-                                                     <div className="text-sm text-zinc-500 uppercase font-bold tracking-wider">Available Balance</div>
-                                                     <div className="text-4xl font-mono text-white">
-                                                         €{((financials?.balance || 0) / 100).toFixed(2)}
-                                                     </div>
-                                                     <div className="text-xs text-zinc-600">Pending: €{((financials?.pending || 0) / 100).toFixed(2)}</div>
-                                                 </div>
-                                                 <div className="space-y-2">
-                                                     <div className="text-sm text-zinc-500 uppercase font-bold tracking-wider">Total Gross (Recent)</div>
-                                                     <div className="text-4xl font-mono text-white">
-                                                         €{((financials?.totalGrossRecent || 0) / 100).toFixed(2)}
-                                                     </div>
-                                                     <div className="text-xs text-zinc-600">Based on last 100 charges</div>
-                                                 </div>
-                                                 <div className="space-y-2 pt-6 border-t border-white/5 col-span-2">
-                                                     <div className="text-sm text-zinc-500 uppercase font-bold tracking-wider">Monthly Recurring Revenue (MRR)</div>
-                                                     <div className="text-5xl font-black text-emerald-400">
-                                                         €{((financials?.mrr || 0) / 100).toFixed(2)}
-                                                     </div>
-                                                     <div className="text-xs text-zinc-600">Projected based on active subscriptions</div>
-                                                 </div>
-                                             </div>
-                                         </div>
-
-                                         <div className="bg-white/5 border border-white/5 rounded-3xl p-8 bg-gradient-to-b from-red-500/5 to-transparent">
-                                             <h4 className="text-xl font-bold text-white mb-6 flex items-center gap-3">
-                                                 <TrendingDown size={24} className="text-red-500"/> "Money Losing"
-                                             </h4>
-                                             <div className="space-y-6">
-                                                 <div>
-                                                     <div className="flex justify-between items-end mb-1">
-                                                         <span className="text-sm text-zinc-400">GenAI Images</span>
-                                                         <span className="text-white font-mono">{costs.dailyImages} today</span>
-                                                     </div>
-                                                     <div className="h-2 w-full bg-black/50 rounded-full overflow-hidden">
-                                                         <div className="h-full bg-purple-500 w-3/4 opacity-50"/> 
-                                                     </div>
-                                                     <div className="text-right text-xs text-red-400 mt-1">Est. €{costs.imageCost.toFixed(2)} / mo</div>
-                                                 </div>
-
-                                                 <div>
-                                                     <div className="flex justify-between items-end mb-1">
-                                                         <span className="text-sm text-zinc-400">Active User Interactions</span>
-                                                         <span className="text-white font-mono">{activeToday} users</span>
-                                                     </div>
-                                                     <div className="text-right text-xs text-red-400 mt-1">Est. €{costs.textCost.toFixed(2)} / mo</div>
-                                                 </div>
-
-                                                 <div className="pt-6 border-t border-white/5">
-                                                     <div className="text-sm text-zinc-500 uppercase font-bold tracking-wider">Total Est. Cost</div>
-                                                     <div className="text-3xl font-black text-red-500">
-                                                         €{costs.totalCost.toFixed(2)}
-                                                     </div>
-                                                     <div className="text-[10px] text-zinc-600 mt-2 leading-relaxed">
-                                                         *Calculated using Gemini Flash pricing (€0.10/1M in, €0.40/1M out) + Image gen (€0.004). Actuals via Google Cloud Console.
-                                                     </div>
-                                                 </div>
-                                             </div>
+                                     {/* Instruction for Cost Accuracy */}
+                                     <div className="p-6 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex gap-4 items-start">
+                                         <div className="p-3 bg-blue-500/20 rounded-full text-blue-400 shrink-0"><HelpCircle size={24}/></div>
+                                         <div>
+                                             <h4 className="font-bold text-white mb-1">How to get 100% accurate costs?</h4>
+                                             <p className="text-sm text-gray-400 leading-relaxed mb-3">
+                                                 AI usage estimation is difficult because token lengths vary. To fix this, log in to your Google Cloud Console, check the billing report for the current month, and input the exact number in the "Money Out" card above using the Edit button.
+                                             </p>
+                                             <a href="https://console.cloud.google.com/billing" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-xs font-bold text-blue-400 hover:text-white transition-colors bg-blue-500/10 hover:bg-blue-500/30 px-3 py-2 rounded-lg">
+                                                 Go to Google Cloud Billing <ExternalLink size={12}/>
+                                             </a>
                                          </div>
                                      </div>
                                  </div>
@@ -634,7 +615,7 @@ export const AdminPanel = ({
                                          <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-purple-500/5 pointer-events-none"/>
                                          <div className="flex-1 relative z-10">
                                              <h4 className="text-2xl font-black text-white mb-2">Generate Access Key</h4>
-                                             <p className="text-zinc-400 text-sm max-w-md">Create new secure promotional keys for user activation. These keys unlock specific plan features.</p>
+                                             <p className="text-zinc-400 text-sm max-w-md">Create new secure promotional keys for user activation.</p>
                                          </div>
                                          <div className="flex items-center gap-4 bg-black/30 p-2 rounded-2xl border border-white/5 backdrop-blur-md relative z-10">
                                              <button onClick={() => setSelectedPlan('plus')} className={`px-6 py-3 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${selectedPlan === 'plus' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}>
@@ -655,7 +636,6 @@ export const AdminPanel = ({
                                                      <th className="p-5 text-xs font-bold text-zinc-500 uppercase tracking-wider">Key Code</th>
                                                      <th className="p-5 text-xs font-bold text-zinc-500 uppercase tracking-wider">Plan</th>
                                                      <th className="p-5 text-xs font-bold text-zinc-500 uppercase tracking-wider">Status</th>
-                                                     <th className="p-5 text-xs font-bold text-zinc-500 uppercase tracking-wider">Created</th>
                                                      <th className="p-5 text-right text-xs font-bold text-zinc-500 uppercase tracking-wider">Action</th>
                                                  </tr>
                                              </thead>
@@ -672,7 +652,6 @@ export const AdminPanel = ({
                                                                  {k.is_used ? 'Redeemed' : 'Available'}
                                                              </div>
                                                          </td>
-                                                         <td className="p-5 text-xs text-zinc-500">{new Date(k.created_at).toLocaleDateString()}</td>
                                                          <td className="p-5 text-right">
                                                              <button onClick={() => {navigator.clipboard.writeText(k.code); addToast('Copied to clipboard', 'success')}} className="p-2 hover:bg-white/10 rounded-xl text-zinc-500 hover:text-white transition-colors">
                                                                  <Copy size={16}/>
@@ -694,7 +673,7 @@ export const AdminPanel = ({
                                              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-white transition-colors" size={18}/>
                                              <input 
                                                 type="text" 
-                                                placeholder="Search users by name..." 
+                                                placeholder="Search users..." 
                                                 value={searchQuery}
                                                 onChange={e => setSearchQuery(e.target.value)}
                                                 className="w-full bg-white/5 border border-white/5 rounded-2xl pl-12 pr-4 py-4 text-white placeholder-zinc-600 outline-none focus:border-indigo-500/50 focus:bg-black/40 transition-all shadow-lg"
@@ -760,12 +739,9 @@ export const AdminPanel = ({
                                                                  <span className="flex items-center gap-1"><Hash size={10}/> {user.id.substring(0, 8)}...</span>
                                                                  <span className="w-1 h-1 rounded-full bg-zinc-700"/>
                                                                  <span className="flex items-center gap-1 group-hover:text-emerald-400 transition-colors"><Activity size={10}/> {user.usage} imgs</span>
-                                                                 <span className="w-1 h-1 rounded-full bg-zinc-700"/>
-                                                                 <span className="flex items-center gap-1"><Calendar size={10}/> {user.lastVisit}</span>
                                                              </div>
                                                          </div>
                                                      </div>
-
                                                      <div className="flex items-center gap-3">
                                                          <button className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center text-zinc-500 group-hover:bg-indigo-500 group-hover:text-white group-hover:border-indigo-500 transition-all shadow-lg">
                                                              <ChevronRight size={18}/>
@@ -774,22 +750,11 @@ export const AdminPanel = ({
                                                  </div>
                                              </div>
                                          ))}
-                                         
-                                         {dbUsers.length === 0 && (
-                                             <div className="text-center py-20 bg-white/5 rounded-3xl border border-white/5">
-                                                 <div className="w-20 h-20 bg-black/30 rounded-full flex items-center justify-center mx-auto mb-4 text-zinc-600 border border-white/5">
-                                                     <Users size={32}/>
-                                                 </div>
-                                                 <p className="text-zinc-500 font-bold">No users found.</p>
-                                                 <p className="text-zinc-600 text-sm mt-1">Try adjusting your filters.</p>
-                                             </div>
-                                         )}
                                      </div>
                                  </div>
                              )}
                          </>
                      )}
-
                  </div>
              </div>
            </div>
