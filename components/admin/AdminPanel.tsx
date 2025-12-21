@@ -7,7 +7,7 @@ import {
   Terminal, Calendar, ArrowUpRight, ArrowLeft, Mail,
   Clock, Hash, AlertTriangle, Check, Layers, DollarSign,
   TrendingUp, TrendingDown, PieChart, Wallet, CreditCard,
-  Settings, HelpCircle, ExternalLink
+  Settings, HelpCircle, ExternalLink, Cloud
 } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { supabase } from '../../supabaseClient';
@@ -38,6 +38,8 @@ interface FinancialData {
     currency: string;
     totalGrossRecent: number; // in cents
     mrr: number; // in cents
+    googleCloudCost: number; // in cents
+    costSource: 'estimate' | 'google_api_connected';
 }
 
 interface AdminPanelProps {
@@ -155,8 +157,7 @@ export const AdminPanel = ({
                 if (!error && data) {
                     setFinancials(data);
                 } else {
-                    // Fail silently or log, don't break UI
-                    console.log("Stripe fetch skipped or failed (check Edge Function logs)");
+                    console.log("Stripe fetch skipped or failed");
                 }
             }
 
@@ -255,7 +256,6 @@ export const AdminPanel = ({
         const estimatedMonthlyImages = totalDailyImages * 30;
         const imageCost = estimatedMonthlyImages * COST_PER_IMAGE;
         
-        // Active today is roughly accurate for recent usage
         const activeCount = dbUsers.filter(u => {
             const d = new Date(u.updatedAt);
             const now = new Date();
@@ -274,15 +274,39 @@ export const AdminPanel = ({
     const estimates = calculateEstimates();
     const revenue = financials ? financials.mrr / 100 : 0; 
     
-    // Use manual cost if provided, otherwise use estimate
-    const finalCost = manualCost !== null ? manualCost : estimates.estimatedTotal;
+    // Cost Logic
+    // 1. Manual Input (Highest Priority)
+    // 2. Google Cloud API (If connected and > 0)
+    // 3. Algorithm Estimate (Fallback)
+    
+    let finalCost = 0;
+    let costLabel = "ESTIMATE";
+    let costColor = "text-red-400";
+
+    if (manualCost !== null) {
+        finalCost = manualCost;
+        costLabel = "MANUAL";
+    } else if (financials?.costSource === 'google_api_connected') {
+        // If API is connected but returns 0 (likely due to no BigQuery), fall back to estimate but show status
+        if (financials.googleCloudCost > 0) {
+            finalCost = financials.googleCloudCost / 100;
+            costLabel = "CLOUD SYNC";
+            costColor = "text-blue-400";
+        } else {
+            finalCost = estimates.estimatedTotal;
+            costLabel = "ESTIMATE (GCP LINKED)";
+        }
+    } else {
+        finalCost = estimates.estimatedTotal;
+    }
+
     const profit = revenue - finalCost;
     const margin = revenue > 0 ? (profit / revenue) * 100 : 0;
 
     const chartData = [
-        { name: 'Revenue', value: revenue, color: '#10b981' }, // Green
-        { name: 'Costs', value: finalCost, color: '#ef4444' }, // Red
-        { name: 'Profit', value: profit, color: profit >= 0 ? '#6366f1' : '#f59e0b' }, // Indigo or Amber if negative
+        { name: 'Revenue', value: revenue, color: '#10b981' }, 
+        { name: 'Costs', value: finalCost, color: '#ef4444' },
+        { name: 'Profit', value: profit, color: profit >= 0 ? '#6366f1' : '#f59e0b' },
     ];
 
     if (showAdminAuth) {
@@ -344,7 +368,7 @@ export const AdminPanel = ({
                     </div>
                     <div>
                         <h2 className="font-bold text-white text-sm">Admin Panel</h2>
-                        <div className="text-[10px] text-zinc-500 font-mono">v2.3 • Finance</div>
+                        <div className="text-[10px] text-zinc-500 font-mono">v2.4 • Connected</div>
                     </div>
                 </div>
                 
@@ -536,12 +560,10 @@ export const AdminPanel = ({
                                                      <>
                                                          <div className="text-5xl font-black text-white tracking-tight">€{finalCost.toFixed(2)}</div>
                                                          <div className="flex items-center gap-2 mt-2">
-                                                             {manualCost !== null ? (
-                                                                 <span className="text-xs bg-red-500 text-white px-2 py-0.5 rounded-md font-bold">MANUAL INPUT</span>
-                                                             ) : (
-                                                                 <span className="text-xs bg-red-500/20 text-red-400 px-2 py-0.5 rounded-md font-bold">ESTIMATE</span>
-                                                             )}
-                                                             <span className="text-sm text-red-400/60 font-medium">{manualCost !== null ? 'Corrected by Admin' : 'Based on usage'}</span>
+                                                             <span className={`text-xs px-2 py-0.5 rounded-md font-bold uppercase ${costLabel.includes('CLOUD') ? 'bg-blue-500/20 text-blue-400' : manualCost ? 'bg-red-500 text-white' : 'bg-red-500/20 text-red-400'}`}>
+                                                                 {costLabel}
+                                                             </span>
+                                                             <span className={`text-sm font-medium ${costColor}`}>{costLabel === 'MANUAL' ? 'Corrected by Admin' : (costLabel.includes('CLOUD') ? 'Synced via GCP' : 'Based on usage')}</span>
                                                          </div>
                                                      </>
                                                  )}
@@ -593,11 +615,11 @@ export const AdminPanel = ({
 
                                      {/* Instruction for Cost Accuracy */}
                                      <div className="p-6 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex gap-4 items-start">
-                                         <div className="p-3 bg-blue-500/20 rounded-full text-blue-400 shrink-0"><HelpCircle size={24}/></div>
+                                         <div className="p-3 bg-blue-500/20 rounded-full text-blue-400 shrink-0"><Cloud size={24}/></div>
                                          <div>
-                                             <h4 className="font-bold text-white mb-1">How to get 100% accurate costs?</h4>
+                                             <h4 className="font-bold text-white mb-1">Automate Costs with Google Cloud</h4>
                                              <p className="text-sm text-gray-400 leading-relaxed mb-3">
-                                                 AI usage estimation is difficult because token lengths vary. To fix this, log in to your Google Cloud Console, check the billing report for the current month, and input the exact number in the "Money Out" card above using the Edit button.
+                                                 To get real-time cost tracking, create a <strong>Google Cloud Service Account</strong> with "Billing Account Viewer" access and add the JSON key to your Supabase Secrets as <code>GOOGLE_SERVICE_ACCOUNT</code>. Also set <code>GOOGLE_BILLING_ACCOUNT_ID</code>.
                                              </p>
                                              <a href="https://console.cloud.google.com/billing" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-xs font-bold text-blue-400 hover:text-white transition-colors bg-blue-500/10 hover:bg-blue-500/30 px-3 py-2 rounded-lg">
                                                  Go to Google Cloud Billing <ExternalLink size={12}/>
