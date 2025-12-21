@@ -7,17 +7,24 @@ import {
   Terminal, Calendar, ArrowUpRight, ArrowLeft, Mail,
   Clock, Hash, AlertTriangle, Check, Layers, DollarSign,
   TrendingUp, TrendingDown, PieChart, Wallet, CreditCard,
-  Settings, HelpCircle, ExternalLink, Cloud, Sliders, Cpu, Server, Info, AlertCircle, PenTool, History, Wrench
+  Settings, HelpCircle, ExternalLink, Cloud, Sliders, Cpu, Server, Info, AlertCircle, PenTool, History, Wrench,
+  BarChart2, UserCheck, FileText, Smartphone
 } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { supabase } from '../../supabaseClient';
 import { UserPlan } from '../../types';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
+// Pricing Constants (Gemini 2.5 Flash)
+const PRICE_INPUT_1M = 0.075;
+const PRICE_OUTPUT_1M = 0.30;
+
 interface GeneratedKey {
+  id?: string; // Added ID for deletion
   code: string;
   isUsed: boolean;
   plan?: 'plus' | 'pro';
+  createdAt?: string;
 }
 
 interface AdminUser {
@@ -30,6 +37,8 @@ interface AdminUser {
   usage: number; // Daily Image Count
   rawSettings: any;
   updatedAt: string;
+  totalInput: number;
+  totalOutput: number;
 }
 
 interface FinancialData {
@@ -68,7 +77,7 @@ export const AdminPanel = ({
 }: AdminPanelProps) => {
     
     const [activeTab, setActiveTab] = useState<'dashboard' | 'keys' | 'users' | 'finance'>('dashboard');
-    const [dbKeys, setDbKeys] = useState<any[]>([]);
+    const [dbKeys, setDbKeys] = useState<GeneratedKey[]>([]);
     const [dbUsers, setDbUsers] = useState<AdminUser[]>([]);
     const [financials, setFinancials] = useState<FinancialData | null>(null);
     const [loadingData, setLoadingData] = useState(false);
@@ -76,7 +85,7 @@ export const AdminPanel = ({
     const [searchQuery, setSearchQuery] = useState('');
     const [showRawData, setShowRawData] = useState<string | null>(null);
     
-    // Detailed Token Stats
+    // Detailed Token Stats (Global)
     const [totalInputTokens, setTotalInputTokens] = useState(0);
     const [totalOutputTokens, setTotalOutputTokens] = useState(0);
     
@@ -85,9 +94,10 @@ export const AdminPanel = ({
     const [isCalibrating, setIsCalibrating] = useState(false);
     const [calibrationValue, setCalibrationValue] = useState('');
     
-    // Filtering
+    // Filtering & Sorting
     const [filterPlan, setFilterPlan] = useState<'all' | 'free' | 'plus' | 'pro'>('all');
     const [showFilterMenu, setShowFilterMenu] = useState(false);
+    const [sortUsers, setSortUsers] = useState<'recent' | 'usage'>('recent');
 
     // User Details & Editing
     const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
@@ -118,10 +128,6 @@ export const AdminPanel = ({
                 if (!error && users) {
                     let tIn = 0;
                     let tOut = 0;
-                    
-                    // Also grab the current user's cost correction if available
-                    // We assume the admin user is viewing this, so we check *their* profile for the global correction value
-                    // In a real multi-tenant app, this would be a system setting table. Here we use the current user's profile metadata.
                     const { data: { user: currentUser } } = await supabase.auth.getUser();
                     
                     const mappedUsers: AdminUser[] = users.map((u: any) => {
@@ -130,14 +136,15 @@ export const AdminPanel = ({
                             try { settings = JSON.parse(settings); } catch (e) {}
                         }
                         
-                        if (settings?.stats) {
-                            tIn += (settings.stats.totalInputTokens || 0);
-                            tOut += (settings.stats.totalOutputTokens || 0);
-                            
-                            // Load calibration from current user's profile
-                            if (currentUser && u.id === currentUser.id) {
-                                setCostCorrection(settings.stats.costCorrection || 0);
-                            }
+                        const uIn = settings?.stats?.totalInputTokens || 0;
+                        const uOut = settings?.stats?.totalOutputTokens || 0;
+                        
+                        tIn += uIn;
+                        tOut += uOut;
+                        
+                        // Load calibration from current user's profile
+                        if (currentUser && u.id === currentUser.id) {
+                            setCostCorrection(settings?.stats?.costCorrection || 0);
                         }
 
                         return {
@@ -149,7 +156,9 @@ export const AdminPanel = ({
                             lastVisit: settings?.stats?.lastVisit || new Date(u.updated_at).toLocaleDateString(),
                             theme: u.theme_color || '#6366f1',
                             rawSettings: settings,
-                            updatedAt: u.updated_at
+                            updatedAt: u.updated_at,
+                            totalInput: uIn,
+                            totalOutput: uOut
                         };
                     });
                     setDbUsers(mappedUsers);
@@ -165,7 +174,15 @@ export const AdminPanel = ({
                     .select('*')
                     .order('created_at', { ascending: false })
                     .limit(50);
-                if (!error && keys) setDbKeys(keys);
+                if (!error && keys) {
+                    setDbKeys(keys.map(k => ({
+                        id: k.id,
+                        code: k.code,
+                        isUsed: k.is_used,
+                        plan: k.plan,
+                        createdAt: k.created_at
+                    })));
+                }
             }
 
             // Fetch Finance (Stripe & Google Cloud)
@@ -191,13 +208,23 @@ export const AdminPanel = ({
         addToast(`Генериран ключ за ${selectedPlan.toUpperCase()}`, 'success');
     };
 
+    const handleDeleteKey = async (id: string) => {
+        try {
+            const { error } = await supabase.from('promo_codes').delete().eq('id', id);
+            if (error) throw error;
+            setDbKeys(prev => prev.filter(k => k.id !== id));
+            addToast('Ключът е изтрит', 'success');
+        } catch (e) {
+            addToast('Грешка при изтриване', 'error');
+        }
+    };
+
     const handleSaveCalibration = async () => {
         const val = parseFloat(calibrationValue);
         if (!isNaN(val) && val >= 0) {
             setCostCorrection(val);
             setIsCalibrating(false);
             
-            // Persist to DB via current user profile update
             const { data: { user } } = await supabase.auth.getUser();
             if (user) {
                 const { data: profile } = await supabase.from('profiles').select('settings').eq('id', user.id).single();
@@ -274,33 +301,26 @@ export const AdminPanel = ({
 
     // --- Financial Calculations ---
     const revenue = financials ? financials.mrr / 100 : 0; 
-    
     const billedCloudCost = financials?.googleCloudCost || 0;
     const isCloudConnected = financials?.googleCloudConnected || false;
     
     // Precise Pricing Model (Gemini 2.5 Flash)
-    // Input: $0.075 / 1M
-    // Output: $0.30 / 1M
-    const liveInputCost = (totalInputTokens / 1000000) * 0.075;
-    const liveOutputCost = (totalOutputTokens / 1000000) * 0.30;
+    const liveInputCost = (totalInputTokens / 1000000) * PRICE_INPUT_1M;
+    const liveOutputCost = (totalOutputTokens / 1000000) * PRICE_OUTPUT_1M;
     const estimatedLiveUsage = liveInputCost + liveOutputCost;
     
-    // Logic: If Google Bill is 0 (Free Tier), use Calibration + Estimate
-    // This allows the user to manually "set" the historical cost ($0.34) and then track automatically from there.
     const showEstimate = billedCloudCost === 0;
-    
-    // Effective Cost Logic:
-    // If Bill is > 0, trust the Bill.
-    // If Bill is 0, use Max(LocalEstimate + Correction, Bill) to show at least something if tracking active.
     const displayCost = showEstimate ? (estimatedLiveUsage + costCorrection) : billedCloudCost;
     
-    const profit = revenue - displayCost;
-    const margin = revenue > 0 ? (profit / revenue) * 100 : 0;
+    // Stripe Fees approx 2.9% + 0.30 per tx (simplified to 3%)
+    const estimatedFees = revenue * 0.03;
+    const netProfit = revenue - displayCost - estimatedFees;
+    const profitMargin = revenue > 0 ? (netProfit / revenue) * 100 : 0;
 
     const chartData = [
         { name: 'Revenue', value: revenue, color: '#10b981' }, 
         { name: 'AI Cost', value: displayCost, color: '#ef4444' },
-        { name: 'Net Bill', value: billedCloudCost, color: '#f59e0b' },
+        { name: 'Fees', value: estimatedFees, color: '#6366f1' },
     ];
 
     if (showAdminAuth) {
@@ -362,7 +382,7 @@ export const AdminPanel = ({
                     </div>
                     <div>
                         <h2 className="font-bold text-white text-sm">Admin Panel</h2>
-                        <div className="text-[10px] text-zinc-500 font-mono">v2.8 • Auto Sync</div>
+                        <div className="text-[10px] text-zinc-500 font-mono">v3.0 • Financials</div>
                     </div>
                 </div>
                 
@@ -371,7 +391,7 @@ export const AdminPanel = ({
                         <Activity size={18}/> Overview
                     </button>
                     <button onClick={() => {setActiveTab('finance'); setSelectedUser(null);}} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTab === 'finance' ? 'bg-white/10 text-white border border-white/5' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}>
-                        <DollarSign size={18}/> Finance (P&L)
+                        <DollarSign size={18}/> Finance
                     </button>
                     <button onClick={() => {setActiveTab('users'); setSelectedUser(null);}} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTab === 'users' ? 'bg-white/10 text-white border border-white/5' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}>
                         <Users size={18}/> Users
@@ -400,7 +420,7 @@ export const AdminPanel = ({
                          )}
                          <div>
                              <h3 className="text-xl font-bold text-white capitalize">{selectedUser ? selectedUser.name : activeTab}</h3>
-                             <p className="text-xs text-zinc-500 mt-0.5">{selectedUser ? 'Viewing User Details' : 'Manage your application data'}</p>
+                             <p className="text-xs text-zinc-500 mt-0.5">{selectedUser ? 'Viewing User Details' : 'System Administration'}</p>
                          </div>
                      </div>
                      <div className="flex items-center gap-3">
@@ -413,10 +433,9 @@ export const AdminPanel = ({
                  {/* Content Scroll Area */}
                  <div className="flex-1 overflow-y-auto custom-scrollbar p-8">
                      
-                     {/* USER DETAILS VIEW */}
+                     {/* USER DETAIL MODAL REPLACEMENT */}
                      {selectedUser && editForm ? (
                          <div className="max-w-4xl mx-auto space-y-6 animate-in slide-in-from-right fade-in duration-300">
-                             {/* ... (User Detail View Code) ... */}
                              <div className="bg-white/5 border border-white/5 rounded-3xl p-8 flex items-center gap-8 shadow-xl">
                                  <div 
                                     className="w-24 h-24 rounded-3xl flex items-center justify-center text-3xl font-black text-white shadow-2xl shadow-indigo-500/20"
@@ -444,7 +463,6 @@ export const AdminPanel = ({
                              </div>
 
                              <div className="grid grid-cols-2 gap-6">
-                                 {/* Edit Details */}
                                  <div className="bg-white/5 border border-white/5 rounded-3xl p-6 space-y-5">
                                      <h4 className="text-lg font-bold text-white flex items-center gap-2"><Edit2 size={18} className="text-zinc-500"/> Edit Profile</h4>
                                      <div className="space-y-2">
@@ -463,7 +481,7 @@ export const AdminPanel = ({
                                                     key={plan}
                                                     onClick={() => setEditForm({...editForm, plan})}
                                                     className={`py-2 rounded-lg text-xs font-bold uppercase transition-all ${editForm.plan === plan 
-                                                        ? (plan === 'pro' ? 'bg-amber-500 text-white shadow-lg shadow-amber-500/30' : plan === 'plus' ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/30' : 'bg-zinc-600 text-white')
+                                                        ? (plan === 'pro' ? 'bg-amber-500 text-white' : plan === 'plus' ? 'bg-indigo-500 text-white' : 'bg-zinc-600 text-white')
                                                         : 'text-zinc-500 hover:bg-white/5 hover:text-white'
                                                     }`}
                                                  >
@@ -473,7 +491,6 @@ export const AdminPanel = ({
                                          </div>
                                      </div>
                                  </div>
-                                 {/* Edit Stats */}
                                  <div className="bg-white/5 border border-white/5 rounded-3xl p-6 space-y-5">
                                      <h4 className="text-lg font-bold text-white flex items-center gap-2"><Activity size={18} className="text-zinc-500"/> Usage Stats</h4>
                                      <div className="grid grid-cols-2 gap-4">
@@ -501,223 +518,153 @@ export const AdminPanel = ({
                          </div>
                      ) : (
                          <>
-                             {/* DASHBOARD & FINANCE COMBINED VIEW */}
-                             {(activeTab === 'dashboard' || activeTab === 'finance') && (
+                             {/* DASHBOARD TAB (OVERVIEW) */}
+                             {activeTab === 'dashboard' && (
                                  <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
-                                     {/* Summary Cards */}
-                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                         
-                                         {/* MONEY IN (REVENUE) */}
-                                         <div className="p-8 bg-emerald-500/10 border border-emerald-500/20 rounded-[32px] relative overflow-hidden">
-                                             <div className="relative z-10">
-                                                 <div className="flex items-center gap-3 mb-4 text-emerald-400">
+                                     <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                                         <div className="p-6 bg-blue-500/10 border border-blue-500/20 rounded-3xl">
+                                             <div className="flex items-center gap-3 mb-2 text-blue-400">
+                                                 <Users size={24}/>
+                                                 <span className="font-bold text-sm uppercase tracking-wider">Total Users</span>
+                                             </div>
+                                             <div className="text-4xl font-black text-white">{dbUsers.length}</div>
+                                         </div>
+                                         <div className="p-6 bg-purple-500/10 border border-purple-500/20 rounded-3xl">
+                                             <div className="flex items-center gap-3 mb-2 text-purple-400">
+                                                 <Zap size={24}/>
+                                                 <span className="font-bold text-sm uppercase tracking-wider">Active Subs</span>
+                                             </div>
+                                             <div className="text-4xl font-black text-white">{dbUsers.filter(u => u.plan !== 'free').length}</div>
+                                         </div>
+                                         <div className="p-6 bg-orange-500/10 border border-orange-500/20 rounded-3xl">
+                                             <div className="flex items-center gap-3 mb-2 text-orange-400">
+                                                 <Activity size={24}/>
+                                                 <span className="font-bold text-sm uppercase tracking-wider">Active Today</span>
+                                             </div>
+                                             <div className="text-4xl font-black text-white">{dbUsers.filter(u => u.lastVisit === new Date().toLocaleDateString()).length}</div>
+                                         </div>
+                                         <div className="p-6 bg-emerald-500/10 border border-emerald-500/20 rounded-3xl">
+                                             <div className="flex items-center gap-3 mb-2 text-emerald-400">
+                                                 <Server size={24}/>
+                                                 <span className="font-bold text-sm uppercase tracking-wider">System Status</span>
+                                             </div>
+                                             <div className="text-xl font-black text-white flex items-center gap-2 mt-2">
+                                                 <div className={`w-3 h-3 rounded-full ${isCloudConnected ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`}/>
+                                                 {isCloudConnected ? 'Operational' : 'Offline'}
+                                             </div>
+                                         </div>
+                                     </div>
+                                     
+                                     {/* Quick Chart Placeholder */}
+                                     <div className="h-64 w-full bg-white/5 border border-white/5 rounded-3xl p-6 flex flex-col justify-center items-center text-zinc-500">
+                                         <BarChart2 size={48} className="mb-2 opacity-50"/>
+                                         <span className="text-sm font-medium">Activity Trends (Coming Soon)</span>
+                                     </div>
+                                 </div>
+                             )}
+
+                             {/* FINANCE TAB (DETAILED P&L) */}
+                             {activeTab === 'finance' && (
+                                 <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
+                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                         {/* INCOME CARD */}
+                                         <div className="p-8 bg-emerald-500/5 border border-emerald-500/20 rounded-[32px] relative overflow-hidden">
+                                             <div className="flex justify-between items-start mb-6">
+                                                 <div className="flex items-center gap-3 text-emerald-400">
                                                      <div className="p-2 bg-emerald-500/20 rounded-xl"><DollarSign size={24}/></div>
-                                                     <span className="font-bold uppercase tracking-wider text-xs">Revenue (MRR)</span>
+                                                     <span className="font-bold uppercase tracking-wider text-xs">Monthly Revenue</span>
                                                  </div>
-                                                 <div className="text-5xl font-black text-white tracking-tight">€{revenue.toFixed(2)}</div>
-                                                 <div className="text-sm text-emerald-400/60 mt-2 font-medium">Monthly Recurring Revenue</div>
+                                                 <div className="px-3 py-1 bg-emerald-500/10 rounded-full text-emerald-300 text-xs font-bold">MRR</div>
                                              </div>
+                                             <div className="text-5xl font-black text-white tracking-tight mb-2">€{revenue.toFixed(2)}</div>
+                                             <p className="text-sm text-zinc-500">Based on active Stripe subscriptions.</p>
                                          </div>
 
-                                         {/* MONEY OUT (COSTS) - Cloud Sync */}
-                                         <div className="p-8 bg-red-500/10 border border-red-500/20 rounded-[32px] relative overflow-hidden group">
-                                             <div className="relative z-10">
-                                                 <div className="flex items-center justify-between mb-4 text-red-400">
-                                                     <div className="flex items-center gap-3">
-                                                         <div className="p-2 bg-red-500/20 rounded-xl"><Cloud size={24}/></div>
-                                                         <span className="font-bold uppercase tracking-wider text-xs">
-                                                             AI Usage Cost
-                                                         </span>
-                                                     </div>
-                                                     <div className="flex gap-2">
-                                                         {showEstimate && (
-                                                             <button 
-                                                                onClick={() => { setCalibrationValue(costCorrection.toString()); setIsCalibrating(true); }}
-                                                                className="text-[10px] text-red-300 hover:text-white underline decoration-dotted transition-colors font-bold"
-                                                             >
-                                                                 Mismatch?
-                                                             </button>
-                                                         )}
-                                                     </div>
+                                         {/* EXPENSE CARD */}
+                                         <div className="p-8 bg-red-500/5 border border-red-500/20 rounded-[32px] relative overflow-hidden">
+                                             <div className="flex justify-between items-start mb-6">
+                                                 <div className="flex items-center gap-3 text-red-400">
+                                                     <div className="p-2 bg-red-500/20 rounded-xl"><Cloud size={24}/></div>
+                                                     <span className="font-bold uppercase tracking-wider text-xs">Est. AI Cost</span>
                                                  </div>
-
-                                                 <div className="text-5xl font-black text-white tracking-tight flex items-baseline gap-2">
-                                                     <span>${displayCost.toFixed(4)}</span>
-                                                     {showEstimate && costCorrection === 0 && <span className="text-lg text-red-400/60 font-bold hidden xl:inline">(Est)</span>}
+                                                 <div className="flex items-center gap-2">
+                                                     {showEstimate && (
+                                                         <button 
+                                                            onClick={() => { setCalibrationValue(costCorrection.toString()); setIsCalibrating(true); }}
+                                                            className="text-[10px] text-red-300 hover:text-white underline decoration-dotted font-bold"
+                                                         >
+                                                             Mismatch?
+                                                         </button>
+                                                     )}
                                                  </div>
-                                                 
-                                                 <div className="flex flex-col gap-1 mt-3">
-                                                     <div className="flex items-center justify-between">
-                                                         <span className={`text-[10px] px-2 py-0.5 rounded-md font-bold uppercase ${isCloudConnected ? 'bg-green-500/20 text-green-400' : 'bg-zinc-600 text-gray-300'}`}>
-                                                             {isCloudConnected ? 'API CONNECTED' : 'OFFLINE'}
-                                                         </span>
-                                                         {financials?.lastSync && (
-                                                             <span className="text-[10px] text-red-400/60 font-mono">
-                                                                 {new Date(financials.lastSync).toLocaleTimeString()}
-                                                             </span>
-                                                         )}
-                                                     </div>
-                                                     
-                                                     {/* Breakdown Subtext */}
-                                                     <div className="flex items-center justify-between text-xs font-mono text-zinc-500 mt-1">
-                                                         <span>Live: ${estimatedLiveUsage.toFixed(4)}</span>
-                                                         {costCorrection > 0 && <span className="text-amber-500">Base: ${costCorrection.toFixed(2)}</span>}
-                                                     </div>
-                                                 </div>
-                                                 
-                                                 {/* Calibration Input Overlay */}
-                                                 {isCalibrating && (
-                                                     <div className="absolute inset-0 bg-black/90 backdrop-blur-md flex flex-col items-center justify-center p-4 z-20 animate-in fade-in">
-                                                         <div className="text-center w-full">
-                                                             <h4 className="text-white font-bold mb-2 text-sm">Calibrate Total Cost</h4>
-                                                             <p className="text-xs text-gray-400 mb-3">Enter the "Gross Cost" value you see in Google Cloud Console.</p>
-                                                             <div className="flex gap-2 justify-center">
-                                                                 <input 
-                                                                    type="number" 
-                                                                    value={calibrationValue}
-                                                                    onChange={e => setCalibrationValue(e.target.value)}
-                                                                    className="w-24 bg-white/10 border border-white/20 rounded-lg px-2 py-1 text-white text-center outline-none focus:border-indigo-500"
-                                                                    placeholder="0.34"
-                                                                    autoFocus
-                                                                 />
-                                                                 <button onClick={handleSaveCalibration} className="bg-green-600 hover:bg-green-500 text-white rounded-lg p-2"><Check size={16}/></button>
-                                                                 <button onClick={() => setIsCalibrating(false)} className="bg-gray-600 hover:bg-gray-500 text-white rounded-lg p-2"><X size={16}/></button>
-                                                             </div>
-                                                         </div>
-                                                     </div>
-                                                 )}
                                              </div>
-                                         </div>
-
-                                         {/* NET PROFIT */}
-                                         <div className={`p-8 rounded-[32px] relative overflow-hidden border ${profit >= 0 ? 'bg-indigo-500/10 border-indigo-500/20' : 'bg-orange-500/10 border-orange-500/20'}`}>
-                                             <div className="relative z-10">
-                                                 <div className={`flex items-center gap-3 mb-4 ${profit >= 0 ? 'text-indigo-400' : 'text-orange-400'}`}>
-                                                     <div className={`p-2 rounded-xl ${profit >= 0 ? 'bg-indigo-500/20' : 'bg-orange-500/20'}`}><Wallet size={24}/></div>
-                                                     <span className="font-bold uppercase tracking-wider text-xs">Net Profit</span>
-                                                 </div>
-                                                 <div className={`text-5xl font-black tracking-tight ${profit >= 0 ? 'text-white' : 'text-orange-500'}`}>€{profit.toFixed(2)}</div>
-                                                 <div className={`text-sm mt-2 font-medium ${profit >= 0 ? 'text-indigo-400/60' : 'text-orange-400/60'}`}>Margin: {margin.toFixed(1)}%</div>
-                                             </div>
-                                         </div>
-                                     </div>
-
-                                     {/* Charts */}
-                                     <div className="h-80 w-full bg-white/5 border border-white/5 rounded-3xl p-8">
-                                         <h4 className="text-white font-bold mb-6 flex items-center gap-2 text-sm uppercase tracking-wider text-zinc-500">Financial Overview</h4>
-                                         <ResponsiveContainer width="100%" height="100%">
-                                             <BarChart data={chartData} layout="vertical" margin={{top: 0, right: 30, left: 30, bottom: 0}}>
-                                                 <CartesianGrid strokeDasharray="3 3" stroke="#333" horizontal={false} />
-                                                 <XAxis type="number" stroke="#666" tick={{fontSize: 10}} hide/>
-                                                 <YAxis type="category" dataKey="name" stroke="#999" width={100} tick={{fontSize: 14, fontWeight: 'bold', fill: '#fff'}} axisLine={false} tickLine={false}/>
-                                                 <Tooltip 
-                                                    cursor={{fill: 'rgba(255,255,255,0.05)'}}
-                                                    content={({ active, payload }) => {
-                                                        if (active && payload && payload.length) {
-                                                        return (
-                                                            <div className="bg-zinc-900 border border-zinc-800 p-3 rounded-xl shadow-xl">
-                                                                <p className="text-white font-bold">{payload[0].payload.name}: €{Number(payload[0].value).toFixed(4)}</p>
-                                                            </div>
-                                                        );
-                                                        }
-                                                        return null;
-                                                    }}
-                                                 />
-                                                 <Bar dataKey="value" radius={[0, 8, 8, 0]} barSize={40}>
-                                                     {chartData.map((entry, index) => (
-                                                         <Cell key={`cell-${index}`} fill={entry.color} />
-                                                     ))}
-                                                 </Bar>
-                                             </BarChart>
-                                         </ResponsiveContainer>
-                                     </div>
-
-                                     <div className="p-6 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex gap-4 items-start relative">
-                                         <div className="p-3 bg-blue-500/20 rounded-full text-blue-400 shrink-0"><Info size={24}/></div>
-                                         <div className="flex-1">
-                                             <h4 className="font-bold text-white mb-1">
-                                                 Smart Cost Tracking
-                                             </h4>
-                                             <p className="text-sm text-gray-400 leading-relaxed mb-3">
-                                                 {showEstimate 
-                                                    ? `Since your Google Cloud Bill is $0.00 (Free Tier), the system calculates Total Cost by adding live usage estimates to your historical baseline.`
-                                                    : `Displaying exact billed amount from Google Cloud Budget API.`
-                                                 }
+                                             <div className="text-5xl font-black text-white tracking-tight mb-2">${displayCost.toFixed(4)}</div>
+                                             <p className="text-sm text-zinc-500 flex items-center gap-2">
+                                                 {showEstimate ? 'Calculated from token usage + baseline.' : 'Directly billed from Google Cloud.'}
                                              </p>
-                                             {showEstimate && (
-                                                 <div className="flex flex-wrap items-center gap-2 text-xs font-mono mt-1">
-                                                     <div className="text-blue-300 bg-blue-500/10 px-3 py-1.5 rounded-lg border border-blue-500/20">
-                                                         Live Tokens: {(totalInputTokens + totalOutputTokens).toLocaleString()}
-                                                     </div>
-                                                     <div className="text-emerald-300 bg-emerald-500/10 px-3 py-1.5 rounded-lg border border-emerald-500/20">
-                                                         In: {totalInputTokens.toLocaleString()} | Out: {totalOutputTokens.toLocaleString()}
+                                             
+                                             {/* Calibration Overlay */}
+                                             {isCalibrating && (
+                                                 <div className="absolute inset-0 bg-black/90 backdrop-blur-md flex flex-col items-center justify-center p-4 z-20 animate-in fade-in">
+                                                     <div className="text-center w-full">
+                                                         <h4 className="text-white font-bold mb-2 text-sm">Calibrate Historical Cost</h4>
+                                                         <p className="text-xs text-gray-400 mb-3">Enter "Gross Cost" from Google Cloud Console.</p>
+                                                         <div className="flex gap-2 justify-center">
+                                                             <input 
+                                                                type="number" 
+                                                                value={calibrationValue}
+                                                                onChange={e => setCalibrationValue(e.target.value)}
+                                                                className="w-24 bg-white/10 border border-white/20 rounded-lg px-2 py-1 text-white text-center outline-none focus:border-indigo-500"
+                                                                placeholder="0.34"
+                                                                autoFocus
+                                                             />
+                                                             <button onClick={handleSaveCalibration} className="bg-green-600 hover:bg-green-500 text-white rounded-lg p-2"><Check size={16}/></button>
+                                                             <button onClick={() => setIsCalibrating(false)} className="bg-gray-600 hover:bg-gray-500 text-white rounded-lg p-2"><X size={16}/></button>
+                                                         </div>
                                                      </div>
                                                  </div>
                                              )}
                                          </div>
                                      </div>
-                                 </div>
-                             )}
 
-                             {/* KEYS MANAGEMENT */}
-                             {activeTab === 'keys' && (
-                                 <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
-                                     {/* Generator Card */}
-                                     <div className="bg-white/5 border border-white/5 rounded-3xl p-8 flex flex-col md:flex-row items-center gap-8 shadow-xl relative overflow-hidden">
-                                         <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-purple-500/5 pointer-events-none"/>
-                                         <div className="flex-1 relative z-10">
-                                             <h4 className="text-2xl font-black text-white mb-2">Generate Access Key</h4>
-                                             <p className="text-zinc-400 text-sm max-w-md">Create new secure promotional keys for user activation.</p>
+                                     {/* PROFIT & BREAKDOWN */}
+                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                         <div className="md:col-span-1 p-6 rounded-3xl border border-white/10 bg-white/5 flex flex-col justify-center items-center text-center">
+                                             <div className="text-sm font-bold text-zinc-400 uppercase tracking-wider mb-2">Net Profit</div>
+                                             <div className={`text-4xl font-black ${netProfit >= 0 ? 'text-indigo-400' : 'text-orange-500'}`}>
+                                                 €{netProfit.toFixed(2)}
+                                             </div>
+                                             <div className="text-xs text-zinc-500 mt-1">Margin: {profitMargin.toFixed(1)}%</div>
                                          </div>
-                                         <div className="flex items-center gap-4 bg-black/30 p-2 rounded-2xl border border-white/5 backdrop-blur-md relative z-10">
-                                             <button onClick={() => setSelectedPlan('plus')} className={`px-6 py-3 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${selectedPlan === 'plus' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}>
-                                                 <Zap size={16} fill="currentColor"/> Plus
-                                             </button>
-                                             <button onClick={() => setSelectedPlan('pro')} className={`px-6 py-3 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${selectedPlan === 'pro' ? 'bg-amber-600 text-white shadow-lg shadow-amber-500/30' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}>
-                                                 <Crown size={16} fill="currentColor"/> Pro
-                                             </button>
-                                         </div>
-                                         <Button onClick={handleGenerate} icon={Plus} className="px-8 py-4 bg-white text-black hover:bg-zinc-200 shadow-xl rounded-2xl text-base relative z-10">Generate Key</Button>
-                                     </div>
 
-                                     {/* Keys Table */}
-                                     <div className="bg-white/5 border border-white/5 rounded-3xl overflow-hidden shadow-lg">
-                                         <table className="w-full text-left">
-                                             <thead>
-                                                 <tr className="border-b border-white/5 bg-black/20">
-                                                     <th className="p-5 text-xs font-bold text-zinc-500 uppercase tracking-wider">Key Code</th>
-                                                     <th className="p-5 text-xs font-bold text-zinc-500 uppercase tracking-wider">Plan</th>
-                                                     <th className="p-5 text-xs font-bold text-zinc-500 uppercase tracking-wider">Status</th>
-                                                     <th className="p-5 text-right text-xs font-bold text-zinc-500 uppercase tracking-wider">Action</th>
-                                                 </tr>
-                                             </thead>
-                                             <tbody className="divide-y divide-white/5">
-                                                 {dbKeys.map((k, i) => (
-                                                     <tr key={i} className="hover:bg-white/5 transition-colors group">
-                                                         <td className="p-5 font-mono text-sm text-indigo-400 font-medium">{k.code}</td>
-                                                         <td className="p-5">
-                                                             <span className={`text-[10px] font-black px-2 py-1 rounded-md uppercase tracking-wider ${k.plan === 'pro' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' : 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20'}`}>{k.plan || 'pro'}</span>
-                                                         </td>
-                                                         <td className="p-5">
-                                                             <div className={`flex items-center gap-2 text-xs font-bold ${k.is_used ? 'text-red-400' : 'text-emerald-400'}`}>
-                                                                 <div className={`w-2 h-2 rounded-full ${k.is_used ? 'bg-red-500' : 'bg-emerald-500'} shadow-[0_0_10px_currentColor]`}/>
-                                                                 {k.is_used ? 'Redeemed' : 'Available'}
-                                                             </div>
-                                                         </td>
-                                                         <td className="p-5 text-right">
-                                                             <button onClick={() => {navigator.clipboard.writeText(k.code); addToast('Copied to clipboard', 'success')}} className="p-2 hover:bg-white/10 rounded-xl text-zinc-500 hover:text-white transition-colors">
-                                                                 <Copy size={16}/>
-                                                             </button>
-                                                         </td>
-                                                     </tr>
-                                                 ))}
-                                             </tbody>
-                                         </table>
+                                         <div className="md:col-span-2 p-6 rounded-3xl border border-white/10 bg-white/5">
+                                             <h4 className="text-sm font-bold text-white uppercase tracking-wider mb-4 flex items-center gap-2"><FileText size={16}/> Cost Ledger</h4>
+                                             <div className="space-y-3 text-sm font-mono">
+                                                 <div className="flex justify-between items-center text-zinc-400">
+                                                     <span>Input Tokens ({totalInputTokens.toLocaleString()})</span>
+                                                     <span>${liveInputCost.toFixed(4)}</span>
+                                                 </div>
+                                                 <div className="flex justify-between items-center text-zinc-400">
+                                                     <span>Output Tokens ({totalOutputTokens.toLocaleString()})</span>
+                                                     <span>${liveOutputCost.toFixed(4)}</span>
+                                                 </div>
+                                                 {costCorrection > 0 && (
+                                                     <div className="flex justify-between items-center text-amber-500">
+                                                         <span>Historical Adjustment</span>
+                                                         <span>${costCorrection.toFixed(4)}</span>
+                                                     </div>
+                                                 )}
+                                                 <div className="flex justify-between items-center text-indigo-400 border-t border-white/5 pt-2">
+                                                     <span>Stripe Fees (Est. 3%)</span>
+                                                     <span>€{estimatedFees.toFixed(2)}</span>
+                                                 </div>
+                                             </div>
+                                         </div>
                                      </div>
                                  </div>
                              )}
 
-                             {/* USERS MANAGEMENT */}
+                             {/* USERS TAB */}
                              {activeTab === 'users' && (
                                  <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
                                      <div className="flex gap-4">
@@ -731,77 +678,112 @@ export const AdminPanel = ({
                                                 className="w-full bg-white/5 border border-white/5 rounded-2xl pl-12 pr-4 py-4 text-white placeholder-zinc-600 outline-none focus:border-indigo-500/50 focus:bg-black/40 transition-all shadow-lg"
                                              />
                                          </div>
-                                         <div className="relative">
-                                             <button 
-                                                onClick={() => setShowFilterMenu(!showFilterMenu)}
-                                                className={`h-full px-6 flex items-center gap-2 bg-white/5 border border-white/5 rounded-2xl text-sm font-bold transition-all hover:bg-white/10 ${filterPlan !== 'all' ? 'text-indigo-400 bg-indigo-500/10 border-indigo-500/30' : 'text-zinc-400'}`}
-                                             >
-                                                 <Filter size={18}/> 
-                                                 {filterPlan === 'all' ? 'Filter' : filterPlan.charAt(0).toUpperCase() + filterPlan.slice(1)}
+                                         <div className="flex gap-2">
+                                             <button onClick={() => setSortUsers(sortUsers === 'recent' ? 'usage' : 'recent')} className="px-4 bg-white/5 hover:bg-white/10 border border-white/5 rounded-2xl text-zinc-400 hover:text-white font-medium text-sm transition-all min-w-[100px]">
+                                                 {sortUsers === 'recent' ? 'Latest' : 'Top Usage'}
                                              </button>
-                                             
-                                             {showFilterMenu && (
-                                                 <div className="absolute top-full right-0 mt-2 w-40 bg-[#111] border border-white/10 rounded-xl shadow-2xl overflow-hidden z-50 animate-in slide-in-from-top-2 fade-in">
-                                                     {(['all', 'free', 'plus', 'pro'] as const).map(p => (
-                                                         <button 
-                                                            key={p}
-                                                            onClick={() => { setFilterPlan(p); setShowFilterMenu(false); }}
-                                                            className={`w-full text-left px-4 py-3 text-xs font-bold uppercase tracking-wider hover:bg-white/5 flex items-center justify-between ${filterPlan === p ? 'text-indigo-400 bg-white/5' : 'text-zinc-500'}`}
-                                                         >
-                                                             {p}
-                                                             {filterPlan === p && <Check size={14}/>}
-                                                         </button>
-                                                     ))}
-                                                 </div>
-                                             )}
-                                             {showFilterMenu && <div className="fixed inset-0 z-40" onClick={() => setShowFilterMenu(false)}/>}
+                                             <div className="relative">
+                                                 <button 
+                                                    onClick={() => setShowFilterMenu(!showFilterMenu)}
+                                                    className={`h-full px-6 flex items-center gap-2 bg-white/5 border border-white/5 rounded-2xl text-sm font-bold transition-all hover:bg-white/10 ${filterPlan !== 'all' ? 'text-indigo-400 bg-indigo-500/10 border-indigo-500/30' : 'text-zinc-400'}`}
+                                                 >
+                                                     <Filter size={18}/> 
+                                                     {filterPlan === 'all' ? 'All' : filterPlan}
+                                                 </button>
+                                                 {showFilterMenu && (
+                                                     <div className="absolute top-full right-0 mt-2 w-32 bg-[#111] border border-white/10 rounded-xl shadow-2xl overflow-hidden z-50 animate-in slide-in-from-top-2 fade-in">
+                                                         {['all', 'free', 'plus', 'pro'].map(p => (
+                                                             <button key={p} onClick={() => { setFilterPlan(p as any); setShowFilterMenu(false); }} className={`w-full text-left px-4 py-3 text-xs font-bold uppercase hover:bg-white/5 ${filterPlan === p ? 'text-indigo-400' : 'text-zinc-500'}`}>
+                                                                 {p}
+                                                             </button>
+                                                         ))}
+                                                     </div>
+                                                 )}
+                                             </div>
                                          </div>
                                      </div>
 
-                                     <div className="grid grid-cols-1 gap-4">
+                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                          {dbUsers
                                             .filter(u => !searchQuery || u.name.toLowerCase().includes(searchQuery.toLowerCase()))
                                             .filter(u => filterPlan === 'all' || u.plan === filterPlan)
+                                            .sort((a, b) => sortUsers === 'recent' ? new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime() : (b.totalInput + b.totalOutput) - (a.totalInput + a.totalOutput))
                                             .map((user) => (
-                                             <div 
-                                                key={user.id} 
-                                                onClick={() => handleUserClick(user)}
-                                                className="group bg-white/5 border border-white/5 rounded-3xl p-5 hover:border-indigo-500/30 hover:bg-white/10 transition-all cursor-pointer shadow-md hover:shadow-xl"
-                                             >
-                                                 <div className="flex items-center justify-between">
-                                                     <div className="flex items-center gap-5">
-                                                         <div 
-                                                            className="w-14 h-14 rounded-2xl flex items-center justify-center text-xl font-bold text-white shadow-lg shadow-black/20 group-hover:scale-110 transition-transform duration-300"
-                                                            style={{ backgroundColor: user.theme }}
-                                                         >
-                                                             {user.name.charAt(0).toUpperCase()}
-                                                         </div>
-                                                         <div>
-                                                             <div className="flex items-center gap-3 mb-1">
-                                                                 <h4 className="font-bold text-white text-lg group-hover:text-indigo-200 transition-colors">{user.name}</h4>
-                                                                 <span className={`text-[10px] font-black px-2 py-0.5 rounded-md uppercase tracking-wider ${
-                                                                     user.plan === 'pro' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' : 
-                                                                     user.plan === 'plus' ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20' : 
-                                                                     'bg-zinc-800 text-zinc-500 border border-white/5'
-                                                                 }`}>
-                                                                     {user.plan}
-                                                                 </span>
-                                                             </div>
-                                                             <div className="flex items-center gap-4 text-xs text-zinc-500 font-mono">
-                                                                 <span className="flex items-center gap-1"><Hash size={10}/> {user.id.substring(0, 8)}...</span>
-                                                                 <span className="w-1 h-1 rounded-full bg-zinc-700"/>
-                                                                 <span className="flex items-center gap-1 group-hover:text-emerald-400 transition-colors"><Activity size={10}/> {user.usage} imgs</span>
-                                                             </div>
-                                                         </div>
+                                             <div key={user.id} onClick={() => handleUserClick(user)} className="group bg-white/5 border border-white/5 rounded-3xl p-5 hover:border-indigo-500/30 hover:bg-white/10 transition-all cursor-pointer shadow-md hover:shadow-xl relative overflow-hidden">
+                                                 <div className="flex items-start gap-4 relative z-10">
+                                                     <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-lg font-bold text-white shadow-lg" style={{ backgroundColor: user.theme }}>
+                                                         {user.name.charAt(0).toUpperCase()}
                                                      </div>
-                                                     <div className="flex items-center gap-3">
-                                                         <button className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center text-zinc-500 group-hover:bg-indigo-500 group-hover:text-white group-hover:border-indigo-500 transition-all shadow-lg">
-                                                             <ChevronRight size={18}/>
-                                                         </button>
+                                                     <div className="flex-1 min-w-0">
+                                                         <div className="flex justify-between items-start">
+                                                             <h4 className="font-bold text-white truncate pr-2">{user.name}</h4>
+                                                             <span className={`text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-wider ${user.plan === 'pro' ? 'bg-amber-500 text-black' : user.plan === 'plus' ? 'bg-indigo-500 text-white' : 'bg-zinc-700 text-zinc-400'}`}>{user.plan}</span>
+                                                         </div>
+                                                         <div className="flex items-center gap-3 text-xs text-zinc-500 font-mono mt-1">
+                                                             <span>ID: {user.id.substring(0,6)}</span>
+                                                             <span className="w-1 h-1 rounded-full bg-zinc-700"/>
+                                                             <span className="text-emerald-500">{user.usage} imgs</span>
+                                                         </div>
+                                                         <div className="mt-3 pt-3 border-t border-white/5 flex gap-4 text-[10px] font-mono text-zinc-400">
+                                                             <div>In: {(user.totalInput/1000).toFixed(1)}k</div>
+                                                             <div>Out: {(user.totalOutput/1000).toFixed(1)}k</div>
+                                                             <div className="ml-auto text-zinc-600">{new Date(user.updatedAt).toLocaleDateString()}</div>
+                                                         </div>
                                                      </div>
                                                  </div>
                                              </div>
                                          ))}
+                                     </div>
+                                 </div>
+                             )}
+
+                             {/* ACCESS KEYS TAB */}
+                             {activeTab === 'keys' && (
+                                 <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
+                                     <div className="bg-white/5 border border-white/5 rounded-3xl p-8 flex flex-col md:flex-row items-center gap-8 shadow-xl relative overflow-hidden">
+                                         <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-purple-500/5 pointer-events-none"/>
+                                         <div className="flex-1 relative z-10">
+                                             <h4 className="text-2xl font-black text-white mb-2">Generate Access Key</h4>
+                                             <p className="text-zinc-400 text-sm max-w-md">Create secure promotional keys.</p>
+                                         </div>
+                                         <div className="flex items-center gap-4 bg-black/30 p-2 rounded-2xl border border-white/5 backdrop-blur-md relative z-10">
+                                             <button onClick={() => setSelectedPlan('plus')} className={`px-6 py-3 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${selectedPlan === 'plus' ? 'bg-indigo-600 text-white shadow-lg' : 'text-zinc-500 hover:text-white'}`}><Zap size={16}/> Plus</button>
+                                             <button onClick={() => setSelectedPlan('pro')} className={`px-6 py-3 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${selectedPlan === 'pro' ? 'bg-amber-600 text-white shadow-lg' : 'text-zinc-500 hover:text-white'}`}><Crown size={16}/> Pro</button>
+                                         </div>
+                                         <Button onClick={handleGenerate} icon={Plus} className="px-8 py-4 bg-white text-black hover:bg-zinc-200 shadow-xl rounded-2xl text-base relative z-10">Generate</Button>
+                                     </div>
+
+                                     <div className="bg-white/5 border border-white/5 rounded-3xl overflow-hidden shadow-lg">
+                                         <table className="w-full text-left">
+                                             <thead>
+                                                 <tr className="border-b border-white/5 bg-black/20">
+                                                     <th className="p-5 text-xs font-bold text-zinc-500 uppercase tracking-wider">Code</th>
+                                                     <th className="p-5 text-xs font-bold text-zinc-500 uppercase tracking-wider">Plan</th>
+                                                     <th className="p-5 text-xs font-bold text-zinc-500 uppercase tracking-wider">Created</th>
+                                                     <th className="p-5 text-xs font-bold text-zinc-500 uppercase tracking-wider">Status</th>
+                                                     <th className="p-5 text-right text-xs font-bold text-zinc-500 uppercase tracking-wider">Action</th>
+                                                 </tr>
+                                             </thead>
+                                             <tbody className="divide-y divide-white/5">
+                                                 {dbKeys.map((k, i) => (
+                                                     <tr key={i} className="hover:bg-white/5 transition-colors group">
+                                                         <td className="p-5 font-mono text-sm text-indigo-400 font-medium">{k.code}</td>
+                                                         <td className="p-5"><span className={`text-[10px] font-black px-2 py-1 rounded-md uppercase ${k.plan === 'pro' ? 'bg-amber-500/10 text-amber-400' : 'bg-indigo-500/10 text-indigo-400'}`}>{k.plan || 'pro'}</span></td>
+                                                         <td className="p-5 text-xs text-zinc-500">{k.createdAt ? new Date(k.createdAt).toLocaleDateString() : '-'}</td>
+                                                         <td className="p-5">
+                                                             <div className={`flex items-center gap-2 text-xs font-bold ${k.isUsed ? 'text-red-400' : 'text-emerald-400'}`}>
+                                                                 <div className={`w-2 h-2 rounded-full ${k.isUsed ? 'bg-red-500' : 'bg-emerald-500'}`}/>
+                                                                 {k.isUsed ? 'Redeemed' : 'Available'}
+                                                             </div>
+                                                         </td>
+                                                         <td className="p-5 text-right flex justify-end gap-2">
+                                                             <button onClick={() => {navigator.clipboard.writeText(k.code); addToast('Copied', 'success')}} className="p-2 hover:bg-white/10 rounded-lg text-zinc-500 hover:text-white transition-colors"><Copy size={16}/></button>
+                                                             {k.id && <button onClick={() => handleDeleteKey(k.id!)} className="p-2 hover:bg-red-500/20 rounded-lg text-zinc-500 hover:text-red-400 transition-colors"><Trash2 size={16}/></button>}
+                                                         </td>
+                                                     </tr>
+                                                 ))}
+                                             </tbody>
+                                         </table>
                                      </div>
                                  </div>
                              )}
