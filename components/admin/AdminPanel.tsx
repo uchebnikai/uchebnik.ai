@@ -36,6 +36,7 @@ interface FinancialData {
     balance: number; // in cents (Stripe)
     mrr: number; // in cents (Stripe)
     googleCloudCost: number; // in dollars (Google API)
+    googleCloudConnected: boolean; // Status flag
     lastSync?: string;
     currency: string;
 }
@@ -219,6 +220,7 @@ export const AdminPanel = ({
     
     // Cloud Cost from API or 0
     const cloudCost = financials?.googleCloudCost || 0;
+    const isCloudConnected = financials?.googleCloudConnected || false;
     
     // Simple profit calculation
     const profit = revenue - cloudCost;
@@ -467,8 +469,8 @@ export const AdminPanel = ({
 
                                                  <div className="text-5xl font-black text-white tracking-tight">${cloudCost.toFixed(2)}</div>
                                                  <div className="flex items-center gap-2 mt-2">
-                                                     <span className={`text-xs px-2 py-0.5 rounded-md font-bold uppercase ${cloudCost > 0 ? 'bg-green-500 text-white' : 'bg-zinc-600 text-gray-300'}`}>
-                                                         {cloudCost > 0 ? 'LIVE SYNC' : 'OFFLINE'}
+                                                     <span className={`text-xs px-2 py-0.5 rounded-md font-bold uppercase ${isCloudConnected ? 'bg-green-500 text-white' : 'bg-zinc-600 text-gray-300'}`}>
+                                                         {isCloudConnected ? 'LIVE SYNC' : 'OFFLINE'}
                                                      </span>
                                                      {financials?.lastSync && (
                                                          <span className="text-xs text-red-400/60 font-mono">
