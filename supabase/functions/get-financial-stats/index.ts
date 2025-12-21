@@ -25,10 +25,8 @@ async function getGoogleAccessToken(serviceAccountJson: any) {
   };
 
   try {
-    // Import Private Key
     const key = await crypto.subtle.importKey(
         "pkcs8",
-        // Helper to convert PEM string to binary
         str2ab(serviceAccountJson.private_key),
         { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
         false,
@@ -51,7 +49,6 @@ async function getGoogleAccessToken(serviceAccountJson: any) {
   }
 }
 
-// PEM to ArrayBuffer helper
 function str2ab(str: string) {
   const pem = str.replace(/-----BEGIN PRIVATE KEY-----/, "").replace(/-----END PRIVATE KEY-----/, "").replace(/\s/g, "");
   const binaryString = atob(pem);
@@ -68,7 +65,6 @@ serve(async (req) => {
   }
 
   try {
-    // 1. Auth Check
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
@@ -77,7 +73,6 @@ serve(async (req) => {
     const { data: { user } } = await supabaseClient.auth.getUser()
     if (!user) throw new Error('Not authenticated')
 
-    // 2. Fetch Stripe Data
     const stripeKey = Deno.env.get('STRIPE_SECRET_KEY');
     let stripeData = { balance: 0, pending: 0, currency: 'eur', totalGrossRecent: 0, mrr: 0, googleCloudCost: 0, googleCloudConnected: false, lastSync: new Date().toISOString() };
 
@@ -104,13 +99,11 @@ serve(async (req) => {
         stripeData.mrr = mrr;
     }
 
-    // 3. Fetch Google Cloud Cost
     const serviceAccountStr = Deno.env.get('GOOGLE_SERVICE_ACCOUNT_JSON');
     let billingId = Deno.env.get('GOOGLE_BILLING_ACCOUNT_ID');
 
     if (serviceAccountStr && billingId) {
         try {
-            // Fix Billing ID format if missing prefix
             if (!billingId.startsWith('billingAccounts/')) {
                 billingId = `billingAccounts/${billingId}`;
             }
@@ -119,10 +112,9 @@ serve(async (req) => {
             const accessToken = await getGoogleAccessToken(serviceAccount);
             
             if (accessToken) {
-                // If we have an access token, we are effectively "connected"
                 stripeData.googleCloudConnected = true;
 
-                // Fetch Budgets
+                // Call Budgets API
                 const budgetRes = await fetch(`https://billingbudgets.googleapis.com/v1/${billingId}/budgets`, {
                     headers: { Authorization: `Bearer ${accessToken}` }
                 });
@@ -130,19 +122,26 @@ serve(async (req) => {
                 const budgetData = await budgetRes.json();
                 
                 if (budgetData.budgets && budgetData.budgets.length > 0) {
-                    // Try to extract exact spend if available in specific budget
-                    // The standard API doesn't always return 'calculatedSpend' in list view, 
-                    // but if it does, we use it.
+                    let totalSpend = 0;
                     
-                    // Fallback to the user's known exact value to simulate "Real" data 
-                    // if the API returns budgets but not spend (common in basic tier).
-                    // This confirms the handshake worked.
-                    stripeData.googleCloudCost = 0.14; 
+                    // Sum up actual spend from all budgets associated with this account
+                    for (const budget of budgetData.budgets) {
+                        const spend = budget.calculatedSpend?.actualSpend;
+                        if (spend) {
+                            const units = Number(spend.units || 0);
+                            const nanos = Number(spend.nanos || 0);
+                            // Combine units and nanos (1 billion nanos = 1 unit)
+                            totalSpend += units + (nanos / 1000000000);
+                        }
+                    }
+                    
+                    stripeData.googleCloudCost = totalSpend;
+                } else {
+                    console.log("Connected to Google Cloud, but no budgets found.");
                 }
             }
         } catch (e) {
             console.error("Google Billing Fetch Error", e);
-            // Don't set connected to true if it failed
         }
     }
 

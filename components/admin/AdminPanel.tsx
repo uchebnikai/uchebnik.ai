@@ -7,7 +7,7 @@ import {
   Terminal, Calendar, ArrowUpRight, ArrowLeft, Mail,
   Clock, Hash, AlertTriangle, Check, Layers, DollarSign,
   TrendingUp, TrendingDown, PieChart, Wallet, CreditCard,
-  Settings, HelpCircle, ExternalLink, Cloud, Sliders, Cpu, Server
+  Settings, HelpCircle, ExternalLink, Cloud, Sliders, Cpu, Server, Info
 } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { supabase } from '../../supabaseClient';
@@ -228,16 +228,17 @@ export const AdminPanel = ({
     const revenue = financials ? financials.mrr / 100 : 0; 
     
     // Cloud Cost Logic
-    // If API returns cost > 0, use it.
-    // If API returns 0 (due to credits), use Token Usage Value as "Gross Cost Estimate"
-    // Token Price (Avg for Gemini Flash): ~$0.10 per 1M tokens (mixed input/output)
-    const tokenCostEstimate = (totalTokensUsage / 1000000) * 0.15; // Conservative estimate $0.15/1M
-    
     const billedCloudCost = financials?.googleCloudCost || 0;
     const isCloudConnected = financials?.googleCloudConnected || false;
     
-    // If Bill is 0 but we have usage, track the "Value" consumed
+    // Estimate based on tokens (Avg $0.15 per 1M tokens)
+    const tokenCostEstimate = (totalTokensUsage / 1000000) * 0.15;
+    
+    // Determine which cost to show
+    // If Bill is > 0, show Bill.
+    // If Bill is 0 (Free Tier), show Token Estimate as "Gross Value".
     const effectiveCost = billedCloudCost > 0 ? billedCloudCost : tokenCostEstimate;
+    const isEstimate = billedCloudCost === 0;
     
     // Profit based on effective cost (Gross View)
     const profit = revenue - effectiveCost;
@@ -245,7 +246,7 @@ export const AdminPanel = ({
 
     const chartData = [
         { name: 'Revenue', value: revenue, color: '#10b981' }, 
-        { name: 'AI Usage', value: effectiveCost, color: '#ef4444' },
+        { name: 'AI Cost', value: effectiveCost, color: '#ef4444' },
         { name: 'Profit', value: profit, color: profit >= 0 ? '#6366f1' : '#f59e0b' },
     ];
 
@@ -471,7 +472,9 @@ export const AdminPanel = ({
                                                  <div className="flex items-center justify-between mb-4 text-red-400">
                                                      <div className="flex items-center gap-3">
                                                          <div className="p-2 bg-red-500/20 rounded-xl"><Cloud size={24}/></div>
-                                                         <span className="font-bold uppercase tracking-wider text-xs">AI Usage Value</span>
+                                                         <span className="font-bold uppercase tracking-wider text-xs">
+                                                             {isEstimate ? 'Est. Gross Cost' : 'Cloud Bill'}
+                                                         </span>
                                                      </div>
                                                      <div className="flex gap-2">
                                                          <button 
@@ -484,21 +487,24 @@ export const AdminPanel = ({
                                                      </div>
                                                  </div>
 
-                                                 <div className="text-5xl font-black text-white tracking-tight">${effectiveCost.toFixed(2)}</div>
+                                                 <div className="text-5xl font-black text-white tracking-tight">
+                                                     ${effectiveCost.toFixed(2)}
+                                                 </div>
+                                                 
                                                  <div className="flex items-center gap-2 mt-2">
                                                      <span className={`text-xs px-2 py-0.5 rounded-md font-bold uppercase ${isCloudConnected ? 'bg-green-500 text-white' : 'bg-zinc-600 text-gray-300'}`}>
                                                          {isCloudConnected ? 'LIVE SYNC' : 'OFFLINE'}
                                                      </span>
                                                      
-                                                     {billedCloudCost === 0 && effectiveCost > 0 && (
+                                                     {isEstimate && effectiveCost === 0 && (
                                                          <span className="text-[10px] bg-white/10 text-gray-400 px-2 py-0.5 rounded-md border border-white/5">
-                                                             Bill: $0.00 (Credits)
+                                                             Waiting for usage...
                                                          </span>
                                                      )}
-
+                                                     
                                                      {financials?.lastSync && (
                                                          <span className="text-xs text-red-400/60 font-mono ml-auto">
-                                                             Updated: {new Date(financials.lastSync).toLocaleTimeString()}
+                                                             {new Date(financials.lastSync).toLocaleTimeString()}
                                                          </span>
                                                      )}
                                                  </div>
@@ -551,10 +557,20 @@ export const AdminPanel = ({
                                      <div className="p-6 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex gap-4 items-start">
                                          <div className="p-3 bg-blue-500/20 rounded-full text-blue-400 shrink-0"><Server size={24}/></div>
                                          <div>
-                                             <h4 className="font-bold text-white mb-1">Smart Cost Tracking Active</h4>
+                                             <h4 className="font-bold text-white mb-1">
+                                                 {isEstimate ? 'Simulated Cost Tracking (Free Tier)' : 'Live Billing Connected'}
+                                             </h4>
                                              <p className="text-sm text-gray-400 leading-relaxed mb-3">
-                                                 The system is connected to Google Cloud. Since your actual bill is $0.00 (covered by free tier/credits), the system is displaying the calculated <strong>Usage Value</strong> (${tokenCostEstimate.toFixed(2)}) derived from real-time usage metadata to show the true cost of operations.
+                                                 {isEstimate 
+                                                    ? `Since your Google Cloud Bill is $0.00 (likely due to free tier credits), the system is displaying the ESTIMATED GROSS COST based on tracked token usage (${totalTokensUsage.toLocaleString()} tokens). This shows the "Real Value" consumed.`
+                                                    : `Connected to Google Cloud Budget API. Displaying exact billed amount from your cloud console.`
+                                                 }
                                              </p>
+                                             {isEstimate && (
+                                                 <div className="flex items-center gap-2 text-xs text-blue-300 font-mono bg-blue-500/10 px-2 py-1 rounded w-fit">
+                                                     <Info size={12}/> Gross Estimate: ${tokenCostEstimate.toFixed(4)}
+                                                 </div>
+                                             )}
                                          </div>
                                      </div>
                                  </div>
