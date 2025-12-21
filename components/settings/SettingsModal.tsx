@@ -595,20 +595,23 @@ export const SettingsModal = ({
                       </section>
 
                       {/* Voice Selection - NEW */}
-                      <section className="space-y-4">
-                          <label className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                              <Volume2 size={18} className="text-indigo-500"/> Избор на Глас
-                          </label>
+                      <section className={`space-y-4 p-6 bg-gray-50/50 dark:bg-white/5 rounded-2xl border border-gray-200 dark:border-white/10 ${!isPremium ? 'opacity-80' : ''}`}>
+                          <div className="flex justify-between items-center mb-2">
+                              <label className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                                  <Volume2 size={18} className="text-indigo-500"/> Избор на Глас
+                              </label>
+                              {!isPremium && <span className="px-2 py-1 bg-gray-200 dark:bg-white/10 rounded text-[10px] font-bold text-gray-500 uppercase">Plus / Pro required</span>}
+                          </div>
                           <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                               {VOICES.map(voice => (
                                   <div key={voice.id} className="relative group">
                                       <button
-                                          onClick={() => setUserSettings({...userSettings, preferredVoice: voice.id})}
+                                          onClick={() => isPremium ? setUserSettings({...userSettings, preferredVoice: voice.id}) : addToast('Тази функция изисква Plus или Pro план.', 'info')}
                                           className={`w-full p-3 rounded-xl text-center text-sm font-bold border transition-all ${
                                               userSettings.preferredVoice === voice.id
                                               ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-500 text-indigo-700 dark:text-indigo-300 shadow-sm'
                                               : 'bg-white dark:bg-white/5 border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/10'
-                                          }`}
+                                          } ${!isPremium ? 'cursor-not-allowed' : ''}`}
                                       >
                                           {voice.name}
                                       </button>

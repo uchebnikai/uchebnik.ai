@@ -3,7 +3,7 @@ import { GoogleGenAI, LiveServerMessage, Modality } from "@google/genai";
 import { SubjectConfig, SubjectId, AppMode, Message, Slide, UserSettings, Session, UserPlan, UserRole, HomeViewType } from './types';
 import { SUBJECTS, VOICES, DEFAULT_VOICE } from './constants';
 import { generateResponse } from './services/aiService';
-import { createBlob } from './services/audioService';
+import { createBlob as createAudioBlob } from './services/audioService'; // Renamed import to avoid conflict
 import { supabase } from './supabaseClient';
 import { Auth } from './components/auth/Auth';
 import { 
@@ -756,8 +756,6 @@ export const App = () => {
         }
         setIsListening(false);
     }
-    
-    setSpeakingMessageId(null);
   };
 
   const handleSend = async (overrideText?: string, overrideImages?: string[]) => {
