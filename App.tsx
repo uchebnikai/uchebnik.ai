@@ -896,7 +896,7 @@ export const App = () => {
 
       if (controller.signal.aborted) return "";
 
-      // UPDATE STATS WITH REAL TOKENS
+      // UPDATE STATS WITH REAL TOKENS FROM METADATA
       if (response.usage) {
           setTotalInputTokens(prev => prev + response.usage!.inputTokens);
           setTotalOutputTokens(prev => prev + response.usage!.outputTokens);

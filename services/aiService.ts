@@ -159,8 +159,6 @@ export const generateResponse = async (
               });
           }
           
-          // Capture Usage Metadata from the stream
-          // The SDK provides this on the chunk if available
           if (chunk.usageMetadata) {
               tokenUsage = {
                   inputTokens: chunk.usageMetadata.promptTokenCount || 0,

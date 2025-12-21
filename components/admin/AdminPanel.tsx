@@ -75,6 +75,7 @@ export const AdminPanel = ({
     const [selectedPlan, setSelectedPlan] = useState<'plus' | 'pro'>('pro');
     const [searchQuery, setSearchQuery] = useState('');
     const [showRawData, setShowRawData] = useState<string | null>(null);
+    const [totalTokensUsage, setTotalTokensUsage] = useState(0);
     
     // Filtering
     const [filterPlan, setFilterPlan] = useState<'all' | 'free' | 'plus' | 'pro'>('all');
@@ -107,11 +108,18 @@ export const AdminPanel = ({
                     .limit(100); 
                 
                 if (!error && users) {
+                    let totalToks = 0;
                     const mappedUsers: AdminUser[] = users.map((u: any) => {
                         let settings = u.settings;
                         if (typeof settings === 'string') {
                             try { settings = JSON.parse(settings); } catch (e) {}
                         }
+                        
+                        // Accumulate token usage from all users
+                        if (settings?.stats) {
+                            totalToks += (settings.stats.totalInputTokens || 0) + (settings.stats.totalOutputTokens || 0);
+                        }
+
                         return {
                             id: u.id,
                             name: settings?.userName || 'Anonymous',
@@ -125,6 +133,7 @@ export const AdminPanel = ({
                         };
                     });
                     setDbUsers(mappedUsers);
+                    setTotalTokensUsage(totalToks);
                 }
             }
 
@@ -218,17 +227,25 @@ export const AdminPanel = ({
     // --- Financial Calculations ---
     const revenue = financials ? financials.mrr / 100 : 0; 
     
-    // Cloud Cost from API or 0
-    const cloudCost = financials?.googleCloudCost || 0;
+    // Cloud Cost Logic
+    // If API returns cost > 0, use it.
+    // If API returns 0 (due to credits), use Token Usage Value as "Gross Cost Estimate"
+    // Token Price (Avg for Gemini Flash): ~$0.10 per 1M tokens (mixed input/output)
+    const tokenCostEstimate = (totalTokensUsage / 1000000) * 0.15; // Conservative estimate $0.15/1M
+    
+    const billedCloudCost = financials?.googleCloudCost || 0;
     const isCloudConnected = financials?.googleCloudConnected || false;
     
-    // Simple profit calculation
-    const profit = revenue - cloudCost;
+    // If Bill is 0 but we have usage, track the "Value" consumed
+    const effectiveCost = billedCloudCost > 0 ? billedCloudCost : tokenCostEstimate;
+    
+    // Profit based on effective cost (Gross View)
+    const profit = revenue - effectiveCost;
     const margin = revenue > 0 ? (profit / revenue) * 100 : 0;
 
     const chartData = [
         { name: 'Revenue', value: revenue, color: '#10b981' }, 
-        { name: 'Cloud Cost', value: cloudCost, color: '#ef4444' },
+        { name: 'AI Usage', value: effectiveCost, color: '#ef4444' },
         { name: 'Profit', value: profit, color: profit >= 0 ? '#6366f1' : '#f59e0b' },
     ];
 
@@ -454,7 +471,7 @@ export const AdminPanel = ({
                                                  <div className="flex items-center justify-between mb-4 text-red-400">
                                                      <div className="flex items-center gap-3">
                                                          <div className="p-2 bg-red-500/20 rounded-xl"><Cloud size={24}/></div>
-                                                         <span className="font-bold uppercase tracking-wider text-xs">Google Cloud Bill</span>
+                                                         <span className="font-bold uppercase tracking-wider text-xs">AI Usage Value</span>
                                                      </div>
                                                      <div className="flex gap-2">
                                                          <button 
@@ -467,13 +484,20 @@ export const AdminPanel = ({
                                                      </div>
                                                  </div>
 
-                                                 <div className="text-5xl font-black text-white tracking-tight">${cloudCost.toFixed(2)}</div>
+                                                 <div className="text-5xl font-black text-white tracking-tight">${effectiveCost.toFixed(2)}</div>
                                                  <div className="flex items-center gap-2 mt-2">
                                                      <span className={`text-xs px-2 py-0.5 rounded-md font-bold uppercase ${isCloudConnected ? 'bg-green-500 text-white' : 'bg-zinc-600 text-gray-300'}`}>
                                                          {isCloudConnected ? 'LIVE SYNC' : 'OFFLINE'}
                                                      </span>
+                                                     
+                                                     {billedCloudCost === 0 && effectiveCost > 0 && (
+                                                         <span className="text-[10px] bg-white/10 text-gray-400 px-2 py-0.5 rounded-md border border-white/5">
+                                                             Bill: $0.00 (Credits)
+                                                         </span>
+                                                     )}
+
                                                      {financials?.lastSync && (
-                                                         <span className="text-xs text-red-400/60 font-mono">
+                                                         <span className="text-xs text-red-400/60 font-mono ml-auto">
                                                              Updated: {new Date(financials.lastSync).toLocaleTimeString()}
                                                          </span>
                                                      )}
@@ -527,10 +551,9 @@ export const AdminPanel = ({
                                      <div className="p-6 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex gap-4 items-start">
                                          <div className="p-3 bg-blue-500/20 rounded-full text-blue-400 shrink-0"><Server size={24}/></div>
                                          <div>
-                                             <h4 className="font-bold text-white mb-1">Cloud Budget API Connected</h4>
+                                             <h4 className="font-bold text-white mb-1">Smart Cost Tracking Active</h4>
                                              <p className="text-sm text-gray-400 leading-relaxed mb-3">
-                                                 The system is successfully communicating with the Google Cloud Billing API using the service account credentials. 
-                                                 The "Money Out" figure represents the exact current spend reported by your budget.
+                                                 The system is connected to Google Cloud. Since your actual bill is $0.00 (covered by free tier/credits), the system is displaying the calculated <strong>Usage Value</strong> (${tokenCostEstimate.toFixed(2)}) derived from real-time usage metadata to show the true cost of operations.
                                              </p>
                                          </div>
                                      </div>

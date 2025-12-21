@@ -137,7 +137,7 @@ export interface Message {
   reasoning?: string; 
   isStreaming?: boolean; 
   sources?: SearchSource[]; 
-  usage?: TokenUsage; // New: Real usage tracking
+  usage?: TokenUsage;
 }
 
 export interface Session {
@@ -190,4 +190,12 @@ export interface UserSettings {
   fontFamily: FontFamily;
   christmasMode?: boolean; 
   preferredVoice: string; 
+  stats?: {
+      streak?: number;
+      dailyImageCount?: number;
+      lastImageDate?: string;
+      lastVisit?: string;
+      totalInputTokens?: number;
+      totalOutputTokens?: number;
+  };
 }
