@@ -13,15 +13,6 @@ export const AI_MODELS = [
   { id: 'gemini-3-flash-preview', name: 'Advanced AI', description: 'Най-новият модел от следващо поколение.' }
 ];
 
-export const VOICES = [
-  { id: 'Puck', name: 'Puck (Tenor, Soft)' },
-  { id: 'Charon', name: 'Charon (Deep, Calm)' },
-  { id: 'Kore', name: 'Kore (Soprano, Clear)' },
-  { id: 'Fenrir', name: 'Fenrir (Bass, Authoritative)' },
-  { id: 'Zephyr', name: 'Zephyr (Warm, Friendly)' },
-  { id: 'Aoede', name: 'Aoede (High, Bright)' }
-];
-
 export const getSystemPrompt = (mode: string, lang: Language, teachingStyle: TeachingStyle = 'normal', customPersona?: string): string => {
   const languageNames: Record<Language, string> = {
     bg: 'Bulgarian',
