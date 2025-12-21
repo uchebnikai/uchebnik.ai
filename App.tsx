@@ -1,6 +1,4 @@
 
-
-
 import React, { useState, useEffect, useRef } from 'react';
 import { GoogleGenAI, LiveServerMessage, Modality } from "@google/genai";
 import { SubjectConfig, SubjectId, AppMode, Message, Slide, UserSettings, Session, UserPlan, UserRole, HomeViewType } from './types';
@@ -244,10 +242,10 @@ export const App = () => {
                 setHomeView('auth_success');
             }
             
-            // Note: We don't clear hash immediately for recovery so Auth component can read it
-            if (type !== 'recovery') {
-                window.history.replaceState(null, '', window.location.pathname);
-            }
+            // IMPORTANT: We do NOT clear the hash here for 'signup' or 'magiclink' anymore.
+            // Supabase client needs the hash to extract the session tokens.
+            // We will clear the hash only after the user acknowledges the success screen
+            // or automatically by Supabase client.
         }
     };
     handleAuthRedirects();
@@ -1528,7 +1526,7 @@ export const App = () => {
                 onContinue={() => {
                     setHomeView('landing');
                     setAuthSuccessType(null);
-                    // Clear hash after successful viewing
+                    // Clear hash after successful viewing so user doesn't see tokens in URL
                     window.history.replaceState(null, '', window.location.pathname);
                 }}
                 userSettings={userSettings}
