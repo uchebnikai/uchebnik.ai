@@ -1,4 +1,6 @@
 
+
+
 import React, { useState, useEffect, useRef } from 'react';
 import { GoogleGenAI, LiveServerMessage, Modality } from "@google/genai";
 import { SubjectConfig, SubjectId, AppMode, Message, Slide, UserSettings, Session, UserPlan, UserRole, HomeViewType } from './types';
@@ -7,6 +9,7 @@ import { generateResponse } from './services/aiService';
 import { createBlob as createAudioBlob } from './services/audioService'; // Renamed import to avoid conflict
 import { supabase } from './supabaseClient';
 import { Auth } from './components/auth/Auth';
+import { AuthSuccess } from './components/auth/AuthSuccess';
 import { 
   Loader2, X, AlertCircle, CheckCircle, Info, Minimize, Database, Radio
 } from 'lucide-react';
@@ -56,6 +59,7 @@ export const App = () => {
   const [syncStatus, setSyncStatus] = useState<'synced' | 'syncing' | 'error' | 'offline'>('synced');
   const [syncErrorDetails, setSyncErrorDetails] = useState<string | null>(null);
   const [missingDbTables, setMissingDbTables] = useState(false);
+  const [authSuccessType, setAuthSuccessType] = useState<'verification' | 'magiclink' | 'email_change' | 'generic' | null>(null);
 
   // --- State ---
   const [userRole, setUserRole] = useState<UserRole | null>(null);
@@ -203,18 +207,50 @@ export const App = () => {
 
   // Auth Effect
   useEffect(() => {
-    const handleHashError = () => {
+    const handleAuthRedirects = () => {
         const hash = window.location.hash;
+        
+        // Handle Error Cases
         if (hash && hash.includes('error=')) {
             const params = new URLSearchParams(hash.substring(1));
             const errorDescription = params.get('error_description');
             if (errorDescription) {
                 addToast(`Грешка при вход: ${decodeURIComponent(errorDescription)}`, 'error');
+            }
+            window.history.replaceState(null, '', window.location.pathname);
+            return;
+        }
+
+        // Handle Success/Action Cases based on Supabase 'type'
+        // Examples: #access_token=...&type=signup  OR #access_token=...&type=recovery
+        if (hash && hash.includes('type=')) {
+            const params = new URLSearchParams(hash.substring(1));
+            const type = params.get('type');
+
+            if (type === 'recovery') {
+                // Password Reset Flow
+                setShowAuthModal(true); // Open modal...
+                // ...Auth component will handle switching to 'update_password' mode via detecting hash
+            } else if (type === 'signup' || type === 'invite') {
+                // Email Verification Success
+                setAuthSuccessType('verification');
+                setHomeView('auth_success');
+            } else if (type === 'magiclink') {
+                // Magic Link Login Success
+                setAuthSuccessType('magiclink');
+                setHomeView('auth_success');
+            } else if (type === 'email_change') {
+                setAuthSuccessType('email_change');
+                setHomeView('auth_success');
+            }
+            
+            // Note: We don't clear hash immediately for recovery so Auth component can read it
+            if (type !== 'recovery') {
                 window.history.replaceState(null, '', window.location.pathname);
             }
         }
     };
-    handleHashError();
+    handleAuthRedirects();
 
     const syncProfile = (session: SupabaseSession | null) => {
         setSession(session);
@@ -1486,7 +1522,18 @@ export const App = () => {
             </div>
         ) : null}
 
-        {!activeSubject ? (
+        {homeView === 'auth_success' ? (
+            <AuthSuccess 
+                type={authSuccessType || 'generic'} 
+                onContinue={() => {
+                    setHomeView('landing');
+                    setAuthSuccessType(null);
+                    // Clear hash after successful viewing
+                    window.history.replaceState(null, '', window.location.pathname);
+                }}
+                userSettings={userSettings}
+            />
+        ) : !activeSubject ? (
             homeView === 'terms' ? <TermsOfService onBack={() => setHomeView('landing')} userSettings={userSettings} /> :
             homeView === 'privacy' ? <PrivacyPolicy onBack={() => setHomeView('landing')} userSettings={userSettings} /> :
             homeView === 'cookies' ? <CookiePolicy onBack={() => setHomeView('landing')} userSettings={userSettings} /> :

@@ -62,7 +62,7 @@ export enum AppMode {
   TEACHER_RESOURCES = 'teacher_resources'
 }
 
-export type HomeViewType = 'landing' | 'school_select' | 'university_select' | 'student_subjects' | 'teacher_subjects' | 'uni_student_subjects' | 'uni_teacher_subjects' | 'terms' | 'privacy' | 'cookies' | 'about' | 'contact';
+export type HomeViewType = 'landing' | 'school_select' | 'university_select' | 'student_subjects' | 'teacher_subjects' | 'uni_student_subjects' | 'uni_teacher_subjects' | 'terms' | 'privacy' | 'cookies' | 'about' | 'contact' | 'auth_success';
 
 export type UserRole = 'student' | 'teacher' | 'uni_student' | 'uni_teacher';
 

@@ -1,4 +1,5 @@
 
+
 import { SubjectId } from '../types';
 
 export type Language = 
@@ -141,6 +142,16 @@ const BASE_EN = {
     'save_changes': 'Save Changes',
     'current_password': 'Current Password',
     'new_password': 'New Password',
+    // Auth Success Messages
+    'auth_success_email_title': 'Email Verified!',
+    'auth_success_email_desc': 'Your email has been successfully verified. Your account is now active.',
+    'auth_success_magic_title': 'Welcome Back!',
+    'auth_success_magic_desc': 'You have successfully signed in via Magic Link.',
+    'auth_success_recovery_title': 'Reset Ready',
+    'auth_success_recovery_desc': 'You can now update your password.',
+    'auth_success_default_title': 'Success!',
+    'auth_success_default_desc': 'Action completed successfully.',
+    'continue_to_app': 'Continue to App',
 };
 
 // Complete English Dictionary (Fallback)
@@ -300,6 +311,16 @@ const BG_DICT = {
     'save_changes': 'Запази Промените',
     'current_password': 'Текуща Парола',
     'new_password': 'Нова Парола',
+    // Auth Success Messages
+    'auth_success_email_title': 'Имейлът е потвърден!',
+    'auth_success_email_desc': 'Вашият имейл е успешно потвърден. Акаунтът ви вече е активен.',
+    'auth_success_magic_title': 'Добре дошъл отново!',
+    'auth_success_magic_desc': 'Успешно влязохте чрез Magic Link.',
+    'auth_success_recovery_title': 'Възстановяване',
+    'auth_success_recovery_desc': 'Сега можете да обновите паролата си.',
+    'auth_success_default_title': 'Успех!',
+    'auth_success_default_desc': 'Действието е изпълнено успешно.',
+    'continue_to_app': 'Към приложението',
     [`subject_${SubjectId.MATH}`]: 'Математика',
     [`subject_${SubjectId.BULGARIAN}`]: 'Български език и Литература',
     [`subject_${SubjectId.ENGLISH}`]: 'Английски език',
