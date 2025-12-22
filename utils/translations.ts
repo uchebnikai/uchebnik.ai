@@ -27,10 +27,10 @@ const translations: Record<string, Record<string, string>> = {
     bg: 'Uchebnik AI', en: 'Uchebnik AI', de: 'Uchebnik AI', es: 'Uchebnik AI', fr: 'Uchebnik AI', it: 'Uchebnik AI', ru: 'Uchebnik AI', tr: 'Uchebnik AI', zh: 'Uchebnik AI', ja: 'Uchebnik AI', ko: 'Uchebnik AI' 
   },
   'ask_anything': { 
-    bg: 'Попитай ме каквото и да е...', en: 'Ask me anything...', de: 'Frag mich alles...', es: 'Pregúntame lo que sea...', fr: 'Demandez-moi n\'importe quoi...', it: 'Chiedimi qualsiasi cosa...', ru: 'Спроси меня о чем угодно...', tr: 'Bana her şeyi sor...', zh: '随便问我什么...', ja: '何でも聞いてください...', ko: '무엇이든 물어보세요...' 
+    bg: 'Попитай ме каквото и да е...', en: 'Ask me anything...', de: 'Frag mich alles...', es: 'Pregúntame lo que sea...', fr: 'Demandez-moi n\'importe quoi...', it: 'Chiedimi qualsiasi cosa...', ru: 'Спроси меня о чем угодно...', tr: 'Bana her şeyi sor...', zh: '随便问我什么...', ja: '何でも聞いてください...', ko: '무엇и든 물어보세요...' 
   },
   'error': { 
-    bg: 'Възникна грешка.', en: 'An error occurred.', de: 'Ein Fehler ist aufgetreten.', es: 'Ocurrió un error.', fr: 'Une erreur est survenue.', it: 'Si è verificato un errore.', ru: 'Произошла ошибка.', tr: 'Bir hata oluştu.', zh: '发生错误。', ja: 'エラーが発生しました。', ko: '오류가 발생했습니다.' 
+    bg: 'Възникна грешка.', en: 'An error occurred.', de: 'Ein Fehler ist aufgetreten.', es: 'Ocurrió un error.', fr: 'Une erreur est survenue.', it: 'Si è verificato un errore.', ru: 'Произошла ошибка.', tr: 'Bir hata oluşту.', zh: '发生错误。', ja: 'エラーが発生しました。', ko: '오류가 발생했습니다.' 
   },
   'delete': { 
     bg: 'Изтрий', en: 'Delete', de: 'Löschen', es: 'Eliminar', fr: 'Supprimer', it: 'Elimina', ru: 'Удалить', tr: 'Sil', zh: '删除', ja: '削除', ko: '삭제' 
@@ -54,6 +54,14 @@ const translations: Record<string, Record<string, string>> = {
     bg: 'Нов чат', en: 'New chat', de: 'Neuer Chat', es: 'Nuevo chat', fr: 'Nouveau chat', it: 'Nuova chat', ru: 'Новый чат', tr: 'Yeni sohbet', zh: '新聊天', ja: '新しいチャット', ko: '새 채팅' 
   },
   
+  // Socratic Mode
+  'dont_give_answer': {
+    bg: 'Не ми давай отговора', en: "Don't give me the answer", de: "Gib mir nicht die Antwort", es: "No me des la respuesta", fr: "Ne me donne pas la réponse", it: "Non darmi la risposta", ru: "Не давай мне ответ", tr: "Cevabı bana verme", zh: "不要直接给我答案", ja: "答えを教えないで", ko: "정답을 알려주지 마세요"
+  },
+  'socratic_desc': {
+    bg: 'AI ще ти помага с насоки и подсказки.', en: "AI will guide you with hints and clues.", de: "Die KI führt dich mit Hinweisen.", es: "La IA te guiará con pistas.", fr: "L'IA vous guidera avec des indices.", it: "L'IA ti guiderà con suggerimenti.", ru: "ИИ поможет подсказками.", tr: "YZ size ipuçlarıyla rehberlik edecektir.", zh: "AI 将通过提示引导你。", ja: "AIがヒントで導きます。", ko: "AI가 힌트로 안내해 드립니다."
+  },
+
   // Navigation & Roles
   'school': { 
     bg: 'Училище', en: 'School', de: 'Schule', es: 'Escuela', fr: 'École', it: 'Scuola', ru: 'Школа', tr: 'Okul', zh: '学校', ja: '学校', ko: '학교' 
@@ -65,7 +73,7 @@ const translations: Record<string, Record<string, string>> = {
     bg: 'Ученици', en: 'Students', de: 'Schüler', es: 'Estudiantes', fr: 'Étudiants', it: 'Studenti', ru: 'Ученики', tr: 'Öğrenciler', zh: '学生', ja: '生徒', ko: '학생' 
   },
   'teachers': { 
-    bg: 'Учители', en: 'Teachers', de: 'Lehrer', es: 'Profesores', fr: 'Enseignants', it: 'Insegnanti', ru: 'Учителя', tr: 'Öğretmenler', zh: '教师', ja: '教師', ko: '교사' 
+    bg: 'Учители', en: 'Teachers', de: 'Lehrer', es: 'Profesores', fr: 'Enseignants', it: 'Insegnanti', ru: 'Учителя', tr: 'Öğretmenлер', zh: '教师', ja: '教師', ko: '교사' 
   },
   'uni_students': { 
     bg: 'Студенти', en: 'Students', de: 'Studenten', es: 'Universitarios', fr: 'Étudiants', it: 'Universitari', ru: 'Студенты', tr: 'Üniversite Öğrencileri', zh: '大学生', ja: '大学生', ko: '대학생' 
@@ -110,7 +118,7 @@ const translations: Record<string, Record<string, string>> = {
     bg: 'Старт', en: 'Start', de: 'Start', es: 'Inicio', fr: 'Démarrer', it: 'Inizio', ru: 'Старт', tr: 'Başla', zh: '开始', ja: '開始', ko: '시작' 
   },
   'back': { 
-    bg: 'Назад', en: 'Back', de: 'Zurück', es: 'Atrás', fr: 'Retour', it: 'Indietro', ru: 'Назад', tr: 'Geri', zh: '返回', ja: '戻る', ko: '뒤로' 
+    bg: 'Назад', en: 'Back', de: 'Zurück', es: 'Atrás', fr: 'Retour', it: 'Indietro', ru: 'Назад', tr: 'Geri', zh: '返回', ja: '戻る', ko: '뒤ро' 
   },
   'back_to_roles': { 
     bg: 'Към ролите', en: 'Back to roles', de: 'Zurück zu Rollen', es: 'Volver a roles', fr: 'Retour aux rôles', it: 'Torna ai ruoli', ru: 'К ролям', tr: 'Rollere dön', zh: '返回角色', ja: '役割に戻る', ko: '역할로 돌아가기' 
@@ -136,7 +144,7 @@ const translations: Record<string, Record<string, string>> = {
     bg: 'Успешно влязохте чрез Magic Link.', en: 'Successfully logged in via Magic Link.', de: 'Erfolgreich über Magic Link eingeloggt.', es: 'Inicio de sesión exitoso vía Magic Link.', fr: 'Connexion réussie via Magic Link.', it: 'Accesso effettuato con successo tramite Magic Link.', ru: 'Успешный вход через Magic Link.', tr: 'Magic Link ile başarıyla giriş yapıldı.', zh: '通过Magic Link成功登录。', ja: 'Magic Link経由で正常にログインしました。', ko: 'Magic Link를 통해 성공적으로 로그인했습니다.' 
   },
   'auth_success_recovery_title': { 
-    bg: 'Възстановяване', en: 'Recovery', de: 'Wiederherstellung', es: 'Recuperación', fr: 'Récupération', it: 'Recupero', ru: 'Восстановление', tr: 'Kurtarma', zh: '恢复', ja: '回復', ko: '복구' 
+    bg: 'Възстановяване', en: 'Recovery', de: 'Wiederherstellung', es: 'Recuperación', fr: 'Récupération', it: 'Recupero', ru: 'Востановление', tr: 'Kurtarma', zh: '恢复', ja: '回復', ko: '복구' 
   },
   'auth_success_recovery_desc': { 
     bg: 'Сега можете да обновите паролата си.', en: 'You can now update your password.', de: 'Sie können jetzt Ihr Passwort aktualisieren.', es: 'Ahora puedes actualizar tu contraseña.', fr: 'Vous pouvez maintenant mettre à jour votre mot de passe.', it: 'Ora puoi aggiornare la tua password.', ru: 'Теперь вы можете обновить пароль.', tr: 'Şifrenizi şimdi güncelleyebilirsiniz.', zh: '您现在可以更新密码。', ja: 'パスワードを更新できます。', ko: '이제 비밀번호를 업데이트할 수 있습니다.' 
@@ -182,7 +190,7 @@ const translations: Record<string, Record<string, string>> = {
     bg: 'Стъпка по стъпка решения', en: 'Step-by-step solutions', de: 'Schritt-für-Schritt-Lösungen', es: 'Soluciones paso a paso', fr: 'Solutions étape par étape', it: 'Soluzioni passo dopo passo', ru: 'Пошаговые решения', tr: 'Adım adım çözümler', zh: '逐步解决方案', ja: 'ステップバイステップの解決策', ko: '단계별 솔루션' 
   },
   'mode_learn': { 
-    bg: 'Учене на тема', en: 'Learn Topic', de: 'Thema lernen', es: 'Aprender tema', fr: 'Apprendre un sujet', it: 'Impara argomento', ru: 'Изучение темы', tr: 'Konu Öğren', zh: '学习主题', ja: 'トピックを学ぶ', ko: '주제 학습' 
+    bg: 'Учене на тема', en: 'Learn Topic', de: 'Thema lernen', es: 'Aprender tema', fr: 'Apprendre un sujet', it: 'Impara argomento', ru: 'Изучение темы', tr: 'Konu Öğрен', zh: '学习主题', ja: 'トピックを学ぶ', ko: '주제 학습' 
   },
   'mode_learn_desc': { 
     bg: 'Подробни обяснения', en: 'Detailed explanations', de: 'Detaillierte Erklärungen', es: 'Explicaciones detalladas', fr: 'Explications détaillées', it: 'Spiegazioni dettagliate', ru: 'Подробные объяснения', tr: 'Detaylı açıklamalar', zh: '详细解释', ja: '詳細な説明', ko: '자세한 설명' 
@@ -243,7 +251,7 @@ const translations: Record<string, Record<string, string>> = {
     bg: 'AI Настройки', en: 'AI Settings', de: 'AI-Einstellungen', es: 'Ajustes de IA', fr: 'Paramètres IA', it: 'Impostazioni AI', ru: 'Настройки ИИ', tr: 'YZ Ayarları', zh: 'AI设置', ja: 'AI設定', ko: 'AI 설정' 
   },
   'data': { 
-    bg: 'Данни', en: 'Data', de: 'Daten', es: 'Datos', fr: 'Données', it: 'Dati', ru: 'Данные', tr: 'Veri', zh: '数据', ja: 'データ', ko: '데이터' 
+    bg: 'Данни', en: 'Data', de: 'Daten', es: 'Datos', fr: 'Données', it: 'Dati', ru: 'Данные', tr: 'Veri', zh: '数据', ja: '数据', ko: '데이터' 
   },
   'save_changes': { 
     bg: 'Запази промените', en: 'Save changes', de: 'Änderungen speichern', es: 'Guardar cambios', fr: 'Sauvegarder', it: 'Salva modifiche', ru: 'Сохранить', tr: 'Değişiklikleri kaydet', zh: '保存更改', ja: '変更を保存', ko: '변경 사항 저장' 
@@ -296,13 +304,13 @@ const translations: Record<string, Record<string, string>> = {
     bg: 'Добави снимка', en: 'Add photo', de: 'Foto hinzufügen', es: 'Añadir foto', fr: 'Ajouter photo', it: 'Aggiungi foto', ru: 'Добавить фото', tr: 'Fotoğraf ekle', zh: '添加照片', ja: '写真を追加', ko: '사진 추가' 
   },
   'scan': { 
-    bg: 'Сканирай', en: 'Scan', de: 'Scannen', es: 'Escanear', fr: 'Scanner', it: 'Scansiona', ru: 'Сканировать', tr: 'Tara', zh: '扫描', ja: 'スキャン', ko: '스캔' 
+    bg: 'Сканирай', en: 'Scan', de: 'Scannen', es: 'Escanear', fr: 'Scanner', it: 'Scansiona', ru: 'Сканировать', tr: 'Tara', zh: '扫描', ja: 'スキャン', ko: 'ス캔' 
   },
   'voice_input': { 
     bg: 'Гласово въвеждане', en: 'Voice input', de: 'Spracheingabe', es: 'Entrada de voz', fr: 'Entrée vocale', it: 'Input vocale', ru: 'Голосовой ввод', tr: 'Sesli giriş', zh: '语音输入', ja: '音声入力', ko: '음성 입력' 
   },
   'ai_warning': { 
-    bg: 'AI може да допуска грешки. Проверявайте важната информация.', en: 'AI can make mistakes. Check important info.', de: 'KI kann Fehler machen. Überprüfen Sie wichtige Infos.', es: 'La IA puede cometer errores. Verifique info importante.', fr: 'L\'IA peut faire des erreurs. Vérifiez les infos.', it: 'L\'IA può commettere errori. Verifica le info importanti.', ru: 'ИИ может ошибаться. Проверяйте информацию.', tr: 'YZ hata yapabilir. Önemli bilgileri kontrol edin.', zh: 'AI可能会犯错。请核实重要信息。', ja: 'AIは間違いを犯す可能性があります。重要な情報を確認してください。', ko: 'AI는 실수를 할 수 있습니다. 중요한 정보를 확인하세요.' 
+    bg: 'AI може да допуска грешки. Проверявайте важната информация.', en: 'AI can make mistakes. Check important info.', de: 'KI kann Fehler machen. Überprüfen Sie wichtige Infos.', es: 'La IA puede cometer errores. Verifique info importante.', fr: 'L\'IA peut faire des erreurs. Vérifiez les infos.', it: 'L\'IA può commettere errori. Verifica le info importanti.', ru: 'ИИ может ошибаться. Проверяйте информацию.', tr: 'YZ hata yapabilir. Önemli bilgileri kontrol edin.', zh: 'AI可能会犯错。请核实重要信息。', ja: 'AIは間違いを犯す可能性があります。重要な情報を确认してください。', ko: 'AI는 실수를 할 수 있습니다. 중요한 정보를 확인하세요.' 
   },
 
   // Plans
@@ -333,7 +341,7 @@ const translations: Record<string, Record<string, string>> = {
     bg: 'Руски език', en: 'Russian', de: 'Russisch', es: 'Ruso', fr: 'Russe', it: 'Russo', ru: 'Русский', tr: 'Rusça', zh: '俄语', ja: 'ロシア語', ko: '러시아어' 
   },
   'subject_french': { 
-    bg: 'Френски език', en: 'French', de: 'Französisch', es: 'Francés', fr: 'Français', it: 'Francese', ru: 'Французский', tr: 'Fransızca', zh: '法语', ja: 'フランス語', ko: '프랑스어' 
+    bg: 'Френски език', en: 'French', de: 'Französisch', es: 'Francés', fr: 'Français', it: 'Francese', ru: 'Французский', tr: 'Fransızca', zh: '法语', ja: 'フランス語', ko: '프랑с어' 
   },
   'subject_spanish': { 
     bg: 'Испански език', en: 'Spanish', de: 'Spanisch', es: 'Español', fr: 'Espagnol', it: 'Spagnolo', ru: 'Испанский', tr: 'İspanyolca', zh: '西班牙语', ja: 'スペイン語', ko: '스페인어' 
@@ -389,7 +397,7 @@ const translations: Record<string, Record<string, string>> = {
     bg: 'Компютърни Науки', en: 'Computer Science', de: 'Informatik', es: 'Ciencias de la Computación', fr: 'Informatique', it: 'Informatica', ru: 'Информатика', tr: 'Bilgisayar Bilimi', zh: '计算机科学', ja: 'コンピュータサイエンス', ko: '컴퓨터 과학' 
   },
   'subject_economics': { 
-    bg: 'Икономика', en: 'Economics', de: 'Wirtschaft', es: 'Economía', fr: 'Économie', it: 'Economia', ru: 'Экономика', tr: 'Ekonomi', zh: '经济学', ja: '経済学', ko: '경제학' 
+    bg: 'Икономика', en: 'Economics', de: 'Wirtschaft', es: 'Economía', fr: 'Économie', it: 'Economia', ru: 'Экономика', tr: 'Ekonomi', zh: '经济学', ja: '经济学', ko: '경제학' 
   },
   'subject_finance': { 
     bg: 'Финанси', en: 'Finance', de: 'Finanzen', es: 'Finanzas', fr: 'Finance', it: 'Finanza', ru: 'Финансы', tr: 'Finans', zh: '金融', ja: '金融', ko: '금융' 
@@ -425,7 +433,7 @@ const translations: Record<string, Record<string, string>> = {
     bg: 'Педагогика', en: 'Pedagogy', de: 'Pädagogik', es: 'Pedagogía', fr: 'Pédagogie', it: 'Pedagogia', ru: 'Педагогика', tr: 'Pedagoji', zh: '教育学', ja: '教育学', ko: '교육학' 
   },
   'subject_marketing': { 
-    bg: 'Маркетинг', en: 'Marketing', de: 'Marketing', es: 'Marketing', fr: 'Marketing', it: 'Marketing', ru: 'Маркетинг', tr: 'Pazarlama', zh: '市场营销', ja: 'マーケティング', ko: '마케팅' 
+    bg: 'Маркетинг', en: 'Marketing', de: 'Marketing', es: 'Marketing', fr: 'Marketing', it: 'Marketing', ru: 'Маркетинг', tr: 'Pazarlama', zh: '市场营销', ja: '마케팅', ko: '마케팅' 
   },
   'subject_journalism': { 
     bg: 'Журналистика', en: 'Journalism', de: 'Journalismus', es: 'Periodismo', fr: 'Journalisme', it: 'Giornalismo', ru: 'Журналистика', tr: 'Gazetecilik', zh: '新闻学', ja: 'ジャーナリズム', ko: '저널리즘' 

@@ -185,6 +185,7 @@ export interface UserSettings {
   customBackground: string | null; 
   language: Language; 
   teachingStyle: TeachingStyle;
+  socraticMode?: boolean; // New: toggle for socratic style in chat
   customPersona?: string; 
   enterToSend: boolean;
   fontFamily: FontFamily;

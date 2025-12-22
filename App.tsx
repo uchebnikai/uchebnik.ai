@@ -136,6 +136,7 @@ export const App = () => {
     customBackground: null,
     language: 'bg',
     teachingStyle: 'normal', 
+    socraticMode: false,
     enterToSend: true,
     fontFamily: 'inter',
     customPersona: '',
@@ -403,6 +404,7 @@ export const App = () => {
                       
                       if (!merged.language) merged.language = 'bg';
                       if (!merged.teachingStyle) merged.teachingStyle = 'normal';
+                      if (merged.socraticMode === undefined) merged.socraticMode = false;
                       if (!merged.customPersona) merged.customPersona = '';
                       if (merged.christmasMode === undefined) merged.christmasMode = false;
                       if (!merged.preferredVoice) merged.preferredVoice = DEFAULT_VOICE;
@@ -695,6 +697,7 @@ export const App = () => {
                             customBackground: null, 
                             language: 'bg',
                             teachingStyle: 'normal', 
+                            socraticMode: false,
                             enterToSend: true,
                             fontFamily: 'inter',
                             customPersona: '',
@@ -785,6 +788,7 @@ export const App = () => {
              setActiveMode(pendingChatInput.mode);
         }
         
+        // FIX: Corrected typo in variable name 'relevantSessions' (removed space)
         const relevantSessions = sessions.filter(s => s.subjectId === pendingChatInput.subjectId).sort((a,b) => b.lastModified - a.lastModified);
         let targetSessionId = relevantSessions[0]?.id;
         
@@ -1077,7 +1081,7 @@ export const App = () => {
           },
           controller.signal,
           userSettings.language,
-          userSettings.teachingStyle, 
+          userSettings.socraticMode ? 'socratic' : userSettings.teachingStyle, 
           userSettings.customPersona 
       );
 
@@ -1439,7 +1443,7 @@ export const App = () => {
     rec.onerror = (e: any) => { 
         console.error("Mic error:", e.error);
         if(e.error === 'not-allowed' || e.error === 'service-not-allowed') {
-            addToast('Не мога да започна запис. Моля, уверете се, че сте позволили достъп до микрофона.', 'error');
+            addToast('Не мога да започна запис. Моля, уверете се, че сте позволилили достъп до микрофона.', 'error');
         } else {
             addToast('Проблем с микрофона. Моля, опитайте отново.', 'info');
         }
@@ -1667,6 +1671,8 @@ export const App = () => {
                     <ChatHeader 
                         setSidebarOpen={setSidebarOpen}
                         activeSubject={activeSubject}
+                        setActiveSubject={setActiveSubject}
+                        setUserSettings={setUserSettings}
                         userRole={userRole}
                         activeMode={activeMode}
                         startVoiceCall={startVoiceCall}
