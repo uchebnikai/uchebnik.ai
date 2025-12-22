@@ -27,6 +27,8 @@ export const Auth = ({ isModal = false, onSuccess, initialMode = 'login' }: Auth
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
+  const today = new Date().toISOString().split('T')[0];
+
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -35,6 +37,11 @@ export const Auth = ({ isModal = false, onSuccess, initialMode = 'login' }: Auth
 
     try {
       if (mode === 'register') {
+        // Future date validation
+        if (new Date(birthDate) > new Date()) {
+            throw new Error("Датата на раждане не може да бъде в бъдещето.");
+        }
+
         const referralCode = localStorage.getItem('uchebnik_invite_code');
         
         const { error } = await supabase.auth.signUp({
@@ -216,6 +223,7 @@ export const Auth = ({ isModal = false, onSuccess, initialMode = 'login' }: Auth
                       value={birthDate}
                       onChange={(e) => setBirthDate(e.target.value)}
                       required
+                      max={today}
                       className={`${INPUT_AUTH} text-gray-500`}
                       />
                   </div>
