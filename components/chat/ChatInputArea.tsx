@@ -1,10 +1,11 @@
 
 import React, { useRef, useEffect, useState } from 'react';
-import { Reply, X, ImageIcon, Mic, MicOff, ArrowUpRight, Calculator, Camera, Square } from 'lucide-react';
+import { Reply, X, ImageIcon, Mic, MicOff, ArrowUpRight, Calculator, Camera, Square, HelpCircle } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
-import { Message, UserSettings } from '../../types';
+import { Message, UserSettings, AppMode } from '../../types';
+import { t } from '../../utils/translations';
 import { INPUT_AREA_BASE, INPUT_AREA_CUSTOM_BG, INPUT_AREA_DEFAULT_BG } from '../../styles/chat';
 import { SLIDE_UP, FADE_IN, ZOOM_IN } from '../../animations/transitions';
 import { resizeImage } from '../../utils/image';
@@ -14,6 +15,8 @@ interface ChatInputAreaProps {
   replyingTo: Message | null;
   setReplyingTo: (msg: Message | null) => void;
   userSettings: UserSettings;
+  setUserSettings: React.Dispatch<React.SetStateAction<UserSettings>>;
+  activeMode: AppMode;
   fileInputRef: React.RefObject<HTMLInputElement | null>;
   loadingSubject: boolean;
   handleImageUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
@@ -50,6 +53,8 @@ export const ChatInputArea = ({
   replyingTo,
   setReplyingTo,
   userSettings,
+  setUserSettings,
+  activeMode,
   fileInputRef,
   loadingSubject,
   handleImageUpload,
@@ -102,7 +107,15 @@ export const ChatInputArea = ({
       }
   };
 
+  const toggleSocratic = () => {
+      setUserSettings(prev => ({
+          ...prev,
+          socraticMode: !prev.socraticMode
+      }));
+  };
+
   const hasMath = /[\\^_{}]/.test(inputValue) || showMath;
+  const isSocratic = !!userSettings.socraticMode;
 
   return (
       <>
@@ -119,6 +132,29 @@ export const ChatInputArea = ({
         <div className="absolute bottom-0 left-0 right-0 px-2 lg:px-4 pointer-events-none z-40 flex justify-center pb-safe">
             <div className="w-full max-w-3xl pointer-events-auto mb-2 lg:mb-4">
                 
+                {/* Socratic Mode Toggle - ONLY for Learn mode */}
+                {activeMode === AppMode.LEARN && (
+                <div className={`flex justify-center mb-2 animate-in slide-in-from-bottom-2 duration-300`}>
+                    <button 
+                        onClick={toggleSocratic}
+                        className={`flex items-center gap-2.5 px-4 py-2 rounded-full backdrop-blur-xl border shadow-xl transition-all duration-300 group
+                        ${isSocratic 
+                            ? 'bg-indigo-600/90 text-white border-indigo-400/50 shadow-indigo-500/20' 
+                            : 'bg-white/70 dark:bg-black/60 text-zinc-600 dark:text-zinc-400 border-white/20 dark:border-white/10 hover:bg-white/90 dark:hover:bg-black/80'}`}
+                    >
+                        <div className={`p-1 rounded-lg transition-colors ${isSocratic ? 'bg-white/20' : 'bg-gray-100 dark:bg-white/5 text-indigo-500'}`}>
+                            <HelpCircle size={14} strokeWidth={2.5}/>
+                        </div>
+                        <span className="text-xs font-black tracking-tight whitespace-nowrap">
+                            {t('dont_give_answer', userSettings.language)}
+                        </span>
+                        <div className={`w-8 h-4 rounded-full flex items-center px-0.5 transition-colors ${isSocratic ? 'bg-indigo-400' : 'bg-gray-300 dark:bg-zinc-700'}`}>
+                            <div className={`w-3 h-3 rounded-full bg-white transition-transform duration-300 ${isSocratic ? 'translate-x-4' : 'translate-x-0'} shadow-sm`} />
+                        </div>
+                    </button>
+                </div>
+                )}
+
                 {/* Live Math Preview */}
                 {hasMath && inputValue.trim() && (
                 <div className={`mb-2 mx-4 bg-white/90 dark:bg-zinc-800/90 backdrop-blur-md border border-indigo-500/20 p-3 rounded-2xl shadow-lg ${FADE_IN}`}>

@@ -788,7 +788,6 @@ export const App = () => {
              setActiveMode(pendingChatInput.mode);
         }
         
-        // FIX: Corrected typo in variable name 'relevantSessions' (removed space)
         const relevantSessions = sessions.filter(s => s.subjectId === pendingChatInput.subjectId).sort((a,b) => b.lastModified - a.lastModified);
         let targetSessionId = relevantSessions[0]?.id;
         
@@ -1060,6 +1059,10 @@ export const App = () => {
           }
       }
       
+      const effectiveTeachingStyle = (currentMode === AppMode.LEARN && userSettings.socraticMode) 
+          ? 'socratic' 
+          : userSettings.teachingStyle;
+
       const response = await generateResponse(
           currentSubId, 
           currentMode, 
@@ -1081,7 +1084,7 @@ export const App = () => {
           },
           controller.signal,
           userSettings.language,
-          userSettings.socraticMode ? 'socratic' : userSettings.teachingStyle, 
+          effectiveTeachingStyle, 
           userSettings.customPersona 
       );
 
@@ -1443,7 +1446,7 @@ export const App = () => {
     rec.onerror = (e: any) => { 
         console.error("Mic error:", e.error);
         if(e.error === 'not-allowed' || e.error === 'service-not-allowed') {
-            addToast('Не мога да започна запис. Моля, уверете се, че сте позволилили достъп до микрофона.', 'error');
+            addToast('Не мога да започна запис. Моля, уверете се, че сте позволили достъп до микрофона.', 'error');
         } else {
             addToast('Проблем с микрофона. Моля, опитайте отново.', 'info');
         }
@@ -1727,6 +1730,8 @@ export const App = () => {
                     replyingTo={replyingTo}
                     setReplyingTo={setReplyingTo}
                     userSettings={userSettings}
+                    setUserSettings={setUserSettings}
+                    activeMode={activeMode}
                     fileInputRef={fileInputRef}
                     loadingSubject={!!loadingSubjects[activeSubject.id]}
                     handleImageUpload={handleImageUpload}
