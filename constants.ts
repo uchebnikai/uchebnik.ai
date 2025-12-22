@@ -32,22 +32,10 @@ export const getSystemPrompt = (mode: string, lang: Language, teachingStyle: Tea
     tr: 'Turkish',
     fr: 'French',
     it: 'Italian',
-    pt: 'Portuguese',
     ru: 'Russian',
     zh: 'Chinese (Simplified)',
     ja: 'Japanese',
-    ko: 'Korean',
-    ar: 'Arabic',
-    hi: 'Hindi',
-    nl: 'Dutch',
-    pl: 'Polish',
-    ro: 'Romanian',
-    el: 'Greek',
-    uk: 'Ukrainian',
-    cs: 'Czech',
-    sv: 'Swedish',
-    hu: 'Hungarian',
-    vi: 'Vietnamese'
+    ko: 'Korean'
   };
   const targetLang = languageNames[lang] || 'English';
 
