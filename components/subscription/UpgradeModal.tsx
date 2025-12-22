@@ -148,11 +148,11 @@ export const UpgradeModal = ({
                  <div className="space-y-3 md:space-y-4 flex-1 mb-6 md:mb-8">
                     <div className="flex items-start gap-3 text-sm font-medium text-gray-600 dark:text-gray-400">
                         <CheckCircle size={18} className="text-gray-400 shrink-0 mt-0.5"/> 
-                        <span>4 снимки на ден</span>
+                        <span>4 снимки дневно</span>
                     </div>
                     <div className="flex items-start gap-3 text-sm font-medium text-gray-600 dark:text-gray-400">
                         <CheckCircle size={18} className="text-gray-400 shrink-0 mt-0.5"/> 
-                        <span>Основен AI модел</span>
+                        <span>Стандартен AI интелект</span>
                     </div>
                     <div className="flex items-start gap-3 text-sm font-medium text-gray-600 dark:text-gray-400 opacity-60">
                         <XCircle size={18} className="text-gray-400 shrink-0 mt-0.5"/> 
@@ -160,7 +160,7 @@ export const UpgradeModal = ({
                     </div>
                     <div className="flex items-start gap-3 text-sm font-medium text-gray-600 dark:text-gray-400">
                         <CheckCircle size={18} className="text-gray-400 shrink-0 mt-0.5"/> 
-                        <span>Помощ по всички предмети</span>
+                        <span>Всички предмети</span>
                     </div>
                  </div>
                  <button 
@@ -195,7 +195,7 @@ export const UpgradeModal = ({
                     
                     <div className="flex items-start gap-3 text-sm font-bold text-zinc-800 dark:text-white">
                         <CheckCircle size={18} className="text-indigo-500 shrink-0 mt-0.5"/> 
-                        <span>12 снимки на ден</span>
+                        <span>12 снимки дневно</span>
                     </div>
                     <div className="flex items-start gap-3 text-sm font-bold text-zinc-400 dark:text-zinc-600 opacity-70">
                         <XCircle size={18} className="shrink-0 mt-0.5"/> 
@@ -203,15 +203,15 @@ export const UpgradeModal = ({
                     </div>
                     <div className="flex items-start gap-3 text-sm font-bold text-zinc-800 dark:text-white">
                         <CheckCircle size={18} className="text-indigo-500 shrink-0 mt-0.5"/> 
-                        <span>Разширен AI модел</span>
+                        <span>По-умен AI (Advanced)</span>
                     </div>
                     <div className="flex items-start gap-3 text-sm font-bold text-zinc-800 dark:text-white">
                         <CheckCircle size={18} className="text-indigo-500 shrink-0 mt-0.5"/> 
-                        <span>Google Търсене</span>
+                        <span>Търсене в Google</span>
                     </div>
                     <div className="flex items-start gap-3 text-sm font-bold text-zinc-800 dark:text-white">
                         <CheckCircle size={18} className="text-indigo-500 shrink-0 mt-0.5"/> 
-                        <span>Смяна на теми и икони</span>
+                        <span>Персонализация (Теми)</span>
                     </div>
                  </div>
                  <button 
@@ -248,19 +248,19 @@ export const UpgradeModal = ({
 
                     <div className="flex items-start gap-3 text-sm font-medium text-zinc-700 dark:text-zinc-100">
                         <CheckCircle size={18} className="text-amber-500 shrink-0 mt-0.5"/> 
-                        <span>Неограничено сканиране</span>
+                        <span>Неограничени снимки</span>
                     </div>
                     <div className="flex items-start gap-3 text-sm font-medium text-zinc-700 dark:text-zinc-100">
                         <CheckCircle size={18} className="text-amber-500 shrink-0 mt-0.5"/> 
-                        <span>Върхов AI модел (Най-умен)</span>
+                        <span>Най-мощният AI (Ultimate)</span>
                     </div>
                     <div className="flex items-start gap-3 text-sm font-medium text-zinc-700 dark:text-zinc-100">
                         <CheckCircle size={18} className="text-amber-500 shrink-0 mt-0.5"/> 
-                        <span>Персонализирани AI учители</span>
+                        <span>Персонализирани AI Роли</span>
                     </div>
                     <div className="flex items-start gap-3 text-sm font-medium text-zinc-700 dark:text-zinc-100">
                         <CheckCircle size={18} className="text-amber-500 shrink-0 mt-0.5"/> 
-                        <span>Гласов режим на живо</span>
+                        <span>Гласов режим (Разговори)</span>
                     </div>
                     <div className="flex items-start gap-3 text-sm font-medium text-zinc-700 dark:text-zinc-100">
                         <CheckCircle size={18} className="text-amber-500 shrink-0 mt-0.5"/> 

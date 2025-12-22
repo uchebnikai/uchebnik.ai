@@ -62,19 +62,19 @@ export const ReferralModal = ({ isOpen, onClose, userSettings, addToast }: Refer
                     <div className="grid grid-cols-2 gap-y-2 gap-x-2">
                          <div className="flex items-center gap-2">
                             <CheckCircle size={14} className="text-amber-500 shrink-0"/>
-                            <span className="text-xs font-medium text-zinc-200">Неограничено сканиране</span>
+                            <span className="text-xs font-medium text-zinc-200">Неограничени снимки</span>
                         </div>
                         <div className="flex items-center gap-2">
                             <CheckCircle size={14} className="text-amber-500 shrink-0"/>
-                            <span className="text-xs font-medium text-zinc-200">Върхов AI модел</span>
+                            <span className="text-xs font-medium text-zinc-200">Ultimate AI Модел</span>
                         </div>
                         <div className="flex items-center gap-2">
                             <CheckCircle size={14} className="text-amber-500 shrink-0"/>
-                            <span className="text-xs font-medium text-zinc-200">Гласов режим на живо</span>
+                            <span className="text-xs font-medium text-zinc-200">Гласов режим</span>
                         </div>
                         <div className="flex items-center gap-2">
                             <CheckCircle size={14} className="text-amber-500 shrink-0"/>
-                            <span className="text-xs font-medium text-zinc-200">AI Учители</span>
+                            <span className="text-xs font-medium text-zinc-200">AI Роли</span>
                         </div>
                          <div className="flex items-center gap-2">
                             <CheckCircle size={14} className="text-amber-500 shrink-0"/>
