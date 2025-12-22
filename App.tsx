@@ -186,6 +186,7 @@ export const App = () => {
   // AbortController for stopping generation
   const abortControllerRef = useRef<AbortController | null>(null);
   const responseWatchdogRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isStreamingRef = useRef(false); // Track if streaming is active to pause sync
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -583,6 +584,10 @@ export const App = () => {
       if (!session?.user?.id || !isRemoteDataLoaded) return;
       if (missingDbTables) return; 
       if (isIncomingUpdateRef.current) { isIncomingUpdateRef.current = false; return; }
+      
+      // Prevent saving while streaming to avoid race conditions/loops
+      if (isStreamingRef.current) return;
+
       setSyncStatus('syncing');
       setSyncErrorDetails(null);
       if (syncSessionsTimer.current) clearTimeout(syncSessionsTimer.current);
@@ -944,6 +949,8 @@ export const App = () => {
         setLoadingSubjects(prev => ({ ...prev, [activeSubject.id]: false }));
     }
     
+    isStreamingRef.current = false; // Ensure flag is reset
+
     // Also stop listening if active
     if (isListening) {
         if (recognitionRef.current) {
@@ -1001,6 +1008,7 @@ export const App = () => {
     setInputValue(''); setSelectedImages([]); if(fileInputRef.current) fileInputRef.current.value = '';
     
     // Start Loading and Setup Controller
+    isStreamingRef.current = true;
     setLoadingSubjects(prev => ({ ...prev, [currentSubId]: true }));
     const controller = new AbortController();
     abortControllerRef.current = controller;
@@ -1125,6 +1133,7 @@ export const App = () => {
        setSessions(prev => prev.map(s => { if (s.id === sessId) { return { ...s, messages: s.messages.map(m => m.id === tempAiMsgId ? errorMsg : m) }; } return s; }));
        return "Error.";
     } finally {
+       isStreamingRef.current = false;
        if (responseWatchdogRef.current) clearTimeout(responseWatchdogRef.current);
        setLoadingSubjects(prev => ({ ...prev, [currentSubId]: false }));
        abortControllerRef.current = null;
