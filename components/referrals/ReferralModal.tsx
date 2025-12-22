@@ -59,13 +59,6 @@ export const ReferralModal = ({ isOpen, onClose, userSettings, addToast }: Refer
                 </h3>
                 
                 <div className="space-y-3">
-                    <div className="flex items-center gap-2 text-xs font-bold text-zinc-400 pb-2 border-b border-white/10">
-                        <div className="p-1 bg-amber-500/20 rounded-full text-amber-500">
-                            <ArrowUp size={12} />
-                        </div>
-                        <span>Всичко от Free и Plus плана</span>
-                    </div>
-                    
                     <div className="grid grid-cols-2 gap-y-2 gap-x-2">
                          <div className="flex items-center gap-2">
                             <CheckCircle size={14} className="text-amber-500 shrink-0"/>

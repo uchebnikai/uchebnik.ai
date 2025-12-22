@@ -197,8 +197,8 @@ export const UpgradeModal = ({
                         <CheckCircle size={18} className="text-indigo-500 shrink-0 mt-0.5"/> 
                         <span>12 снимки дневно</span>
                     </div>
-                    <div className="flex items-start gap-3 text-sm font-bold text-zinc-800 dark:text-white">
-                        <CheckCircle size={18} className="text-indigo-500 shrink-0 mt-0.5"/> 
+                    <div className="flex items-start gap-3 text-sm font-bold text-zinc-400 dark:text-zinc-600 opacity-70">
+                        <XCircle size={18} className="shrink-0 mt-0.5"/> 
                         <span>Гласов режим (Разговори)</span>
                     </div>
                     <div className="flex items-start gap-3 text-sm font-bold text-zinc-800 dark:text-white">
@@ -257,6 +257,10 @@ export const UpgradeModal = ({
                     <div className="flex items-start gap-3 text-sm font-medium text-zinc-700 dark:text-zinc-100">
                         <CheckCircle size={18} className="text-amber-500 shrink-0 mt-0.5"/> 
                         <span>Персонализирани AI Роли</span>
+                    </div>
+                    <div className="flex items-start gap-3 text-sm font-medium text-zinc-700 dark:text-zinc-100">
+                        <CheckCircle size={18} className="text-amber-500 shrink-0 mt-0.5"/> 
+                        <span>Гласов режим (Разговори)</span>
                     </div>
                     <div className="flex items-start gap-3 text-sm font-medium text-zinc-700 dark:text-zinc-100">
                         <CheckCircle size={18} className="text-amber-500 shrink-0 mt-0.5"/> 
