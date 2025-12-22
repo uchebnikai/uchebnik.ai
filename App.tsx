@@ -517,7 +517,7 @@ export const App = () => {
                           const localOnly = prev.filter(p => !remoteSessions.find((r: Session) => r.id === p.id));
                           return [...localOnly, ...merged].sort((a: Session, b: Session) => b.lastModified - a.lastModified);
                       });
-                      addToast(t('synced', userSettings.language), 'info');
+                      // addToast(t('synced', userSettings.language), 'info'); // Sync notification removed
                   }
               }
           })
