@@ -1,47 +1,12 @@
 
 import { GoogleGenAI, Modality } from "@google/genai";
 
-const TTS_MODEL = "gemini-2.5-flash-preview-tts";
+// TTS Model removed as per project restrictions.
+// const TTS_MODEL = "gemini-2.5-flash-preview-tts";
 
 export const generateSpeech = async (text: string, voiceName: string = 'Puck'): Promise<AudioBuffer | null> => {
-  const apiKey = process.env.API_KEY || "";
-  if (!apiKey) {
-    console.error("API Key missing");
-    return null;
-  }
-
-  const ai = new GoogleGenAI({ apiKey });
-
-  try {
-    const response = await ai.models.generateContent({
-      model: TTS_MODEL,
-      contents: [{ parts: [{ text }] }],
-      config: {
-        responseModalities: [Modality.AUDIO],
-        speechConfig: {
-          voiceConfig: {
-            prebuiltVoiceConfig: { voiceName },
-          },
-        },
-      },
-    });
-
-    const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-    if (!base64Audio) throw new Error("No audio data received");
-
-    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
-    const audioBuffer = await decodeAudioData(
-      decode(base64Audio),
-      audioContext,
-      24000,
-      1
-    );
-    
-    return audioBuffer;
-  } catch (error) {
-    console.error("TTS Error:", error);
-    return null;
-  }
+  console.warn("Text-to-Speech is currently disabled in this project configuration.");
+  return null;
 };
 
 // Helper Functions
