@@ -120,12 +120,12 @@ export const getRank = (level: number): RankInfo => {
 // --- DAILY QUESTS LOGIC ---
 
 const QUEST_TEMPLATES = [
-    { desc: 'Send {n} messages', type: 'message', min: 3, max: 8, xpPerUnit: 10 },
-    { desc: 'Upload {n} images', type: 'image', min: 1, max: 3, xpPerUnit: 25 },
-    { desc: 'Solve {n} Math problems', type: SubjectId.MATH, min: 2, max: 5, xpPerUnit: 30 },
-    { desc: 'Practice English ({n} msgs)', type: SubjectId.ENGLISH, min: 3, max: 6, xpPerUnit: 20 },
-    { desc: 'Learn History ({n} msgs)', type: SubjectId.HISTORY, min: 3, max: 5, xpPerUnit: 20 },
-    { desc: 'Write code ({n} msgs in IT)', type: SubjectId.IT, min: 2, max: 4, xpPerUnit: 30 },
+    { desc: 'Изпрати {n} съобщения', type: 'message', min: 3, max: 8, xpPerUnit: 10 },
+    { desc: 'Качи {n} снимки', type: 'image', min: 1, max: 3, xpPerUnit: 25 },
+    { desc: 'Реши {n} задачи по Математика', type: SubjectId.MATH, min: 2, max: 5, xpPerUnit: 30 },
+    { desc: 'Упражнявай Английски ({n} съобщ.)', type: SubjectId.ENGLISH, min: 3, max: 6, xpPerUnit: 20 },
+    { desc: 'Учи История ({n} съобщ.)', type: SubjectId.HISTORY, min: 3, max: 5, xpPerUnit: 20 },
+    { desc: 'Пиши код ({n} съобщ. в ИТ)', type: SubjectId.IT, min: 2, max: 4, xpPerUnit: 30 },
 ];
 
 export const generateDailyQuests = (): DailyQuest[] => {

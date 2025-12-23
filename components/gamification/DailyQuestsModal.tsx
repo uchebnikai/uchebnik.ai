@@ -30,7 +30,7 @@ export const DailyQuestsModal = ({ isOpen, onClose, quests }: DailyQuestsModalPr
                         </h2>
                         <div className="flex items-center gap-2 text-xs text-indigo-200 mt-1">
                             <Clock size={12}/>
-                            <span>Рестартират се в полунощ</span>
+                            <span>Нови мисии всеки ден в 00:00</span>
                         </div>
                     </div>
                     <button onClick={onClose} className="p-2 bg-white/10 hover:bg-white/20 rounded-full text-zinc-300 hover:text-white transition-colors">

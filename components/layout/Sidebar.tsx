@@ -180,33 +180,29 @@ export const Sidebar = ({
           </div>
 
           <div className="flex-1 overflow-y-auto px-4 pb-4 custom-scrollbar">
-             {/* Gamification Buttons */}
+             {/* Gamification Buttons - Compact Grid */}
              {session && (
-                 <div className="space-y-2 mt-2 mb-2">
+                 <div className={`mt-2 mb-2 ${collapsed ? 'space-y-2' : 'grid grid-cols-2 gap-2'}`}>
                      <button 
                         onClick={() => setShowLeaderboard && setShowLeaderboard(true)}
-                        className={`w-full flex items-center ${collapsed ? 'justify-center py-3' : 'justify-between px-3 py-3'} rounded-xl transition-all group glass-button border border-amber-500/20 hover:border-amber-500/40 hover:bg-amber-500/10`}
+                        className={`flex items-center justify-center ${collapsed ? 'py-3 w-full' : 'py-2.5 px-2'} rounded-xl transition-all group glass-button border border-amber-500/20 hover:border-amber-500/40 hover:bg-amber-500/10 flex-col gap-1`}
                         title="Класация"
                      >
-                         <div className="flex items-center gap-3">
-                             <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-500 group-hover:text-amber-400 group-hover:bg-amber-500/20 transition-colors">
-                                 <Trophy size={18} />
-                             </div>
-                             {!collapsed && <span className="text-sm font-bold text-amber-600 dark:text-amber-400">Класация</span>}
+                         <div className="w-6 h-6 rounded-md bg-amber-500/10 flex items-center justify-center text-amber-500 group-hover:text-amber-400 group-hover:bg-amber-500/20 transition-colors">
+                             <Trophy size={14} />
                          </div>
+                         {!collapsed && <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wide">Класация</span>}
                      </button>
 
                      <button 
                         onClick={() => setShowQuests && setShowQuests(true)}
-                        className={`w-full flex items-center ${collapsed ? 'justify-center py-3' : 'justify-between px-3 py-3'} rounded-xl transition-all group glass-button border border-pink-500/20 hover:border-pink-500/40 hover:bg-pink-500/10`}
+                        className={`flex items-center justify-center ${collapsed ? 'py-3 w-full' : 'py-2.5 px-2'} rounded-xl transition-all group glass-button border border-pink-500/20 hover:border-pink-500/40 hover:bg-pink-500/10 flex-col gap-1`}
                         title="Дневни Мисии"
                      >
-                         <div className="flex items-center gap-3">
-                             <div className="w-8 h-8 rounded-lg bg-pink-500/10 flex items-center justify-center text-pink-500 group-hover:text-pink-400 group-hover:bg-pink-500/20 transition-colors">
-                                 <Target size={18} />
-                             </div>
-                             {!collapsed && <span className="text-sm font-bold text-pink-600 dark:text-pink-400">Мисии</span>}
+                         <div className="w-6 h-6 rounded-md bg-pink-500/10 flex items-center justify-center text-pink-500 group-hover:text-pink-400 group-hover:bg-pink-500/20 transition-colors">
+                             <Target size={14} />
                          </div>
+                         {!collapsed && <span className="text-[10px] font-bold text-pink-600 dark:text-pink-400 uppercase tracking-wide">Мисии</span>}
                      </button>
                  </div>
              )}
