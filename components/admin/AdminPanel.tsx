@@ -9,7 +9,7 @@ import {
   TrendingUp, TrendingDown, Wallet, CreditCard,
   Settings, HelpCircle, ExternalLink, Cloud, Sliders, Cpu, Server, Info, AlertCircle, PenTool, History, Wrench,
   BarChart2, UserCheck, FileText, Smartphone, Wifi, Globe, HardDrive, Lock, Brain, LayoutDashboard,
-  RotateCcw, CalendarDays, Coins, Radio, Send, PieChart as PieChartIcon, MessageSquare, Bug, CheckSquare
+  RotateCcw, CalendarDays, Coins, Radio, Send, PieChart as PieChartIcon, MessageSquare
 } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { supabase } from '../../supabaseClient';
@@ -48,16 +48,6 @@ interface AdminUser {
   totalOutput: number;
   stripeId?: string;
   proExpiresAt?: string;
-}
-
-interface Report {
-    id: string;
-    user_id: string;
-    title: string;
-    description: string;
-    images: string[];
-    status: 'open' | 'resolved';
-    created_at: string;
 }
 
 interface FinancialData {
@@ -112,10 +102,9 @@ export const AdminPanel = ({
   addToast
 }: AdminPanelProps) => {
     
-    const [activeTab, setActiveTab] = useState<'dashboard' | 'status' | 'finance' | 'users' | 'keys' | 'broadcast' | 'reports'>('dashboard');
+    const [activeTab, setActiveTab] = useState<'dashboard' | 'status' | 'finance' | 'users' | 'keys' | 'broadcast'>('dashboard');
     const [dbKeys, setDbKeys] = useState<GeneratedKey[]>([]);
     const [dbUsers, setDbUsers] = useState<AdminUser[]>([]);
-    const [reports, setReports] = useState<Report[]>([]);
     const [financials, setFinancials] = useState<FinancialData | null>(null);
     const [loadingData, setLoadingData] = useState(false);
     const [selectedPlan, setSelectedPlan] = useState<'plus' | 'pro'>('pro');
@@ -150,9 +139,6 @@ export const AdminPanel = ({
     const [userSessions, setUserSessions] = useState<Session[]>([]);
     const [loadingSessions, setLoadingSessions] = useState(false);
     const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
-
-    // Report Details
-    const [selectedReport, setSelectedReport] = useState<Report | null>(null);
 
     // Initial State - will be updated by real checks
     const [systemHealth, setSystemHealth] = useState<SystemService[]>([
@@ -273,7 +259,7 @@ export const AdminPanel = ({
         setLoadingData(true);
         try {
             // Fetch Users - This acts as a live DB check for the Admin Panel
-            if (['users', 'dashboard', 'finance', 'reports'].includes(activeTab)) {
+            if (['users', 'dashboard', 'finance'].includes(activeTab)) {
                 const dbStart = performance.now();
                 const { data: users, error } = await supabase
                     .from('profiles')
@@ -340,14 +326,6 @@ export const AdminPanel = ({
                 const { data: keys, error } = await supabase.from('promo_codes').select('*').order('created_at', { ascending: false }).limit(50);
                 if (!error && keys) {
                     setDbKeys(keys.map(k => ({ id: k.id, code: k.code, isUsed: k.is_used, plan: k.plan, createdAt: k.created_at })));
-                }
-            }
-
-            // Fetch Reports
-            if (['reports', 'dashboard'].includes(activeTab)) {
-                const { data: reportsData, error: reportsError } = await supabase.from('reports').select('*').order('created_at', { ascending: false });
-                if (!reportsError && reportsData) {
-                    setReports(reportsData);
                 }
             }
 
@@ -469,77 +447,25 @@ export const AdminPanel = ({
             const currentSettings = selectedUser.rawSettings || {};
             
             const updatedSettings = { ...currentSettings, userName: editForm.name, plan: editForm.plan, stats: { ...(currentSettings.stats || {}), dailyImageCount: editForm.usage } };
-            const { error } = await supabase.from('profiles').update({ 
-                settings: updatedSettings, 
-                xp: editForm.xp,
-                level: editForm.level,
-                updated_at: new Date().toISOString() 
-            }).eq('id', selectedUser.id);
-            
+            const { error } = await supabase.from('profiles').update({ settings: updatedSettings, updated_at: new Date().toISOString() }).eq('id', selectedUser.id);
             if (error) throw error;
-            const updatedUser: AdminUser = { 
-                ...selectedUser, 
-                name: editForm.name, 
-                plan: editForm.plan, 
-                usage: editForm.usage, 
-                xp: editForm.xp,
-                level: editForm.level,
-                rawSettings: updatedSettings 
-            };
+            const updatedUser: AdminUser = { ...selectedUser, name: editForm.name, plan: editForm.plan, usage: editForm.usage, rawSettings: updatedSettings };
             setDbUsers(prev => prev.map(u => u.id === selectedUser.id ? updatedUser : u));
             setSelectedUser(updatedUser); 
             addToast('Промените са запазени успешно!', 'success');
         } catch (e) { addToast('Грешка при запазване.', 'error'); }
     };
 
-    const handleUpdateReportStatus = async (id: string, newStatus: 'open' | 'resolved') => {
-        try {
-            const { error } = await supabase.from('reports').update({ status: newStatus }).eq('id', id);
-            if (error) throw error;
-            setReports(prev => prev.map(r => r.id === id ? { ...r, status: newStatus } : r));
-            if (selectedReport && selectedReport.id === id) {
-                setSelectedReport(prev => prev ? { ...prev, status: newStatus } : null);
-            }
-            addToast(`Статусът е променен на ${newStatus}`, 'success');
-        } catch (e) {
-            addToast('Грешка при обновяване на статуса', 'error');
-        }
-    };
-
-    const handleDeleteReport = async (id: string) => {
-        try {
-            const { error } = await supabase.from('reports').delete().eq('id', id);
-            if (error) throw error;
-            setReports(prev => prev.filter(r => r.id !== id));
-            setSelectedReport(null);
-            addToast('Докладът е изтрит', 'success');
-        } catch (e) {
-            addToast('Грешка при изтриване', 'error');
-        }
-    };
-
     const handleUserClick = (user: AdminUser) => {
         setSelectedUser(user);
-        // Removed streak from edit form, added xp and level
-        setEditForm({ 
-            name: user.name, 
-            plan: user.plan, 
-            usage: user.usage,
-            xp: user.xp,
-            level: user.level
-        });
+        // Removed streak from edit form
+        setEditForm({ name: user.name, plan: user.plan, usage: user.usage });
     };
 
     // Helper to check if user is online (active within last 5 minutes)
     const isUserOnline = (updatedAt: string) => {
         const diff = new Date().getTime() - new Date(updatedAt).getTime();
         return diff < 5 * 60 * 1000;
-    };
-
-    // Helper to get reporter name
-    const getReporterName = (userId: string) => {
-        const user = dbUsers.find(u => u.id === userId);
-        return user ? user.name : userId.substring(0, 8);
     };
 
     // Financials
@@ -678,7 +604,7 @@ export const AdminPanel = ({
                         </div>
                         <div>
                             <h2 className="font-bold text-white text-sm">Контролен Панел</h2>
-                            <div className="text-[10px] text-zinc-500 font-mono">v3.6 • Live</div>
+                            <div className="text-[10px] text-zinc-500 font-mono">v3.5 • Live</div>
                         </div>
                     </div>
                     <button onClick={() => setShowAdminPanel(false)} className="md:hidden p-2 text-zinc-400 hover:text-white transition-colors">
@@ -692,9 +618,6 @@ export const AdminPanel = ({
                     </button>
                     <button onClick={() => {setActiveTab('status'); setSelectedUser(null);}} className={`flex-shrink-0 md:w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTab === 'status' ? 'bg-white/10 text-white border border-white/5 shadow-lg shadow-black/20' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}>
                         <Activity size={18}/> <span className="hidden md:inline">Системен статус</span><span className="md:hidden">Статус</span>
-                    </button>
-                    <button onClick={() => {setActiveTab('reports'); setSelectedUser(null);}} className={`flex-shrink-0 md:w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTab === 'reports' ? 'bg-white/10 text-white border border-white/5 shadow-lg shadow-black/20' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}>
-                        <Bug size={18}/> <span className="hidden md:inline">Доклади</span><span className="md:hidden">Доклади</span>
                     </button>
                     <button onClick={() => {setActiveTab('broadcast'); setSelectedUser(null);}} className={`flex-shrink-0 md:w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTab === 'broadcast' ? 'bg-white/10 text-white border border-white/5 shadow-lg shadow-black/20' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}>
                         <Radio size={18}/> <span className="hidden md:inline">Съобщение</span><span className="md:hidden">Инфо</span>
@@ -722,8 +645,8 @@ export const AdminPanel = ({
                  {/* Header */}
                  <div className="h-16 md:h-20 border-b border-white/5 flex items-center justify-between px-4 md:px-8 bg-white/5 backdrop-blur-sm shrink-0">
                      <div className="flex items-center gap-4">
-                         {(selectedUser || selectedReport) && (
-                             <button onClick={() => {setSelectedUser(null); setSelectedReport(null);}} className="p-2 hover:bg-white/10 rounded-full text-zinc-400 hover:text-white transition-colors">
+                         {selectedUser && (
+                             <button onClick={() => setSelectedUser(null)} className="p-2 hover:bg-white/10 rounded-full text-zinc-400 hover:text-white transition-colors">
                                  <ArrowLeft size={20}/>
                              </button>
                          )}
@@ -731,12 +654,10 @@ export const AdminPanel = ({
                              <h3 className="text-lg md:text-xl font-bold text-white capitalize flex items-center gap-2">
                                  {activeTab === 'status' ? <div className={`w-2 h-2 rounded-full animate-pulse ${systemHealth.some(s => s.status === 'down') ? 'bg-red-500' : 'bg-green-500'}`}/> : null}
                                  {selectedUser ? 'Профил' : 
-                                  selectedReport ? 'Преглед на доклад' :
                                   activeTab === 'dashboard' ? 'Общ преглед' :
                                   activeTab === 'status' ? 'Системен статус' :
                                   activeTab === 'broadcast' ? 'Съобщение' :
                                   activeTab === 'finance' ? 'Финанси' :
-                                  activeTab === 'reports' ? 'Доклади за грешки' :
                                   activeTab === 'users' ? 'Потребители' :
                                   'Ключове за достъп'}
                              </h3>
@@ -753,55 +674,8 @@ export const AdminPanel = ({
                  {/* Content Scroll Area */}
                  <div className="flex-1 overflow-y-auto custom-scrollbar p-4 md:p-8 pb-20 md:pb-8">
                      
-                     {/* REPORT DETAIL VIEW */}
-                     {selectedReport && (
-                         <div className="max-w-4xl mx-auto space-y-6 animate-in slide-in-from-right fade-in duration-300">
-                             <div className="bg-white/5 border border-white/10 rounded-3xl p-6 md:p-8">
-                                 <div className="flex justify-between items-start mb-6">
-                                     <div>
-                                         <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider mb-3 inline-block ${selectedReport.status === 'open' ? 'bg-red-500/20 text-red-400' : 'bg-green-500/20 text-green-400'}`}>
-                                             {selectedReport.status}
-                                         </span>
-                                         <h2 className="text-2xl md:text-3xl font-black text-white">{selectedReport.title}</h2>
-                                         <p className="text-zinc-400 text-sm mt-1">Докладван от: <span className="text-white font-medium">{getReporterName(selectedReport.user_id)}</span> на {new Date(selectedReport.created_at).toLocaleString()}</p>
-                                     </div>
-                                     <div className="flex gap-2">
-                                         {selectedReport.status === 'open' && (
-                                             <button onClick={() => handleUpdateReportStatus(selectedReport.id, 'resolved')} className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-xl font-bold text-sm transition-colors">
-                                                 <CheckSquare size={16}/> Маркирай като решен
-                                             </button>
-                                         )}
-                                         <button onClick={() => handleDeleteReport(selectedReport.id)} className="p-2 bg-white/5 hover:bg-red-500/20 text-zinc-400 hover:text-red-400 rounded-xl transition-colors">
-                                             <Trash2 size={20}/>
-                                         </button>
-                                     </div>
-                                 </div>
-
-                                 <div className="space-y-6">
-                                     <div className="bg-black/30 rounded-2xl p-5 border border-white/5">
-                                         <h4 className="text-xs font-bold text-zinc-500 uppercase mb-2">Описание</h4>
-                                         <p className="text-white whitespace-pre-wrap">{selectedReport.description}</p>
-                                     </div>
-
-                                     {selectedReport.images && selectedReport.images.length > 0 && (
-                                         <div>
-                                             <h4 className="text-xs font-bold text-zinc-500 uppercase mb-3">Прикачени снимки</h4>
-                                             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                                                 {selectedReport.images.map((img, i) => (
-                                                     <div key={i} className="aspect-square rounded-xl overflow-hidden border border-white/10 bg-black/50">
-                                                         <img src={img} className="w-full h-full object-contain cursor-pointer hover:scale-105 transition-transform" onClick={() => window.open(img, '_blank')}/>
-                                                     </div>
-                                                 ))}
-                                             </div>
-                                         </div>
-                                     )}
-                                 </div>
-                             </div>
-                         </div>
-                     )}
-
-                     {/* USER DETAIL MODAL */}
-                     {selectedUser && editForm && !selectedReport && (
+                     {/* USER DETAIL MODAL REPLACEMENT */}
+                     {selectedUser && editForm ? (
                          <div className="max-w-5xl mx-auto space-y-6 animate-in slide-in-from-right fade-in duration-300">
                              
                              {/* Profile Header */}
@@ -883,20 +757,11 @@ export const AdminPanel = ({
                                              </div>
                                          </div>
 
-                                         <div className="grid grid-cols-2 gap-3">
+                                         <div className="grid grid-cols-1 gap-4">
                                              <div className="space-y-2">
-                                                 <label className="text-xs font-bold text-zinc-500 uppercase ml-1">XP</label>
-                                                 <input type="number" value={editForm.xp} onChange={(e) => setEditForm({...editForm, xp: parseInt(e.target.value) || 0})} className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-amber-500 transition-colors text-center"/>
+                                                 <label className="text-xs font-bold text-zinc-500 uppercase ml-1">Usage</label>
+                                                 <input type="number" value={editForm.usage} onChange={(e) => setEditForm({...editForm, usage: parseInt(e.target.value) || 0})} className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-blue-500 transition-colors text-center"/>
                                              </div>
-                                             <div className="space-y-2">
-                                                 <label className="text-xs font-bold text-zinc-500 uppercase ml-1">Level</label>
-                                                 <input type="number" value={editForm.level} onChange={(e) => setEditForm({...editForm, level: parseInt(e.target.value) || 1})} className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-amber-500 transition-colors text-center"/>
-                                             </div>
-                                         </div>
-
-                                         <div className="space-y-2">
-                                             <label className="text-xs font-bold text-zinc-500 uppercase ml-1">Usage</label>
-                                             <input type="number" value={editForm.usage} onChange={(e) => setEditForm({...editForm, usage: parseInt(e.target.value) || 0})} className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-blue-500 transition-colors text-center"/>
                                          </div>
                                      </div>
                                  </div>
@@ -1245,53 +1110,6 @@ export const AdminPanel = ({
                                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                          <div className="md:col-span-1 p-6 rounded-3xl border border-white/10 bg-white/5 flex flex-col justify-center items-center text-center"><div className="text-sm font-bold text-zinc-400 uppercase tracking-wider mb-2">Нетна печалба</div><div className={`text-4xl font-black ${netProfit >= 0 ? 'text-indigo-400' : 'text-orange-500'}`}>€{netProfit.toFixed(2)}</div><div className="text-xs text-zinc-500 mt-1">Марж: {profitMargin.toFixed(1)}%</div></div>
                                          <div className="md:col-span-2 p-6 rounded-3xl border border-white/10 bg-white/5"><h4 className="text-sm font-bold text-white uppercase tracking-wider mb-4 flex items-center gap-2"><FileText size={16}/> Разходен дневник</h4><div className="space-y-3 text-sm font-mono"><div className="flex justify-between items-center text-zinc-400"><span>Входящи ({totalInputTokens.toLocaleString()})</span><span>${liveInputCost.toFixed(4)}</span></div><div className="flex justify-between items-center text-zinc-400"><span>Изходящи ({totalOutputTokens.toLocaleString()})</span><span>${liveOutputCost.toFixed(4)}</span></div>{costCorrection > 0 && (<div className="flex justify-between items-center text-amber-500"><span>Historical Adjustment</span><span>${costCorrection.toFixed(4)}</span></div>)}<div className="flex justify-between items-center text-indigo-400 border-t border-white/5 pt-2"><span>Stripe Fees (Est. 3%)</span><span>€{estimatedFees.toFixed(2)}</span></div></div></div>
-                                     </div>
-                                 </div>
-                             )}
-
-                             {/* REPORTS TAB - NEW */}
-                             {activeTab === 'reports' && (
-                                 <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
-                                     <div className="flex flex-col md:flex-row justify-between items-end mb-6 gap-4">
-                                         <h3 className="text-2xl font-bold text-white">Доклади за проблеми</h3>
-                                         <div className="text-zinc-500 text-sm">{reports.length} общо доклада</div>
-                                     </div>
-
-                                     <div className="bg-white/5 border border-white/5 rounded-3xl overflow-hidden shadow-lg">
-                                         <div className="overflow-x-auto">
-                                             <table className="w-full text-left">
-                                                 <thead>
-                                                     <tr className="border-b border-white/5 bg-black/20">
-                                                         <th className="p-5 text-xs font-bold text-zinc-500 uppercase tracking-wider">Дата</th>
-                                                         <th className="p-5 text-xs font-bold text-zinc-500 uppercase tracking-wider">Потребител</th>
-                                                         <th className="p-5 text-xs font-bold text-zinc-500 uppercase tracking-wider">Заглавие</th>
-                                                         <th className="p-5 text-xs font-bold text-zinc-500 uppercase tracking-wider">Статус</th>
-                                                         <th className="p-5 text-right text-xs font-bold text-zinc-500 uppercase tracking-wider">Действие</th>
-                                                     </tr>
-                                                 </thead>
-                                                 <tbody className="divide-y divide-white/5">
-                                                     {reports.length === 0 ? (
-                                                         <tr><td colSpan={5} className="p-8 text-center text-zinc-500">Няма намерени доклади.</td></tr>
-                                                     ) : (
-                                                         reports.map((r, i) => (
-                                                             <tr key={r.id} onClick={() => setSelectedReport(r)} className="hover:bg-white/5 transition-colors cursor-pointer group">
-                                                                 <td className="p-5 text-xs text-zinc-400 font-mono">{new Date(r.created_at).toLocaleDateString()}</td>
-                                                                 <td className="p-5 text-sm font-bold text-zinc-300">{getReporterName(r.user_id)}</td>
-                                                                 <td className="p-5 text-sm text-white font-medium truncate max-w-xs">{r.title}</td>
-                                                                 <td className="p-5">
-                                                                     <span className={`text-[10px] font-black px-2 py-1 rounded-md uppercase ${r.status === 'open' ? 'bg-red-500/10 text-red-400' : 'bg-green-500/10 text-green-400'}`}>
-                                                                         {r.status}
-                                                                     </span>
-                                                                 </td>
-                                                                 <td className="p-5 text-right">
-                                                                     <ChevronRight size={16} className="text-zinc-600 group-hover:text-white transition-colors ml-auto"/>
-                                                                 </td>
-                                                             </tr>
-                                                         ))
-                                                     )}
-                                                 </tbody>
-                                             </table>
-                                         </div>
                                      </div>
                                  </div>
                              )}
