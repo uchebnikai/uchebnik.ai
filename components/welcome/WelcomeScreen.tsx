@@ -52,6 +52,11 @@ export const WelcomeScreen = ({
     const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = e.target.files;
         if (files && files.length > 0) {
+            if (files.length + selectedImages.length > 4) {
+                alert("Максимум 4 снимки на съобщение.");
+                e.target.value = '';
+                return;
+            }
             try {
                 const processedImages = await Promise.all(
                     Array.from(files).map(file => resizeImage(file as File, 800, 0.6))

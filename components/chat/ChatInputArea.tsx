@@ -103,6 +103,16 @@ export const ChatInputArea = ({
       }
   };
 
+  const onImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const files = e.target.files;
+      if (files && (files.length + selectedImages.length > 4)) {
+          alert("Максимум 4 снимки на съобщение.");
+          e.target.value = '';
+          return;
+      }
+      handleImageUpload(e);
+  };
+
   const toggleSocratic = () => {
       setUserSettings(prev => ({
           ...prev,
@@ -186,7 +196,7 @@ export const ChatInputArea = ({
                 <button onClick={() => fileInputRef.current?.click()} disabled={loadingSubject} className="flex-none w-10 h-10 rounded-full flex items-center justify-center text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-white/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
                     <ImageIcon size={20} strokeWidth={2}/>
                 </button>
-                <input type="file" ref={fileInputRef} onChange={handleImageUpload} className="hidden" accept="image/*" multiple />
+                <input type="file" ref={fileInputRef} onChange={onImageUpload} className="hidden" accept="image/*" multiple />
                 
                 {/* Math Toggle */}
                 <button onClick={() => setShowMath(!showMath)} disabled={loadingSubject} className={`flex-none w-10 h-10 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${showMath ? 'text-indigo-600 bg-indigo-50 dark:bg-white/10' : 'text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-white/10'}`}>

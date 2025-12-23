@@ -1,5 +1,5 @@
 
-import { Medal, Trophy, Crown, Gem, Star } from 'lucide-react';
+import { Medal, Trophy, Crown, Gem, Star, MessageSquare, Image, Mic, BookOpen, Calculator, Globe, Code } from 'lucide-react';
 import { RankInfo, RankTier, UserPlan, DailyQuest, SubjectId } from '../types';
 
 // Constants
@@ -119,13 +119,31 @@ export const getRank = (level: number): RankInfo => {
 
 // --- DAILY QUESTS LOGIC ---
 
+// Helper to get icon based on quest type
+export const getQuestIcon = (type: string) => {
+    switch (type) {
+        case 'message': return MessageSquare;
+        case 'image': return Image;
+        case 'voice': return Mic;
+        case SubjectId.MATH: return Calculator;
+        case SubjectId.ENGLISH: 
+        case SubjectId.GERMAN:
+        case SubjectId.FRENCH:
+        case SubjectId.SPANISH: return Globe;
+        case SubjectId.IT: return Code;
+        case SubjectId.HISTORY: return BookOpen;
+        default: return Star;
+    }
+};
+
 const QUEST_TEMPLATES = [
-    { desc: 'Изпрати {n} съобщения', type: 'message', min: 3, max: 8, xpPerUnit: 10 },
-    { desc: 'Качи {n} снимки', type: 'image', min: 1, max: 3, xpPerUnit: 25 },
-    { desc: 'Реши {n} задачи по Математика', type: SubjectId.MATH, min: 2, max: 5, xpPerUnit: 30 },
-    { desc: 'Упражнявай Английски ({n} съобщ.)', type: SubjectId.ENGLISH, min: 3, max: 6, xpPerUnit: 20 },
-    { desc: 'Учи История ({n} съобщ.)', type: SubjectId.HISTORY, min: 3, max: 5, xpPerUnit: 20 },
-    { desc: 'Пиши код ({n} съобщ. в ИТ)', type: SubjectId.IT, min: 2, max: 4, xpPerUnit: 30 },
+    { desc: 'Изпрати {n} съобщения', type: 'message', min: 3, max: 8, xpPerUnit: 15 },
+    { desc: 'Качи {n} снимки за анализ', type: 'image', min: 1, max: 2, xpPerUnit: 30 },
+    { desc: 'Реши {n} задачи по Математика', type: SubjectId.MATH, min: 2, max: 5, xpPerUnit: 25 },
+    { desc: 'Упражнявай чужд език ({n} съобщ.)', type: SubjectId.ENGLISH, min: 3, max: 6, xpPerUnit: 20 },
+    { desc: 'Научи нещо по История ({n} въпроса)', type: SubjectId.HISTORY, min: 2, max: 4, xpPerUnit: 20 },
+    { desc: 'Програмирай с AI ({n} съобщ.)', type: SubjectId.IT, min: 2, max: 4, xpPerUnit: 25 },
+    { desc: 'Гласов разговор ({n} реплики)', type: 'voice', min: 3, max: 10, xpPerUnit: 10 },
 ];
 
 export const generateDailyQuests = (): DailyQuest[] => {
@@ -160,16 +178,24 @@ export const updateQuestProgress = (
         if (q.isCompleted) return q;
 
         let match = false;
-        // Check generic type match
-        if (q.type === actionType) match = true;
-        // Check subject specific match (only counts if action is message or voice, not just image upload unless specified)
-        if ((actionType === 'message' || actionType === 'voice') && q.type === subjectId) match = true;
+        
+        // 1. Generic Type Match (e.g. 'message', 'image')
+        if (q.type === actionType) {
+            match = true;
+        }
+        
+        // 2. Subject Specific Match
+        // We only count messages or voice towards subject specific quests
+        if ((actionType === 'message' || actionType === 'voice') && q.type === subjectId) {
+            match = true;
+        }
 
         if (match) {
             const newCurrent = Math.min(q.current + amount, q.target);
             const isNowCompleted = newCurrent >= q.target;
             
-            if (isNowCompleted) {
+            // Only reward if it JUST completed
+            if (isNowCompleted && q.current < q.target) {
                 xpGained += q.xpReward;
                 completedQuests.push(q.description);
             }

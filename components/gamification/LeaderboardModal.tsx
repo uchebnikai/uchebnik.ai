@@ -150,7 +150,7 @@ export const LeaderboardModal = ({ isOpen, onClose, currentUserId }: Leaderboard
                 {/* Table Header */}
                 <div className="grid grid-cols-12 gap-3 px-6 py-3 text-[10px] font-bold text-zinc-500 uppercase tracking-wider border-b border-white/5 bg-black/20 relative z-10 backdrop-blur-sm">
                     <div className="col-span-2 text-center">#</div>
-                    <div className="col-span-7">Ученик</div>
+                    <div className="col-span-7">Потребител</div>
                     <div className="col-span-3 text-right">XP</div>
                 </div>
 
