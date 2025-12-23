@@ -135,7 +135,7 @@ export const App = () => {
     languageLevel: 'standard', 
     preferredModel: 'auto',
     themeColor: '#6366f1',
-    customBackground: null,
+    customBackground: null, 
     language: 'bg',
     teachingStyle: 'normal', 
     socraticMode: false,
@@ -471,7 +471,7 @@ export const App = () => {
           } catch (err) {
               console.error("Failed to load remote data", err);
               localStorage.setItem('sys_monitor_db', JSON.stringify({
-                  status: 'outage',
+                  status: 'down',
                   latency: Math.round(performance.now() - dbStart),
                   timestamp: Date.now()
               }));
@@ -1584,6 +1584,8 @@ export const App = () => {
             syncStatus={syncStatus}
             homeView={homeView}
             dailyImageCount={dailyImageCount}
+            // NEW PROP
+            setShowLeaderboard={setShowLeaderboard}
           />
       )}
       
@@ -1784,17 +1786,6 @@ export const App = () => {
             onConfirm={confirmModal?.onConfirm || (() => {})}
             onCancel={() => setConfirmModal(null)}
         />
-
-        {/* Global Leaderboard Button Floating */}
-        {session && !showLeaderboard && !showAuthModal && (
-            <button 
-                onClick={() => setShowLeaderboard(true)}
-                className="fixed top-20 left-4 z-40 hidden lg:flex items-center gap-2 px-3 py-2 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-xl border border-white/10 text-white text-xs font-bold transition-colors animate-in slide-in-from-left-4"
-            >
-                <div className="p-1 bg-amber-500 rounded-lg"><Gift size={14}/></div>
-                Top Students
-            </button>
-        )}
 
       <div className="fixed top-4 right-4 z-[100] flex flex-col gap-2 pointer-events-none">
         {toasts.map(t => (

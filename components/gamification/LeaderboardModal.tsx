@@ -15,7 +15,6 @@ interface LeaderboardModalProps {
 export const LeaderboardModal = ({ isOpen, onClose, currentUserId }: LeaderboardModalProps) => {
     const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
     const [loading, setLoading] = useState(true);
-    const [userRank, setUserRank] = useState<number | null>(null);
 
     useEffect(() => {
         if (isOpen) {
@@ -29,7 +28,7 @@ export const LeaderboardModal = ({ isOpen, onClose, currentUserId }: Leaderboard
             // Fetch top 50 users by XP
             const { data, error } = await supabase
                 .from('profiles')
-                .select('id, xp, level, settings')
+                .select('id, xp, level, settings, avatar_url')
                 .order('xp', { ascending: false })
                 .limit(50);
 
@@ -43,11 +42,14 @@ export const LeaderboardModal = ({ isOpen, onClose, currentUserId }: Leaderboard
                     
                     // Fallback level calculation if not in DB yet
                     const level = profile.level || calculateLevel(profile.xp || 0);
+                    
+                    // Prioritize dedicated avatar_url, fall back to settings, then null
+                    const avatar = profile.avatar_url || settings?.avatar || null;
 
                     return {
                         userId: profile.id,
                         name: settings?.userName || 'Anonymous Scholar',
-                        avatar: settings?.avatar || null,
+                        avatar: avatar,
                         xp: profile.xp || 0,
                         level: level,
                         rank: index + 1,
@@ -55,12 +57,6 @@ export const LeaderboardModal = ({ isOpen, onClose, currentUserId }: Leaderboard
                     };
                 });
                 setEntries(mapped);
-
-                // Find current user rank if not in top 50
-                if (currentUserId && !mapped.find(e => e.isCurrentUser)) {
-                    // Logic to find exact rank would require a count query, 
-                    // for now we just show them if they are in top 50.
-                }
             }
         } catch (e) {
             console.error("Leaderboard fetch error:", e);
@@ -84,8 +80,8 @@ export const LeaderboardModal = ({ isOpen, onClose, currentUserId }: Leaderboard
                             <Trophy size={24} fill="currentColor" className="text-amber-400"/>
                         </div>
                         <div>
-                            <h2 className="text-xl font-black text-white tracking-tight">Top Students</h2>
-                            <p className="text-xs text-zinc-400">Global Ranking</p>
+                            <h2 className="text-xl font-black text-white tracking-tight">Класация</h2>
+                            <p className="text-xs text-zinc-400">Топ Ученици</p>
                         </div>
                     </div>
                     <button onClick={onClose} className="p-2 bg-white/5 hover:bg-white/10 rounded-full text-zinc-400 hover:text-white transition-colors">
@@ -93,69 +89,83 @@ export const LeaderboardModal = ({ isOpen, onClose, currentUserId }: Leaderboard
                     </button>
                 </div>
 
+                {/* List Header */}
+                <div className="grid grid-cols-12 gap-2 px-6 py-2 text-[10px] font-bold text-zinc-500 uppercase tracking-wider border-b border-white/5 bg-black/20">
+                    <div className="col-span-2 text-center">Ранк</div>
+                    <div className="col-span-7">Потребител</div>
+                    <div className="col-span-3 text-right">Общо XP</div>
+                </div>
+
                 {/* List */}
-                <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-2">
+                <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-1">
                     {loading ? (
                         <div className="flex flex-col items-center justify-center h-40 space-y-4">
                             <div className="w-8 h-8 border-4 border-amber-500/30 border-t-amber-500 rounded-full animate-spin"/>
-                            <p className="text-zinc-500 text-sm">Calculating ranks...</p>
+                            <p className="text-zinc-500 text-sm">Зареждане на класацията...</p>
                         </div>
                     ) : (
                         entries.map((entry) => {
                             const rankInfo = getRank(entry.level);
                             const RankIcon = rankInfo.icon;
+                            const isTop3 = entry.rank <= 3;
                             
                             return (
                                 <div 
                                     key={entry.userId} 
-                                    className={`flex items-center gap-4 p-3 rounded-2xl border transition-all ${
+                                    className={`grid grid-cols-12 gap-2 items-center p-3 rounded-xl transition-all ${
                                         entry.isCurrentUser 
-                                        ? 'bg-white/10 border-amber-500/50 shadow-[0_0_15px_rgba(245,158,11,0.1)]' 
-                                        : 'bg-white/5 border-white/5 hover:bg-white/10'
+                                        ? 'bg-indigo-500/20 border border-indigo-500/50' 
+                                        : 'hover:bg-white/5 border border-transparent'
                                     }`}
                                 >
-                                    <div className={`w-8 font-black text-center ${
-                                        entry.rank === 1 ? 'text-yellow-400 text-xl' :
-                                        entry.rank === 2 ? 'text-gray-300 text-lg' :
-                                        entry.rank === 3 ? 'text-amber-600 text-lg' :
-                                        'text-zinc-500 text-sm'
-                                    }`}>
-                                        {entry.rank}
+                                    {/* Rank Column */}
+                                    <div className="col-span-2 flex justify-center">
+                                        <div className={`w-8 h-8 flex items-center justify-center font-black rounded-lg ${
+                                            entry.rank === 1 ? 'bg-yellow-500 text-black shadow-lg shadow-yellow-500/50' :
+                                            entry.rank === 2 ? 'bg-gray-300 text-black shadow-lg' :
+                                            entry.rank === 3 ? 'bg-amber-700 text-white shadow-lg' :
+                                            'text-zinc-500 bg-white/5'
+                                        }`}>
+                                            {entry.rank}
+                                        </div>
                                     </div>
 
-                                    <div className="relative">
-                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold bg-gradient-to-br ${rankInfo.gradient} ring-2 ring-black`}>
-                                            {entry.avatar ? (
-                                                <img src={entry.avatar} className="w-full h-full object-cover rounded-full" />
-                                            ) : (
-                                                <User size={16}/>
-                                            )}
-                                        </div>
-                                        <div className="absolute -bottom-1 -right-1 bg-black rounded-full p-0.5 border border-white/10">
-                                            <div className={`w-4 h-4 rounded-full flex items-center justify-center bg-gradient-to-br ${rankInfo.gradient}`}>
-                                                <RankIcon size={8} className="text-white/80"/>
+                                    {/* User Info Column */}
+                                    <div className="col-span-7 flex items-center gap-3 min-w-0">
+                                        <div className="relative shrink-0">
+                                            <div className={`w-10 h-10 rounded-full flex items-center justify-center bg-zinc-800 border-2 ${isTop3 ? 'border-amber-400' : 'border-white/10'} overflow-hidden`}>
+                                                {entry.avatar ? (
+                                                    <img src={entry.avatar} className="w-full h-full object-cover" loading="lazy" />
+                                                ) : (
+                                                    <span className="text-xs font-bold text-zinc-500">{entry.name.charAt(0)}</span>
+                                                )}
+                                            </div>
+                                            <div className="absolute -bottom-1 -right-1 bg-black rounded-full p-0.5 border border-white/10">
+                                                <div className={`w-4 h-4 rounded-full flex items-center justify-center bg-gradient-to-br ${rankInfo.gradient}`}>
+                                                    <RankIcon size={8} className="text-white/90"/>
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
 
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-2">
-                                            <span className={`font-bold truncate text-sm ${entry.isCurrentUser ? 'text-white' : 'text-zinc-300'}`}>
-                                                {entry.name}
+                                        <div className="flex flex-col min-w-0">
+                                            <div className="flex items-center gap-1.5">
+                                                <span className={`font-bold text-sm truncate ${entry.isCurrentUser ? 'text-white' : 'text-zinc-200'}`}>
+                                                    {entry.name}
+                                                </span>
+                                                {entry.rank === 1 && <Crown size={12} className="text-yellow-500 fill-yellow-500 shrink-0"/>}
+                                            </div>
+                                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded w-fit ${entry.isCurrentUser ? 'bg-indigo-500 text-white' : 'bg-white/10 text-zinc-400'}`}>
+                                                Lvl {entry.level}
                                             </span>
-                                            {entry.rank <= 3 && <Crown size={12} className="text-yellow-500 fill-yellow-500"/>}
-                                        </div>
-                                        <div className="text-[10px] text-zinc-500 flex items-center gap-2">
-                                            <span className="text-amber-500 font-bold">Lvl {entry.level}</span>
-                                            <span>•</span>
-                                            <span>{rankInfo.name}</span>
                                         </div>
                                     </div>
 
-                                    <div className="text-right">
-                                        <div className="text-xs font-mono font-bold text-zinc-400">
-                                            {entry.xp.toLocaleString()} XP
-                                        </div>
+                                    {/* XP Column */}
+                                    <div className="col-span-3 text-right flex flex-col justify-center">
+                                        <span className="text-sm font-mono font-bold text-white tracking-tight">
+                                            {entry.xp.toLocaleString()}
+                                        </span>
+                                        <span className="text-[10px] text-zinc-500">XP</span>
                                     </div>
                                 </div>
                             );
@@ -165,9 +175,9 @@ export const LeaderboardModal = ({ isOpen, onClose, currentUserId }: Leaderboard
 
                 {/* Footer (Current User) */}
                 {currentUserId && entries.find(e => e.isCurrentUser) && (
-                    <div className="p-4 bg-amber-500/10 border-t border-amber-500/20 flex justify-center">
-                        <span className="text-xs font-medium text-amber-200">
-                            You are ranked #{entries.find(e => e.isCurrentUser)?.rank}! Keep learning!
+                    <div className="p-4 bg-indigo-500/10 border-t border-indigo-500/20 flex justify-center backdrop-blur-md">
+                        <span className="text-xs font-bold text-indigo-300">
+                            Ти си на позиция #{entries.find(e => e.isCurrentUser)?.rank}! Продължавай напред! 🚀
                         </span>
                     </div>
                 )}

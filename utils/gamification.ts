@@ -3,28 +3,61 @@ import { Medal, Trophy, Crown, Gem, Star } from 'lucide-react';
 import { RankInfo, RankTier } from '../types';
 
 // Constants
-export const XP_PER_MESSAGE = 15;
-export const XP_PER_IMAGE = 30;
-export const XP_PER_VOICE = 50;
+export const XP_PER_MESSAGE = 20; // Faster feedback loop
+export const XP_PER_IMAGE = 40;
+export const XP_PER_VOICE = 60;
 
-// Calculate Level based on XP
-// Formula: XP = (Level^2) * 100
+// Configurable curve constant
+// Lower BASE_XP means faster first levels.
+const BASE_XP = 50; 
+const EXPONENT = 1.55; // Controls how fast the difficulty ramps up
+
+/**
+ * Calculates the total XP required to reach a specific level.
+ * Formula: XP = BASE * (Level - 1) ^ EXPONENT
+ */
+export const getMinXPForLevel = (level: number): number => {
+    if (level <= 1) return 0;
+    return Math.floor(BASE_XP * Math.pow(level - 1, EXPONENT));
+};
+
+/**
+ * Calculates the current Level based on total XP.
+ * Inverse Formula: Level = (XP / BASE)^(1/EXPONENT) + 1
+ */
 export const calculateLevel = (xp: number): number => {
-    return Math.floor(Math.sqrt(xp / 100)) + 1;
+    if (xp <= 0) return 1;
+    return Math.floor(Math.pow(xp / BASE_XP, 1 / EXPONENT)) + 1;
 };
 
-// Calculate XP required for next level
-export const xpForNextLevel = (currentLevel: number): number => {
-    return Math.pow(currentLevel + 1, 2) * 100;
+/**
+ * Returns stats for the progress bar.
+ */
+export const getLevelStats = (totalXP: number, currentLevel: number) => {
+    const startXP = getMinXPForLevel(currentLevel);
+    const endXP = getMinXPForLevel(currentLevel + 1);
+    
+    // XP gained specifically within this level
+    const currentLevelProgress = totalXP - startXP;
+    // XP needed to complete this level
+    const xpNeededForNext = endXP - startXP;
+    
+    // Percentage 0-100
+    const percentage = Math.min(100, Math.max(0, (currentLevelProgress / xpNeededForNext) * 100));
+
+    return {
+        currentLevelProgress, // e.g. 40
+        xpNeededForNext,      // e.g. 100
+        percentage,           // e.g. 40%
+        startXP,
+        endXP
+    };
 };
 
-// Calculate progress percentage to next level
+// Deprecated wrapper to maintain compatibility if used elsewhere, 
+// but preferred to use getLevelStats for UI
 export const getLevelProgress = (xp: number, level: number): number => {
-    const currentLevelBaseXP = Math.pow(level, 2) * 100;
-    const nextLevelXP = Math.pow(level + 1, 2) * 100;
-    const xpInLevel = xp - currentLevelBaseXP;
-    const xpNeeded = nextLevelXP - currentLevelBaseXP;
-    return Math.min(100, Math.max(0, (xpInLevel / xpNeeded) * 100));
+    return getLevelStats(xp, level).percentage;
 };
 
 export const RANKS: RankInfo[] = [
@@ -40,15 +73,15 @@ export const RANKS: RankInfo[] = [
         id: 'silver',
         name: 'Silver',
         minLevel: 10,
-        color: '#c0c0c0',
-        gradient: 'from-gray-400 to-gray-100',
+        color: '#9ca3af',
+        gradient: 'from-gray-400 to-gray-200',
         icon: Medal
     },
     {
         id: 'gold',
         name: 'Gold',
-        minLevel: 30,
-        color: '#ffd700',
+        minLevel: 25,
+        color: '#fbbf24',
         gradient: 'from-yellow-600 to-yellow-300',
         icon: Trophy
     },
@@ -56,16 +89,16 @@ export const RANKS: RankInfo[] = [
         id: 'platinum',
         name: 'Platinum',
         minLevel: 50,
-        color: '#e5e4e2',
-        gradient: 'from-cyan-700 to-cyan-300',
+        color: '#38bdf8',
+        gradient: 'from-cyan-600 to-cyan-300',
         icon: Crown
     },
     {
         id: 'diamond',
         name: 'Diamond',
         minLevel: 100,
-        color: '#b9f2ff',
-        gradient: 'from-blue-600 via-indigo-400 to-cyan-300',
+        color: '#818cf8',
+        gradient: 'from-indigo-600 via-purple-500 to-pink-400',
         icon: Gem
     }
 ];

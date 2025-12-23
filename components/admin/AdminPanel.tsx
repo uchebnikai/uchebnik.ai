@@ -376,7 +376,9 @@ export const AdminPanel = ({
                                 // If admin panel hasn't made a request yet, show the app's last sync status
                                 return prev.map(s => {
                                     if(s.name.includes('Core Database') || s.name.includes('Object Storage')) {
-                                        return { ...s, status: dbLog.status, latency: dbLog.latency, lastCheck: dbLog.timestamp };
+                                        // Normalize status 'outage' to 'down' if present in localStorage
+                                        const normalizedStatus = dbLog.status === 'outage' ? 'down' : dbLog.status;
+                                        return { ...s, status: normalizedStatus, latency: dbLog.latency, lastCheck: dbLog.timestamp };
                                     }
                                     return s;
                                 });
@@ -399,7 +401,7 @@ export const AdminPanel = ({
             if (item.name.includes(namePart)) {
                 return {
                     ...item,
-                    status: isUp ? 'operational' : 'outage',
+                    status: isUp ? 'operational' : 'down',
                     latency: isUp ? latency : 0,
                     lastCheck: timestamp
                 };
@@ -492,7 +494,7 @@ export const AdminPanel = ({
                     key={i} 
                     className={`flex-1 rounded-sm transition-all duration-500 ${
                         status === 'unknown' ? 'bg-zinc-700' :
-                        status === 'outage' ? 'bg-red-500' : 
+                        status === 'down' ? 'bg-red-500' : 
                         status === 'degraded' ? (i > 30 ? 'bg-amber-500' : 'bg-green-500') : 
                         'bg-green-500'
                     } ${i < 30 ? 'opacity-40' : 'opacity-100'}`} 
@@ -650,7 +652,7 @@ export const AdminPanel = ({
                          )}
                          <div>
                              <h3 className="text-lg md:text-xl font-bold text-white capitalize flex items-center gap-2">
-                                 {activeTab === 'status' ? <div className={`w-2 h-2 rounded-full animate-pulse ${systemHealth.some(s => s.status === 'outage') ? 'bg-red-500' : 'bg-green-500'}`}/> : null}
+                                 {activeTab === 'status' ? <div className={`w-2 h-2 rounded-full animate-pulse ${systemHealth.some(s => s.status === 'down') ? 'bg-red-500' : 'bg-green-500'}`}/> : null}
                                  {selectedUser ? 'Профил' : 
                                   activeTab === 'dashboard' ? 'Общ преглед' :
                                   activeTab === 'status' ? 'Системен статус' :

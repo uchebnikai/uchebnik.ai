@@ -5,7 +5,7 @@ import { DynamicIcon } from '../ui/DynamicIcon';
 import { SUBJECTS } from '../../constants';
 import { SubjectId, AppMode, Session, UserRole, UserSettings, UserPlan, SubjectConfig, HomeViewType } from '../../types';
 import { t } from '../../utils/translations';
-import { getRank, getLevelProgress } from '../../utils/gamification';
+import { getRank, getLevelStats } from '../../utils/gamification';
 
 interface SidebarProps {
   sidebarOpen: boolean;
@@ -39,6 +39,7 @@ interface SidebarProps {
   syncStatus?: 'synced' | 'syncing' | 'error' | 'offline';
   homeView: HomeViewType;
   dailyImageCount?: number; 
+  setShowLeaderboard?: (val: boolean) => void;
 }
 
 export const Sidebar = ({
@@ -71,7 +72,8 @@ export const Sidebar = ({
   userRole,
   syncStatus = 'synced',
   homeView,
-  dailyImageCount = 0
+  dailyImageCount = 0,
+  setShowLeaderboard
 }: SidebarProps) => {
     
     // Internal State for Folders
@@ -102,7 +104,7 @@ export const Sidebar = ({
 
     // Gamification Logic
     const currentRank = getRank(userSettings.level);
-    const progress = getLevelProgress(userSettings.xp, userSettings.level);
+    const stats = getLevelStats(userSettings.xp, userSettings.level);
     const RankIcon = currentRank.icon;
 
     return (
@@ -173,6 +175,22 @@ export const Sidebar = ({
           </div>
 
           <div className="flex-1 overflow-y-auto px-4 pb-4 custom-scrollbar">
+             {/* Leaderboard Button - Added Here */}
+             {session && (
+                 <button 
+                    onClick={() => setShowLeaderboard && setShowLeaderboard(true)}
+                    className={`w-full flex items-center ${collapsed ? 'justify-center py-3' : 'justify-between px-3 py-3'} mt-2 mb-2 rounded-xl transition-all group border border-transparent hover:border-amber-500/20 hover:bg-amber-500/10`}
+                    title="Класация"
+                 >
+                     <div className="flex items-center gap-3">
+                         <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-500 group-hover:text-amber-400 group-hover:bg-amber-500/20 transition-colors">
+                             <Trophy size={18} />
+                         </div>
+                         {!collapsed && <span className="text-sm font-bold text-amber-600 dark:text-amber-400">Класация</span>}
+                     </div>
+                 </button>
+             )}
+
              {collapsed ? (
                  <div className="mt-4 flex flex-col items-center gap-4 w-full animate-in fade-in">
                      <button 
@@ -520,22 +538,28 @@ export const Sidebar = ({
                          {!collapsed && (
                              <>
                                 <div className="flex-1 min-w-0 text-left">
-                                    <div className="font-bold text-sm truncate text-zinc-900 dark:text-zinc-100">
+                                    <div className="font-bold text-sm truncate text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
                                         {userMeta.firstName && userMeta.lastName 
                                             ? `${userMeta.firstName} ${userMeta.lastName}`
                                             : (userSettings.userName || 'Потребител')}
                                     </div>
                                     <div className="flex items-center gap-2 mt-0.5">
-                                        <div className="text-[10px] font-black uppercase tracking-wider text-zinc-500">
-                                            Lvl {userSettings.level} • {currentRank.name}
-                                        </div>
+                                        <span className={`text-[10px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded text-black bg-gradient-to-r ${currentRank.gradient}`}>
+                                            Lvl {userSettings.level}
+                                        </span>
                                     </div>
-                                    {/* XP Progress Bar */}
-                                    <div className="w-full h-1 bg-black/10 dark:bg-white/10 rounded-full mt-1.5 overflow-hidden">
-                                        <div 
-                                            className={`h-full bg-gradient-to-r ${currentRank.gradient}`} 
-                                            style={{ width: `${progress}%` }}
-                                        />
+                                    {/* Detailed XP Progress */}
+                                    <div className="mt-1.5">
+                                        <div className="w-full h-1 bg-black/10 dark:bg-white/10 rounded-full overflow-hidden">
+                                            <div 
+                                                className={`h-full bg-gradient-to-r ${currentRank.gradient}`} 
+                                                style={{ width: `${stats.percentage}%` }}
+                                            />
+                                        </div>
+                                        <div className="flex justify-between text-[8px] font-mono text-zinc-500 mt-0.5">
+                                            <span>{Math.floor(stats.currentLevelProgress)} XP</span>
+                                            <span>{Math.floor(stats.xpNeededForNext)} XP</span>
+                                        </div>
                                     </div>
                                 </div>
                                 <ChevronUp size={16} className={`text-gray-400 transition-transform duration-300 ${profileMenuOpen ? 'rotate-180' : ''}`} />
