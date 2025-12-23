@@ -154,13 +154,27 @@ export const UpgradeModal = ({
                         <CheckCircle size={18} className="text-gray-400 shrink-0 mt-0.5"/> 
                         <span>Стандартен AI интелект</span>
                     </div>
-                    <div className="flex items-start gap-3 text-sm font-medium text-gray-600 dark:text-gray-400 opacity-60">
-                        <XCircle size={18} className="text-gray-400 shrink-0 mt-0.5"/> 
-                        <span>Гласов режим (Разговори)</span>
-                    </div>
                     <div className="flex items-start gap-3 text-sm font-medium text-gray-600 dark:text-gray-400">
                         <CheckCircle size={18} className="text-gray-400 shrink-0 mt-0.5"/> 
                         <span>Всички предмети</span>
+                    </div>
+                    
+                    {/* Missing Features */}
+                    <div className="flex items-start gap-3 text-sm font-medium text-gray-400 dark:text-gray-600 opacity-80">
+                        <XCircle size={18} className="shrink-0 mt-0.5"/> 
+                        <span>XP Boost</span>
+                    </div>
+                    <div className="flex items-start gap-3 text-sm font-medium text-gray-400 dark:text-gray-600 opacity-80">
+                        <XCircle size={18} className="shrink-0 mt-0.5"/> 
+                        <span>Гласов режим</span>
+                    </div>
+                    <div className="flex items-start gap-3 text-sm font-medium text-gray-400 dark:text-gray-600 opacity-80">
+                        <XCircle size={18} className="shrink-0 mt-0.5"/> 
+                        <span>Google Търсене</span>
+                    </div>
+                    <div className="flex items-start gap-3 text-sm font-medium text-gray-400 dark:text-gray-600 opacity-80">
+                        <XCircle size={18} className="shrink-0 mt-0.5"/> 
+                        <span>Advanced AI</span>
                     </div>
                  </div>
                  <button 
