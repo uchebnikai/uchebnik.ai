@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
-import { X, Trophy, Crown, Zap, Shield } from 'lucide-react';
+import { X, Trophy, Crown, Zap, Shield, HelpCircle, Info } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 import { LeaderboardEntry } from '../../types';
 import { getRank, calculateLevel } from '../../utils/gamification';
@@ -15,6 +15,7 @@ interface LeaderboardModalProps {
 export const LeaderboardModal = ({ isOpen, onClose, currentUserId }: LeaderboardModalProps) => {
     const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
     const [loading, setLoading] = useState(true);
+    const [showInfo, setShowInfo] = useState(false);
 
     useEffect(() => {
         if (isOpen) {
@@ -76,29 +77,51 @@ export const LeaderboardModal = ({ isOpen, onClose, currentUserId }: Leaderboard
                 onClick={e => e.stopPropagation()}
             >
                 {/* Decorative Background Elements */}
-                <div className="absolute top-0 inset-x-0 h-40 bg-gradient-to-b from-indigo-500/10 via-purple-500/5 to-transparent pointer-events-none" />
-                <div className="absolute -top-20 -left-20 w-60 h-60 bg-indigo-500/20 blur-[100px] rounded-full pointer-events-none" />
-                <div className="absolute -top-20 -right-20 w-60 h-60 bg-amber-500/10 blur-[100px] rounded-full pointer-events-none" />
-
+                <div className="absolute top-0 inset-x-0 h-32 bg-gradient-to-b from-indigo-500/10 via-purple-500/5 to-transparent pointer-events-none" />
+                
                 {/* Header */}
-                <div className="p-6 pb-4 flex items-center justify-between shrink-0 relative z-10">
+                <div className="p-6 pb-2 flex items-center justify-between shrink-0 relative z-10">
                     <div>
                         <div className="flex items-center gap-2 mb-1">
-                            <Trophy size={18} className="text-amber-400" fill="currentColor"/>
+                            <Trophy size={20} className="text-amber-400" fill="currentColor"/>
                             <span className="text-xs font-bold text-amber-400 uppercase tracking-widest">Hall of Fame</span>
                         </div>
-                        <h2 className="text-3xl font-black text-white tracking-tight">Класация</h2>
+                        <h2 className="text-2xl font-black text-white tracking-tight">Класация</h2>
                     </div>
-                    <button onClick={onClose} className="p-2 bg-white/5 hover:bg-white/10 rounded-full text-zinc-400 hover:text-white transition-colors border border-white/5">
-                        <X size={20}/>
-                    </button>
+                    <div className="flex gap-2">
+                        <button 
+                            onClick={() => setShowInfo(!showInfo)}
+                            className={`p-2 rounded-full transition-colors border ${showInfo ? 'bg-indigo-500 text-white border-indigo-500' : 'bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white border-white/5'}`}
+                        >
+                            <Info size={20}/>
+                        </button>
+                        <button onClick={onClose} className="p-2 bg-white/5 hover:bg-white/10 rounded-full text-zinc-400 hover:text-white transition-colors border border-white/5">
+                            <X size={20}/>
+                        </button>
+                    </div>
                 </div>
+
+                {/* Help Banner (Toggleable) */}
+                {showInfo && (
+                    <div className="mx-6 mb-4 p-4 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl animate-in slide-in-from-top-2">
+                        <h4 className="text-sm font-bold text-white mb-2 flex items-center gap-2">
+                            <Zap size={14} className="text-amber-400" fill="currentColor"/> Как да се издигна?
+                        </h4>
+                        <p className="text-xs text-zinc-300 leading-relaxed">
+                            Печелете <strong className="text-amber-400">XP</strong> (опит) като учите!
+                            <br/>• Писане на съобщения: <strong>20 XP</strong>
+                            <br/>• Качване на снимки: <strong>40 XP</strong>
+                            <br/>• Гласови разговори: <strong>60 XP</strong>
+                            <br/>Събирайте XP, за да качвате нива и да отключвате нови рангове (Bronze, Silver, Gold...).
+                        </p>
+                    </div>
+                )}
 
                 {/* Table Header */}
                 <div className="grid grid-cols-12 gap-3 px-6 py-3 text-[10px] font-bold text-zinc-500 uppercase tracking-wider border-b border-white/5 bg-white/5 relative z-10 backdrop-blur-sm">
-                    <div className="col-span-2 text-center">#</div>
-                    <div className="col-span-7">Ученик</div>
-                    <div className="col-span-3 text-right">XP</div>
+                    <div className="col-span-2 text-center">Ранк</div>
+                    <div className="col-span-7">Ученик & Ниво</div>
+                    <div className="col-span-3 text-right">Общо XP</div>
                 </div>
 
                 {/* List */}
@@ -118,10 +141,10 @@ export const LeaderboardModal = ({ isOpen, onClose, currentUserId }: Leaderboard
                             const isTop2 = entry.rank === 2;
                             const isTop3 = entry.rank === 3;
                             
-                            let rankBadgeClass = "bg-white/5 text-zinc-400";
-                            if (isTop1) rankBadgeClass = "bg-gradient-to-br from-yellow-300 to-yellow-600 text-black shadow-lg shadow-yellow-500/20 ring-1 ring-yellow-400/50";
-                            if (isTop2) rankBadgeClass = "bg-gradient-to-br from-gray-300 to-gray-500 text-black shadow-lg ring-1 ring-gray-400/50";
-                            if (isTop3) rankBadgeClass = "bg-gradient-to-br from-orange-300 to-orange-600 text-black shadow-lg ring-1 ring-orange-400/50";
+                            let rankBadgeClass = "bg-white/5 text-zinc-400 font-medium";
+                            if (isTop1) rankBadgeClass = "bg-gradient-to-br from-yellow-300 to-yellow-600 text-black shadow-lg shadow-yellow-500/20 ring-1 ring-yellow-400/50 font-black";
+                            if (isTop2) rankBadgeClass = "bg-gradient-to-br from-gray-300 to-gray-500 text-black shadow-lg ring-1 ring-gray-400/50 font-black";
+                            if (isTop3) rankBadgeClass = "bg-gradient-to-br from-orange-300 to-orange-600 text-black shadow-lg ring-1 ring-orange-400/50 font-black";
 
                             return (
                                 <div 
@@ -132,14 +155,9 @@ export const LeaderboardModal = ({ isOpen, onClose, currentUserId }: Leaderboard
                                         : 'hover:bg-white/5 border border-transparent'
                                     }`}
                                 >
-                                    {/* Subtle Glow for Top 3 */}
-                                    {isTop1 && <div className="absolute inset-0 bg-yellow-500/5 pointer-events-none" />}
-                                    {isTop2 && <div className="absolute inset-0 bg-gray-500/5 pointer-events-none" />}
-                                    {isTop3 && <div className="absolute inset-0 bg-orange-500/5 pointer-events-none" />}
-
                                     {/* Rank Column */}
                                     <div className="col-span-2 flex justify-center relative z-10">
-                                        <div className={`w-8 h-8 flex items-center justify-center font-black rounded-xl text-sm ${rankBadgeClass}`}>
+                                        <div className={`w-8 h-8 flex items-center justify-center rounded-xl text-sm ${rankBadgeClass}`}>
                                             {isTop1 ? <Crown size={16} fill="black" /> : entry.rank}
                                         </div>
                                     </div>
@@ -157,7 +175,7 @@ export const LeaderboardModal = ({ isOpen, onClose, currentUserId }: Leaderboard
                                                     <span className="text-xs font-bold text-zinc-500">{entry.name.charAt(0)}</span>
                                                 )}
                                             </div>
-                                            {/* Rank Tier Badge */}
+                                            {/* Rank Tier Badge - Smaller */}
                                             <div className="absolute -bottom-1 -right-1 bg-[#09090b] rounded-full p-[2px]">
                                                 <div className={`w-4 h-4 rounded-full flex items-center justify-center bg-gradient-to-br ${rankInfo.gradient} ring-1 ring-black`}>
                                                     <RankIcon size={8} className="text-white drop-shadow-sm"/>
@@ -171,9 +189,12 @@ export const LeaderboardModal = ({ isOpen, onClose, currentUserId }: Leaderboard
                                                     {entry.name}
                                                 </span>
                                             </div>
-                                            <div className="flex items-center gap-2">
-                                                <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded w-fit bg-white/5 text-zinc-400 border border-white/5`}>
-                                                    Level {entry.level}
+                                            {/* Explicit Tier Label */}
+                                            <div className="flex items-center gap-2 mt-0.5">
+                                                <span className="text-[10px] font-bold text-zinc-500">Lvl {entry.level}</span>
+                                                <span className="w-1 h-1 rounded-full bg-zinc-700"></span>
+                                                <span className="text-[9px] font-bold uppercase tracking-wider" style={{ color: rankInfo.color }}>
+                                                    {rankInfo.name}
                                                 </span>
                                             </div>
                                         </div>
@@ -201,7 +222,7 @@ export const LeaderboardModal = ({ isOpen, onClose, currentUserId }: Leaderboard
                                     <Shield size={20} />
                                 </div>
                                 <div>
-                                    <div className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider">Твоята позиция</div>
+                                    <div className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider">Ти си тук</div>
                                     <div className="font-black text-xl text-white">#{currentUserEntry.rank}</div>
                                 </div>
                             </div>
@@ -215,7 +236,7 @@ export const LeaderboardModal = ({ isOpen, onClose, currentUserId }: Leaderboard
                             </div>
                         </div>
                         {currentUserEntry.rank > 3 && (
-                            <p className="text-center text-[10px] text-zinc-500 mt-3 font-medium animate-pulse">
+                            <p className="text-center text-[10px] text-zinc-500 mt-3 font-medium">
                                 Продължавай да учиш, за да стигнеш върха! 🚀
                             </p>
                         )}
