@@ -107,13 +107,9 @@ export const LeaderboardModal = ({ isOpen, onClose, currentUserId }: Leaderboard
                 {/* Header */}
                 <div className="p-6 pb-4 flex items-center justify-between shrink-0 relative z-10">
                     <div>
-                        <div className="flex items-center gap-2 mb-1">
-                            <div className="p-1.5 bg-amber-500/10 rounded-lg border border-amber-500/20">
-                                <Trophy size={16} className="text-amber-400" fill="currentColor"/>
-                            </div>
-                            <span className="text-[10px] font-bold text-amber-400 uppercase tracking-widest">Hall of Fame</span>
-                        </div>
-                        <h2 className="text-3xl font-black text-white tracking-tight">Класация</h2>
+                        <h2 className="text-3xl font-black text-white tracking-tight flex items-center gap-3">
+                            <Trophy size={28} className="text-amber-400" fill="currentColor"/> Класация
+                        </h2>
                     </div>
                     <div className="flex gap-2">
                         <button 

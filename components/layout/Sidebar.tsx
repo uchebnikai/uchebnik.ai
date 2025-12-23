@@ -179,7 +179,7 @@ export const Sidebar = ({
              {session && (
                  <button 
                     onClick={() => setShowLeaderboard && setShowLeaderboard(true)}
-                    className={`w-full flex items-center ${collapsed ? 'justify-center py-3' : 'justify-between px-3 py-3'} mt-2 mb-2 rounded-xl transition-all group border border-transparent hover:border-amber-500/20 hover:bg-amber-500/10`}
+                    className={`w-full flex items-center ${collapsed ? 'justify-center py-3' : 'justify-between px-3 py-3'} mt-2 mb-2 rounded-xl transition-all group glass-button border border-amber-500/20 hover:border-amber-500/40 hover:bg-amber-500/10`}
                     title="Класация"
                  >
                      <div className="flex items-center gap-3">
