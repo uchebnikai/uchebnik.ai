@@ -17,6 +17,7 @@ import { UserPlan, UserRole, Session } from '../../types';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, LineChart, Line, AreaChart, Area, PieChart, Pie, Legend } from 'recharts';
 import { SUBJECTS } from '../../constants';
 import { t } from '../../utils/translations';
+import { Lightbox } from '../ui/Lightbox';
 
 // Pricing Constants (Gemini 2.5 Flash)
 const PRICE_INPUT_1M = 0.075;
@@ -123,6 +124,7 @@ export const AdminPanel = ({
     const [selectedPlan, setSelectedPlan] = useState<'plus' | 'pro'>('pro');
     const [searchQuery, setSearchQuery] = useState('');
     const [showRawData, setShowRawData] = useState<string | null>(null);
+    const [zoomedImage, setZoomedImage] = useState<string | null>(null);
     
     // Stats
     const [totalInputTokens, setTotalInputTokens] = useState(0);
@@ -1118,7 +1120,7 @@ export const AdminPanel = ({
                                                          {report.images && Array.isArray(report.images) && report.images.length > 0 && (
                                                              <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
                                                                  {report.images.map((img, i) => (
-                                                                     <img key={i} src={img} className="h-20 w-20 object-cover rounded-lg border border-white/10 hover:scale-150 transition-transform origin-bottom-left cursor-pointer z-10 hover:z-20 bg-black"/>
+                                                                     <img key={i} src={img} onClick={() => setZoomedImage(img)} className="h-20 w-20 object-cover rounded-lg border border-white/10 hover:scale-105 transition-transform cursor-pointer bg-black"/>
                                                                  ))}
                                                              </div>
                                                          )}
@@ -1347,6 +1349,9 @@ export const AdminPanel = ({
                      )}
                  </div>
              </div>
+             
+             {/* Lightbox for Reports */}
+             <Lightbox image={zoomedImage} onClose={() => setZoomedImage(null)} />
            </div>
         </div>
       );
