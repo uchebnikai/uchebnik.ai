@@ -43,6 +43,7 @@ import { MessageList } from './components/chat/MessageList';
 import { ChatInputArea } from './components/chat/ChatInputArea';
 import { TermsOfService, PrivacyPolicy, CookiePolicy, About, Contact } from './components/pages/StaticPages';
 import { Snowfall } from './components/ui/Snowfall';
+import { ReportModal } from './components/support/ReportModal';
 
 interface GeneratedKey {
   code: string;
@@ -88,6 +89,7 @@ export const App = () => {
   const [showReferralModal, setShowReferralModal] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [showQuests, setShowQuests] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
   
   const [homeView, setHomeView] = useState<HomeViewType>('landing');
 
@@ -1665,6 +1667,7 @@ export const App = () => {
             dailyImageCount={dailyImageCount}
             setShowLeaderboard={setShowLeaderboard}
             setShowQuests={setShowQuests}
+            setShowReportModal={setShowReportModal}
           />
       )}
       
@@ -1859,6 +1862,13 @@ export const App = () => {
             isOpen={showQuests}
             onClose={() => setShowQuests(false)}
             quests={userSettings.dailyQuests?.quests || []}
+        />
+        <ReportModal
+            isOpen={showReportModal}
+            onClose={() => setShowReportModal(false)}
+            userSettings={userSettings}
+            addToast={addToast}
+            userId={session?.user?.id}
         />
         <Lightbox image={zoomedImage} onClose={() => setZoomedImage(null)} />
         
