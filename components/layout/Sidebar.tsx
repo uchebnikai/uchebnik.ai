@@ -1,16 +1,17 @@
 
 import React, { useState } from 'react';
-import { MessageSquare, Trash2, Plus, School, GraduationCap, Briefcase, ChevronDown, User, Settings, CreditCard, HelpCircle, LogOut, ArrowRight, ChevronUp, FileText, Flame, CloudOff, RefreshCw, Cloud, PanelLeftClose, PanelLeftOpen, LayoutDashboard, Landmark, Zap, Lock, LogIn, Snowflake, Gift } from 'lucide-react';
+import { MessageSquare, Trash2, Plus, School, GraduationCap, Briefcase, ChevronDown, User, Settings, CreditCard, HelpCircle, LogOut, ArrowRight, ChevronUp, FileText, CloudOff, RefreshCw, Cloud, PanelLeftClose, PanelLeftOpen, LogIn, Snowflake, Gift, Trophy } from 'lucide-react';
 import { DynamicIcon } from '../ui/DynamicIcon';
 import { SUBJECTS } from '../../constants';
 import { SubjectId, AppMode, Session, UserRole, UserSettings, UserPlan, SubjectConfig, HomeViewType } from '../../types';
 import { t } from '../../utils/translations';
+import { getRank, getLevelProgress } from '../../utils/gamification';
 
 interface SidebarProps {
   sidebarOpen: boolean;
   setSidebarOpen: (val: boolean) => void;
   userSettings: UserSettings;
-  setUserSettings: (val: any) => void; // Added setter
+  setUserSettings: (val: any) => void; 
   userPlan: UserPlan;
   activeSubject: SubjectConfig | null;
   setActiveSubject: (subject: SubjectConfig | null) => void;
@@ -27,14 +28,14 @@ interface SidebarProps {
   userMeta: any;
   session: any;
   setShowUnlockModal: (val: boolean) => void;
-  setShowReferralModal: (val: boolean) => void; // New Prop
+  setShowReferralModal: (val: boolean) => void; 
   setShowSettings: (val: boolean) => void;
   handleLogout: () => void;
   setShowAuthModal: (val: boolean) => void;
   addToast: (msg: string, type: 'success' | 'error' | 'info') => void;
   setShowSubjectDashboard: (val: boolean) => void;
   userRole: UserRole | null;
-  streak: number;
+  streak: number; // Deprecated, kept for interface compat but unused
   syncStatus?: 'synced' | 'syncing' | 'error' | 'offline';
   homeView: HomeViewType;
   dailyImageCount?: number; 
@@ -68,7 +69,6 @@ export const Sidebar = ({
   addToast,
   setShowSubjectDashboard,
   userRole,
-  streak,
   syncStatus = 'synced',
   homeView,
   dailyImageCount = 0
@@ -98,8 +98,12 @@ export const Sidebar = ({
     const usagePercent = Math.min((dailyImageCount / maxImages) * 100, 100);
     const isNearLimit = usagePercent >= 75;
     
-    // Hide referral if user has Plus or Pro plan (paid or reward)
     const shouldShowReferral = userPlan === 'free';
+
+    // Gamification Logic
+    const currentRank = getRank(userSettings.level);
+    const progress = getLevelProgress(userSettings.xp, userSettings.level);
+    const RankIcon = currentRank.icon;
 
     return (
       <>
@@ -131,7 +135,6 @@ export const Sidebar = ({
             </button>
             
             <div className="flex items-center gap-2">
-                {/* Collapse Toggle (Desktop Only) */}
                 <button onClick={toggleCollapse} className="hidden lg:flex p-2 text-gray-400 hover:text-indigo-500 hover:bg-gray-100 dark:hover:bg-white/5 rounded-lg transition-colors">
                     {collapsed ? <PanelLeftOpen size={20}/> : <PanelLeftClose size={20}/>}
                 </button>
@@ -149,7 +152,6 @@ export const Sidebar = ({
                    {unreadSubjects.has(SubjectId.GENERAL) && <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full animate-pulse" />}
               </button>
               
-              {/* General Chat Sessions List */}
               {activeSubject?.id === SubjectId.GENERAL && !collapsed && (
                   <div className="ml-4 mt-1 space-y-0.5 border-l-2 border-indigo-500/20 pl-2 animate-in slide-in-from-top-2">
                      {sessions.filter(s => s.subjectId === SubjectId.GENERAL).map(s => (
@@ -185,7 +187,8 @@ export const Sidebar = ({
                         className={`p-3 rounded-xl transition-all ${homeView === 'university_select' || homeView === 'uni_student_subjects' || homeView === 'uni_teacher_subjects' ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-500/30' : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10 hover:text-emerald-500'}`}
                         title={t('university', userSettings.language)}
                      >
-                        <Landmark size={20} />
+                        <School size={20} className="hidden" /> {/* Spacer/Icon placeholder */}
+                        <Briefcase size={20} />
                      </button>
                  </div>
              ) : (
@@ -306,7 +309,7 @@ export const Sidebar = ({
                      <div className="pt-2">
                         <button onClick={() => { setActiveSubject(null); setHomeView('university_select'); setUserRole(null); setUniFolderOpen(!uniFolderOpen); }} className="w-full flex items-center justify-between px-2 py-3 text-gray-400 dark:text-zinc-500 hover:text-emerald-500 transition-colors">
                             <div className="flex items-center gap-2">
-                                <Landmark size={18} />
+                                <Briefcase size={18} />
                                 <span className="text-xs font-bold uppercase tracking-widest">{t('university', userSettings.language)}</span>
                             </div>
                             <ChevronDown size={14} className={`transition-transform duration-300 ${uniFolderOpen ? 'rotate-180' : ''}`}/>
@@ -416,7 +419,7 @@ export const Sidebar = ({
           </div>
 
           <div className={`p-4 border-t border-white/10 bg-white/20 dark:bg-black/20 space-y-3 backdrop-blur-md flex flex-col justify-center`}>
-             {/* Christmas Toggle - Prominent & Over Login */}
+             {/* Christmas Toggle */}
              <button 
                 onClick={() => setUserSettings((prev: UserSettings) => ({...prev, christmasMode: !prev.christmasMode}))}
                 className={`w-full flex items-center ${collapsed ? 'justify-center' : 'justify-between px-4'} py-3.5 rounded-2xl transition-all relative overflow-hidden group shadow-md hover:shadow-lg active:scale-95 mb-1
@@ -447,25 +450,6 @@ export const Sidebar = ({
                  )}
              </button>
 
-             {/* Usage Progress Bar for Non-Pro Users - ONLY IF LOGGED IN */}
-             {session && userPlan !== 'pro' && !collapsed && (
-               <div className="px-1 mb-2">
-                  <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-wider mb-1.5">
-                      <span className={isNearLimit ? "text-red-500" : "text-gray-500"}>
-                          {dailyImageCount} / {maxImages} Снимки
-                      </span>
-                      <span className="text-indigo-500">Дневен Лимит</span>
-                  </div>
-                  <div className="h-1.5 w-full bg-gray-200 dark:bg-white/10 rounded-full overflow-hidden">
-                      <div 
-                        className={`h-full rounded-full transition-all duration-500 ${isNearLimit ? 'bg-red-500' : 'bg-indigo-500'}`} 
-                        style={{width: `${usagePercent}%`}}
-                      />
-                  </div>
-                  {isNearLimit && <p className="text-[10px] text-red-500 mt-1 font-medium animate-pulse">Лимитът наближава!</p>}
-               </div>
-             )}
-
              {/* Referral Button - Highly Visible - Only show if shouldShowReferral is true */}
              {session && !collapsed && shouldShowReferral && (
                <button onClick={() => setShowReferralModal(true)} className={`w-full mb-1 group relative overflow-hidden rounded-2xl p-4 text-left shadow-lg transition-all hover:scale-[1.02] active:scale-[0.98] bg-gradient-to-r from-amber-500 to-orange-500 text-white`}>
@@ -493,36 +477,6 @@ export const Sidebar = ({
                  </button>
              )}
 
-             {/* Upgrade Plan Card - ONLY IF LOGGED IN */}
-             {session && userPlan !== 'pro' && !collapsed && (
-               <button onClick={() => setShowUnlockModal(true)} className={`w-full mb-1 group relative overflow-hidden rounded-2xl p-4 text-left shadow-xl transition-all hover:scale-[1.02] active:scale-[0.98] ${isNearLimit ? 'animate-pulse-slow ring-2 ring-red-500/50' : ''}`}>
-                  <div className="absolute inset-0 bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 animate-gradient-xy" />
-                  <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20" />
-                  <div className="relative z-10 flex items-center justify-between text-white">
-                     <div>
-                        <h3 className="font-black text-lg tracking-tight flex items-center gap-2">
-                            {t('upgrade_plan', userSettings.language)}
-                            {isNearLimit && <Lock size={14} />}
-                        </h3>
-                        <p className="text-xs font-medium text-indigo-100 opacity-90">{t('unlock_potential', userSettings.language)}</p>
-                     </div>
-                     <div className="w-8 h-8 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center border border-white/20">
-                        <ArrowRight size={16} />
-                     </div>
-                  </div>
-               </button>
-             )}
-             
-             {/* Small Upgrade Icon - ONLY IF LOGGED IN */}
-             {session && userPlan !== 'pro' && collapsed && (
-                 <button onClick={() => setShowUnlockModal(true)} className="w-full flex justify-center mb-1 group relative">
-                     <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-600 to-pink-600 flex items-center justify-center text-white shadow-lg">
-                         <CreditCard size={18}/>
-                     </div>
-                     {isNearLimit && <div className="absolute top-0 right-2 w-3 h-3 bg-red-500 rounded-full border-2 border-black"></div>}
-                 </button>
-             )}
-             
              {session ? (
                  <div className="relative mb-1">
                     {profileMenuOpen && (
@@ -550,11 +504,19 @@ export const Sidebar = ({
                     )}
                     
                     <button onClick={() => setProfileMenuOpen(!profileMenuOpen)} className={`flex items-center gap-3 w-full p-2.5 rounded-2xl hover:bg-white/50 dark:hover:bg-white/5 transition-all duration-200 border border-transparent hover:border-indigo-500/10 group ${collapsed ? 'justify-center' : ''}`}>
-                         <img 
-                           src={userMeta.avatar || "https://cdn-icons-png.freepik.com/256/3276/3276580.png"} 
-                           alt="Profile" 
-                           className="w-10 h-10 rounded-full object-cover border border-gray-200 dark:border-white/10"
-                         />
+                         <div className="relative">
+                             <img 
+                               src={userMeta.avatar || "https://cdn-icons-png.freepik.com/256/3276/3276580.png"} 
+                               alt="Profile" 
+                               className={`w-10 h-10 rounded-full object-cover border-2 ${currentRank.color === '#cd7f32' ? 'border-orange-700' : 'border-current'}`}
+                               style={{ borderColor: currentRank.color }}
+                             />
+                             <div className="absolute -bottom-1 -right-1 bg-black rounded-full p-0.5 border border-white/20">
+                                 <div className={`w-4 h-4 rounded-full flex items-center justify-center bg-gradient-to-br ${currentRank.gradient}`}>
+                                     <RankIcon size={8} className="text-white"/>
+                                 </div>
+                             </div>
+                         </div>
                          {!collapsed && (
                              <>
                                 <div className="flex-1 min-w-0 text-left">
@@ -563,20 +525,17 @@ export const Sidebar = ({
                                             ? `${userMeta.firstName} ${userMeta.lastName}`
                                             : (userSettings.userName || 'Потребител')}
                                     </div>
-                                    <div className="flex items-center gap-2">
-                                        <div className={`text-[10px] font-bold uppercase tracking-wider ${userPlan === 'pro' ? 'text-amber-500' : userPlan === 'plus' ? 'text-indigo-500' : 'text-gray-500'}`}>
-                                            {userPlan === 'pro' ? 'Pro Plan' : userPlan === 'plus' ? 'Plus Plan' : 'Free Plan'}
+                                    <div className="flex items-center gap-2 mt-0.5">
+                                        <div className="text-[10px] font-black uppercase tracking-wider text-zinc-500">
+                                            Lvl {userSettings.level} • {currentRank.name}
                                         </div>
-                                        {streak > 0 && (
-                                            <div className="flex items-center gap-1 text-[10px] font-bold text-orange-500 bg-orange-100 dark:bg-orange-500/20 px-1.5 py-0.5 rounded-full animate-in zoom-in">
-                                                <Flame size={10} fill="currentColor" className="animate-pulse" /> {streak}
-                                            </div>
-                                        )}
                                     </div>
-                                    <div className="text-[10px] uppercase font-bold tracking-widest flex items-center gap-1.5 opacity-60 mt-1">
-                                        {syncStatus === 'syncing' && <><RefreshCw size={10} className="animate-spin"/> {t('syncing', userSettings.language)}</>}
-                                        {syncStatus === 'synced' && <><Cloud size={10} className="text-emerald-500"/> {t('synced', userSettings.language)}</>}
-                                        {syncStatus === 'error' && <><CloudOff size={10} className="text-red-500"/> {t('sync_error', userSettings.language)}</>}
+                                    {/* XP Progress Bar */}
+                                    <div className="w-full h-1 bg-black/10 dark:bg-white/10 rounded-full mt-1.5 overflow-hidden">
+                                        <div 
+                                            className={`h-full bg-gradient-to-r ${currentRank.gradient}`} 
+                                            style={{ width: `${progress}%` }}
+                                        />
                                     </div>
                                 </div>
                                 <ChevronUp size={16} className={`text-gray-400 transition-transform duration-300 ${profileMenuOpen ? 'rotate-180' : ''}`} />

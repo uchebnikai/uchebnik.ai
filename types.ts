@@ -185,21 +185,46 @@ export interface UserSettings {
   customBackground: string | null; 
   language: Language; 
   teachingStyle: TeachingStyle;
-  socraticMode?: boolean; // New: toggle for socratic style in chat
+  socraticMode?: boolean; 
   customPersona?: string; 
   enterToSend: boolean;
   fontFamily: FontFamily;
   christmasMode?: boolean; 
   preferredVoice: string; 
-  referralCode?: string; // New: Unique code for this user
-  proExpiresAt?: string; // New: ISO Date string
+  referralCode?: string; 
+  proExpiresAt?: string; 
+  
+  // Gamification
+  xp: number;
+  level: number;
+  
   stats?: {
-      streak?: number;
       dailyImageCount?: number;
       lastImageDate?: string;
       lastVisit?: string;
       totalInputTokens?: number;
       totalOutputTokens?: number;
-      costCorrection?: number; // New field for manual cost calibration
+      costCorrection?: number; 
   };
+}
+
+export type RankTier = 'bronze' | 'silver' | 'gold' | 'platinum' | 'diamond';
+
+export interface RankInfo {
+    id: RankTier;
+    name: string;
+    minLevel: number;
+    color: string;
+    gradient: string;
+    icon: any;
+}
+
+export interface LeaderboardEntry {
+    userId: string;
+    name: string;
+    avatar?: string;
+    xp: number;
+    level: number;
+    rank: number;
+    isCurrentUser?: boolean;
 }

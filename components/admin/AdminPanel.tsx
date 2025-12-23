@@ -36,7 +36,8 @@ interface AdminUser {
   name: string;
   avatar?: string;
   plan: UserPlan;
-  streak: number;
+  xp: number;
+  level: number;
   lastVisit: string;
   createdAt: string;
   theme: string;
@@ -300,7 +301,8 @@ export const AdminPanel = ({
                             name: settings?.userName || 'Anonymous',
                             avatar: avatarUrl,
                             plan: settings?.plan || 'free',
-                            streak: settings?.stats?.streak || 0,
+                            xp: u.xp || 0,
+                            level: u.level || 1,
                             usage: settings?.stats?.dailyImageCount || 0,
                             lastVisit: settings?.stats?.lastVisit || new Date(u.updated_at).toLocaleDateString(),
                             createdAt: u.created_at || u.updated_at, // Use updated_at as fallback if created_at is missing
@@ -441,11 +443,11 @@ export const AdminPanel = ({
         if (!selectedUser || !editForm) return;
         try {
             const currentSettings = selectedUser.rawSettings || {};
-            // Role removed from updates
-            const updatedSettings = { ...currentSettings, userName: editForm.name, plan: editForm.plan, stats: { ...(currentSettings.stats || {}), streak: editForm.streak, dailyImageCount: editForm.usage } };
+            
+            const updatedSettings = { ...currentSettings, userName: editForm.name, plan: editForm.plan, stats: { ...(currentSettings.stats || {}), dailyImageCount: editForm.usage } };
             const { error } = await supabase.from('profiles').update({ settings: updatedSettings, updated_at: new Date().toISOString() }).eq('id', selectedUser.id);
             if (error) throw error;
-            const updatedUser: AdminUser = { ...selectedUser, name: editForm.name, plan: editForm.plan, streak: editForm.streak, usage: editForm.usage, rawSettings: updatedSettings };
+            const updatedUser: AdminUser = { ...selectedUser, name: editForm.name, plan: editForm.plan, usage: editForm.usage, rawSettings: updatedSettings };
             setDbUsers(prev => prev.map(u => u.id === selectedUser.id ? updatedUser : u));
             setSelectedUser(updatedUser); 
             addToast('Промените са запазени успешно!', 'success');
@@ -454,8 +456,8 @@ export const AdminPanel = ({
 
     const handleUserClick = (user: AdminUser) => {
         setSelectedUser(user);
-        // Removed role from edit form
-        setEditForm({ name: user.name, plan: user.plan, streak: user.streak, usage: user.usage });
+        // Removed streak from edit form
+        setEditForm({ name: user.name, plan: user.plan, usage: user.usage });
     };
 
     // Helper to check if user is online (active within last 5 minutes)
@@ -702,14 +704,12 @@ export const AdminPanel = ({
                                                  }`}>
                                                      {selectedUser.plan}
                                                  </span>
-                                                 {selectedUser.proExpiresAt && (
-                                                     <span className="text-[10px] text-zinc-400">Expires: {new Date(selectedUser.proExpiresAt).toLocaleDateString()}</span>
-                                                 )}
                                              </div>
                                          </div>
                                          <div className="flex flex-col gap-1 text-sm text-zinc-400">
                                              <div className="flex items-center gap-2 truncate"><Mail size={14}/> {selectedUser.email || 'Email not visible'}</div>
                                              <div className="flex items-center gap-2 font-mono truncate"><Hash size={14}/> {selectedUser.id}</div>
+                                             <div className="flex items-center gap-2 font-mono text-amber-500 truncate"><Crown size={14}/> Level {selectedUser.level} ({selectedUser.xp} XP)</div>
                                              {selectedUser.stripeId && <div className="flex items-center gap-2 font-mono text-xs text-indigo-400 truncate"><CreditCard size={12}/> {selectedUser.stripeId}</div>}
                                              {isUserOnline(selectedUser.updatedAt) ? (
                                                  <div className="flex items-center gap-2 text-xs font-bold text-green-400 animate-pulse"><div className="w-2 h-2 rounded-full bg-green-500"/> ONLINE NOW</div>
@@ -755,11 +755,7 @@ export const AdminPanel = ({
                                              </div>
                                          </div>
 
-                                         <div className="grid grid-cols-2 gap-4">
-                                             <div className="space-y-2">
-                                                 <label className="text-xs font-bold text-zinc-500 uppercase ml-1">Streak</label>
-                                                 <input type="number" value={editForm.streak} onChange={(e) => setEditForm({...editForm, streak: parseInt(e.target.value) || 0})} className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-orange-500 transition-colors text-center"/>
-                                             </div>
+                                         <div className="grid grid-cols-1 gap-4">
                                              <div className="space-y-2">
                                                  <label className="text-xs font-bold text-zinc-500 uppercase ml-1">Usage</label>
                                                  <input type="number" value={editForm.usage} onChange={(e) => setEditForm({...editForm, usage: parseInt(e.target.value) || 0})} className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-blue-500 transition-colors text-center"/>
@@ -1142,7 +1138,7 @@ export const AdminPanel = ({
                                                          <div className="flex items-center gap-3 text-xs text-zinc-500 font-mono mt-1">
                                                              <span>ID: {user.id.substring(0,6)}</span>
                                                              <span className="w-1 h-1 rounded-full bg-zinc-700"/>
-                                                             <span className="text-emerald-500">{user.usage} imgs</span>
+                                                             <span className="text-amber-500 font-bold">Lvl {user.level}</span>
                                                          </div>
                                                          <div className="mt-3 pt-3 border-t border-white/5 flex gap-4 text-[10px] font-mono text-zinc-400">
                                                              <div>In: {(user.totalInput/1000).toFixed(1)}k</div>

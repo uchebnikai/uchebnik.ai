@@ -22,6 +22,7 @@ import { useTheme } from './hooks/useTheme';
 import { getBackgroundImageStyle } from './styles/utils';
 import { TOAST_CONTAINER, TOAST_ERROR, TOAST_SUCCESS, TOAST_INFO } from './styles/ui';
 import { t } from './utils/translations';
+import { calculateLevel, XP_PER_MESSAGE, XP_PER_IMAGE, XP_PER_VOICE } from './utils/gamification';
 
 // Components
 import { Lightbox } from './components/ui/Lightbox';
@@ -30,6 +31,7 @@ import { AdminPanel } from './components/admin/AdminPanel';
 import { UpgradeModal } from './components/subscription/UpgradeModal';
 import { SettingsModal } from './components/settings/SettingsModal';
 import { ReferralModal } from './components/referrals/ReferralModal';
+import { LeaderboardModal } from './components/gamification/LeaderboardModal';
 import { HistoryDrawer } from './components/history/HistoryDrawer';
 import { VoiceCallOverlay } from './components/voice/VoiceCallOverlay';
 import { Sidebar } from './components/layout/Sidebar';
@@ -83,6 +85,7 @@ export const App = () => {
   const [isDarkMode, setIsDarkMode] = useState(true); 
   const [showSettings, setShowSettings] = useState(false);
   const [showReferralModal, setShowReferralModal] = useState(false);
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
   
   const [homeView, setHomeView] = useState<HomeViewType>('landing');
 
@@ -96,7 +99,6 @@ export const App = () => {
   
   const [userPlan, setUserPlan] = useState<UserPlan>('free');
   const [dailyImageCount, setDailyImageCount] = useState(0);
-  const [streak, setStreak] = useState(0);
   
   // NEW: Token Stats State
   const [totalInputTokens, setTotalInputTokens] = useState(0);
@@ -143,7 +145,9 @@ export const App = () => {
     christmasMode: false,
     preferredVoice: DEFAULT_VOICE,
     referralCode: '',
-    proExpiresAt: ''
+    proExpiresAt: '',
+    xp: 0,
+    level: 1
   });
   const [unreadSubjects, setUnreadSubjects] = useState<Set<string>>(new Set());
   const [notification, setNotification] = useState<{ message: string, subjectId: string } | null>(null);
@@ -275,15 +279,10 @@ export const App = () => {
         if (session) {
             setShowAuthModal(false);
             
-            // Handle deferred referral code (e.g. from Google Sign In)
-            // If the user signed up via Google, they didn't pass metadata at creation.
-            // We apply it here.
             const storedRefCode = localStorage.getItem('uchebnik_invite_code');
             if (storedRefCode) {
-                // Check if user already has a referral code applied (prevent re-use)
                 const currentRef = session.user.user_metadata.referral_code;
                 if (!currentRef) {
-                    // Update user metadata with the referral code
                     const { error } = await supabase.auth.updateUser({
                         data: { referral_code: storedRefCode }
                     });
@@ -295,7 +294,6 @@ export const App = () => {
                         console.error("Failed to apply referral code:", error);
                     }
                 } else {
-                    // Already has one or was handled by signup
                     localStorage.removeItem('uchebnik_invite_code');
                 }
             }
@@ -350,10 +348,8 @@ export const App = () => {
                   if (newBroadcast.type === 'modal') {
                       setBroadcastModal({ isOpen: true, message: newBroadcast.message });
                   } else {
-                      // Custom long duration toast for system messages
                       addToast(newBroadcast.message, 'info'); 
                   }
-                  // Optional sound effect
                   if (userSettings.sound) {
                       new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3').play().catch(()=>{});
                   }
@@ -384,7 +380,7 @@ export const App = () => {
           try {
               const { data: profileData, error: profileError } = await supabase
                   .from('profiles')
-                  .select('settings, theme_color, custom_background, referral_code, pro_expires_at')
+                  .select('settings, theme_color, custom_background, referral_code, pro_expires_at, xp, level')
                   .eq('id', session.user.id)
                   .single();
               
@@ -394,13 +390,15 @@ export const App = () => {
               }
 
               if (profileData) {
-                  // Merge new referral fields
+                  // Merge new referral fields + XP/Level
                   const referralCode = profileData.referral_code;
                   const proExpiresAt = profileData.pro_expires_at;
+                  const xp = profileData.xp || 0;
+                  const level = profileData.level || 1;
 
                   if (profileData.settings) {
                       const { plan, stats, ...restSettings } = profileData.settings;
-                      const merged = { ...restSettings, themeColor: profileData.theme_color, customBackground: profileData.custom_background, referralCode, proExpiresAt };
+                      const merged = { ...restSettings, themeColor: profileData.theme_color, customBackground: profileData.custom_background, referralCode, proExpiresAt, xp, level };
                       
                       if (!merged.language) merged.language = 'bg';
                       if (!merged.teachingStyle) merged.teachingStyle = 'normal';
@@ -411,12 +409,10 @@ export const App = () => {
                       
                       setUserSettings(prev => ({ ...prev, ...merged }));
                       
-                      // LOGIC: Check Pro Expiry
                       let effectivePlan = plan;
                       if (proExpiresAt && new Date(proExpiresAt) < new Date()) {
                           if (plan !== 'free') {
                               effectivePlan = 'free';
-                              // Silent downgrade locally, backend should ideally handle this or we update on next sync
                               console.warn("Pro plan expired.");
                           }
                       }
@@ -424,8 +420,6 @@ export const App = () => {
                       if (effectivePlan) setUserPlan(effectivePlan);
                       
                       if (stats) {
-                          setStreak(stats.streak || 0);
-                          // Restore Token Stats
                           setTotalInputTokens(stats.totalInputTokens || 0);
                           setTotalOutputTokens(stats.totalOutputTokens || 0);
                           setCostCorrection(stats.costCorrection || 0);
@@ -440,7 +434,7 @@ export const App = () => {
                   } else {
                       if (profileData.theme_color) setUserSettings(prev => ({...prev, themeColor: profileData.theme_color}));
                       if (profileData.custom_background) setUserSettings(prev => ({...prev, customBackground: profileData.custom_background}));
-                      setUserSettings(prev => ({...prev, referralCode, proExpiresAt}));
+                      setUserSettings(prev => ({...prev, referralCode, proExpiresAt, xp, level}));
                   }
               }
 
@@ -520,7 +514,6 @@ export const App = () => {
                           const localOnly = prev.filter(p => !remoteSessions.find((r: Session) => r.id === p.id));
                           return [...localOnly, ...merged].sort((a: Session, b: Session) => b.lastModified - a.lastModified);
                       });
-                      // addToast(t('synced', userSettings.language), 'info'); // Sync notification removed
                   }
               }
           })
@@ -531,16 +524,13 @@ export const App = () => {
   useEffect(() => {
       if (!session?.user?.id || missingDbTables) return;
       
-      // Separate subscription for profiles to catch Referral Rewards in real-time
       const channel = supabase.channel(`sync-profiles:${session.user.id}`)
           .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${session.user.id}` }, (payload) => {
               const remoteData = payload.new as any;
               
-              // Check for Referral Reward
               const oldExpiry = userSettings.proExpiresAt;
               const newExpiry = remoteData.pro_expires_at;
               
-              // Only toast if expiry INCREASED (got reward)
               if (newExpiry && (!oldExpiry || new Date(newExpiry) > new Date(oldExpiry))) {
                   addToast(t('referral_reward_toast', userSettings.language) || "Friend verified! You earned 3 days of Pro! 🎉", 'success');
                   if (userSettings.sound) {
@@ -552,21 +542,23 @@ export const App = () => {
                   isIncomingUpdateRef.current = true;
                   const { plan, stats, ...settingsRest } = remoteData.settings;
                   
-                  // Update settings
+                  const xp = remoteData.xp || 0;
+                  const level = remoteData.level || 1;
+
                   setUserSettings(prev => ({ 
                       ...prev, 
                       ...settingsRest, 
                       themeColor: remoteData.theme_color, 
                       custom_background: remoteData.custom_background,
                       referralCode: remoteData.referral_code,
-                      proExpiresAt: remoteData.pro_expires_at 
+                      proExpiresAt: remoteData.pro_expires_at,
+                      xp,
+                      level
                   }));
                   
-                  // Update plan (handling expiry check logic if needed again, but backend source of truth)
                   if (plan) setUserPlan(plan);
                   
                   if (stats) {
-                      setStreak(stats.streak || 0);
                       if (stats.costCorrection !== undefined) setCostCorrection(stats.costCorrection);
                       
                       const today = new Date().toDateString();
@@ -587,7 +579,6 @@ export const App = () => {
       if (missingDbTables) return; 
       if (isIncomingUpdateRef.current) { isIncomingUpdateRef.current = false; return; }
       
-      // Prevent saving while streaming to avoid race conditions/loops
       if (isStreamingRef.current) return;
 
       setSyncStatus('syncing');
@@ -614,32 +605,29 @@ export const App = () => {
           const fullSettingsPayload = {
               ...userSettings, plan: userPlan,
               stats: { 
-                  streak, 
                   dailyImageCount, 
                   lastImageDate: localStorage.getItem('uchebnik_image_date'), 
                   lastVisit: localStorage.getItem('uchebnik_last_visit'),
-                  // Persist Tokens and Cost Correction
                   totalInputTokens,
                   totalOutputTokens,
                   costCorrection
               }
           };
-          // Do not send referralCode or proExpiresAt back to 'settings' JSON if they are separate columns, 
-          // but we merged them into userSettings for UI. 
-          // The profile table update here mainly handles the 'settings' JSONB column.
-          const { referralCode, proExpiresAt, ...settingsToSave } = fullSettingsPayload;
+          const { referralCode, proExpiresAt, xp, level, ...settingsToSave } = fullSettingsPayload;
 
           const { error } = await supabase.from('profiles').upsert({
               id: session.user.id, 
               settings: settingsToSave, 
               theme_color: userSettings.themeColor, 
-              custom_background: userSettings.customBackground, 
+              custom_background: userSettings.customBackground,
+              xp: userSettings.xp, // Sync dedicated columns
+              level: userSettings.level,
               updated_at: new Date().toISOString()
           });
           if (error && error.code === '42P01') { setMissingDbTables(true); }
       }, 1000);
       return () => { if(syncSettingsTimer.current) clearTimeout(syncSettingsTimer.current); };
-  }, [userSettings, userPlan, streak, dailyImageCount, totalInputTokens, totalOutputTokens, costCorrection, session?.user?.id, isRemoteDataLoaded, missingDbTables]);
+  }, [userSettings, userPlan, dailyImageCount, totalInputTokens, totalOutputTokens, costCorrection, session?.user?.id, isRemoteDataLoaded, missingDbTables]);
 
   // Window Resize
   useEffect(() => {
@@ -658,7 +646,6 @@ export const App = () => {
         const sessionsKey = userId ? `uchebnik_sessions_${userId}` : 'uchebnik_sessions';
         const settingsKey = userId ? `uchebnik_settings_${userId}` : 'uchebnik_settings';
         const planKey = userId ? `uchebnik_plan_${userId}` : 'uchebnik_user_plan';
-        const streakKey = userId ? `uchebnik_streak_${userId}` : 'uchebnik_streak';
         const lastVisitKey = userId ? `uchebnik_last_visit_${userId}` : 'uchebnik_last_visit';
 
         try {
@@ -704,7 +691,9 @@ export const App = () => {
                             christmasMode: false,
                             preferredVoice: DEFAULT_VOICE,
                             referralCode: '',
-                            proExpiresAt: ''
+                            proExpiresAt: '',
+                            xp: 0,
+                            level: 1
                         });
                      }
                 }
@@ -738,23 +727,7 @@ export const App = () => {
             } else {
                 setDailyImageCount(parseInt(lastUsageCount || '0'));
             }
-            const lastVisit = localStorage.getItem(lastVisitKey);
-            const savedStreak = parseInt(localStorage.getItem(streakKey) || '0', 10);
-            if (lastVisit !== today) {
-                const yesterday = new Date();
-                yesterday.setDate(yesterday.getDate() - 1);
-                if (lastVisit === yesterday.toDateString()) {
-                    const newStreak = savedStreak + 1;
-                    setStreak(newStreak);
-                    localStorage.setItem(streakKey, newStreak.toString());
-                } else {
-                    setStreak(1);
-                    localStorage.setItem(streakKey, '1');
-                }
-                localStorage.setItem(lastVisitKey, today);
-            } else {
-                setStreak(savedStreak);
-            }
+            localStorage.setItem(lastVisitKey, today);
         }
     };
     initData();
@@ -946,15 +919,10 @@ export const App = () => {
         clearTimeout(responseWatchdogRef.current);
         responseWatchdogRef.current = null;
     }
-    
-    // Force stop loading state
     if (activeSubject) {
         setLoadingSubjects(prev => ({ ...prev, [activeSubject.id]: false }));
     }
-    
-    isStreamingRef.current = false; // Ensure flag is reset
-
-    // Also stop listening if active
+    isStreamingRef.current = false; 
     if (isListening) {
         if (recognitionRef.current) {
             recognitionRef.current.onend = null;
@@ -962,6 +930,27 @@ export const App = () => {
         }
         setIsListening(false);
     }
+  };
+
+  // Grant XP Logic
+  const grantXP = (amount: number) => {
+      setUserSettings(prev => {
+          const newXP = prev.xp + amount;
+          const newLevel = calculateLevel(newXP);
+          
+          if (newLevel > prev.level) {
+              addToast(`Поздравления! Достигнахте ниво ${newLevel}! 🎉`, 'success');
+              if (prev.sound) {
+                  new Audio('https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3').play().catch(()=>{});
+              }
+          }
+          
+          return {
+              ...prev,
+              xp: newXP,
+              level: newLevel
+          };
+      });
   };
 
   const handleSend = async (overrideText?: string, overrideImages?: string[]) => {
@@ -1090,13 +1079,18 @@ export const App = () => {
 
       if (controller.signal.aborted) return "";
 
-      // UPDATE STATS WITH REAL TOKENS FROM METADATA
       if (response.usage) {
           setTotalInputTokens(prev => prev + response.usage!.inputTokens);
           setTotalOutputTokens(prev => prev + response.usage!.outputTokens);
       }
 
       if (currentImgs.length > 0) { incrementImageCount(currentImgs.length); }
+      
+      // Calculate and Grant XP
+      let earnedXP = XP_PER_MESSAGE;
+      if (currentImgs.length > 0) earnedXP += (currentImgs.length * XP_PER_IMAGE);
+      grantXP(earnedXP);
+
       setSessions(prev => prev.map(s => {
           if (s.id === sessId) {
               const updatedMessages = s.messages.map(m => {
@@ -1114,7 +1108,7 @@ export const App = () => {
                           imageAnalysis: response.imageAnalysis, 
                           sources: response.sources, 
                           isStreaming: false,
-                          usage: response.usage // Save usage history
+                          usage: response.usage
                       };
                   }
                   return m;
@@ -1219,21 +1213,17 @@ export const App = () => {
     });
   };
 
-  // --- Gemini Live API Logic ---
-  
   const startVoiceCall = async () => { 
     if (!session) { setShowAuthModal(true); return; } 
     
-    // Check plan restriction - Call feature is Plus/Pro only
     if (userPlan === 'free') {
         setShowUnlockModal(true);
         return;
     }
 
-    // Check permission first
     try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        stream.getTracks().forEach(track => track.stop()); // Just checking
+        stream.getTracks().forEach(track => track.stop());
     } catch (e) {
         addToast('Моля, разрешете достъп до микрофона.', 'error');
         return;
@@ -1246,14 +1236,10 @@ export const App = () => {
   const endVoiceCall = () => { 
       setIsVoiceCallActive(false); 
       setVoiceCallStatus('idle'); 
-      
-      // Close Live Session
       if (liveSessionRef.current) {
           liveSessionRef.current.close();
           liveSessionRef.current = null;
       }
-      
-      // Close Audio Context
       if (audioContextRef.current) {
           audioContextRef.current.close();
           audioContextRef.current = null;
@@ -1266,10 +1252,9 @@ export const App = () => {
       const ai = new GoogleGenAI({ apiKey });
       
       try {
-          // Initialize Audio Contexts
           const inputAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)({sampleRate: 16000});
           const outputAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)({sampleRate: 24000});
-          audioContextRef.current = inputAudioContext; // Store one for cleanup
+          audioContextRef.current = inputAudioContext; 
 
           const inputNode = inputAudioContext.createGain();
           const outputNode = outputAudioContext.createGain();
@@ -1277,7 +1262,6 @@ export const App = () => {
           let nextStartTime = 0;
           const sources = new Set<AudioBufferSourceNode>();
 
-          // Connect Live Session
           const sessionPromise = ai.live.connect({
               model: LIVE_MODEL,
               config: {
@@ -1291,9 +1275,6 @@ export const App = () => {
               },
               callbacks: {
                   onopen: async () => {
-                      console.log("Live Session Opened");
-                      
-                      // Start Microphone Stream
                       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                       const source = inputAudioContext.createMediaStreamSource(stream);
                       const scriptProcessor = inputAudioContext.createScriptProcessor(4096, 1, 1);
@@ -1339,6 +1320,9 @@ export const App = () => {
                           source.start(nextStartTime);
                           nextStartTime += audioBuffer.duration;
                           sources.add(source);
+                          
+                          // Optional: Grant small XP for voice interaction
+                          grantXP(XP_PER_VOICE / 10); 
                       }
                       
                       if (message.serverContent?.interrupted) {
@@ -1348,7 +1332,6 @@ export const App = () => {
                       }
                   },
                   onclose: () => {
-                      console.log("Live Session Closed");
                       endVoiceCall();
                   },
                   onerror: (e) => {
@@ -1368,7 +1351,6 @@ export const App = () => {
       }
   };
 
-  // Helper functions for Live Audio (duplicated from service to ensure closure scope safety)
   function createBlob(data: Float32Array): { data: string; mimeType: string } {
       const l = data.length;
       const int16 = new Int16Array(l);
@@ -1507,10 +1489,8 @@ export const App = () => {
 
   return (
     <div className="flex h-full w-full relative overflow-hidden text-foreground">
-      {/* Snowfall Layer - Always mounted but controlled by internal opacity */}
       <Snowfall active={!!userSettings.christmasMode} />
       
-      {/* Broadcast Modal */}
       {broadcastModal && broadcastModal.isOpen && (
           <div className="fixed inset-0 z-[250] bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in" onClick={() => setBroadcastModal(null)}>
               <div className="bg-[#09090b] border border-indigo-500/30 w-full max-w-md p-8 rounded-[32px] shadow-2xl relative animate-in zoom-in-95" onClick={e => e.stopPropagation()}>
@@ -1531,14 +1511,10 @@ export const App = () => {
           </div>
       )}
       
-      {/* Background Layers for Smooth Transitions */}
-      
-      {/* 1. Base Gradient Layer (Default) */}
       {!userSettings.customBackground && (
         <div className={`fixed inset-0 z-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-indigo-200/20 via-background to-background dark:from-indigo-900/20 dark:via-background dark:to-background pointer-events-none transition-all duration-1000 ${focusMode ? 'brightness-[0.4]' : ''} ${userSettings.christmasMode ? 'opacity-0' : 'opacity-100'}`}></div>
       )}
 
-      {/* 2. Custom User Background Layer */}
       {userSettings.customBackground && (
          <div 
            className={`fixed inset-0 z-0 bg-cover bg-center pointer-events-none transition-all duration-1000 ${focusMode ? 'brightness-[0.2] grayscale' : ''} ${userSettings.christmasMode ? 'opacity-0' : 'opacity-100'}`}
@@ -1546,13 +1522,11 @@ export const App = () => {
          />
       )}
 
-      {/* 3. Christmas Background Layer (Overlay) */}
       <div 
         className={`fixed inset-0 z-0 bg-cover bg-center pointer-events-none transition-all duration-1000 ${focusMode ? 'brightness-[0.2] grayscale' : ''} ${userSettings.christmasMode ? 'opacity-100' : 'opacity-0'}`}
         style={{ backgroundImage: `url('https://i.ibb.co/WNmGnfdC/Gemini-Generated-Image-g5c7r7g5c7r7g5c7.png')` }}
       />
 
-      {/* Decorative Orbs (Only visible on Default BG) */}
       {!userSettings.customBackground && !userSettings.christmasMode && (
         <>
             <div className={`fixed top-[-10%] right-[-5%] w-[500px] h-[500px] bg-indigo-500/10 dark:bg-indigo-500/20 rounded-full blur-[120px] pointer-events-none z-0 animate-pulse-slow transition-opacity ${focusMode ? 'opacity-20' : 'opacity-100'}`} />
@@ -1606,7 +1580,7 @@ export const App = () => {
             addToast={addToast}
             setShowSubjectDashboard={setShowSubjectDashboard}
             userRole={userRole}
-            streak={streak}
+            streak={0} // Streak is removed
             syncStatus={syncStatus}
             homeView={homeView}
             dailyImageCount={dailyImageCount}
@@ -1622,7 +1596,7 @@ export const App = () => {
                         <span className="font-bold block mb-0.5">{missingDbTables ? 'Database Setup Required' : t('sync_error', userSettings.language)}</span>
                         <span className="opacity-90">
                             {missingDbTables 
-                                ? 'Tables missing. Please run the SQL setup script in Supabase.' 
+                                ? 'Run SQL commands to update schema.' 
                                 : syncErrorDetails || t('error', userSettings.language)}
                         </span>
                     </div>
@@ -1637,7 +1611,6 @@ export const App = () => {
                 onContinue={() => {
                     setHomeView('landing');
                     setAuthSuccessType(null);
-                    // Clear hash after successful viewing so user doesn't see tokens in URL
                     window.history.replaceState(null, '', window.location.pathname);
                 }}
                 userSettings={userSettings}
@@ -1749,7 +1722,6 @@ export const App = () => {
         )}
       </main>
 
-        {/* Modals moved outside of main to properly overlay sidebar */}
         <AdminPanel 
             showAdminAuth={showAdminAuth}
             setShowAdminAuth={setShowAdminAuth}
@@ -1798,6 +1770,11 @@ export const App = () => {
             userSettings={userSettings}
             addToast={addToast}
         />
+        <LeaderboardModal
+            isOpen={showLeaderboard}
+            onClose={() => setShowLeaderboard(false)}
+            currentUserId={session?.user?.id}
+        />
         <Lightbox image={zoomedImage} onClose={() => setZoomedImage(null)} />
         
         <ConfirmModal 
@@ -1807,6 +1784,17 @@ export const App = () => {
             onConfirm={confirmModal?.onConfirm || (() => {})}
             onCancel={() => setConfirmModal(null)}
         />
+
+        {/* Global Leaderboard Button Floating */}
+        {session && !showLeaderboard && !showAuthModal && (
+            <button 
+                onClick={() => setShowLeaderboard(true)}
+                className="fixed top-20 left-4 z-40 hidden lg:flex items-center gap-2 px-3 py-2 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-xl border border-white/10 text-white text-xs font-bold transition-colors animate-in slide-in-from-left-4"
+            >
+                <div className="p-1 bg-amber-500 rounded-lg"><Gift size={14}/></div>
+                Top Students
+            </button>
+        )}
 
       <div className="fixed top-4 right-4 z-[100] flex flex-col gap-2 pointer-events-none">
         {toasts.map(t => (
