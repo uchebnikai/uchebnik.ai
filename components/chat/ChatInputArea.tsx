@@ -1,6 +1,6 @@
 
 import React, { useRef, useEffect, useState } from 'react';
-import { Reply, X, ImageIcon, Mic, MicOff, ArrowUpRight, Calculator, Camera, Square, HelpCircle } from 'lucide-react';
+import { Reply, X, ImageIcon, Mic, MicOff, ArrowUpRight, Calculator, Square, HelpCircle } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
@@ -8,8 +8,6 @@ import { Message, UserSettings, AppMode } from '../../types';
 import { t } from '../../utils/translations';
 import { INPUT_AREA_BASE, INPUT_AREA_CUSTOM_BG, INPUT_AREA_DEFAULT_BG } from '../../styles/chat';
 import { SLIDE_UP, FADE_IN, ZOOM_IN } from '../../animations/transitions';
-import { resizeImage } from '../../utils/image';
-import { CameraModal } from '../ui/CameraModal';
 
 interface ChatInputAreaProps {
   replyingTo: Message | null;
@@ -65,13 +63,11 @@ export const ChatInputArea = ({
   handleSend,
   selectedImages,
   handleRemoveImage,
-  onCameraCapture,
   onStopGeneration
 }: ChatInputAreaProps) => {
   
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [showMath, setShowMath] = useState(false);
-  const [showCamera, setShowCamera] = useState(false);
 
   useEffect(() => {
     if (textareaRef.current) {
@@ -119,16 +115,6 @@ export const ChatInputArea = ({
 
   return (
       <>
-        {showCamera && onCameraCapture && (
-            <CameraModal 
-                onClose={() => setShowCamera(false)}
-                onCapture={(img) => {
-                    onCameraCapture(img);
-                    setShowCamera(false);
-                }}
-            />
-        )}
-
         <div className="absolute bottom-0 left-0 right-0 px-2 lg:px-4 pointer-events-none z-40 flex justify-center pb-safe">
             <div className="w-full max-w-3xl pointer-events-auto mb-2 lg:mb-4">
                 
@@ -202,13 +188,6 @@ export const ChatInputArea = ({
                 </button>
                 <input type="file" ref={fileInputRef} onChange={handleImageUpload} className="hidden" accept="image/*" multiple />
                 
-                {/* Camera Button */}
-                {onCameraCapture && (
-                    <button onClick={() => setShowCamera(true)} disabled={loadingSubject} className="flex-none w-10 h-10 rounded-full flex items-center justify-center text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-white/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
-                        <Camera size={20} strokeWidth={2}/>
-                    </button>
-                )}
-
                 {/* Math Toggle */}
                 <button onClick={() => setShowMath(!showMath)} disabled={loadingSubject} className={`flex-none w-10 h-10 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${showMath ? 'text-indigo-600 bg-indigo-50 dark:bg-white/10' : 'text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-white/10'}`}>
                     <Calculator size={20} strokeWidth={2}/>

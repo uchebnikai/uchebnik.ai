@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { MessageSquare, Trash2, Plus, School, GraduationCap, Briefcase, ChevronDown, User, Settings, CreditCard, HelpCircle, LogOut, ArrowRight, ChevronUp, FileText, CloudOff, RefreshCw, Cloud, PanelLeftClose, PanelLeftOpen, LogIn, Snowflake, Gift, Trophy } from 'lucide-react';
+import { MessageSquare, Trash2, Plus, School, GraduationCap, Briefcase, ChevronDown, User, Settings, CreditCard, HelpCircle, LogOut, ArrowRight, ChevronUp, FileText, CloudOff, RefreshCw, Cloud, PanelLeftClose, PanelLeftOpen, LogIn, Snowflake, Gift, Trophy, Target } from 'lucide-react';
 import { DynamicIcon } from '../ui/DynamicIcon';
 import { SUBJECTS } from '../../constants';
 import { SubjectId, AppMode, Session, UserRole, UserSettings, UserPlan, SubjectConfig, HomeViewType } from '../../types';
@@ -40,6 +40,7 @@ interface SidebarProps {
   homeView: HomeViewType;
   dailyImageCount?: number; 
   setShowLeaderboard?: (val: boolean) => void;
+  setShowQuests?: (val: boolean) => void;
 }
 
 export const Sidebar = ({
@@ -73,7 +74,8 @@ export const Sidebar = ({
   syncStatus = 'synced',
   homeView,
   dailyImageCount = 0,
-  setShowLeaderboard
+  setShowLeaderboard,
+  setShowQuests
 }: SidebarProps) => {
     
     // Internal State for Folders
@@ -106,6 +108,9 @@ export const Sidebar = ({
     const currentRank = getRank(userSettings.level);
     const stats = getLevelStats(userSettings.xp, userSettings.level);
     const RankIcon = currentRank.icon;
+
+    // Check for completed quests to show a dot (optional enhancement, simple check here)
+    const hasCompletedQuests = userSettings.dailyQuests?.quests.some(q => q.isCompleted);
 
     return (
       <>
@@ -175,20 +180,35 @@ export const Sidebar = ({
           </div>
 
           <div className="flex-1 overflow-y-auto px-4 pb-4 custom-scrollbar">
-             {/* Leaderboard Button - Added Here */}
+             {/* Gamification Buttons */}
              {session && (
-                 <button 
-                    onClick={() => setShowLeaderboard && setShowLeaderboard(true)}
-                    className={`w-full flex items-center ${collapsed ? 'justify-center py-3' : 'justify-between px-3 py-3'} mt-2 mb-2 rounded-xl transition-all group glass-button border border-amber-500/20 hover:border-amber-500/40 hover:bg-amber-500/10`}
-                    title="Класация"
-                 >
-                     <div className="flex items-center gap-3">
-                         <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-500 group-hover:text-amber-400 group-hover:bg-amber-500/20 transition-colors">
-                             <Trophy size={18} />
+                 <div className="space-y-2 mt-2 mb-2">
+                     <button 
+                        onClick={() => setShowLeaderboard && setShowLeaderboard(true)}
+                        className={`w-full flex items-center ${collapsed ? 'justify-center py-3' : 'justify-between px-3 py-3'} rounded-xl transition-all group glass-button border border-amber-500/20 hover:border-amber-500/40 hover:bg-amber-500/10`}
+                        title="Класация"
+                     >
+                         <div className="flex items-center gap-3">
+                             <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-500 group-hover:text-amber-400 group-hover:bg-amber-500/20 transition-colors">
+                                 <Trophy size={18} />
+                             </div>
+                             {!collapsed && <span className="text-sm font-bold text-amber-600 dark:text-amber-400">Класация</span>}
                          </div>
-                         {!collapsed && <span className="text-sm font-bold text-amber-600 dark:text-amber-400">Класация</span>}
-                     </div>
-                 </button>
+                     </button>
+
+                     <button 
+                        onClick={() => setShowQuests && setShowQuests(true)}
+                        className={`w-full flex items-center ${collapsed ? 'justify-center py-3' : 'justify-between px-3 py-3'} rounded-xl transition-all group glass-button border border-pink-500/20 hover:border-pink-500/40 hover:bg-pink-500/10`}
+                        title="Дневни Мисии"
+                     >
+                         <div className="flex items-center gap-3">
+                             <div className="w-8 h-8 rounded-lg bg-pink-500/10 flex items-center justify-center text-pink-500 group-hover:text-pink-400 group-hover:bg-pink-500/20 transition-colors">
+                                 <Target size={18} />
+                             </div>
+                             {!collapsed && <span className="text-sm font-bold text-pink-600 dark:text-pink-400">Мисии</span>}
+                         </div>
+                     </button>
+                 </div>
              )}
 
              {collapsed ? (

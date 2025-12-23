@@ -1,6 +1,6 @@
 
 import { Medal, Trophy, Crown, Gem, Star } from 'lucide-react';
-import { RankInfo, RankTier, UserPlan } from '../types';
+import { RankInfo, RankTier, UserPlan, DailyQuest, SubjectId } from '../types';
 
 // Constants
 export const XP_PER_MESSAGE = 20; // Faster feedback loop
@@ -65,8 +65,6 @@ export const getLevelStats = (totalXP: number, currentLevel: number) => {
     };
 };
 
-// Deprecated wrapper to maintain compatibility if used elsewhere, 
-// but preferred to use getLevelStats for UI
 export const getLevelProgress = (xp: number, level: number): number => {
     return getLevelStats(xp, level).percentage;
 };
@@ -115,7 +113,75 @@ export const RANKS: RankInfo[] = [
 ];
 
 export const getRank = (level: number): RankInfo => {
-    // Reverse find to get the highest matching rank
     const rank = [...RANKS].reverse().find(r => level >= r.minLevel);
     return rank || RANKS[0];
+};
+
+// --- DAILY QUESTS LOGIC ---
+
+const QUEST_TEMPLATES = [
+    { desc: 'Send {n} messages', type: 'message', min: 3, max: 8, xpPerUnit: 10 },
+    { desc: 'Upload {n} images', type: 'image', min: 1, max: 3, xpPerUnit: 25 },
+    { desc: 'Solve {n} Math problems', type: SubjectId.MATH, min: 2, max: 5, xpPerUnit: 30 },
+    { desc: 'Practice English ({n} msgs)', type: SubjectId.ENGLISH, min: 3, max: 6, xpPerUnit: 20 },
+    { desc: 'Learn History ({n} msgs)', type: SubjectId.HISTORY, min: 3, max: 5, xpPerUnit: 20 },
+    { desc: 'Write code ({n} msgs in IT)', type: SubjectId.IT, min: 2, max: 4, xpPerUnit: 30 },
+];
+
+export const generateDailyQuests = (): DailyQuest[] => {
+    // Select 3 random unique templates
+    const shuffled = [...QUEST_TEMPLATES].sort(() => 0.5 - Math.random());
+    const selected = shuffled.slice(0, 3);
+
+    return selected.map(t => {
+        const target = Math.floor(Math.random() * (t.max - t.min + 1)) + t.min;
+        return {
+            id: Math.random().toString(36).substr(2, 9),
+            description: t.desc.replace('{n}', target.toString()),
+            target: target,
+            current: 0,
+            xpReward: target * t.xpPerUnit,
+            isCompleted: false,
+            type: t.type
+        };
+    });
+};
+
+export const updateQuestProgress = (
+    quests: DailyQuest[], 
+    actionType: 'message' | 'image' | 'voice', 
+    subjectId: string, 
+    amount: number = 1
+): { updatedQuests: DailyQuest[], xpGained: number, completedQuests: string[] } => {
+    let xpGained = 0;
+    const completedQuests: string[] = [];
+
+    const updatedQuests = quests.map(q => {
+        if (q.isCompleted) return q;
+
+        let match = false;
+        // Check generic type match
+        if (q.type === actionType) match = true;
+        // Check subject specific match (only counts if action is message or voice, not just image upload unless specified)
+        if ((actionType === 'message' || actionType === 'voice') && q.type === subjectId) match = true;
+
+        if (match) {
+            const newCurrent = Math.min(q.current + amount, q.target);
+            const isNowCompleted = newCurrent >= q.target;
+            
+            if (isNowCompleted) {
+                xpGained += q.xpReward;
+                completedQuests.push(q.description);
+            }
+
+            return {
+                ...q,
+                current: newCurrent,
+                isCompleted: isNowCompleted
+            };
+        }
+        return q;
+    });
+
+    return { updatedQuests, xpGained, completedQuests };
 };

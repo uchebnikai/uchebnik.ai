@@ -1,12 +1,11 @@
 
 import React, { useState, useRef } from 'react';
-import { Shield, MessageSquare, ArrowRight, School, GraduationCap, Briefcase, ArrowLeft, ArrowUpRight, Search, ImageIcon, Camera, Mic, MicOff, X, Menu, Landmark } from 'lucide-react';
+import { Shield, MessageSquare, ArrowRight, School, GraduationCap, Briefcase, ArrowLeft, ArrowUpRight, Search, ImageIcon, Mic, MicOff, X, Menu, Landmark } from 'lucide-react';
 import { SubjectConfig, UserRole, UserSettings, HomeViewType, SubjectId } from '../../types';
 import { SUBJECTS } from '../../constants';
 import { DynamicIcon } from '../ui/DynamicIcon';
 import { ZOOM_IN, SLIDE_UP, FADE_IN } from '../../animations/transitions';
 import { getStaggeredDelay } from '../../animations/utils';
-import { CameraModal } from '../ui/CameraModal';
 import { resizeImage } from '../../utils/image';
 import { t } from '../../utils/translations';
 
@@ -36,7 +35,6 @@ export const WelcomeScreen = ({
 
     const [inputValue, setInputValue] = useState('');
     const [selectedImages, setSelectedImages] = useState<string[]>([]);
-    const [showCamera, setShowCamera] = useState(false);
     const [isListening, setIsListening] = useState(false);
     const recognitionRef = useRef<any>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -66,11 +64,6 @@ export const WelcomeScreen = ({
         }
     };
 
-    const handleCameraCapture = (base64Image: string) => {
-        setSelectedImages(prev => [...prev, base64Image]);
-        setShowCamera(false);
-    };
-
     const handleRemoveImage = (index: number) => {
         setSelectedImages(prev => prev.filter((_, i) => i !== index));
     };
@@ -87,7 +80,7 @@ export const WelcomeScreen = ({
         
         const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
         if (!SR) {
-            alert('Гласовото разпознаване не се поддържа от този браузър.');
+            alert('Гласовата услуга не се поддържа от този браузър.');
             return;
         }
 
@@ -133,13 +126,6 @@ export const WelcomeScreen = ({
     return (
     <div className={`flex flex-col h-full w-full overflow-hidden items-center bg-transparent relative`}>
       
-      {showCamera && (
-          <CameraModal 
-              onClose={() => setShowCamera(false)}
-              onCapture={handleCameraCapture}
-          />
-      )}
-
       {homeView === 'landing' && (
         <div className="w-full h-full overflow-y-auto custom-scrollbar p-4 md:p-8 flex flex-col items-center">
             <div className={`w-full max-w-5xl flex-1 flex flex-col items-center justify-center relative z-10 ${ZOOM_IN} duration-700 min-h-min py-8`}>
@@ -207,10 +193,6 @@ export const WelcomeScreen = ({
                             <ImageIcon size={18} className="md:w-5 md:h-5" strokeWidth={2}/>
                         </button>
                         <input type="file" ref={fileInputRef} onChange={handleImageUpload} className="hidden" accept="image/*" multiple />
-                        
-                        <button onClick={() => setShowCamera(true)} className="p-2 text-gray-500 hover:text-indigo-600 hover:bg-white/50 dark:hover:bg-white/10 rounded-full transition-colors" title={t('scan', userSettings.language)}>
-                            <Camera size={18} className="md:w-5 md:h-5" strokeWidth={2}/>
-                        </button>
                         
                         <button onClick={toggleListening} className={`p-2 rounded-full transition-all ${isListening ? 'bg-red-500 text-white animate-pulse' : 'text-gray-500 hover:text-indigo-600 hover:bg-white/50 dark:hover:bg-white/10'}`} title={t('voice_input', userSettings.language)}>
                             {isListening ? <MicOff size={18} className="md:w-5 md:h-5"/> : <Mic size={18} className="md:w-5 md:h-5" strokeWidth={2}/>}

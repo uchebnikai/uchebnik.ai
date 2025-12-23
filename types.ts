@@ -171,6 +171,16 @@ export type UserPlan = 'free' | 'plus' | 'pro';
 export type TeachingStyle = 'normal' | 'socratic' | 'eli5' | 'academic' | 'motivational';
 export type FontFamily = 'inter' | 'dyslexic' | 'mono';
 
+export interface DailyQuest {
+  id: string;
+  description: string;
+  target: number;
+  current: number;
+  xpReward: number;
+  isCompleted: boolean;
+  type: 'message' | 'image' | 'voice' | string; // string for subject_ids
+}
+
 export interface UserSettings {
   userName: string;
   textSize: 'small' | 'normal' | 'large';
@@ -197,6 +207,10 @@ export interface UserSettings {
   // Gamification
   xp: number;
   level: number;
+  dailyQuests?: {
+      date: string;
+      quests: DailyQuest[];
+  };
   
   stats?: {
       dailyImageCount?: number;

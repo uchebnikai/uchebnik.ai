@@ -22,7 +22,7 @@ import { useTheme } from './hooks/useTheme';
 import { getBackgroundImageStyle } from './styles/utils';
 import { TOAST_CONTAINER, TOAST_ERROR, TOAST_SUCCESS, TOAST_INFO } from './styles/ui';
 import { t } from './utils/translations';
-import { calculateLevel, XP_PER_MESSAGE, XP_PER_IMAGE, XP_PER_VOICE, calculateXPWithBoost } from './utils/gamification';
+import { calculateLevel, XP_PER_MESSAGE, XP_PER_IMAGE, XP_PER_VOICE, calculateXPWithBoost, generateDailyQuests, updateQuestProgress } from './utils/gamification';
 
 // Components
 import { Lightbox } from './components/ui/Lightbox';
@@ -32,6 +32,7 @@ import { UpgradeModal } from './components/subscription/UpgradeModal';
 import { SettingsModal } from './components/settings/SettingsModal';
 import { ReferralModal } from './components/referrals/ReferralModal';
 import { LeaderboardModal } from './components/gamification/LeaderboardModal';
+import { DailyQuestsModal } from './components/gamification/DailyQuestsModal';
 import { HistoryDrawer } from './components/history/HistoryDrawer';
 import { VoiceCallOverlay } from './components/voice/VoiceCallOverlay';
 import { Sidebar } from './components/layout/Sidebar';
@@ -86,6 +87,7 @@ export const App = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [showReferralModal, setShowReferralModal] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
+  const [showQuests, setShowQuests] = useState(false);
   
   const [homeView, setHomeView] = useState<HomeViewType>('landing');
 
@@ -147,7 +149,11 @@ export const App = () => {
     referralCode: '',
     proExpiresAt: '',
     xp: 0,
-    level: 1
+    level: 1,
+    dailyQuests: {
+        date: new Date().toDateString(),
+        quests: generateDailyQuests()
+    }
   });
   const [unreadSubjects, setUnreadSubjects] = useState<Set<string>>(new Set());
   const [notification, setNotification] = useState<{ message: string, subjectId: string } | null>(null);
@@ -219,6 +225,20 @@ export const App = () => {
           document.body.style.fontFamily = '';
       }
   }, [userSettings.fontFamily]);
+
+  // Check Daily Quests Date
+  useEffect(() => {
+      const today = new Date().toDateString();
+      if (!userSettings.dailyQuests || userSettings.dailyQuests.date !== today) {
+          setUserSettings(prev => ({
+              ...prev,
+              dailyQuests: {
+                  date: today,
+                  quests: generateDailyQuests()
+              }
+          }));
+      }
+  }, [userSettings.dailyQuests]);
 
   // Auth & URL Logic (Referrals)
   useEffect(() => {
@@ -365,6 +385,15 @@ export const App = () => {
                     if (merged.christmasMode === undefined) merged.christmasMode = false;
                     if (!merged.preferredVoice) merged.preferredVoice = DEFAULT_VOICE;
                     
+                    // Daily Quests init in profile load
+                    const today = new Date().toDateString();
+                    if (!merged.dailyQuests || merged.dailyQuests.date !== today) {
+                        merged.dailyQuests = {
+                            date: today,
+                            quests: generateDailyQuests()
+                        };
+                    }
+
                     setUserSettings(prev => ({ ...prev, ...merged }));
                     
                     let effectivePlan = plan;
@@ -382,7 +411,6 @@ export const App = () => {
                         setTotalOutputTokens(stats.totalOutputTokens || 0);
                         setCostCorrection(stats.costCorrection || 0);
                         
-                        const today = new Date().toDateString();
                         if (stats.lastImageDate === today) {
                             setDailyImageCount(stats.dailyImageCount || 0);
                         } else {
@@ -932,6 +960,41 @@ export const App = () => {
       });
   };
 
+  // Update Daily Quests logic wrapper
+  const updateQuests = (type: 'message' | 'image' | 'voice', subjectId: string) => {
+      if (!userSettings.dailyQuests) return;
+      
+      const { updatedQuests, xpGained, completedQuests } = updateQuestProgress(
+          userSettings.dailyQuests.quests,
+          type,
+          subjectId
+      );
+
+      if (xpGained > 0) {
+          grantXP(xpGained);
+          completedQuests.forEach(desc => {
+              addToast(`Мисия изпълнена: ${desc} (+ XP)`, 'success');
+          });
+          
+          setUserSettings(prev => ({
+              ...prev,
+              dailyQuests: {
+                  ...prev.dailyQuests!,
+                  quests: updatedQuests
+              }
+          }));
+      } else {
+          // Just update progress without XP grant if nothing completed
+          setUserSettings(prev => ({
+              ...prev,
+              dailyQuests: {
+                  ...prev.dailyQuests!,
+                  quests: updatedQuests
+              }
+          }));
+      }
+  };
+
   const handleSend = async (overrideText?: string, overrideImages?: string[]) => {
     if (!session) { 
         const currentSubId = activeSubjectRef.current?.id || SubjectId.GENERAL;
@@ -1063,12 +1126,19 @@ export const App = () => {
           setTotalOutputTokens(prev => prev + response.usage!.outputTokens);
       }
 
-      if (currentImgs.length > 0) { incrementImageCount(currentImgs.length); }
+      if (currentImgs.length > 0) { 
+          incrementImageCount(currentImgs.length);
+          // Quest Progress: Image
+          updateQuests('image', currentSubId);
+      }
       
       // Calculate and Grant XP
       let earnedXP = XP_PER_MESSAGE;
       if (currentImgs.length > 0) earnedXP += (currentImgs.length * XP_PER_IMAGE);
       grantXP(earnedXP);
+      
+      // Quest Progress: Message
+      updateQuests('message', currentSubId);
 
       setSessions(prev => prev.map(s => {
           if (s.id === sessId) {
@@ -1131,11 +1201,7 @@ export const App = () => {
     }
   };
 
-  const handleCameraCapture = (base64Image: string) => {
-    if (!session) { setShowAuthModal(true); return; }
-    if (!checkImageLimit(1)) return;
-    setSelectedImages(prev => [...prev, base64Image]);
-  };
+  // Camera capture is now unified into file upload via native behavior, separate logic removed
 
   const handleBackgroundUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -1302,6 +1368,10 @@ export const App = () => {
                           
                           // Optional: Grant small XP for voice interaction
                           grantXP(XP_PER_VOICE / 10); 
+                          // Update Quest Progress for Voice
+                          if (activeSubjectRef.current) {
+                              updateQuests('voice', activeSubjectRef.current.id);
+                          }
                       }
                       
                       if (message.serverContent?.interrupted) {
@@ -1563,8 +1633,8 @@ export const App = () => {
             syncStatus={syncStatus}
             homeView={homeView}
             dailyImageCount={dailyImageCount}
-            // NEW PROP
             setShowLeaderboard={setShowLeaderboard}
+            setShowQuests={setShowQuests}
           />
       )}
       
@@ -1696,7 +1766,6 @@ export const App = () => {
                     handleSend={() => handleSend()}
                     selectedImages={selectedImages}
                     handleRemoveImage={handleRemoveImage}
-                    onCameraCapture={handleCameraCapture}
                     onStopGeneration={handleStopGeneration}
                 />
             </div>
@@ -1755,6 +1824,11 @@ export const App = () => {
             isOpen={showLeaderboard}
             onClose={() => setShowLeaderboard(false)}
             currentUserId={session?.user?.id}
+        />
+        <DailyQuestsModal
+            isOpen={showQuests}
+            onClose={() => setShowQuests(false)}
+            quests={userSettings.dailyQuests?.quests || []}
         />
         <Lightbox image={zoomedImage} onClose={() => setZoomedImage(null)} />
         
