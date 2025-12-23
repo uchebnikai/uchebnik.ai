@@ -1785,17 +1785,6 @@ export const App = () => {
             onCancel={() => setConfirmModal(null)}
         />
 
-        {/* Global Leaderboard Button Floating */}
-        {session && !showLeaderboard && !showAuthModal && (
-            <button 
-                onClick={() => setShowLeaderboard(true)}
-                className="fixed top-20 left-4 z-40 hidden lg:flex items-center gap-2 px-3 py-2 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-xl border border-white/10 text-white text-xs font-bold transition-colors animate-in slide-in-from-left-4"
-            >
-                <div className="p-1 bg-amber-500 rounded-lg"><Gift size={14}/></div>
-                Top Students
-            </button>
-        )}
-
       <div className="fixed top-4 right-4 z-[100] flex flex-col gap-2 pointer-events-none">
         {toasts.map(t => (
           <div key={t.id} className={`${TOAST_CONTAINER} ${t.type === 'error' ? TOAST_ERROR : t.type === 'success' ? TOAST_SUCCESS : TOAST_INFO}`}>
