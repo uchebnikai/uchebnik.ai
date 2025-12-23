@@ -1,11 +1,11 @@
 
 import React, { useState } from 'react';
-import { MessageSquare, Trash2, Plus, School, GraduationCap, Briefcase, ChevronDown, User, Settings, CreditCard, HelpCircle, LogOut, ArrowRight, ChevronUp, FileText, CloudOff, RefreshCw, Cloud, PanelLeftClose, PanelLeftOpen, LogIn, Snowflake, Gift, Trophy, Star } from 'lucide-react';
+import { MessageSquare, Trash2, Plus, School, GraduationCap, Briefcase, ChevronDown, User, Settings, CreditCard, HelpCircle, LogOut, ArrowRight, ChevronUp, FileText, CloudOff, RefreshCw, Cloud, PanelLeftClose, PanelLeftOpen, LogIn, Snowflake, Gift, Trophy } from 'lucide-react';
 import { DynamicIcon } from '../ui/DynamicIcon';
 import { SUBJECTS } from '../../constants';
 import { SubjectId, AppMode, Session, UserRole, UserSettings, UserPlan, SubjectConfig, HomeViewType } from '../../types';
 import { t } from '../../utils/translations';
-import { getRank, getLevelProgressStats } from '../../utils/gamification';
+import { getRank, getLevelProgress } from '../../utils/gamification';
 
 interface SidebarProps {
   sidebarOpen: boolean;
@@ -35,7 +35,7 @@ interface SidebarProps {
   addToast: (msg: string, type: 'success' | 'error' | 'info') => void;
   setShowSubjectDashboard: (val: boolean) => void;
   userRole: UserRole | null;
-  streak: number; 
+  streak: number; // Deprecated, kept for interface compat but unused
   syncStatus?: 'synced' | 'syncing' | 'error' | 'offline';
   homeView: HomeViewType;
   dailyImageCount?: number; 
@@ -74,16 +74,18 @@ export const Sidebar = ({
   dailyImageCount = 0
 }: SidebarProps) => {
     
+    // Internal State for Folders
     const [schoolFolderOpen, setSchoolFolderOpen] = useState(true); 
     const [studentsFolderOpen, setStudentsFolderOpen] = useState(false);
     const [teachersFolderOpen, setTeachersFolderOpen] = useState(false);
+    
+    // University Folders
     const [uniFolderOpen, setUniFolderOpen] = useState(true);
     const [uniStudentsFolderOpen, setUniStudentsFolderOpen] = useState(false);
     const [uniTeachersFolderOpen, setUniTeachersFolderOpen] = useState(false);
 
     const [profileMenuOpen, setProfileMenuOpen] = useState(false);
     const [collapsed, setCollapsed] = useState(false);
-    const [showLeaderboardTrigger, setShowLeaderboardTrigger] = useState(false); // Helper to trigger modal from here if needed
     
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024;
 
@@ -91,27 +93,17 @@ export const Sidebar = ({
         setCollapsed(!collapsed);
     };
 
+    // Usage Logic
     const maxImages = userPlan === 'free' ? 4 : (userPlan === 'plus' ? 12 : 9999);
+    const usagePercent = Math.min((dailyImageCount / maxImages) * 100, 100);
+    const isNearLimit = usagePercent >= 75;
+    
     const shouldShowReferral = userPlan === 'free';
 
     // Gamification Logic
     const currentRank = getRank(userSettings.level);
-    const { progress, current: currentXP, total: totalNeeded } = getLevelProgressStats(userSettings.xp, userSettings.level);
+    const progress = getLevelProgress(userSettings.xp, userSettings.level);
     const RankIcon = currentRank.icon;
-
-    // Helper to open leaderboard (via event dispatch or passed prop if we lift state up further)
-    // Since LeaderboardModal is in App.tsx and controlled by showLeaderboard, 
-    // we need to dispatch a custom event or use a global state. 
-    // For now, let's assume App.tsx listens to a window event or we pass a prop.
-    // Ideally, we'd add `setShowLeaderboard` to props, but to minimize prop drilling changes in XML:
-    const triggerLeaderboard = () => {
-        // Dispatching a custom event that App.tsx can listen to if implemented, 
-        // OR ideally we should have passed `setShowLeaderboard` in props. 
-        // Assuming we can't change App.tsx signature easily in this prompt constraint without huge diff:
-        // We will fallback to a DOM trigger for the floating button which is hidden on mobile but logic exists in App.
-        const btn = document.querySelector('button[class*="fixed top-20 left-4"]') as HTMLButtonElement;
-        if(btn) btn.click();
-    };
 
     return (
       <>
@@ -195,6 +187,7 @@ export const Sidebar = ({
                         className={`p-3 rounded-xl transition-all ${homeView === 'university_select' || homeView === 'uni_student_subjects' || homeView === 'uni_teacher_subjects' ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-500/30' : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10 hover:text-emerald-500'}`}
                         title={t('university', userSettings.language)}
                      >
+                        <School size={20} className="hidden" /> {/* Spacer/Icon placeholder */}
                         <Briefcase size={20} />
                      </button>
                  </div>
@@ -209,9 +202,10 @@ export const Sidebar = ({
                             </div>
                             <ChevronDown size={14} className={`transition-transform duration-300 ${schoolFolderOpen ? 'rotate-180' : ''}`}/>
                         </button>
+                        
                         {schoolFolderOpen && (
                             <div className="pl-4 space-y-1 animate-in slide-in-from-top-2">
-                                {/* Folders content... */}
+                                {/* Students Subfolder */}
                                 <div className="border-l border-indigo-500/10 pl-2">
                                     <div className="flex items-center justify-between w-full px-2 py-2 group">
                                         <button 
@@ -228,18 +222,38 @@ export const Sidebar = ({
                                     {studentsFolderOpen && (
                                         <div className="space-y-0.5 mt-1 animate-in slide-in-from-top-1">
                                             {SUBJECTS.filter(s => s.id !== SubjectId.GENERAL && s.categories.includes('school')).map(s => (
-                                                <button 
-                                                    key={`student-${s.id}`}
-                                                    onClick={() => { handleSubjectChange(s, 'student'); if(isMobile) setSidebarOpen(false); }}
-                                                    className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm transition-colors ${activeSubject?.id === s.id && userRole === 'student' ? 'bg-indigo-50 dark:bg-white/10 text-indigo-600 dark:text-indigo-300 font-bold' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5'}`}
-                                                >
-                                                    <div className={`w-2 h-2 rounded-full ${s.color} shrink-0`}></div>
-                                                    <span className="truncate">{t(`subject_${s.id}`, userSettings.language)}</span>
-                                                </button>
+                                                <div key={`student-${s.id}`}>
+                                                    <button 
+                                                        onClick={() => { handleSubjectChange(s, 'student'); if(isMobile) setSidebarOpen(false); }}
+                                                        className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm transition-colors ${activeSubject?.id === s.id && userRole === 'student' ? 'bg-indigo-50 dark:bg-white/10 text-indigo-600 dark:text-indigo-300 font-bold' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5'}`}
+                                                    >
+                                                        <div className={`w-2 h-2 rounded-full ${s.color} shrink-0`}></div>
+                                                        <span className="truncate">{t(`subject_${s.id}`, userSettings.language)}</span>
+                                                    </button>
+                                                    {activeSubject?.id === s.id && userRole === 'student' && (
+                                                        <div className="ml-4 pl-2 border-l border-indigo-500/20 space-y-0.5 my-1">
+                                                            {sessions.filter(sess => sess.subjectId === s.id && sess.role === 'student').map(sess => (
+                                                                <div key={sess.id} className="flex items-center group/session">
+                                                                    <button 
+                                                                        onClick={() => { setActiveSessionId(sess.id); if(isMobile) setSidebarOpen(false); setShowSubjectDashboard(false); }}
+                                                                        className={`flex-1 text-left px-2 py-1.5 rounded-lg text-xs font-medium truncate transition-colors ${activeSessionId === sess.id ? 'text-indigo-600 dark:text-white bg-indigo-50 dark:bg-white/5' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
+                                                                    >
+                                                                        {sess.title}
+                                                                    </button>
+                                                                    <button onClick={() => deleteSession(sess.id)} className="p-1 text-gray-400 hover:text-red-500 opacity-0 group-hover/session:opacity-100 transition-opacity"><Trash2 size={10}/></button>
+                                                                </div>
+                                                            ))}
+                                                            <button onClick={() => { createNewSession(s.id, 'student', activeMode); if(isMobile) setSidebarOpen(false); setShowSubjectDashboard(false); }} className="w-full text-left px-2 py-1.5 text-[10px] font-bold text-indigo-500 hover:text-indigo-600 flex items-center gap-1">
+                                                                <Plus size={10}/> {t('new_chat', userSettings.language)}
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </div>
                                             ))}
                                         </div>
                                     )}
                                 </div>
+                                {/* Teachers Subfolder */}
                                 <div className="border-l border-indigo-500/10 pl-2 mt-2">
                                     <div className="flex items-center justify-between w-full px-2 py-2 group">
                                         <button 
@@ -256,14 +270,33 @@ export const Sidebar = ({
                                     {teachersFolderOpen && (
                                         <div className="space-y-0.5 mt-1 animate-in slide-in-from-top-1">
                                             {SUBJECTS.filter(s => s.id !== SubjectId.GENERAL && s.categories.includes('school')).map(s => (
-                                                <button 
-                                                    key={`teacher-${s.id}`}
-                                                    onClick={() => { handleSubjectChange(s, 'teacher'); if(isMobile) setSidebarOpen(false); }}
-                                                    className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm transition-colors ${activeSubject?.id === s.id && userRole === 'teacher' ? 'bg-indigo-50 dark:bg-white/10 text-indigo-600 dark:text-indigo-300 font-bold' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5'}`}
-                                                >
-                                                    <div className={`w-1.5 h-1.5 rounded-full ${s.color}`}></div>
-                                                    <span className="truncate">{t(`subject_${s.id}`, userSettings.language)}</span>
-                                                </button>
+                                                <div key={`teacher-${s.id}`}>
+                                                    <button 
+                                                        onClick={() => { handleSubjectChange(s, 'teacher'); if(isMobile) setSidebarOpen(false); }}
+                                                        className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm transition-colors ${activeSubject?.id === s.id && userRole === 'teacher' ? 'bg-indigo-50 dark:bg-white/10 text-indigo-600 dark:text-indigo-300 font-bold' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5'}`}
+                                                    >
+                                                        <div className={`w-1.5 h-1.5 rounded-full ${s.color}`}></div>
+                                                        <span className="truncate">{t(`subject_${s.id}`, userSettings.language)}</span>
+                                                    </button>
+                                                    {activeSubject?.id === s.id && userRole === 'teacher' && (
+                                                        <div className="ml-4 pl-2 border-l border-indigo-500/20 space-y-0.5 my-1">
+                                                            {sessions.filter(sess => sess.subjectId === s.id && sess.role === 'teacher').map(sess => (
+                                                                <div key={sess.id} className="flex items-center group/session">
+                                                                    <button 
+                                                                        onClick={() => { setActiveSessionId(sess.id); if(isMobile) setSidebarOpen(false); setShowSubjectDashboard(false); }}
+                                                                        className={`flex-1 text-left px-2 py-1.5 rounded-lg text-xs font-medium truncate transition-colors ${activeSessionId === sess.id ? 'text-indigo-600 dark:text-white bg-indigo-50 dark:bg-white/5' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
+                                                                    >
+                                                                        {sess.title}
+                                                                    </button>
+                                                                    <button onClick={() => deleteSession(sess.id)} className="p-1 text-gray-400 hover:text-red-500 opacity-0 group-hover/session:opacity-100 transition-opacity"><Trash2 size={10}/></button>
+                                                                </div>
+                                                            ))}
+                                                            <button onClick={() => { createNewSession(s.id, 'teacher', activeMode); if(isMobile) setSidebarOpen(false); setShowSubjectDashboard(false); }} className="w-full text-left px-2 py-1.5 text-[10px] font-bold text-indigo-500 hover:text-indigo-600 flex items-center gap-1">
+                                                                <Plus size={10}/> {t('new_chat', userSettings.language)}
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </div>
                                             ))}
                                         </div>
                                     )}
@@ -284,22 +317,99 @@ export const Sidebar = ({
                         {uniFolderOpen && (
                             <div className="pl-4 space-y-1 animate-in slide-in-from-top-2">
                                 <div className="border-l border-emerald-500/10 pl-2">
-                                    <button 
-                                        onClick={() => { setActiveSubject(null); setHomeView('uni_student_subjects'); setUserRole('uni_student'); if(isMobile) setSidebarOpen(false); }}
-                                        className="w-full flex items-center gap-2 px-2 py-2 text-gray-500 dark:text-zinc-400 hover:text-emerald-500 transition-colors"
-                                    >
-                                        <GraduationCap size={14} />
-                                        <span className="text-[11px] font-bold uppercase tracking-wider">{t('uni_students', userSettings.language)}</span>
-                                    </button>
+                                    <div className="flex items-center justify-between w-full px-2 py-2 group">
+                                        <button 
+                                            onClick={() => { setActiveSubject(null); setHomeView('uni_student_subjects'); setUserRole('uni_student'); if(isMobile) setSidebarOpen(false); }}
+                                            className="flex items-center gap-2 text-gray-500 dark:text-zinc-400 hover:text-emerald-500 transition-colors flex-1 text-left"
+                                        >
+                                            <GraduationCap size={14} />
+                                            <span className="text-[11px] font-bold uppercase tracking-wider">{t('uni_students', userSettings.language)}</span>
+                                        </button>
+                                        <button onClick={() => setUniStudentsFolderOpen(!uniStudentsFolderOpen)} className="p-1 text-gray-400 hover:text-emerald-500 rounded-full hover:bg-gray-100 dark:hover:bg-white/5 transition-colors">
+                                            <ChevronDown size={12} className={`transition-transform duration-300 ${uniStudentsFolderOpen ? 'rotate-180' : ''}`}/>
+                                        </button>
+                                    </div>
+                                    {uniStudentsFolderOpen && (
+                                        <div className="space-y-0.5 mt-1 animate-in slide-in-from-top-1">
+                                            {SUBJECTS.filter(s => s.id !== SubjectId.GENERAL && s.categories.includes('university')).map(s => (
+                                                <div key={`uni-student-${s.id}`}>
+                                                    <button 
+                                                        onClick={() => { handleSubjectChange(s, 'uni_student'); if(isMobile) setSidebarOpen(false); }}
+                                                        className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm transition-colors ${activeSubject?.id === s.id && userRole === 'uni_student' ? 'bg-emerald-50 dark:bg-white/10 text-emerald-600 dark:text-emerald-300 font-bold' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5'}`}
+                                                    >
+                                                        <div className={`w-2 h-2 rounded-full ${s.color} shrink-0`}></div>
+                                                        <span className="truncate">{t(`subject_${s.id}`, userSettings.language)}</span>
+                                                    </button>
+                                                    {activeSubject?.id === s.id && userRole === 'uni_student' && (
+                                                        <div className="ml-4 pl-2 border-l border-emerald-500/20 space-y-0.5 my-1">
+                                                            {sessions.filter(sess => sess.subjectId === s.id && sess.role === 'uni_student').map(sess => (
+                                                                <div key={sess.id} className="flex items-center group/session">
+                                                                    <button 
+                                                                        onClick={() => { setActiveSessionId(sess.id); if(isMobile) setSidebarOpen(false); setShowSubjectDashboard(false); }}
+                                                                        className={`flex-1 text-left px-2 py-1.5 rounded-lg text-xs font-medium truncate transition-colors ${activeSessionId === sess.id ? 'text-emerald-600 dark:text-white bg-emerald-50 dark:bg-white/5' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
+                                                                    >
+                                                                        {sess.title}
+                                                                    </button>
+                                                                    <button onClick={() => deleteSession(sess.id)} className="p-1 text-gray-400 hover:text-red-500 opacity-0 group-hover/session:opacity-100 transition-opacity"><Trash2 size={10}/></button>
+                                                                </div>
+                                                            ))}
+                                                            <button onClick={() => { createNewSession(s.id, 'uni_student', activeMode); if(isMobile) setSidebarOpen(false); setShowSubjectDashboard(false); }} className="w-full text-left px-2 py-1.5 text-[10px] font-bold text-emerald-500 hover:text-emerald-600 flex items-center gap-1">
+                                                                <Plus size={10}/> {t('new_chat', userSettings.language)}
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
-                                <div className="border-l border-emerald-500/10 pl-2 mt-1">
-                                    <button 
-                                        onClick={() => { setActiveSubject(null); setHomeView('uni_teacher_subjects'); setUserRole('uni_teacher'); if(isMobile) setSidebarOpen(false); }}
-                                        className="w-full flex items-center gap-2 px-2 py-2 text-gray-500 dark:text-zinc-400 hover:text-emerald-500 transition-colors"
-                                    >
-                                        <Briefcase size={14} />
-                                        <span className="text-[11px] font-bold uppercase tracking-wider">{t('uni_professors', userSettings.language)}</span>
-                                    </button>
+                                {/* Uni Teachers Subfolder */}
+                                <div className="border-l border-emerald-500/10 pl-2 mt-2">
+                                    <div className="flex items-center justify-between w-full px-2 py-2 group">
+                                        <button 
+                                            onClick={() => { setActiveSubject(null); setHomeView('uni_teacher_subjects'); setUserRole('uni_teacher'); if(isMobile) setSidebarOpen(false); }}
+                                            className="flex items-center gap-2 text-gray-500 dark:text-zinc-400 hover:text-emerald-500 transition-colors flex-1 text-left"
+                                        >
+                                            <Briefcase size={14} />
+                                            <span className="text-[11px] font-bold uppercase tracking-wider">{t('uni_professors', userSettings.language)}</span>
+                                        </button>
+                                        <button onClick={() => setUniTeachersFolderOpen(!uniTeachersFolderOpen)} className="p-1 text-gray-400 hover:text-emerald-500 rounded-full hover:bg-gray-100 dark:hover:bg-white/5 transition-colors">
+                                            <ChevronDown size={12} className={`transition-transform duration-300 ${uniTeachersFolderOpen ? 'rotate-180' : ''}`}/>
+                                        </button>
+                                    </div>
+                                    {uniTeachersFolderOpen && (
+                                        <div className="space-y-0.5 mt-1 animate-in slide-in-from-top-1">
+                                            {SUBJECTS.filter(s => s.id !== SubjectId.GENERAL && s.categories.includes('university')).map(s => (
+                                                <div key={`uni-teacher-${s.id}`}>
+                                                    <button 
+                                                        onClick={() => { handleSubjectChange(s, 'uni_teacher'); if(isMobile) setSidebarOpen(false); }}
+                                                        className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm transition-colors ${activeSubject?.id === s.id && userRole === 'uni_teacher' ? 'bg-emerald-50 dark:bg-white/10 text-emerald-600 dark:text-emerald-300 font-bold' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5'}`}
+                                                    >
+                                                        <div className={`w-1.5 h-1.5 rounded-full ${s.color}`}></div>
+                                                        <span className="truncate">{t(`subject_${s.id}`, userSettings.language)}</span>
+                                                    </button>
+                                                    {activeSubject?.id === s.id && userRole === 'uni_teacher' && (
+                                                        <div className="ml-4 pl-2 border-l border-emerald-500/20 space-y-0.5 my-1">
+                                                            {sessions.filter(sess => sess.subjectId === s.id && sess.role === 'uni_teacher').map(sess => (
+                                                                <div key={sess.id} className="flex items-center group/session">
+                                                                    <button 
+                                                                        onClick={() => { setActiveSessionId(sess.id); if(isMobile) setSidebarOpen(false); setShowSubjectDashboard(false); }}
+                                                                        className={`flex-1 text-left px-2 py-1.5 rounded-lg text-xs font-medium truncate transition-colors ${activeSessionId === sess.id ? 'text-emerald-600 dark:text-white bg-emerald-50 dark:bg-white/5' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
+                                                                    >
+                                                                        {sess.title}
+                                                                    </button>
+                                                                    <button onClick={() => deleteSession(sess.id)} className="p-1 text-gray-400 hover:text-red-500 opacity-0 group-hover/session:opacity-100 transition-opacity"><Trash2 size={10}/></button>
+                                                                </div>
+                                                            ))}
+                                                            <button onClick={() => { createNewSession(s.id, 'uni_teacher', activeMode); if(isMobile) setSidebarOpen(false); setShowSubjectDashboard(false); }} className="w-full text-left px-2 py-1.5 text-[10px] font-bold text-emerald-500 hover:text-emerald-600 flex items-center gap-1">
+                                                                <Plus size={10}/> {t('new_chat', userSettings.language)}
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         )}
@@ -309,25 +419,6 @@ export const Sidebar = ({
           </div>
 
           <div className={`p-4 border-t border-white/10 bg-white/20 dark:bg-black/20 space-y-3 backdrop-blur-md flex flex-col justify-center`}>
-             
-             {/* Leaderboard Button - Prominently Displayed */}
-             {session && (
-                 <button 
-                    onClick={triggerLeaderboard}
-                    className={`w-full flex items-center ${collapsed ? 'justify-center' : 'gap-3 px-4'} py-3 rounded-2xl transition-all relative overflow-hidden group bg-gradient-to-r from-amber-500/10 to-orange-500/10 hover:from-amber-500/20 hover:to-orange-500/20 border border-amber-500/20 text-amber-500 mb-1`}
-                 >
-                     <div className="p-1 bg-amber-500/20 rounded-lg shrink-0">
-                        <Trophy size={18} fill="currentColor" className="text-amber-500" />
-                     </div>
-                     {!collapsed && (
-                         <div className="flex flex-col text-left">
-                             <span className="font-bold text-xs uppercase tracking-wider">Ранглиста</span>
-                             <span className="text-[10px] opacity-80">Виж топ учениците</span>
-                         </div>
-                     )}
-                 </button>
-             )}
-
              {/* Christmas Toggle */}
              <button 
                 onClick={() => setUserSettings((prev: UserSettings) => ({...prev, christmasMode: !prev.christmasMode}))}
@@ -351,9 +442,41 @@ export const Sidebar = ({
                          </div>
                      )}
                  </div>
+
+                 {!collapsed && (
+                    <div className={`relative z-10 w-10 h-5 rounded-full transition-colors flex items-center px-0.5 ${userSettings.christmasMode ? 'bg-black/20' : 'bg-gray-200 dark:bg-white/10'}`}>
+                        <div className={`w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-300 ${userSettings.christmasMode ? 'translate-x-5' : 'translate-x-0'}`} />
+                    </div>
+                 )}
              </button>
 
-             {/* Profile Menu with XP Stats */}
+             {/* Referral Button - Highly Visible - Only show if shouldShowReferral is true */}
+             {session && !collapsed && shouldShowReferral && (
+               <button onClick={() => setShowReferralModal(true)} className={`w-full mb-1 group relative overflow-hidden rounded-2xl p-4 text-left shadow-lg transition-all hover:scale-[1.02] active:scale-[0.98] bg-gradient-to-r from-amber-500 to-orange-500 text-white`}>
+                  <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20" />
+                  <div className="relative z-10 flex items-center justify-between">
+                     <div>
+                        <h3 className="font-bold text-sm tracking-tight flex items-center gap-2">
+                            {t('referrals', userSettings.language) || "Покани Приятел"}
+                        </h3>
+                        <p className="text-[10px] font-medium opacity-90">Вземи безплатен Pro</p>
+                     </div>
+                     <div className="w-8 h-8 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center border border-white/20">
+                        <Gift size={16} />
+                     </div>
+                  </div>
+               </button>
+             )}
+             
+             {/* Small Referral Icon - Collapsed */}
+             {session && collapsed && shouldShowReferral && (
+                 <button onClick={() => setShowReferralModal(true)} className="w-full flex justify-center mb-1 group relative">
+                     <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white shadow-lg">
+                         <Gift size={18}/>
+                     </div>
+                 </button>
+             )}
+
              {session ? (
                  <div className="relative mb-1">
                     {profileMenuOpen && (
@@ -366,6 +489,12 @@ export const Sidebar = ({
                                  <button onClick={() => {setShowUnlockModal(true); setProfileMenuOpen(false)}} className="w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-white/5 text-sm font-medium flex items-center gap-3 transition-colors">
                                     <CreditCard size={16} className="text-gray-500"/> {t('manage_plan', userSettings.language)}
                                  </button>
+                                 <button onClick={() => {setActiveSubject(null); setHomeView('terms'); setProfileMenuOpen(false); if(isMobile) setSidebarOpen(false);}} className="w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-white/5 text-sm font-medium flex items-center gap-3 transition-colors">
+                                    <FileText size={16} className="text-gray-500"/> {t('terms', userSettings.language)}
+                                 </button>
+                                  <button onClick={() => {addToast('Моля, използвайте формата за контакт.', 'info'); setProfileMenuOpen(false)}} className="w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-white/5 text-sm font-medium flex items-center gap-3 transition-colors">
+                                    <HelpCircle size={16} className="text-gray-500"/> {t('help', userSettings.language)}
+                                 </button>
                                  <div className="h-px bg-gray-100 dark:bg-white/5 mx-2" />
                                  <button onClick={handleLogout} className="w-full text-left px-4 py-3 hover:bg-red-50 dark:hover:bg-red-900/10 text-red-500 text-sm font-medium flex items-center gap-3 transition-colors">
                                     <LogOut size={16}/> {t('logout', userSettings.language)}
@@ -374,8 +503,8 @@ export const Sidebar = ({
                         </>
                     )}
                     
-                    <button onClick={() => setProfileMenuOpen(!profileMenuOpen)} className={`flex items-center gap-3 w-full p-2 rounded-2xl hover:bg-white/50 dark:hover:bg-white/5 transition-all duration-200 border border-transparent hover:border-indigo-500/10 group ${collapsed ? 'justify-center' : ''}`}>
-                         <div className="relative shrink-0">
+                    <button onClick={() => setProfileMenuOpen(!profileMenuOpen)} className={`flex items-center gap-3 w-full p-2.5 rounded-2xl hover:bg-white/50 dark:hover:bg-white/5 transition-all duration-200 border border-transparent hover:border-indigo-500/10 group ${collapsed ? 'justify-center' : ''}`}>
+                         <div className="relative">
                              <img 
                                src={userMeta.avatar || "https://cdn-icons-png.freepik.com/256/3276/3276580.png"} 
                                alt="Profile" 
@@ -389,33 +518,34 @@ export const Sidebar = ({
                              </div>
                          </div>
                          {!collapsed && (
-                             <div className="flex-1 min-w-0 text-left">
-                                <div className="flex items-center justify-between">
+                             <>
+                                <div className="flex-1 min-w-0 text-left">
                                     <div className="font-bold text-sm truncate text-zinc-900 dark:text-zinc-100">
-                                        {userMeta.firstName ? `${userMeta.firstName}` : (userSettings.userName || 'Потребител')}
+                                        {userMeta.firstName && userMeta.lastName 
+                                            ? `${userMeta.firstName} ${userMeta.lastName}`
+                                            : (userSettings.userName || 'Потребител')}
                                     </div>
-                                    <span className="text-[10px] font-black uppercase text-amber-500">Lvl {userSettings.level}</span>
+                                    <div className="flex items-center gap-2 mt-0.5">
+                                        <div className="text-[10px] font-black uppercase tracking-wider text-zinc-500">
+                                            Lvl {userSettings.level} • {currentRank.name}
+                                        </div>
+                                    </div>
+                                    {/* XP Progress Bar */}
+                                    <div className="w-full h-1 bg-black/10 dark:bg-white/10 rounded-full mt-1.5 overflow-hidden">
+                                        <div 
+                                            className={`h-full bg-gradient-to-r ${currentRank.gradient}`} 
+                                            style={{ width: `${progress}%` }}
+                                        />
+                                    </div>
                                 </div>
-                                
-                                {/* XP Progress Bar */}
-                                <div className="w-full h-1.5 bg-black/10 dark:bg-white/10 rounded-full mt-1.5 overflow-hidden">
-                                    <div 
-                                        className={`h-full bg-gradient-to-r ${currentRank.gradient} transition-all duration-500`} 
-                                        style={{ width: `${progress}%` }}
-                                    />
-                                </div>
-                                
-                                {/* XP Text Stats */}
-                                <div className="flex justify-between items-center mt-1">
-                                    <span className="text-[9px] font-medium text-zinc-500 dark:text-zinc-400">{currentXP} / {totalNeeded} XP</span>
-                                    <span className="text-[9px] font-bold text-zinc-400 dark:text-zinc-500 uppercase">{currentRank.name}</span>
-                                </div>
-                             </div>
+                                <ChevronUp size={16} className={`text-gray-400 transition-transform duration-300 ${profileMenuOpen ? 'rotate-180' : ''}`} />
+                             </>
                          )}
                     </button>
                  </div>
              ) : (
                  <button onClick={() => setShowAuthModal(true)} className={`w-full mb-1 flex items-center gap-3 p-3 rounded-2xl bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-600 text-white font-bold transition-all shadow-xl shadow-indigo-500/25 active:scale-95 group relative overflow-hidden ${collapsed ? 'justify-center' : ''}`}>
+                     <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 pointer-events-none" />
                      <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center border border-white/20 shrink-0 relative z-10"><LogIn size={20}/></div>
                      {!collapsed && (
                          <div className="text-left relative z-10">

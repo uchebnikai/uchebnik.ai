@@ -2,70 +2,35 @@
 import { Medal, Trophy, Crown, Gem, Star } from 'lucide-react';
 import { RankInfo, RankTier } from '../types';
 
-// Constants - Increased base rewards for satisfaction
-export const XP_PER_MESSAGE = 25; 
-export const XP_PER_IMAGE = 50;
-export const XP_PER_VOICE = 40;
+// Constants
+export const XP_PER_MESSAGE = 15;
+export const XP_PER_IMAGE = 30;
+export const XP_PER_VOICE = 50;
 
-/**
- * XP Curve Logic:
- * We use a quadratic formula to ensure early levels are fast, but it gets harder later.
- * Formula: XP = 50 * (Level - 1)^1.6
- * 
- * Level 1: 0 XP
- * Level 2: 50 XP (2 messages)
- * Level 3: 150 XP (Total)
- * Level 4: 300 XP (Total)
- * ...
- */
-
-export const getLevelBaseXP = (level: number): number => {
-    if (level <= 1) return 0;
-    // Non-linear curve: starts easy, gets steeper
-    return Math.floor(50 * Math.pow(level - 1, 1.6));
+// Calculate Level based on XP
+// Formula: XP = (Level^2) * 100
+export const calculateLevel = (xp: number): number => {
+    return Math.floor(Math.sqrt(xp / 100)) + 1;
 };
 
-export const calculateLevel = (xp: number): number => {
-    // Approximate inverse of the formula to find level from XP
-    // This is a rough estimation, we iterate to find exact for precision at boundaries
-    let level = 1;
-    while (getLevelBaseXP(level + 1) <= xp) {
-        level++;
-    }
-    return level;
+// Calculate XP required for next level
+export const xpForNextLevel = (currentLevel: number): number => {
+    return Math.pow(currentLevel + 1, 2) * 100;
 };
 
 // Calculate progress percentage to next level
-// Returns: { progress: number (0-100), currentXPInLevel, xpNeededForLevel }
-export const getLevelProgressStats = (xp: number, level: number) => {
-    const currentLevelBase = getLevelBaseXP(level);
-    const nextLevelBase = getLevelBaseXP(level + 1);
-    
-    const xpNeededForNext = nextLevelBase - currentLevelBase;
-    const xpGainedInCurrent = xp - currentLevelBase;
-    
-    // Safety check to prevent division by zero or negative
-    if (xpNeededForNext <= 0) return { progress: 100, current: 0, total: 0 };
-
-    const progress = Math.min(100, Math.max(0, (xpGainedInCurrent / xpNeededForNext) * 100));
-    
-    return {
-        progress,
-        current: xpGainedInCurrent,
-        total: xpNeededForNext,
-        nextLevelThreshold: nextLevelBase
-    };
-};
-
-// Deprecated wrapper for backward compatibility if needed, but prefer getLevelProgressStats
 export const getLevelProgress = (xp: number, level: number): number => {
-    return getLevelProgressStats(xp, level).progress;
+    const currentLevelBaseXP = Math.pow(level, 2) * 100;
+    const nextLevelXP = Math.pow(level + 1, 2) * 100;
+    const xpInLevel = xp - currentLevelBaseXP;
+    const xpNeeded = nextLevelXP - currentLevelBaseXP;
+    return Math.min(100, Math.max(0, (xpInLevel / xpNeeded) * 100));
 };
 
 export const RANKS: RankInfo[] = [
     {
         id: 'bronze',
-        name: 'Начинаещ', // Beginner
+        name: 'Bronze',
         minLevel: 1,
         color: '#cd7f32',
         gradient: 'from-orange-700 to-orange-400',
@@ -73,32 +38,32 @@ export const RANKS: RankInfo[] = [
     },
     {
         id: 'silver',
-        name: 'Напреднал', // Advanced
-        minLevel: 5,
+        name: 'Silver',
+        minLevel: 10,
         color: '#c0c0c0',
-        gradient: 'from-slate-400 to-slate-100',
+        gradient: 'from-gray-400 to-gray-100',
         icon: Medal
     },
     {
         id: 'gold',
-        name: 'Експерт', // Expert
-        minLevel: 15,
+        name: 'Gold',
+        minLevel: 30,
         color: '#ffd700',
         gradient: 'from-yellow-600 to-yellow-300',
         icon: Trophy
     },
     {
         id: 'platinum',
-        name: 'Майстор', // Master
-        minLevel: 30,
+        name: 'Platinum',
+        minLevel: 50,
         color: '#e5e4e2',
         gradient: 'from-cyan-700 to-cyan-300',
         icon: Crown
     },
     {
         id: 'diamond',
-        name: 'Легенда', // Legend
-        minLevel: 50,
+        name: 'Diamond',
+        minLevel: 100,
         color: '#b9f2ff',
         gradient: 'from-blue-600 via-indigo-400 to-cyan-300',
         icon: Gem
@@ -106,6 +71,7 @@ export const RANKS: RankInfo[] = [
 ];
 
 export const getRank = (level: number): RankInfo => {
+    // Reverse find to get the highest matching rank
     const rank = [...RANKS].reverse().find(r => level >= r.minLevel);
     return rank || RANKS[0];
 };
