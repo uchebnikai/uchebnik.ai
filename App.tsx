@@ -863,6 +863,17 @@ export const App = () => {
           if (isPasswordChange) { updates.password = editProfile.password; }
           const { error } = await supabase.auth.updateUser(updates, { emailRedirectTo: window.location.origin });
           if (error) throw error;
+
+          // Sync with profiles table immediately for Admin/Leaderboard visibility
+          if (session?.user?.id) {
+              const { error: profileError } = await supabase.from('profiles').update({
+                  avatar_url: editProfile.avatar,
+                  updated_at: new Date().toISOString()
+              }).eq('id', session.user.id);
+              
+              if (profileError) console.error("Failed to sync avatar to profiles", profileError);
+          }
+
           setUserMeta({ firstName: editProfile.firstName, lastName: editProfile.lastName, avatar: editProfile.avatar });
           setUserSettings(prev => ({...prev, userName: updates.data.full_name}));
           let successMessage = 'Профилът е обновен успешно!';
