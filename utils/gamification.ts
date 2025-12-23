@@ -137,10 +137,10 @@ export const getQuestIcon = (type: string) => {
 };
 
 const QUEST_TEMPLATES = [
-    { desc: 'Изпрати {n} съобщения', type: 'message', min: 3, max: 8, xpPerUnit: 20 }, // Increased slightly
-    { desc: 'Качи {n} снимки', type: 'image', min: 1, max: 3, xpPerUnit: 40 }, // Increased to match 3*40=120 or close to 75
-    { desc: 'Реши {n} задачи по Математика', type: SubjectId.MATH, min: 2, max: 5, xpPerUnit: 30 }, // 5 * 30 = 150 XP
-    { desc: 'Упражнявай език ({n} съобщ.)', type: SubjectId.ENGLISH, min: 3, max: 6, xpPerUnit: 20 }, // 4 * 20 = 80 XP
+    { desc: 'Изпрати {n} съобщения', type: 'message', min: 3, max: 8, xpPerUnit: 20 },
+    { desc: 'Качи {n} снимки', type: 'image', min: 1, max: 3, xpPerUnit: 40 },
+    { desc: 'Реши {n} задачи по Математика', type: SubjectId.MATH, min: 2, max: 5, xpPerUnit: 30 },
+    { desc: 'Упражнявай Английски ({n} съобщ.)', type: SubjectId.ENGLISH, min: 3, max: 6, xpPerUnit: 20 },
     { desc: 'Научи нещо по История ({n} въпр.)', type: SubjectId.HISTORY, min: 2, max: 4, xpPerUnit: 25 },
     { desc: 'Програмирай с AI ({n} заявки)', type: SubjectId.IT, min: 2, max: 4, xpPerUnit: 30 },
     { desc: 'Гласов разговор ({n} реплики)', type: 'voice', min: 3, max: 10, xpPerUnit: 15 },

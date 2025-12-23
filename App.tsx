@@ -226,10 +226,20 @@ export const App = () => {
       }
   }, [userSettings.fontFamily]);
 
-  // Check Daily Quests Date
+  // Check Daily Quests Date & Language Migration
   useEffect(() => {
       const today = new Date().toDateString();
-      if (!userSettings.dailyQuests || userSettings.dailyQuests.date !== today) {
+      const currentQuests = userSettings.dailyQuests?.quests || [];
+      
+      // Detect English quests (from old cache) to force update to Bulgarian
+      const hasEnglish = currentQuests.some(q => 
+          q.description.includes('Solve') || 
+          q.description.includes('Practice') || 
+          q.description.includes('Upload') ||
+          q.description.includes('Send')
+      );
+
+      if (!userSettings.dailyQuests || userSettings.dailyQuests.date !== today || hasEnglish) {
           setUserSettings(prev => ({
               ...prev,
               dailyQuests: {
