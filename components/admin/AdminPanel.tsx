@@ -9,11 +9,12 @@ import {
   TrendingUp, TrendingDown, Wallet, CreditCard,
   Settings, HelpCircle, ExternalLink, Cloud, Sliders, Cpu, Server, Info, AlertCircle, PenTool, History, Wrench,
   BarChart2, UserCheck, FileText, Smartphone, Wifi, Globe, HardDrive, Lock, Brain, LayoutDashboard,
-  RotateCcw, CalendarDays, Coins, Radio, Send, PieChart as PieChartIcon, MessageSquare, Flag, CheckSquare, Square
+  RotateCcw, CalendarDays, Coins, Radio, Send, PieChart as PieChartIcon, MessageSquare, Flag, CheckSquare, Square,
+  ToggleLeft, ToggleRight, List, FileWarning
 } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { supabase } from '../../supabaseClient';
-import { UserPlan, UserRole, Session } from '../../types';
+import { UserPlan, UserRole, Session, AdminLog, FeatureFlag, ErrorLog } from '../../types';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, LineChart, Line, AreaChart, Area, PieChart, Pie, Legend } from 'recharts';
 import { SUBJECTS } from '../../constants';
 import { t } from '../../utils/translations';
@@ -115,7 +116,7 @@ export const AdminPanel = ({
   addToast
 }: AdminPanelProps) => {
     
-    const [activeTab, setActiveTab] = useState<'dashboard' | 'status' | 'finance' | 'users' | 'keys' | 'broadcast' | 'reports'>('dashboard');
+    const [activeTab, setActiveTab] = useState<'dashboard' | 'status' | 'finance' | 'users' | 'keys' | 'broadcast' | 'reports' | 'system' | 'logs'>('dashboard');
     const [dbKeys, setDbKeys] = useState<GeneratedKey[]>([]);
     const [dbUsers, setDbUsers] = useState<AdminUser[]>([]);
     const [dbReports, setDbReports] = useState<Report[]>([]);
@@ -142,11 +143,26 @@ export const AdminPanel = ({
     const [subjectStats, setSubjectStats] = useState<SubjectStat[]>([]);
     const [heatmapRange, setHeatmapRange] = useState<number>(7);
     const [isHeatmapLoading, setIsHeatmapLoading] = useState(false);
+    const [heatmapData, setHeatmapData] = useState<{day: number, hour: number, count: number}[]>([]);
+
+    // Cohorts State
+    const [cohortData, setCohortData] = useState<any[]>([]);
 
     // Broadcast State
     const [broadcastMsg, setBroadcastMsg] = useState('');
     const [broadcastType, setBroadcastType] = useState<'toast' | 'modal'>('toast');
     const [isBroadcasting, setIsBroadcasting] = useState(false);
+
+    // Logs & Config
+    const [adminLogs, setAdminLogs] = useState<AdminLog[]>([]);
+    const [errorLogs, setErrorLogs] = useState<ErrorLog[]>([]);
+    const [featureFlags, setFeatureFlags] = useState<FeatureFlag[]>([]);
+    const [globalXPMultiplier, setGlobalXPMultiplier] = useState(1);
+    const [loadingSystem, setLoadingSystem] = useState(false);
+
+    // Refund State
+    const [refundId, setRefundId] = useState('');
+    const [isRefunding, setIsRefunding] = useState(false);
 
     // User Details & Chat
     const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
@@ -174,6 +190,8 @@ export const AdminPanel = ({
     useEffect(() => {
         if (showAdminPanel && activeTab === 'dashboard') {
             fetchSubjectStats();
+            fetchHeatmapData();
+            fetchCohortData();
         }
     }, [heatmapRange, showAdminPanel, activeTab]);
 
@@ -186,6 +204,20 @@ export const AdminPanel = ({
             setActiveSessionId(null);
         }
     }, [selectedUser]);
+
+    useEffect(() => {
+        if (activeTab === 'system') fetchSystemConfig();
+        if (activeTab === 'logs') fetchLogs();
+    }, [activeTab]);
+
+    const logAdminAction = async (action: string, details: any) => {
+        const { data: { user } } = await supabase.auth.getUser();
+        await supabase.from('admin_logs').insert({
+            admin_id: user?.id,
+            action,
+            details
+        });
+    };
 
     const fetchUserChatHistory = async (userId: string) => {
         setLoadingSessions(true);
@@ -210,6 +242,79 @@ export const AdminPanel = ({
             console.error("Chat History Error", e);
         } finally {
             setLoadingSessions(false);
+        }
+    };
+
+    const fetchHeatmapData = async () => {
+        // Fetch sessions from user_data table to build a real heatmap
+        // Since we can't easily query JSON inside text column 'data' for timestamps without heavy compute,
+        // we'll fetch the updated_at of sessions as a proxy or fetch lightweight data
+        const { data: userData } = await supabase.from('user_data').select('data').limit(200);
+        
+        if (userData) {
+            const heatmap: Record<string, number> = {};
+            
+            // Initialize Grid
+            for (let d = 0; d < 7; d++) {
+                for (let h = 0; h < 24; h++) {
+                    heatmap[`${d}-${h}`] = 0;
+                }
+            }
+
+            // Populate Grid
+            userData.forEach((row: any) => {
+                const sessions: Session[] = row.data || [];
+                sessions.forEach(s => {
+                    s.messages.forEach(m => {
+                        const date = new Date(m.timestamp);
+                        const day = date.getDay(); // 0-6
+                        const hour = date.getHours(); // 0-23
+                        heatmap[`${day}-${hour}`] = (heatmap[`${day}-${hour}`] || 0) + 1;
+                    });
+                });
+            });
+
+            const result = Object.entries(heatmap).map(([key, count]) => {
+                const [day, hour] = key.split('-').map(Number);
+                return { day, hour, count };
+            });
+            setHeatmapData(result);
+        }
+    };
+
+    const fetchCohortData = async () => {
+        // Fetch all users with created_at and last_sign_in (updated_at)
+        const { data: users } = await supabase.from('profiles').select('created_at, updated_at');
+        
+        if (users) {
+            const cohorts: Record<string, { total: number, active: number }> = {};
+            
+            users.forEach((u: any) => {
+                const created = new Date(u.created_at || u.updated_at); // Fallback
+                const monthKey = `${created.getFullYear()}-${created.getMonth() + 1}`;
+                
+                if (!cohorts[monthKey]) cohorts[monthKey] = { total: 0, active: 0 };
+                cohorts[monthKey].total++;
+
+                // Consider active if updated within last 30 days
+                const lastActive = new Date(u.updated_at);
+                const diffTime = Math.abs(new Date().getTime() - lastActive.getTime());
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+                
+                if (diffDays <= 30) {
+                    cohorts[monthKey].active++;
+                }
+            });
+
+            const result = Object.entries(cohorts)
+                .map(([date, stats]) => ({
+                    date,
+                    total: stats.total,
+                    retention: stats.total > 0 ? (stats.active / stats.total) * 100 : 0
+                }))
+                .sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+            
+            setCohortData(result);
         }
     };
 
@@ -244,6 +349,60 @@ export const AdminPanel = ({
         }
     };
 
+    const fetchSystemConfig = async () => {
+        setLoadingSystem(true);
+        try {
+            const { data: flags } = await supabase.from('feature_flags').select('*');
+            if (flags) setFeatureFlags(flags);
+
+            const { data: config } = await supabase.from('app_config').select('*').eq('key', 'global_xp_multiplier').single();
+            if (config) setGlobalXPMultiplier(config.value || 1);
+        } catch (e) { console.error(e); }
+        setLoadingSystem(false);
+    };
+
+    const toggleFeatureFlag = async (key: string, currentValue: boolean) => {
+        await supabase.from('feature_flags').upsert({ key, enabled: !currentValue });
+        setFeatureFlags(prev => prev.map(f => f.key === key ? { ...f, enabled: !currentValue } : f));
+        logAdminAction('toggle_flag', { key, value: !currentValue });
+        addToast(`Flag ${key} updated`, 'success');
+    };
+
+    const updateGlobalXP = async (val: number) => {
+        setGlobalXPMultiplier(val);
+        await supabase.from('app_config').upsert({ key: 'global_xp_multiplier', value: val });
+        logAdminAction('update_global_xp', { value: val });
+        addToast(`Global XP Multiplier set to ${val}x`, 'success');
+    };
+
+    const fetchLogs = async () => {
+        const { data: admin } = await supabase.from('admin_logs').select('*').order('created_at', { ascending: false }).limit(50);
+        if (admin) setAdminLogs(admin);
+
+        const { data: errors } = await supabase.from('error_logs').select('*').order('created_at', { ascending: false }).limit(50);
+        if (errors) setErrorLogs(errors);
+    };
+
+    const handleRefund = async () => {
+        if (!refundId) return;
+        setIsRefunding(true);
+        try {
+            const { data, error } = await supabase.functions.invoke('process-refund', {
+                body: { payment_intent_id: refundId } // or charge_id
+            });
+            
+            if (error || !data.success) throw new Error(error?.message || data?.error || "Refund failed");
+            
+            addToast("Refund processed successfully", "success");
+            setRefundId('');
+            logAdminAction('process_refund', { id: refundId });
+        } catch (e: any) {
+            addToast(`Refund Error: ${e.message}`, "error");
+        } finally {
+            setIsRefunding(false);
+        }
+    };
+
     const handleSendBroadcast = async () => {
         if (!broadcastMsg.trim()) return;
         setIsBroadcasting(true);
@@ -257,6 +416,7 @@ export const AdminPanel = ({
             if (error) throw error;
             
             setBroadcastMsg('');
+            logAdminAction('broadcast', { message: broadcastMsg, type: broadcastType });
             addToast('Съобщението е изпратено успешно!', 'success');
         } catch (e: any) {
             console.error("Broadcast failed:", e);
@@ -453,6 +613,7 @@ export const AdminPanel = ({
         generateKey(selectedPlan);
         setTimeout(fetchData, 1000);
         addToast(`Генериран ключ за ${selectedPlan.toUpperCase()}`, 'success');
+        logAdminAction('generate_key', { plan: selectedPlan });
     };
 
     const handleDeleteKey = async (id: string) => {
@@ -460,6 +621,7 @@ export const AdminPanel = ({
             await supabase.from('promo_codes').delete().eq('id', id);
             setDbKeys(prev => prev.filter(k => k.id !== id));
             addToast('Ключът е изтрит', 'success');
+            logAdminAction('delete_key', { id });
         } catch (e) { addToast('Грешка при изтриване', 'error'); }
     };
 
@@ -514,6 +676,7 @@ export const AdminPanel = ({
             
             setDbUsers(prev => prev.map(u => u.id === selectedUser.id ? updatedUser : u));
             setSelectedUser(updatedUser); 
+            logAdminAction('update_user', { userId: selectedUser.id, updates: editForm });
             addToast('Промените са запазени успешно!', 'success');
         } catch (e) { addToast('Грешка при запазване.', 'error'); }
     };
@@ -526,6 +689,7 @@ export const AdminPanel = ({
             if (error) throw error;
             
             setDbReports(prev => prev.map(r => r.id === reportId ? { ...r, status: newStatus } : r));
+            logAdminAction('resolve_report', { id: reportId, status: newStatus });
             addToast(`Статусът е променен на ${newStatus}`, 'success');
         } catch (e) {
             console.error("Resolve error", e);
@@ -562,7 +726,7 @@ export const AdminPanel = ({
         return diff < 5 * 60 * 1000;
     };
 
-    // Financials
+    // Financials & Unit Economics
     const revenue = financials ? financials.mrr / 100 : 0; 
     const billedCloudCost = financials?.googleCloudCost || 0;
     const liveInputCost = (totalInputTokens / 1000000) * PRICE_INPUT_1M;
@@ -573,6 +737,12 @@ export const AdminPanel = ({
     const estimatedFees = revenue * 0.03;
     const netProfit = revenue - displayCost - estimatedFees;
     const profitMargin = revenue > 0 ? (netProfit / revenue) * 100 : 0;
+    
+    // Unit Economics
+    const activeUserCount = dbUsers.length > 0 ? dbUsers.length : 1; 
+    const payingUserCount = dbUsers.filter(u => u.plan !== 'free').length || 1;
+    const ARPU = revenue / payingUserCount; // Average Revenue Per Paying User
+    const ACPU = displayCost / activeUserCount; // Average Cost Per Active User
 
     // Status Bar Component
     const UptimeBar = ({ status }: { status: string }) => (
@@ -692,7 +862,7 @@ export const AdminPanel = ({
                         </div>
                         <div>
                             <h2 className="font-bold text-white text-sm">Контролен Панел</h2>
-                            <div className="text-[10px] text-zinc-500 font-mono">v3.6 • Live</div>
+                            <div className="text-[10px] text-zinc-500 font-mono">v4.0 • Enterprise</div>
                         </div>
                     </div>
                     <button onClick={() => setShowAdminPanel(false)} className="md:hidden p-2 text-zinc-400 hover:text-white transition-colors">
@@ -702,25 +872,31 @@ export const AdminPanel = ({
                 
                 <nav className="flex md:flex-col gap-2 overflow-x-auto md:overflow-visible pb-2 md:pb-0 no-scrollbar">
                     <button onClick={() => {setActiveTab('dashboard'); setSelectedUser(null);}} className={`flex-shrink-0 md:w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTab === 'dashboard' ? 'bg-white/10 text-white border border-white/5 shadow-lg shadow-black/20' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}>
-                        <LayoutDashboard size={18}/> <span className="hidden md:inline">Общ преглед</span><span className="md:hidden">Табло</span>
+                        <LayoutDashboard size={18}/> <span className="hidden md:inline">Analytics</span><span className="md:hidden">Табло</span>
+                    </button>
+                    <button onClick={() => {setActiveTab('system'); setSelectedUser(null);}} className={`flex-shrink-0 md:w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTab === 'system' ? 'bg-white/10 text-white border border-white/5 shadow-lg shadow-black/20' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}>
+                        <Sliders size={18}/> <span className="hidden md:inline">System Config</span><span className="md:hidden">Система</span>
                     </button>
                     <button onClick={() => {setActiveTab('reports'); setSelectedUser(null);}} className={`flex-shrink-0 md:w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTab === 'reports' ? 'bg-white/10 text-white border border-white/5 shadow-lg shadow-black/20' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}>
-                        <Flag size={18}/> <span className="hidden md:inline">Доклади</span><span className="md:hidden">Доклади</span>
+                        <Flag size={18}/> <span className="hidden md:inline">Reports</span><span className="md:hidden">Доклади</span>
                     </button>
                     <button onClick={() => {setActiveTab('status'); setSelectedUser(null);}} className={`flex-shrink-0 md:w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTab === 'status' ? 'bg-white/10 text-white border border-white/5 shadow-lg shadow-black/20' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}>
-                        <Activity size={18}/> <span className="hidden md:inline">Системен статус</span><span className="md:hidden">Статус</span>
+                        <Activity size={18}/> <span className="hidden md:inline">Health</span><span className="md:hidden">Статус</span>
                     </button>
                     <button onClick={() => {setActiveTab('broadcast'); setSelectedUser(null);}} className={`flex-shrink-0 md:w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTab === 'broadcast' ? 'bg-white/10 text-white border border-white/5 shadow-lg shadow-black/20' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}>
-                        <Radio size={18}/> <span className="hidden md:inline">Съобщение</span><span className="md:hidden">Инфо</span>
+                        <Radio size={18}/> <span className="hidden md:inline">Broadcast</span><span className="md:hidden">Инфо</span>
                     </button>
                     <button onClick={() => {setActiveTab('finance'); setSelectedUser(null);}} className={`flex-shrink-0 md:w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTab === 'finance' ? 'bg-white/10 text-white border border-white/5 shadow-lg shadow-black/20' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}>
-                        <DollarSign size={18}/> <span className="hidden md:inline">Финанси</span><span className="md:hidden">Пари</span>
+                        <DollarSign size={18}/> <span className="hidden md:inline">Finance</span><span className="md:hidden">Пари</span>
                     </button>
                     <button onClick={() => {setActiveTab('users'); setSelectedUser(null);}} className={`flex-shrink-0 md:w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTab === 'users' ? 'bg-white/10 text-white border border-white/5 shadow-lg shadow-black/20' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}>
-                        <Users size={18}/> <span className="hidden md:inline">Потребители</span><span className="md:hidden">Хора</span>
+                        <Users size={18}/> <span className="hidden md:inline">Users</span><span className="md:hidden">Хора</span>
                     </button>
                     <button onClick={() => {setActiveTab('keys'); setSelectedUser(null);}} className={`flex-shrink-0 md:w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTab === 'keys' ? 'bg-white/10 text-white border border-white/5 shadow-lg shadow-black/20' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}>
-                        <Key size={18}/> <span className="hidden md:inline">Ключове за достъп</span><span className="md:hidden">Кодове</span>
+                        <Key size={18}/> <span className="hidden md:inline">Access Keys</span><span className="md:hidden">Кодове</span>
+                    </button>
+                    <button onClick={() => {setActiveTab('logs'); setSelectedUser(null);}} className={`flex-shrink-0 md:w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTab === 'logs' ? 'bg-white/10 text-white border border-white/5 shadow-lg shadow-black/20' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}>
+                        <List size={18}/> <span className="hidden md:inline">Audit Logs</span><span className="md:hidden">Логове</span>
                     </button>
                 </nav>
 
@@ -744,20 +920,13 @@ export const AdminPanel = ({
                          <div>
                              <h3 className="text-lg md:text-xl font-bold text-white capitalize flex items-center gap-2">
                                  {activeTab === 'status' ? <div className={`w-2 h-2 rounded-full animate-pulse ${systemHealth.some(s => s.status === 'down') ? 'bg-red-500' : 'bg-green-500'}`}/> : null}
-                                 {selectedUser ? 'Профил' : 
-                                  activeTab === 'dashboard' ? 'Общ преглед' :
-                                  activeTab === 'reports' ? 'Доклади за грешки' :
-                                  activeTab === 'status' ? 'Системен статус' :
-                                  activeTab === 'broadcast' ? 'Съобщение' :
-                                  activeTab === 'finance' ? 'Финанси' :
-                                  activeTab === 'users' ? 'Потребители' :
-                                  'Ключове за достъп'}
+                                 {selectedUser ? 'Профил' : activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
                              </h3>
                              <p className="text-xs text-zinc-500 mt-0.5 hidden md:block">{selectedUser ? `Детайли за ${selectedUser.name}` : 'Конзола за управление'}</p>
                          </div>
                      </div>
                      <div className="flex items-center gap-3">
-                         <button onClick={() => {fetchData(); if(activeTab==='dashboard') fetchSubjectStats();}} className="p-2 hover:bg-white/10 rounded-lg text-zinc-400 hover:text-white transition-colors" title="Обнови данни">
+                         <button onClick={() => {fetchData(); if(activeTab==='dashboard') {fetchSubjectStats(); fetchHeatmapData(); fetchCohortData();}}} className="p-2 hover:bg-white/10 rounded-lg text-zinc-400 hover:text-white transition-colors" title="Обнови данни">
                              <RefreshCw size={18} className={loadingData ? 'animate-spin' : ''}/>
                          </button>
                      </div>
@@ -769,7 +938,7 @@ export const AdminPanel = ({
                      {/* USER DETAIL MODAL REPLACEMENT */}
                      {selectedUser && editForm ? (
                          <div className="max-w-5xl mx-auto space-y-6 animate-in slide-in-from-right fade-in duration-300">
-                             
+                             {/* ... Profile Header (Unchanged) ... */}
                              {/* Profile Header */}
                              <div className="bg-white/5 border border-white/10 rounded-3xl p-6 md:p-8 relative overflow-hidden group">
                                  <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 to-transparent pointer-events-none"/>
@@ -968,7 +1137,7 @@ export const AdminPanel = ({
                          </div>
                      ) : (
                          <>
-                             {/* DASHBOARD TAB */}
+                             {/* DASHBOARD TAB (Enhanced) */}
                              {activeTab === 'dashboard' && (
                                  <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
                                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 md:gap-6">
@@ -981,85 +1150,250 @@ export const AdminPanel = ({
                                          </div>
                                          <div className="p-6 bg-emerald-500/10 border border-emerald-500/20 rounded-3xl relative overflow-hidden group">
                                              <div className="relative z-10">
-                                                 <div className="flex items-center gap-3 mb-2 text-emerald-400"><DollarSign size={24}/><span className="font-bold text-sm uppercase tracking-wider">Приходи</span></div>
+                                                 <div className="flex items-center gap-3 mb-2 text-emerald-400"><DollarSign size={24}/><span className="font-bold text-sm uppercase tracking-wider">Приходи (MRR)</span></div>
                                                  <div className="text-4xl font-black text-white">€{revenue.toFixed(2)}</div>
                                              </div>
                                              <DollarSign size={100} className="absolute -bottom-4 -right-4 text-emerald-500/10 group-hover:scale-110 transition-transform"/>
                                          </div>
+                                         <div className="p-6 bg-indigo-500/10 border border-indigo-500/20 rounded-3xl relative overflow-hidden group">
+                                             <div className="relative z-10">
+                                                 <div className="flex items-center gap-3 mb-2 text-indigo-400"><Coins size={24}/><span className="font-bold text-sm uppercase tracking-wider">ARPU</span></div>
+                                                 <div className="text-4xl font-black text-white">€{ARPU.toFixed(2)}</div>
+                                             </div>
+                                             <Coins size={100} className="absolute -bottom-4 -right-4 text-indigo-500/10 group-hover:scale-110 transition-transform"/>
+                                         </div>
                                          <div className="p-6 bg-orange-500/10 border border-orange-500/20 rounded-3xl relative overflow-hidden group">
                                              <div className="relative z-10">
-                                                 <div className="flex items-center gap-3 mb-2 text-orange-400"><Activity size={24}/><span className="font-bold text-sm uppercase tracking-wider">Активни</span></div>
-                                                 <div className="text-4xl font-black text-white">{dbUsers.filter(u => u.lastVisit === new Date().toLocaleDateString()).length}</div>
+                                                 <div className="flex items-center gap-3 mb-2 text-orange-400"><Activity size={24}/><span className="font-bold text-sm uppercase tracking-wider">ACPU</span></div>
+                                                 <div className="text-4xl font-black text-white">€{ACPU.toFixed(2)}</div>
                                              </div>
                                              <Activity size={100} className="absolute -bottom-4 -right-4 text-orange-500/10 group-hover:scale-110 transition-transform"/>
                                          </div>
-                                         <div className="p-6 bg-purple-500/10 border border-purple-500/20 rounded-3xl relative overflow-hidden group">
-                                             <div className="relative z-10">
-                                                 <div className="flex items-center gap-3 mb-2 text-purple-400"><Brain size={24}/><span className="font-bold text-sm uppercase tracking-wider">Токени</span></div>
-                                                 <div className="text-4xl font-black text-white">{(totalInputTokens + totalOutputTokens).toLocaleString()}</div>
-                                             </div>
-                                             <Brain size={100} className="absolute -bottom-4 -right-4 text-purple-500/10 group-hover:scale-110 transition-transform"/>
-                                         </div>
                                      </div>
 
-                                     {/* Subject Popularity Heatmap */}
+                                     {/* Peak Usage Heatmap */}
                                      <div className="bg-white/5 border border-white/5 rounded-3xl p-6 md:p-8 relative overflow-hidden">
-                                         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-                                             <h3 className="text-xl font-bold text-white flex items-center gap-2"><PieChartIcon size={20} className="text-indigo-500"/> Популярност на предметите</h3>
-                                             <div className="flex bg-black/30 p-1 rounded-xl border border-white/5 overflow-x-auto max-w-full">
-                                                 {[1, 7, 30, 36500].map(d => (
-                                                     <button key={d} onClick={() => setHeatmapRange(d)} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${heatmapRange === d ? 'bg-indigo-600 text-white' : 'text-zinc-500 hover:text-white'}`}>
-                                                         {d === 1 ? 'Днес' : d === 36500 ? 'Общо' : `${d} Дни`}
-                                                     </button>
-                                                 ))}
-                                             </div>
+                                         <div className="flex justify-between items-center mb-6">
+                                             <h3 className="text-xl font-bold text-white flex items-center gap-2"><TrendingUp size={20} className="text-red-500"/> Пиково Натоварване (Heatmap)</h3>
                                          </div>
                                          
-                                         {subjectStats.length === 0 ? (
-                                             <div className="flex flex-col items-center justify-center py-12 text-zinc-500">
-                                                 {isHeatmapLoading ? <RefreshCw className="animate-spin mb-2"/> : <PieChartIcon size={32} className="mb-2 opacity-50"/>}
-                                                 <p>{isHeatmapLoading ? "Зареждане на данни..." : "Няма данни за този период."}</p>
-                                             </div>
+                                         {heatmapData.length === 0 ? (
+                                             <div className="text-center py-12 text-zinc-500">Зареждане на данни...</div>
                                          ) : (
-                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-                                                 <div className="h-64">
-                                                     <ResponsiveContainer width="100%" height="100%">
-                                                         <PieChart>
-                                                             <Pie 
-                                                                 data={subjectStats} 
-                                                                 dataKey="count" 
-                                                                 nameKey="name" 
-                                                                 cx="50%" 
-                                                                 cy="50%" 
-                                                                 outerRadius={80} 
-                                                                 innerRadius={50} 
-                                                                 stroke="none"
-                                                             >
-                                                                 {subjectStats.map((entry, index) => (
-                                                                     <Cell key={`cell-${index}`} fill={getHexColor(entry.color)} />
-                                                                 ))}
-                                                             </Pie>
-                                                             <Tooltip contentStyle={{backgroundColor: '#111', borderColor: '#333', borderRadius: '8px'}} itemStyle={{color: '#fff'}} formatter={(val: number) => [`${val} сесии`, 'Използване']}/>
-                                                         </PieChart>
-                                                     </ResponsiveContainer>
-                                                 </div>
-                                                 <div className="grid grid-cols-1 gap-2 max-h-64 overflow-y-auto custom-scrollbar">
-                                                     {subjectStats.map((stat, i) => (
-                                                         <div key={i} className="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/5 hover:bg-white/10 transition-colors">
-                                                             <div className="flex items-center gap-3">
-                                                                 <div className="w-3 h-3 rounded-full" style={{backgroundColor: getHexColor(stat.color)}}></div>
-                                                                 <span className="text-sm font-bold text-zinc-200">{stat.name}</span>
-                                                             </div>
-                                                             <div className="text-right">
-                                                                 <div className="text-sm font-mono font-bold text-white">{stat.percentage.toFixed(1)}%</div>
-                                                                 <div className="text-xs text-zinc-500">{stat.count} сесии</div>
-                                                             </div>
-                                                         </div>
+                                             <div className="overflow-x-auto">
+                                                 <div className="grid grid-cols-[auto_repeat(24,1fr)] gap-1 min-w-[800px]">
+                                                     <div className="col-span-1"></div>
+                                                     {Array.from({length: 24}).map((_, h) => (
+                                                         <div key={h} className="text-[10px] text-zinc-500 text-center">{h}</div>
+                                                     ))}
+                                                     
+                                                     {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day, d) => (
+                                                         <React.Fragment key={d}>
+                                                             <div className="text-xs text-zinc-400 font-bold pr-2 self-center">{day}</div>
+                                                             {Array.from({length: 24}).map((_, h) => {
+                                                                 const count = heatmapData.find(x => x.day === d && x.hour === h)?.count || 0;
+                                                                 const intensity = Math.min(count * 20, 100); // Scale logic
+                                                                 return (
+                                                                     <div 
+                                                                         key={h} 
+                                                                         className="h-8 rounded-sm transition-all hover:ring-1 hover:ring-white/50"
+                                                                         style={{ backgroundColor: `rgba(99, 102, 241, ${intensity / 100})`, opacity: intensity > 0 ? 1 : 0.1 }}
+                                                                         title={`${count} сесии`}
+                                                                     />
+                                                                 );
+                                                             })}
+                                                         </React.Fragment>
                                                      ))}
                                                  </div>
                                              </div>
                                          )}
                                      </div>
+
+                                     {/* Retention Cohorts */}
+                                     <div className="bg-white/5 border border-white/5 rounded-3xl p-6 md:p-8">
+                                         <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2"><Users size={20} className="text-blue-500"/> Кохорти на Задържане</h3>
+                                         <div className="overflow-x-auto">
+                                             <table className="w-full text-left border-collapse">
+                                                 <thead>
+                                                     <tr className="text-zinc-500 text-xs uppercase border-b border-white/5">
+                                                         <th className="p-3">Месец</th>
+                                                         <th className="p-3 text-center">Нови Потр.</th>
+                                                         <th className="p-3 text-center">Активни (30d)</th>
+                                                         <th className="p-3 text-center">Задържане</th>
+                                                     </tr>
+                                                 </thead>
+                                                 <tbody>
+                                                     {cohortData.map((row, i) => (
+                                                         <tr key={i} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                                                             <td className="p-3 font-mono text-zinc-300">{row.date}</td>
+                                                             <td className="p-3 text-center text-white font-bold">{row.total}</td>
+                                                             <td className="p-3 text-center text-white">{row.active}</td>
+                                                             <td className="p-3">
+                                                                 <div className="flex items-center gap-2">
+                                                                     <div className="flex-1 h-2 bg-black/40 rounded-full overflow-hidden">
+                                                                         <div 
+                                                                             className={`h-full ${row.retention > 50 ? 'bg-green-500' : row.retention > 20 ? 'bg-amber-500' : 'bg-red-500'}`} 
+                                                                             style={{width: `${row.retention}%`}}
+                                                                         />
+                                                                     </div>
+                                                                     <span className="text-xs font-mono w-10 text-right">{row.retention.toFixed(1)}%</span>
+                                                                 </div>
+                                                             </td>
+                                                         </tr>
+                                                     ))}
+                                                 </tbody>
+                                             </table>
+                                         </div>
+                                     </div>
+                                 </div>
+                             )}
+
+                             {/* FINANCE TAB (Enhanced with Refunds) */}
+                             {activeTab === 'finance' && (
+                                 <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
+                                     {/* ... Existing Finance Cards ... */}
+                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                         <div className="p-8 bg-emerald-500/5 border border-emerald-500/20 rounded-[32px] relative overflow-hidden">
+                                             <div className="flex justify-between items-start mb-6">
+                                                 <div className="flex items-center gap-3 text-emerald-400"><div className="p-2 bg-emerald-500/20 rounded-xl"><DollarSign size={24}/></div><span className="font-bold uppercase tracking-wider text-xs">Месечен приход</span></div>
+                                                 <div className="px-3 py-1 bg-emerald-500/10 rounded-full text-emerald-300 text-xs font-bold">MRR</div>
+                                             </div>
+                                             <div className="text-5xl font-black text-white tracking-tight mb-2">€{revenue.toFixed(2)}</div>
+                                             <p className="text-sm text-zinc-500">Based on active Stripe subscriptions.</p>
+                                         </div>
+                                         <div className="p-8 bg-red-500/5 border border-red-500/20 rounded-[32px] relative overflow-hidden">
+                                             <div className="flex justify-between items-start mb-6">
+                                                 <div className="flex items-center gap-3 text-red-400"><div className="p-2 bg-red-500/20 rounded-xl"><Cloud size={24}/></div><span className="font-bold uppercase tracking-wider text-xs">Разход за AI</span></div>
+                                             </div>
+                                             <div className="text-5xl font-black text-white tracking-tight mb-2">${displayCost.toFixed(4)}</div>
+                                             <p className="text-sm text-zinc-500 flex items-center gap-2">Based on token usage.</p>
+                                         </div>
+                                     </div>
+
+                                     {/* Refund Processor */}
+                                     <div className="bg-white/5 border border-white/5 rounded-3xl p-8">
+                                         <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2"><RotateCcw size={20} className="text-orange-500"/> Обработка на Възстановявания (Refunds)</h3>
+                                         <div className="flex gap-4 items-end bg-black/30 p-6 rounded-2xl border border-white/5">
+                                             <div className="flex-1 space-y-2">
+                                                 <label className="text-xs font-bold text-zinc-500 uppercase ml-1">Payment Intent ID / Email</label>
+                                                 <input 
+                                                     value={refundId} 
+                                                     onChange={e => setRefundId(e.target.value)} 
+                                                     placeholder="pi_3M..." 
+                                                     className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-orange-500 transition-colors"
+                                                 />
+                                             </div>
+                                             <Button onClick={handleRefund} disabled={isRefunding || !refundId} className="bg-orange-600 hover:bg-orange-500 text-white px-8 py-3 rounded-xl shadow-lg shadow-orange-500/20 h-[46px]">
+                                                 {isRefunding ? 'Обработка...' : 'Възстанови сума'}
+                                             </Button>
+                                         </div>
+                                         <p className="text-xs text-zinc-500 mt-3 ml-2">⚠️ Това действие ще върне пълната сума на клиента чрез Stripe.</p>
+                                     </div>
+                                 </div>
+                             )}
+
+                             {/* SYSTEM CONFIG TAB */}
+                             {activeTab === 'system' && (
+                                 <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
+                                     <div className="bg-white/5 border border-white/5 rounded-3xl p-8">
+                                         <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2"><ToggleRight size={20} className="text-purple-500"/> Feature Flags</h3>
+                                         
+                                         {loadingSystem ? (
+                                             <div className="text-zinc-500">Loading config...</div>
+                                         ) : (
+                                             <div className="grid gap-4">
+                                                 {featureFlags.length === 0 && <div className="text-zinc-500 italic">No flags found in DB.</div>}
+                                                 {featureFlags.map(flag => (
+                                                     <div key={flag.key} className="flex items-center justify-between p-4 bg-black/30 rounded-xl border border-white/5">
+                                                         <div>
+                                                             <div className="font-bold text-white text-sm">{flag.key}</div>
+                                                             <div className="text-xs text-zinc-500">{flag.description}</div>
+                                                         </div>
+                                                         <button 
+                                                             onClick={() => toggleFeatureFlag(flag.key, flag.enabled)}
+                                                             className={`w-12 h-6 rounded-full transition-colors relative ${flag.enabled ? 'bg-green-500' : 'bg-zinc-700'}`}
+                                                         >
+                                                             <div className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform ${flag.enabled ? 'translate-x-6' : 'translate-x-0'}`}/>
+                                                         </button>
+                                                     </div>
+                                                 ))}
+                                             </div>
+                                         )}
+                                     </div>
+
+                                     <div className="bg-white/5 border border-white/5 rounded-3xl p-8">
+                                         <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2"><Zap size={20} className="text-amber-500"/> Global Config</h3>
+                                         
+                                         <div className="flex items-center justify-between p-4 bg-black/30 rounded-xl border border-white/5">
+                                             <div>
+                                                 <div className="font-bold text-white text-sm">Global XP Multiplier</div>
+                                                 <div className="text-xs text-zinc-500">Увеличава спечеления XP за всички потребители.</div>
+                                             </div>
+                                             <div className="flex items-center gap-3">
+                                                 <span className="text-amber-400 font-black font-mono text-lg">{globalXPMultiplier}x</span>
+                                                 <div className="flex gap-1">
+                                                     <button onClick={() => updateGlobalXP(1)} className={`px-3 py-1 rounded-lg text-xs font-bold ${globalXPMultiplier === 1 ? 'bg-white text-black' : 'bg-white/10 text-zinc-400'}`}>1x</button>
+                                                     <button onClick={() => updateGlobalXP(1.5)} className={`px-3 py-1 rounded-lg text-xs font-bold ${globalXPMultiplier === 1.5 ? 'bg-white text-black' : 'bg-white/10 text-zinc-400'}`}>1.5x</button>
+                                                     <button onClick={() => updateGlobalXP(2)} className={`px-3 py-1 rounded-lg text-xs font-bold ${globalXPMultiplier === 2 ? 'bg-amber-500 text-black' : 'bg-white/10 text-zinc-400'}`}>2x</button>
+                                                 </div>
+                                             </div>
+                                         </div>
+                                     </div>
+                                 </div>
+                             )}
+
+                             {/* LOGS TAB */}
+                             {activeTab === 'logs' && (
+                                 <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
+                                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                         {/* Admin Activity */}
+                                         <div className="bg-white/5 border border-white/5 rounded-3xl p-6 h-[600px] flex flex-col">
+                                             <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2"><Shield size={20} className="text-indigo-500"/> Admin Activity Log</h3>
+                                             <div className="flex-1 overflow-y-auto custom-scrollbar space-y-2 bg-black/30 p-2 rounded-xl border border-white/5">
+                                                 {adminLogs.length === 0 && <div className="text-zinc-500 text-center p-4">No logs found.</div>}
+                                                 {adminLogs.map(log => (
+                                                     <div key={log.id} className="p-3 bg-white/5 rounded-lg border border-white/5 text-xs">
+                                                         <div className="flex justify-between mb-1">
+                                                             <span className="font-bold text-indigo-400 uppercase">{log.action}</span>
+                                                             <span className="text-zinc-500 font-mono">{new Date(log.created_at).toLocaleString()}</span>
+                                                         </div>
+                                                         <div className="text-zinc-300 font-mono break-all">{JSON.stringify(log.details)}</div>
+                                                     </div>
+                                                 ))}
+                                             </div>
+                                         </div>
+
+                                         {/* Error Stream */}
+                                         <div className="bg-white/5 border border-white/5 rounded-3xl p-6 h-[600px] flex flex-col">
+                                             <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2"><FileWarning size={20} className="text-red-500"/> Error Log Stream</h3>
+                                             <div className="flex-1 overflow-y-auto custom-scrollbar space-y-2 bg-black/30 p-2 rounded-xl border border-white/5">
+                                                 {errorLogs.length === 0 && <div className="text-zinc-500 text-center p-4">No errors logged.</div>}
+                                                 {errorLogs.map(log => (
+                                                     <div key={log.id} className="p-3 bg-red-900/10 rounded-lg border border-red-500/20 text-xs">
+                                                         <div className="flex justify-between mb-1">
+                                                             <span className="font-bold text-red-400">Error</span>
+                                                             <span className="text-zinc-500 font-mono">{new Date(log.created_at).toLocaleString()}</span>
+                                                         </div>
+                                                         <div className="text-red-200 mb-2 font-bold">{log.error}</div>
+                                                         {log.context && <div className="text-zinc-400 font-mono bg-black/40 p-2 rounded">{JSON.stringify(log.context)}</div>}
+                                                     </div>
+                                                 ))}
+                                             </div>
+                                         </div>
+                                     </div>
+                                 </div>
+                             )}
+
+                             {/* ... Other Tabs (Keys, Broadcast, Reports, Status) ... */}
+                             {/* KEYS TAB */}
+                             {activeTab === 'keys' && (
+                                 <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
+                                     <div className="bg-white/5 border border-white/5 rounded-3xl p-8 flex flex-col md:flex-row items-center gap-8 shadow-xl relative overflow-hidden">
+                                         <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-purple-500/5 pointer-events-none"/><div className="flex-1 relative z-10"><h4 className="text-2xl font-black text-white mb-2">Генериране на ключ</h4><p className="text-zinc-400 text-sm max-w-md">Създаване на промоционални ключове.</p></div>
+                                         <div className="flex items-center gap-4 bg-black/30 p-2 rounded-2xl border border-white/5 backdrop-blur-md relative z-10"><button onClick={() => setSelectedPlan('plus')} className={`px-6 py-3 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${selectedPlan === 'plus' ? 'bg-indigo-600 text-white shadow-lg' : 'text-zinc-500 hover:text-white'}`}><Zap size={16}/> Plus</button><button onClick={() => setSelectedPlan('pro')} className={`px-6 py-3 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${selectedPlan === 'pro' ? 'bg-amber-600 text-white shadow-lg' : 'text-zinc-500 hover:text-white'}`}><Crown size={16}/> Pro</button></div>
+                                         <Button onClick={handleGenerate} icon={Plus} className="px-8 py-4 bg-white text-black hover:bg-zinc-200 shadow-xl rounded-2xl text-base relative z-10">Генерирай</Button>
+                                     </div>
+                                     <div className="bg-white/5 border border-white/5 rounded-3xl overflow-hidden shadow-lg"><div className="overflow-x-auto"><table className="w-full text-left"><thead><tr className="border-b border-white/5 bg-black/20"><th className="p-5 text-xs font-bold text-zinc-500 uppercase tracking-wider">Код</th><th className="p-5 text-xs font-bold text-zinc-500 uppercase tracking-wider">План</th><th className="p-5 text-xs font-bold text-zinc-500 uppercase tracking-wider">Създаден</th><th className="p-5 text-xs font-bold text-zinc-500 uppercase tracking-wider">Статус</th><th className="p-5 text-right text-xs font-bold text-zinc-500 uppercase tracking-wider">Действие</th></tr></thead><tbody className="divide-y divide-white/5">{dbKeys.map((k, i) => (<tr key={i} className="hover:bg-white/5 transition-colors group"><td className="p-5 font-mono text-sm text-indigo-400 font-medium">{k.code}</td><td className="p-5"><span className={`text-[10px] font-black px-2 py-1 rounded-md uppercase ${k.plan === 'pro' ? 'bg-amber-500/10 text-amber-400' : 'bg-indigo-500/10 text-indigo-400'}`}>{k.plan || 'pro'}</span></td><td className="p-5 text-xs text-zinc-500">{k.createdAt ? new Date(k.createdAt).toLocaleDateString() : '-'}</td><td className="p-5"><div className={`flex items-center gap-2 text-xs font-bold ${k.isUsed ? 'text-red-400' : 'text-emerald-400'}`}><div className={`w-2 h-2 rounded-full ${k.isUsed ? 'bg-red-500' : 'bg-emerald-500'}`}/>{k.isUsed ? 'Използван' : 'Активен'}</div></td><td className="p-5 text-right flex justify-end gap-2"><button onClick={() => {navigator.clipboard.writeText(k.code); addToast('Copied', 'success')}} className="p-2 hover:bg-white/10 rounded-lg text-zinc-500 hover:text-white transition-colors"><Copy size={16}/></button>{k.id && <button onClick={() => handleDeleteKey(k.id!)} className="p-2 hover:bg-red-500/20 rounded-lg text-zinc-500 hover:text-red-400 transition-colors"><Trash2 size={16}/></button>}</td></tr>))}</tbody></table></div></div>
                                  </div>
                              )}
 
@@ -1193,16 +1527,6 @@ export const AdminPanel = ({
                                                  </Button>
                                              </div>
                                          </div>
-
-                                         <div className="space-y-6">
-                                             <div className="bg-blue-500/10 border border-blue-500/20 rounded-3xl p-6">
-                                                 <h4 className="text-blue-400 font-bold mb-2 flex items-center gap-2"><Info size={18}/> Technical Note</h4>
-                                                 <p className="text-sm text-blue-200/80 leading-relaxed">
-                                                     This system uses <strong>Supabase Realtime</strong> connected to the <code>broadcasts</code> table. 
-                                                     Messages are delivered instantly to all active WebSocket connections. No polling is used.
-                                                 </p>
-                                             </div>
-                                         </div>
                                      </div>
                                  </div>
                              )}
@@ -1250,52 +1574,13 @@ export const AdminPanel = ({
                                              ))}
                                          </div>
                                      </div>
-
-                                     <div className="bg-white/5 border border-white/5 rounded-3xl p-8">
-                                         <h3 className="text-xl font-bold text-white mb-6">Дневник на статуса</h3>
-                                         <div className="space-y-6">
-                                             <div className="border-l-2 border-emerald-500 pl-4 py-1">
-                                                 <div className="text-sm text-zinc-500 font-mono mb-1">{new Date().toLocaleDateString()}</div>
-                                                 <h4 className="font-bold text-white">Мониторингът е активен</h4>
-                                                 <p className="text-sm text-zinc-500">Статусът се базира на реална телеметрия от приложението.</p>
-                                             </div>
-                                         </div>
-                                     </div>
                                  </div>
                              )}
 
-                             {/* FINANCE TAB */}
-                             {activeTab === 'finance' && (
-                                 <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
-                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                         <div className="p-8 bg-emerald-500/5 border border-emerald-500/20 rounded-[32px] relative overflow-hidden">
-                                             <div className="flex justify-between items-start mb-6">
-                                                 <div className="flex items-center gap-3 text-emerald-400"><div className="p-2 bg-emerald-500/20 rounded-xl"><DollarSign size={24}/></div><span className="font-bold uppercase tracking-wider text-xs">Месечен приход</span></div>
-                                                 <div className="px-3 py-1 bg-emerald-500/10 rounded-full text-emerald-300 text-xs font-bold">MRR</div>
-                                             </div>
-                                             <div className="text-5xl font-black text-white tracking-tight mb-2">€{revenue.toFixed(2)}</div>
-                                             <p className="text-sm text-zinc-500">Based on active Stripe subscriptions.</p>
-                                         </div>
-                                         <div className="p-8 bg-red-500/5 border border-red-500/20 rounded-[32px] relative overflow-hidden">
-                                             <div className="flex justify-between items-start mb-6">
-                                                 <div className="flex items-center gap-3 text-red-400"><div className="p-2 bg-red-500/20 rounded-xl"><Cloud size={24}/></div><span className="font-bold uppercase tracking-wider text-xs">Разход за AI</span></div>
-                                                 <div className="flex items-center gap-2">{showEstimate && (<button onClick={() => { setCalibrationValue(costCorrection.toString()); setIsCalibrating(true); }} className="text-[10px] text-red-300 hover:text-white underline decoration-dotted font-bold">Корекция?</button>)}</div>
-                                             </div>
-                                             <div className="text-5xl font-black text-white tracking-tight mb-2">${displayCost.toFixed(4)}</div>
-                                             <p className="text-sm text-zinc-500 flex items-center gap-2">{showEstimate ? 'Калкулирано от токени + корекция.' : 'Директно от Google Cloud Billing.'}</p>
-                                             {isCalibrating && (<div className="absolute inset-0 bg-black/90 backdrop-blur-md flex flex-col items-center justify-center p-4 z-20 animate-in fade-in"><div className="text-center w-full"><h4 className="text-white font-bold mb-2 text-sm">Calibrate Historical Cost</h4><div className="flex gap-2 justify-center"><input type="number" value={calibrationValue} onChange={e => setCalibrationValue(e.target.value)} className="w-24 bg-white/10 border border-white/20 rounded-lg px-2 py-1 text-white text-center outline-none focus:border-indigo-500" placeholder="0.34" autoFocus /><button onClick={handleSaveCalibration} className="bg-green-600 hover:bg-green-500 text-white rounded-lg p-2"><Check size={16}/></button><button onClick={() => setIsCalibrating(false)} className="bg-gray-600 hover:bg-gray-500 text-white rounded-lg p-2"><X size={16}/></button></div></div></div>)}
-                                         </div>
-                                     </div>
-                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                         <div className="md:col-span-1 p-6 rounded-3xl border border-white/10 bg-white/5 flex flex-col justify-center items-center text-center"><div className="text-sm font-bold text-zinc-400 uppercase tracking-wider mb-2">Нетна печалба</div><div className={`text-4xl font-black ${netProfit >= 0 ? 'text-indigo-400' : 'text-orange-500'}`}>€{netProfit.toFixed(2)}</div><div className="text-xs text-zinc-500 mt-1">Марж: {profitMargin.toFixed(1)}%</div></div>
-                                         <div className="md:col-span-2 p-6 rounded-3xl border border-white/10 bg-white/5"><h4 className="text-sm font-bold text-white uppercase tracking-wider mb-4 flex items-center gap-2"><FileText size={16}/> Разходен дневник</h4><div className="space-y-3 text-sm font-mono"><div className="flex justify-between items-center text-zinc-400"><span>Входящи ({totalInputTokens.toLocaleString()})</span><span>${liveInputCost.toFixed(4)}</span></div><div className="flex justify-between items-center text-zinc-400"><span>Изходящи ({totalOutputTokens.toLocaleString()})</span><span>${liveOutputCost.toFixed(4)}</span></div>{costCorrection > 0 && (<div className="flex justify-between items-center text-amber-500"><span>Historical Adjustment</span><span>${costCorrection.toFixed(4)}</span></div>)}<div className="flex justify-between items-center text-indigo-400 border-t border-white/5 pt-2"><span>Stripe Fees (Est. 3%)</span><span>€{estimatedFees.toFixed(2)}</span></div></div></div>
-                                     </div>
-                                 </div>
-                             )}
-
-                             {/* USERS TAB */}
+                             {/* USERS TAB (Existing code reused) */}
                              {activeTab === 'users' && (
                                  <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
+                                     {/* ... User Search/Filter ... */}
                                      <div className="flex flex-col md:flex-row gap-4">
                                          <div className="flex-1 relative group"><Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-white transition-colors" size={18}/><input type="text" placeholder="Търсене по име, имейл или ID..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="w-full bg-white/5 border border-white/5 rounded-2xl pl-12 pr-4 py-4 text-white placeholder-zinc-600 outline-none focus:border-indigo-500/50 focus:bg-black/40 transition-all shadow-lg"/></div>
                                          <div className="flex gap-2">
@@ -1331,18 +1616,6 @@ export const AdminPanel = ({
                                              </div>
                                          ))}
                                      </div>
-                                 </div>
-                             )}
-
-                             {/* KEYS TAB */}
-                             {activeTab === 'keys' && (
-                                 <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
-                                     <div className="bg-white/5 border border-white/5 rounded-3xl p-8 flex flex-col md:flex-row items-center gap-8 shadow-xl relative overflow-hidden">
-                                         <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-purple-500/5 pointer-events-none"/><div className="flex-1 relative z-10"><h4 className="text-2xl font-black text-white mb-2">Генериране на ключ</h4><p className="text-zinc-400 text-sm max-w-md">Създаване на промоционални ключове.</p></div>
-                                         <div className="flex items-center gap-4 bg-black/30 p-2 rounded-2xl border border-white/5 backdrop-blur-md relative z-10"><button onClick={() => setSelectedPlan('plus')} className={`px-6 py-3 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${selectedPlan === 'plus' ? 'bg-indigo-600 text-white shadow-lg' : 'text-zinc-500 hover:text-white'}`}><Zap size={16}/> Plus</button><button onClick={() => setSelectedPlan('pro')} className={`px-6 py-3 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${selectedPlan === 'pro' ? 'bg-amber-600 text-white shadow-lg' : 'text-zinc-500 hover:text-white'}`}><Crown size={16}/> Pro</button></div>
-                                         <Button onClick={handleGenerate} icon={Plus} className="px-8 py-4 bg-white text-black hover:bg-zinc-200 shadow-xl rounded-2xl text-base relative z-10">Генерирай</Button>
-                                     </div>
-                                     <div className="bg-white/5 border border-white/5 rounded-3xl overflow-hidden shadow-lg"><div className="overflow-x-auto"><table className="w-full text-left"><thead><tr className="border-b border-white/5 bg-black/20"><th className="p-5 text-xs font-bold text-zinc-500 uppercase tracking-wider">Код</th><th className="p-5 text-xs font-bold text-zinc-500 uppercase tracking-wider">План</th><th className="p-5 text-xs font-bold text-zinc-500 uppercase tracking-wider">Създаден</th><th className="p-5 text-xs font-bold text-zinc-500 uppercase tracking-wider">Статус</th><th className="p-5 text-right text-xs font-bold text-zinc-500 uppercase tracking-wider">Действие</th></tr></thead><tbody className="divide-y divide-white/5">{dbKeys.map((k, i) => (<tr key={i} className="hover:bg-white/5 transition-colors group"><td className="p-5 font-mono text-sm text-indigo-400 font-medium">{k.code}</td><td className="p-5"><span className={`text-[10px] font-black px-2 py-1 rounded-md uppercase ${k.plan === 'pro' ? 'bg-amber-500/10 text-amber-400' : 'bg-indigo-500/10 text-indigo-400'}`}>{k.plan || 'pro'}</span></td><td className="p-5 text-xs text-zinc-500">{k.createdAt ? new Date(k.createdAt).toLocaleDateString() : '-'}</td><td className="p-5"><div className={`flex items-center gap-2 text-xs font-bold ${k.isUsed ? 'text-red-400' : 'text-emerald-400'}`}><div className={`w-2 h-2 rounded-full ${k.isUsed ? 'bg-red-500' : 'bg-emerald-500'}`}/>{k.isUsed ? 'Използван' : 'Активен'}</div></td><td className="p-5 text-right flex justify-end gap-2"><button onClick={() => {navigator.clipboard.writeText(k.code); addToast('Copied', 'success')}} className="p-2 hover:bg-white/10 rounded-lg text-zinc-500 hover:text-white transition-colors"><Copy size={16}/></button>{k.id && <button onClick={() => handleDeleteKey(k.id!)} className="p-2 hover:bg-red-500/20 rounded-lg text-zinc-500 hover:text-red-400 transition-colors"><Trash2 size={16}/></button>}</td></tr>))}</tbody></table></div></div>
                                  </div>
                              )}
                          </>
