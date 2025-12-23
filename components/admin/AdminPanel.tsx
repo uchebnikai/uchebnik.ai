@@ -9,7 +9,7 @@ import {
   TrendingUp, TrendingDown, Wallet, CreditCard,
   Settings, HelpCircle, ExternalLink, Cloud, Sliders, Cpu, Server, Info, AlertCircle, PenTool, History, Wrench,
   BarChart2, UserCheck, FileText, Smartphone, Wifi, Globe, HardDrive, Lock, Brain, LayoutDashboard,
-  RotateCcw, CalendarDays, Coins, Radio, Send, PieChart as PieChartIcon, MessageSquare
+  RotateCcw, CalendarDays, Coins, Radio, Send, PieChart as PieChartIcon, MessageSquare, Flag, CheckSquare, Square
 } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { supabase } from '../../supabaseClient';
@@ -48,6 +48,18 @@ interface AdminUser {
   totalOutput: number;
   stripeId?: string;
   proExpiresAt?: string;
+}
+
+interface Report {
+    id: string;
+    user_id: string;
+    title: string;
+    description: string;
+    images: string[];
+    status: 'open' | 'resolved';
+    created_at: string;
+    user_email?: string; // joined
+    user_name?: string; // joined
 }
 
 interface FinancialData {
@@ -102,9 +114,10 @@ export const AdminPanel = ({
   addToast
 }: AdminPanelProps) => {
     
-    const [activeTab, setActiveTab] = useState<'dashboard' | 'status' | 'finance' | 'users' | 'keys' | 'broadcast'>('dashboard');
+    const [activeTab, setActiveTab] = useState<'dashboard' | 'status' | 'finance' | 'users' | 'keys' | 'broadcast' | 'reports'>('dashboard');
     const [dbKeys, setDbKeys] = useState<GeneratedKey[]>([]);
     const [dbUsers, setDbUsers] = useState<AdminUser[]>([]);
+    const [dbReports, setDbReports] = useState<Report[]>([]);
     const [financials, setFinancials] = useState<FinancialData | null>(null);
     const [loadingData, setLoadingData] = useState(false);
     const [selectedPlan, setSelectedPlan] = useState<'plus' | 'pro'>('pro');
@@ -259,7 +272,7 @@ export const AdminPanel = ({
         setLoadingData(true);
         try {
             // Fetch Users - This acts as a live DB check for the Admin Panel
-            if (['users', 'dashboard', 'finance'].includes(activeTab)) {
+            if (['users', 'dashboard', 'finance', 'reports'].includes(activeTab)) {
                 const dbStart = performance.now();
                 const { data: users, error } = await supabase
                     .from('profiles')
@@ -318,6 +331,30 @@ export const AdminPanel = ({
                     setDbUsers(mappedUsers);
                     setTotalInputTokens(tIn);
                     setTotalOutputTokens(tOut);
+                }
+            }
+
+            // Fetch Reports
+            if (activeTab === 'reports') {
+                const { data: reports, error: reportsError } = await supabase
+                    .from('reports')
+                    .select('*')
+                    .order('created_at', { ascending: false })
+                    .limit(50);
+
+                if (reportsError) {
+                    console.error("Reports error", reportsError);
+                } else if (reports) {
+                    // Enrich with user info from already fetched users or fetch individually
+                    const enrichedReports = reports.map(r => {
+                        const user = dbUsers.find(u => u.id === r.user_id);
+                        return {
+                            ...r,
+                            user_email: user?.email || 'Unknown',
+                            user_name: user?.name || 'Anonymous'
+                        };
+                    });
+                    setDbReports(enrichedReports);
                 }
             }
 
@@ -446,20 +483,75 @@ export const AdminPanel = ({
         try {
             const currentSettings = selectedUser.rawSettings || {};
             
-            const updatedSettings = { ...currentSettings, userName: editForm.name, plan: editForm.plan, stats: { ...(currentSettings.stats || {}), dailyImageCount: editForm.usage } };
-            const { error } = await supabase.from('profiles').update({ settings: updatedSettings, updated_at: new Date().toISOString() }).eq('id', selectedUser.id);
+            const updatedSettings = { 
+                ...currentSettings, 
+                userName: editForm.name, 
+                plan: editForm.plan, 
+                stats: { ...(currentSettings.stats || {}), dailyImageCount: editForm.usage } 
+            };
+
+            // Update main profile columns AND settings JSON
+            const { error } = await supabase.from('profiles').update({ 
+                settings: updatedSettings, 
+                xp: editForm.xp,
+                level: editForm.level,
+                updated_at: new Date().toISOString() 
+            }).eq('id', selectedUser.id);
+
             if (error) throw error;
-            const updatedUser: AdminUser = { ...selectedUser, name: editForm.name, plan: editForm.plan, usage: editForm.usage, rawSettings: updatedSettings };
+            
+            const updatedUser: AdminUser = { 
+                ...selectedUser, 
+                name: editForm.name, 
+                plan: editForm.plan, 
+                usage: editForm.usage,
+                xp: editForm.xp,
+                level: editForm.level,
+                rawSettings: updatedSettings 
+            };
+            
             setDbUsers(prev => prev.map(u => u.id === selectedUser.id ? updatedUser : u));
             setSelectedUser(updatedUser); 
             addToast('Промените са запазени успешно!', 'success');
         } catch (e) { addToast('Грешка при запазване.', 'error'); }
     };
 
+    const handleResolveReport = async (reportId: string, currentStatus: string) => {
+        try {
+            const newStatus = currentStatus === 'open' ? 'resolved' : 'open';
+            const { error } = await supabase.from('reports').update({ status: newStatus }).eq('id', reportId);
+            
+            if (error) throw error;
+            
+            setDbReports(prev => prev.map(r => r.id === reportId ? { ...r, status: newStatus } : r));
+            addToast(`Статусът е променен на ${newStatus}`, 'success');
+        } catch (e) {
+            console.error("Resolve error", e);
+            addToast("Грешка при обновяване на статус", "error");
+        }
+    };
+
+    const handleDeleteReport = async (reportId: string) => {
+        if (!confirm("Сигурни ли сте?")) return;
+        try {
+            const { error } = await supabase.from('reports').delete().eq('id', reportId);
+            if (error) throw error;
+            setDbReports(prev => prev.filter(r => r.id !== reportId));
+            addToast("Докладът е изтрит", "success");
+        } catch (e) {
+            addToast("Грешка при изтриване", "error");
+        }
+    };
+
     const handleUserClick = (user: AdminUser) => {
         setSelectedUser(user);
-        // Removed streak from edit form
-        setEditForm({ name: user.name, plan: user.plan, usage: user.usage });
+        setEditForm({ 
+            name: user.name, 
+            plan: user.plan, 
+            usage: user.usage,
+            xp: user.xp,
+            level: user.level
+        });
     };
 
     // Helper to check if user is online (active within last 5 minutes)
@@ -479,12 +571,6 @@ export const AdminPanel = ({
     const estimatedFees = revenue * 0.03;
     const netProfit = revenue - displayCost - estimatedFees;
     const profitMargin = revenue > 0 ? (netProfit / revenue) * 100 : 0;
-
-    const chartData = [
-        { name: 'Revenue', value: revenue, color: '#10b981' }, 
-        { name: 'AI Cost', value: displayCost, color: '#ef4444' },
-        { name: 'Fees', value: estimatedFees, color: '#6366f1' },
-    ];
 
     // Status Bar Component
     const UptimeBar = ({ status }: { status: string }) => (
@@ -604,7 +690,7 @@ export const AdminPanel = ({
                         </div>
                         <div>
                             <h2 className="font-bold text-white text-sm">Контролен Панел</h2>
-                            <div className="text-[10px] text-zinc-500 font-mono">v3.5 • Live</div>
+                            <div className="text-[10px] text-zinc-500 font-mono">v3.6 • Live</div>
                         </div>
                     </div>
                     <button onClick={() => setShowAdminPanel(false)} className="md:hidden p-2 text-zinc-400 hover:text-white transition-colors">
@@ -615,6 +701,9 @@ export const AdminPanel = ({
                 <nav className="flex md:flex-col gap-2 overflow-x-auto md:overflow-visible pb-2 md:pb-0 no-scrollbar">
                     <button onClick={() => {setActiveTab('dashboard'); setSelectedUser(null);}} className={`flex-shrink-0 md:w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTab === 'dashboard' ? 'bg-white/10 text-white border border-white/5 shadow-lg shadow-black/20' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}>
                         <LayoutDashboard size={18}/> <span className="hidden md:inline">Общ преглед</span><span className="md:hidden">Табло</span>
+                    </button>
+                    <button onClick={() => {setActiveTab('reports'); setSelectedUser(null);}} className={`flex-shrink-0 md:w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTab === 'reports' ? 'bg-white/10 text-white border border-white/5 shadow-lg shadow-black/20' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}>
+                        <Flag size={18}/> <span className="hidden md:inline">Доклади</span><span className="md:hidden">Доклади</span>
                     </button>
                     <button onClick={() => {setActiveTab('status'); setSelectedUser(null);}} className={`flex-shrink-0 md:w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTab === 'status' ? 'bg-white/10 text-white border border-white/5 shadow-lg shadow-black/20' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}>
                         <Activity size={18}/> <span className="hidden md:inline">Системен статус</span><span className="md:hidden">Статус</span>
@@ -655,6 +744,7 @@ export const AdminPanel = ({
                                  {activeTab === 'status' ? <div className={`w-2 h-2 rounded-full animate-pulse ${systemHealth.some(s => s.status === 'down') ? 'bg-red-500' : 'bg-green-500'}`}/> : null}
                                  {selectedUser ? 'Профил' : 
                                   activeTab === 'dashboard' ? 'Общ преглед' :
+                                  activeTab === 'reports' ? 'Доклади за грешки' :
                                   activeTab === 'status' ? 'Системен статус' :
                                   activeTab === 'broadcast' ? 'Съобщение' :
                                   activeTab === 'finance' ? 'Финанси' :
@@ -754,6 +844,17 @@ export const AdminPanel = ({
                                                          {plan}
                                                      </button>
                                                  ))}
+                                             </div>
+                                         </div>
+
+                                         <div className="grid grid-cols-2 gap-3">
+                                             <div className="space-y-2">
+                                                 <label className="text-xs font-bold text-zinc-500 uppercase ml-1">Level</label>
+                                                 <input type="number" value={editForm.level} onChange={(e) => setEditForm({...editForm, level: parseInt(e.target.value) || 1})} className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-amber-500 transition-colors text-center"/>
+                                             </div>
+                                             <div className="space-y-2">
+                                                 <label className="text-xs font-bold text-zinc-500 uppercase ml-1">XP</label>
+                                                 <input type="number" value={editForm.xp} onChange={(e) => setEditForm({...editForm, xp: parseInt(e.target.value) || 0})} className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-indigo-500 transition-colors text-center"/>
                                              </div>
                                          </div>
 
@@ -956,6 +1057,82 @@ export const AdminPanel = ({
                                                  </div>
                                              </div>
                                          )}
+                                     </div>
+                                 </div>
+                             )}
+
+                             {/* REPORTS TAB */}
+                             {activeTab === 'reports' && (
+                                 <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
+                                     <div className="bg-white/5 border border-white/5 rounded-3xl p-6 md:p-8">
+                                         <div className="flex justify-between items-center mb-6">
+                                             <h3 className="text-xl font-bold text-white flex items-center gap-3">
+                                                 <Flag size={20} className="text-amber-500"/> Доклади за проблеми
+                                             </h3>
+                                             <div className="text-xs text-zinc-500 font-mono">
+                                                 Показване на последните 50
+                                             </div>
+                                         </div>
+
+                                         <div className="space-y-4">
+                                             {dbReports.length === 0 ? (
+                                                 <div className="text-center py-12 text-zinc-500">
+                                                     <CheckCircle size={32} className="mx-auto mb-2 opacity-30"/>
+                                                     <p>Няма активни доклади.</p>
+                                                 </div>
+                                             ) : (
+                                                 dbReports.map(report => (
+                                                     <div key={report.id} className={`p-5 rounded-2xl border transition-all ${report.status === 'resolved' ? 'bg-white/5 border-green-500/20' : 'bg-white/10 border-amber-500/30'}`}>
+                                                         <div className="flex justify-between items-start mb-3">
+                                                             <div>
+                                                                 <div className="flex items-center gap-2">
+                                                                     <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${report.status === 'resolved' ? 'bg-green-500/20 text-green-400' : 'bg-amber-500/20 text-amber-400'}`}>
+                                                                         {report.status}
+                                                                     </span>
+                                                                     <span className="text-xs text-zinc-500 font-mono">
+                                                                         {new Date(report.created_at).toLocaleString()}
+                                                                     </span>
+                                                                 </div>
+                                                                 <h4 className="font-bold text-white text-lg mt-1">{report.title}</h4>
+                                                             </div>
+                                                             <div className="flex gap-2">
+                                                                 <button 
+                                                                     onClick={() => handleResolveReport(report.id, report.status)}
+                                                                     className={`p-2 rounded-lg transition-colors ${report.status === 'resolved' ? 'text-zinc-500 hover:text-amber-400 bg-white/5' : 'text-green-400 hover:bg-green-500/20 bg-green-500/10'}`}
+                                                                     title={report.status === 'resolved' ? 'Маркирай като отворен' : 'Маркирай като решен'}
+                                                                 >
+                                                                     {report.status === 'resolved' ? <RotateCcw size={16}/> : <CheckSquare size={16}/>}
+                                                                 </button>
+                                                                 <button 
+                                                                     onClick={() => handleDeleteReport(report.id)}
+                                                                     className="p-2 text-red-400 hover:bg-red-500/20 bg-red-500/10 rounded-lg transition-colors"
+                                                                     title="Изтрий"
+                                                                 >
+                                                                     <Trash2 size={16}/>
+                                                                 </button>
+                                                             </div>
+                                                         </div>
+                                                         
+                                                         <p className="text-sm text-zinc-300 mb-4 whitespace-pre-wrap">{report.description}</p>
+                                                         
+                                                         {report.images && Array.isArray(report.images) && report.images.length > 0 && (
+                                                             <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
+                                                                 {report.images.map((img, i) => (
+                                                                     <img key={i} src={img} className="h-20 w-20 object-cover rounded-lg border border-white/10 hover:scale-150 transition-transform origin-bottom-left cursor-pointer z-10 hover:z-20 bg-black"/>
+                                                                 ))}
+                                                             </div>
+                                                         )}
+
+                                                         <div className="flex items-center gap-2 pt-3 border-t border-white/5 text-xs text-zinc-500">
+                                                             <Users size={12}/>
+                                                             <span className="font-bold text-zinc-400">{report.user_name}</span>
+                                                             <span className="font-mono">({report.user_email})</span>
+                                                             <span className="font-mono ml-auto opacity-50">ID: {report.user_id.substring(0, 8)}</span>
+                                                         </div>
+                                                     </div>
+                                                 ))
+                                             )}
+                                         </div>
                                      </div>
                                  </div>
                              )}
