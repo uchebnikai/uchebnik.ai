@@ -107,7 +107,6 @@ export const LeaderboardModal = ({ isOpen, onClose, currentUserId }: Leaderboard
                         entries.map((entry) => {
                             const rankInfo = getRank(entry.level);
                             const RankIcon = rankInfo.icon;
-                            const isTop3 = entry.rank <= 3;
                             
                             return (
                                 <div 
@@ -133,7 +132,10 @@ export const LeaderboardModal = ({ isOpen, onClose, currentUserId }: Leaderboard
                                     {/* User Info Column */}
                                     <div className="col-span-7 flex items-center gap-3 min-w-0">
                                         <div className="relative shrink-0">
-                                            <div className={`w-10 h-10 rounded-full flex items-center justify-center bg-zinc-800 border-2 ${isTop3 ? 'border-amber-400' : 'border-white/10'} overflow-hidden`}>
+                                            <div 
+                                                className="w-10 h-10 rounded-full flex items-center justify-center bg-zinc-800 border-2 overflow-hidden transition-colors"
+                                                style={{ borderColor: rankInfo.color }}
+                                            >
                                                 {entry.avatar ? (
                                                     <img src={entry.avatar} className="w-full h-full object-cover" loading="lazy" />
                                                 ) : (
