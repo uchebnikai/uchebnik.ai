@@ -242,30 +242,3 @@ export interface LeaderboardEntry {
     rank: number;
     isCurrentUser?: boolean;
 }
-
-// Admin & System Types
-export interface AdminLog {
-    id: string;
-    admin_id: string;
-    action: string;
-    details: any;
-    created_at: string;
-}
-
-export interface ErrorLog {
-    id: string;
-    user_id?: string;
-    error: string;
-    context: any;
-    created_at: string;
-}
-
-export interface FeatureFlag {
-    key: string;
-    enabled: boolean;
-    description: string;
-}
-
-export interface AppConfig {
-    global_xp_multiplier: number;
-}

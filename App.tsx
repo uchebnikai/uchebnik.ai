@@ -109,10 +109,6 @@ export const App = () => {
   const [totalOutputTokens, setTotalOutputTokens] = useState(0);
   const [costCorrection, setCostCorrection] = useState(0);
 
-  // Global Config
-  const [globalXPMultiplier, setGlobalXPMultiplier] = useState(1);
-  const [featureFlags, setFeatureFlags] = useState<Record<string, boolean>>({});
-
   const [showAdminAuth, setShowAdminAuth] = useState(false);
   const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [adminPasswordInput, setAdminPasswordInput] = useState('');
@@ -231,32 +227,6 @@ export const App = () => {
           document.body.style.fontFamily = '';
       }
   }, [userSettings.fontFamily]);
-
-  // Load Global Config (XP, Feature Flags)
-  useEffect(() => {
-      const fetchConfig = async () => {
-          try {
-              // Fetch XP Multiplier
-              const { data: config } = await supabase.from('app_config').select('*').eq('key', 'global_xp_multiplier').single();
-              if (config && config.value) {
-                  setGlobalXPMultiplier(config.value);
-                  if (config.value > 1) {
-                      addToast(`🔥 Double XP Weekend is Active! (${config.value}x)`, 'success');
-                  }
-              }
-
-              // Fetch Feature Flags
-              const { data: flags } = await supabase.from('feature_flags').select('*');
-              if (flags) {
-                  const flagMap: Record<string, boolean> = {};
-                  flags.forEach((f: any) => { flagMap[f.key] = f.enabled; });
-                  setFeatureFlags(flagMap);
-              }
-          } catch (e) { console.error("Config fetch error", e); }
-      };
-      
-      fetchConfig();
-  }, []);
 
   // Check Daily Quests Date & Language Migration
   useEffect(() => {
@@ -825,10 +795,6 @@ export const App = () => {
 
   // --- Logic Helpers ---
   const checkImageLimit = (count = 1): boolean => {
-      if (featureFlags['image_generation'] === false) {
-          addToast("Качването на снимки е временно изключено от администратор.", "info");
-          return false;
-      }
       let limit = 4;
       if (userPlan === 'plus') limit = 12;
       if (userPlan === 'pro') limit = 9999;
@@ -985,7 +951,7 @@ export const App = () => {
 
   // Grant XP Logic - Refactored to use functional update
   const grantXP = (amount: number) => {
-      const boostedAmount = calculateXPWithBoost(amount, userPlan, globalXPMultiplier);
+      const boostedAmount = calculateXPWithBoost(amount, userPlan);
       
       setUserSettings(prev => {
           const newXP = prev.xp + boostedAmount;
@@ -1028,7 +994,7 @@ export const App = () => {
               return prev;
           }
 
-          const questXP = calculateXPWithBoost(totalXpGained, userPlan, globalXPMultiplier); 
+          const questXP = calculateXPWithBoost(totalXpGained, userPlan); 
           const newXP = prev.xp + questXP;
           const newLevel = calculateLevel(newXP);
 
@@ -1241,11 +1207,6 @@ export const App = () => {
     } catch (error: any) {
        console.error("HandleSend Error:", error);
        
-       // Log error to system
-       try {
-           supabase.from('error_logs').insert({ user_id: session?.user?.id, error: error.message, context: { location: 'handleSend', mode: currentMode, subject: currentSubId } });
-       } catch(e){}
-
        if (error.name === 'AbortError' || controller.signal.aborted) {
            return "Aborted";
        }
@@ -1332,11 +1293,6 @@ export const App = () => {
   const startVoiceCall = async () => { 
     if (!session) { setShowAuthModal(true); return; } 
     
-    if (featureFlags['voice_mode'] === false) {
-        addToast("Гласовите услуги са временно изключени от администратор.", "info");
-        return;
-    }
-
     if (userPlan === 'free') {
         setShowUnlockModal(true);
         return;
@@ -1461,8 +1417,6 @@ export const App = () => {
                   },
                   onerror: (e) => {
                       console.error("Live Session Error", e);
-                      // Log to error table
-                      try { supabase.from('error_logs').insert({ user_id: session?.user?.id, error: 'Live Session Error', context: { error: JSON.stringify(e) } }); } catch(e){}
                       addToast("Грешка при връзката с Live AI.", "error");
                       endVoiceCall();
                   }

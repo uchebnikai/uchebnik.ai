@@ -18,9 +18,9 @@ export const PLAN_XP_MULTIPLIERS: Record<UserPlan, number> = {
     pro: 1.5
 };
 
-export const calculateXPWithBoost = (baseXP: number, plan: UserPlan, globalMultiplier: number = 1): number => {
+export const calculateXPWithBoost = (baseXP: number, plan: UserPlan): number => {
     const multiplier = PLAN_XP_MULTIPLIERS[plan] || 1;
-    return Math.floor(baseXP * multiplier * globalMultiplier);
+    return Math.floor(baseXP * multiplier);
 };
 
 /**
