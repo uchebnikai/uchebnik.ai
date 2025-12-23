@@ -22,7 +22,7 @@ import { useTheme } from './hooks/useTheme';
 import { getBackgroundImageStyle } from './styles/utils';
 import { TOAST_CONTAINER, TOAST_ERROR, TOAST_SUCCESS, TOAST_INFO } from './styles/ui';
 import { t } from './utils/translations';
-import { calculateLevel, XP_PER_MESSAGE, XP_PER_IMAGE, XP_PER_VOICE } from './utils/gamification';
+import { calculateLevel, XP_PER_MESSAGE, XP_PER_IMAGE, XP_PER_VOICE, calculateXPWithBoost } from './utils/gamification';
 
 // Components
 import { Lightbox } from './components/ui/Lightbox';
@@ -945,8 +945,10 @@ export const App = () => {
 
   // Grant XP Logic
   const grantXP = (amount: number) => {
+      const boostedAmount = calculateXPWithBoost(amount, userPlan);
+      
       setUserSettings(prev => {
-          const newXP = prev.xp + amount;
+          const newXP = prev.xp + boostedAmount;
           const newLevel = calculateLevel(newXP);
           
           if (newLevel > prev.level) {

@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { X, ArrowLeft, Zap, Crown, CheckCircle, Loader2, ArrowUp, Layers, Star, XCircle } from 'lucide-react';
+import { X, ArrowLeft, Zap, Crown, CheckCircle, Loader2, ArrowUp, Layers, Star, XCircle, TrendingUp } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { UserPlan, UserSettings } from '../../types';
 import { supabase } from '../../supabaseClient';
@@ -197,6 +197,10 @@ export const UpgradeModal = ({
                         <CheckCircle size={18} className="text-indigo-500 shrink-0 mt-0.5"/> 
                         <span>12 снимки дневно</span>
                     </div>
+                    <div className="flex items-start gap-3 text-sm font-bold text-zinc-800 dark:text-white">
+                        <TrendingUp size={18} className="text-indigo-500 shrink-0 mt-0.5"/> 
+                        <span>+15% XP Boost</span>
+                    </div>
                     <div className="flex items-start gap-3 text-sm font-bold text-zinc-400 dark:text-zinc-600 opacity-70">
                         <XCircle size={18} className="shrink-0 mt-0.5"/> 
                         <span>Гласов режим (Разговори)</span>
@@ -249,6 +253,10 @@ export const UpgradeModal = ({
                     <div className="flex items-start gap-3 text-sm font-medium text-zinc-700 dark:text-zinc-100">
                         <CheckCircle size={18} className="text-amber-500 shrink-0 mt-0.5"/> 
                         <span>Неограничени снимки</span>
+                    </div>
+                    <div className="flex items-start gap-3 text-sm font-medium text-zinc-700 dark:text-zinc-100">
+                        <TrendingUp size={18} className="text-amber-500 shrink-0 mt-0.5"/> 
+                        <span>+50% XP Boost</span>
                     </div>
                     <div className="flex items-start gap-3 text-sm font-medium text-zinc-700 dark:text-zinc-100">
                         <CheckCircle size={18} className="text-amber-500 shrink-0 mt-0.5"/> 

@@ -1,6 +1,6 @@
 
 import { Medal, Trophy, Crown, Gem, Star } from 'lucide-react';
-import { RankInfo, RankTier } from '../types';
+import { RankInfo, RankTier, UserPlan } from '../types';
 
 // Constants
 export const XP_PER_MESSAGE = 20; // Faster feedback loop
@@ -11,6 +11,17 @@ export const XP_PER_VOICE = 60;
 // Lower BASE_XP means faster first levels.
 const BASE_XP = 50; 
 const EXPONENT = 1.55; // Controls how fast the difficulty ramps up
+
+export const PLAN_XP_MULTIPLIERS: Record<UserPlan, number> = {
+    free: 1,
+    plus: 1.15,
+    pro: 1.5
+};
+
+export const calculateXPWithBoost = (baseXP: number, plan: UserPlan): number => {
+    const multiplier = PLAN_XP_MULTIPLIERS[plan] || 1;
+    return Math.floor(baseXP * multiplier);
+};
 
 /**
  * Calculates the total XP required to reach a specific level.
