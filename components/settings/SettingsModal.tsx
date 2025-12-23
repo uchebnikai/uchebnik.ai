@@ -5,7 +5,7 @@ import {
   ImageIcon, Edit2, Cpu, ChevronDown, Database, Trash2, 
   ArrowRight, Settings, CreditCard, Loader2, Globe, 
   Layout, Smartphone, Monitor, Sparkles, LogOut, Volume2, 
-  Keyboard, Type, Download, Zap, Brain, MessageCircle, Gift, Copy
+  Keyboard, Type, Download, Zap, Brain, MessageCircle, Gift, Copy, Eye
 } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { UserSettings, UserPlan } from '../../types';
@@ -182,7 +182,6 @@ export const SettingsModal = ({
                           <p className="text-gray-500">Управлявайте вашата лична информация и абонамент.</p>
                       </div>
 
-                      {/* ... existing profile inputs ... */}
                       <div className="flex flex-col items-center md:items-start gap-6">
                           <div className="relative group cursor-pointer" onClick={() => avatarInputRef.current?.click()}>
                               <div className="w-28 h-28 rounded-[2rem] p-1 border-2 border-dashed border-gray-300 dark:border-white/20 hover:border-indigo-500 transition-colors">
@@ -209,7 +208,6 @@ export const SettingsModal = ({
                               <input value={editProfile.email} onChange={e => setEditProfile({...editProfile, email: e.target.value})} className="w-full bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 outline-none focus:border-indigo-500 transition-all font-medium"/>
                           </div>
                           
-                          {/* Password Change Section */}
                           <div className="col-span-1 md:col-span-2 pt-2 border-t border-gray-100 dark:border-white/5 mt-2">
                               <h4 className="text-sm font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2"><Lock size={16} className="text-indigo-500"/> Смяна на парола</h4>
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -312,8 +310,7 @@ export const SettingsModal = ({
                           </div>
                       </section>
 
-                      {/* Theme Colors - NO CHANGES HERE */}
-                      {/* ... Existing Theme Color Section ... */}
+                      {/* Theme Colors */}
                       <section className={`space-y-4 p-6 bg-gray-50/50 dark:bg-white/5 rounded-2xl border border-gray-200 dark:border-white/10 ${!isPremium ? 'opacity-70' : ''}`}>
                           <div className="flex justify-between items-center mb-2">
                               <label className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
@@ -360,48 +357,46 @@ export const SettingsModal = ({
                           </div>
                       </section>
 
-                      {/* Fonts */}
-                      <section className={`space-y-4 p-6 bg-gray-50/50 dark:bg-white/5 rounded-2xl border border-gray-200 dark:border-white/10 ${!isPremium ? 'opacity-70' : ''}`}>
-                          <div className="flex justify-between items-center mb-2">
-                              <label className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                                  <Type size={18} className="text-blue-500"/> Шрифт
-                              </label>
-                              {!isPremium && <span className="px-2 py-1 bg-gray-200 dark:bg-white/10 rounded text-[10px] font-bold text-gray-500 uppercase">Plus / Pro required</span>}
+                      {/* Mode Toggle & High Contrast */}
+                      <section className="flex flex-col gap-4">
+                          <div className="flex items-center justify-between p-5 bg-white dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-2xl">
+                              <div className="flex items-center gap-3">
+                                  <div className={`p-2.5 rounded-xl ${isDarkMode ? 'bg-indigo-500/10 text-indigo-400' : 'bg-amber-500/10 text-amber-500'}`}>
+                                      {isDarkMode ? <Moon size={20}/> : <Sun size={20}/>}
+                                  </div>
+                                  <div>
+                                      <div className="font-bold text-sm text-gray-900 dark:text-white">Тема на интерфейса</div>
+                                      <div className="text-xs text-gray-500">{isDarkMode ? t('dark_mode', userSettings.language) : t('light_mode', userSettings.language)}</div>
+                                  </div>
+                              </div>
+                              <button 
+                                onClick={() => setIsDarkMode(!isDarkMode)} 
+                                className={`w-14 h-8 rounded-full transition-colors flex items-center px-1 ${isDarkMode ? 'bg-indigo-600' : 'bg-gray-300'}`}
+                              >
+                                  <div className={`w-6 h-6 rounded-full bg-white shadow-md transition-transform duration-300 ${isDarkMode ? 'translate-x-6' : 'translate-x-0'}`} />
+                              </button>
                           </div>
-                          <div className={`grid grid-cols-1 md:grid-cols-3 gap-3 ${!isPremium ? 'pointer-events-none' : ''}`}>
-                              <button onClick={() => setUserSettings({...userSettings, fontFamily: 'inter'})} className={`py-3 px-4 rounded-xl border font-sans font-medium transition-all ${userSettings.fontFamily === 'inter' ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400' : 'border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/5'}`}>
-                                  Standard (Inter)
-                              </button>
-                              <button onClick={() => setUserSettings({...userSettings, fontFamily: 'dyslexic'})} className={`py-3 px-4 rounded-xl border font-medium transition-all ${userSettings.fontFamily === 'dyslexic' ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400' : 'border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/5'}`} style={{fontFamily: '"Comic Sans MS", cursive'}}>
-                                  Dyslexia Friendly
-                              </button>
-                              <button onClick={() => setUserSettings({...userSettings, fontFamily: 'mono'})} className={`py-3 px-4 rounded-xl border font-mono font-medium transition-all ${userSettings.fontFamily === 'mono' ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400' : 'border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/5'}`}>
-                                  Monospace / Code
-                              </button>
-                          </div>
-                      </section>
 
-                      {/* Mode Toggle */}
-                      <section className="flex items-center justify-between p-5 bg-white dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-2xl">
-                          <div className="flex items-center gap-3">
-                              <div className={`p-2.5 rounded-xl ${isDarkMode ? 'bg-indigo-500/10 text-indigo-400' : 'bg-amber-500/10 text-amber-500'}`}>
-                                  {isDarkMode ? <Moon size={20}/> : <Sun size={20}/>}
+                          <div className="flex items-center justify-between p-5 bg-white dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-2xl">
+                              <div className="flex items-center gap-3">
+                                  <div className="p-2.5 rounded-xl bg-yellow-500/10 text-yellow-600 dark:text-yellow-400">
+                                      <Eye size={20}/>
+                                  </div>
+                                  <div>
+                                      <div className="font-bold text-sm text-gray-900 dark:text-white">High Contrast Mode</div>
+                                      <div className="text-xs text-gray-500">За по-добра видимост.</div>
+                                  </div>
                               </div>
-                              <div>
-                                  <div className="font-bold text-sm text-gray-900 dark:text-white">Тема на интерфейса</div>
-                                  <div className="text-xs text-gray-500">{isDarkMode ? t('dark_mode', userSettings.language) : t('light_mode', userSettings.language)}</div>
-                              </div>
+                              <button 
+                                onClick={() => setUserSettings({...userSettings, highContrast: !userSettings.highContrast})} 
+                                className={`w-14 h-8 rounded-full transition-colors flex items-center px-1 ${userSettings.highContrast ? 'bg-yellow-500' : 'bg-gray-300'}`}
+                              >
+                                  <div className={`w-6 h-6 rounded-full bg-white shadow-md transition-transform duration-300 ${userSettings.highContrast ? 'translate-x-6' : 'translate-x-0'}`} />
+                              </button>
                           </div>
-                          <button 
-                            onClick={() => setIsDarkMode(!isDarkMode)} 
-                            className={`w-14 h-8 rounded-full transition-colors flex items-center px-1 ${isDarkMode ? 'bg-indigo-600' : 'bg-gray-300'}`}
-                          >
-                              <div className={`w-6 h-6 rounded-full bg-white shadow-md transition-transform duration-300 ${isDarkMode ? 'translate-x-6' : 'translate-x-0'}`} />
-                          </button>
                       </section>
 
                       {/* Chat Backgrounds */}
-                      {/* ... existing Chat BG section ... */}
                       <section className={`space-y-4 ${!isPremium ? 'opacity-70' : ''}`}>
                            <div className="flex justify-between items-center">
                               <label className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
@@ -483,7 +478,6 @@ export const SettingsModal = ({
                       </div>
 
                       {/* AI Model Selection */}
-                      {/* ... existing model selection ... */}
                       <section className="space-y-4">
                           <label className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
                               <Cpu size={18} className="text-blue-500"/> AI Модел
@@ -542,7 +536,7 @@ export const SettingsModal = ({
                           </div>
                       </section>
 
-                      {/* Voice Selection - NEW */}
+                      {/* Voice Selection */}
                       <section className={`space-y-4 p-6 bg-gray-50/50 dark:bg-white/5 rounded-2xl border border-gray-200 dark:border-white/10 ${!isPremium ? 'opacity-80' : ''}`}>
                           <div className="flex justify-between items-center mb-2">
                               <label className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
@@ -596,7 +590,6 @@ export const SettingsModal = ({
                       </section>
 
                       {/* Custom Persona (Pro Feature) */}
-                      {/* ... existing custom persona section ... */}
                       <section className={`space-y-4 p-6 bg-gradient-to-br from-indigo-50/50 to-purple-50/50 dark:from-indigo-900/10 dark:to-purple-900/10 rounded-2xl border border-indigo-200 dark:border-indigo-500/20 ${!isPro ? 'opacity-70' : ''}`}>
                           <div className="flex justify-between items-center mb-2">
                               <label className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">

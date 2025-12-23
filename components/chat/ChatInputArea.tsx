@@ -1,6 +1,6 @@
 
 import React, { useRef, useEffect, useState } from 'react';
-import { Reply, X, ImageIcon, Mic, MicOff, ArrowUpRight, Calculator, Camera, Square, HelpCircle } from 'lucide-react';
+import { Reply, X, ImageIcon, Mic, MicOff, ArrowUpRight, Calculator, Camera, Square, HelpCircle, Sparkles } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
@@ -24,7 +24,7 @@ interface ChatInputAreaProps {
   isListening: boolean;
   inputValue: string;
   setInputValue: React.Dispatch<React.SetStateAction<string>>;
-  handleSend: () => void;
+  handleSend: (overrideText?: string) => void;
   selectedImages: string[];
   handleRemoveImage: (index: number) => void;
   onCameraCapture?: (base64: string) => void;
@@ -47,6 +47,15 @@ const MATH_SYMBOLS = [
   { label: 'Δ', val: '\\Delta' },
   { label: 'α', val: '\\alpha' },
   { label: 'β', val: '\\beta' },
+];
+
+const QUICK_PROMPTS = [
+    { label: "Обясни това", text: "Можеш ли да ми обясниш това по-подробно?" },
+    { label: "Дай пример", text: "Дай ми пример, за да го разбера по-добре." },
+    { label: "Резюмирай", text: "Направи кратко резюме на най-важното." },
+    { label: "Направи го по-кратко", text: "Напиши го по-кратко и ясно." },
+    { label: "Преведи на Английски", text: "Преведи това на английски." },
+    { label: "Създай тест", text: "Направи ми кратък тест по тази тема." }
 ];
 
 export const ChatInputArea = ({
@@ -103,7 +112,6 @@ export const ChatInputArea = ({
               e.preventDefault();
               if (!loadingSubject) handleSend();
           }
-          // If enterToSend is false, or shift+enter, it defaults to new line naturally
       }
   };
 
@@ -116,6 +124,7 @@ export const ChatInputArea = ({
 
   const hasMath = /[\\^_{}]/.test(inputValue) || showMath;
   const isSocratic = !!userSettings.socraticMode;
+  const showQuickPrompts = !inputValue.trim() && selectedImages.length === 0 && !loadingSubject && !replyingTo;
 
   return (
       <>
@@ -153,6 +162,22 @@ export const ChatInputArea = ({
                         </div>
                     </button>
                 </div>
+                )}
+
+                {/* Quick Prompts Menu */}
+                {showQuickPrompts && (
+                    <div className="mb-3 mx-2 overflow-x-auto no-scrollbar flex gap-2 pb-1 animate-in slide-in-from-bottom-2 fade-in">
+                        {QUICK_PROMPTS.map((prompt, i) => (
+                            <button
+                                key={i}
+                                onClick={() => handleSend(prompt.text)}
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border border-indigo-500/10 hover:border-indigo-500/40 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 text-xs font-bold text-zinc-600 dark:text-zinc-300 rounded-xl transition-all shadow-sm whitespace-nowrap active:scale-95"
+                            >
+                                <Sparkles size={10} className="text-indigo-500"/>
+                                {prompt.label}
+                            </button>
+                        ))}
+                    </div>
                 )}
 
                 {/* Live Math Preview */}
@@ -239,7 +264,7 @@ export const ChatInputArea = ({
                         <Square size={16} fill="currentColor" strokeWidth={2.5} />
                     </button>
                 ) : (
-                    <button onClick={handleSend} disabled={(!inputValue.trim() && !selectedImages.length)} className="flex-none w-10 h-10 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white flex items-center justify-center shadow-lg shadow-indigo-600/30 disabled:opacity-50 disabled:shadow-none transition-all active:scale-95">
+                    <button onClick={() => handleSend()} disabled={(!inputValue.trim() && !selectedImages.length)} className="flex-none w-10 h-10 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white flex items-center justify-center shadow-lg shadow-indigo-600/30 disabled:opacity-50 disabled:shadow-none transition-all active:scale-95">
                         <ArrowUpRight size={20} strokeWidth={2.5} />
                     </button>
                 )}

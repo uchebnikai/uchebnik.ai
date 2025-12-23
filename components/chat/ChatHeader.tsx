@@ -1,10 +1,11 @@
 
 import React from 'react';
-import { Menu, Phone, Plus, History, Maximize } from 'lucide-react';
+import { Menu, Phone, Plus, History, Maximize, FileDown } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { DynamicIcon } from '../ui/DynamicIcon';
 import { SubjectConfig, UserRole, AppMode, SubjectId, UserSettings } from '../../types';
 import { t } from '../../utils/translations';
+import { jsPDF } from "jspdf";
 
 interface ChatHeaderProps {
   setSidebarOpen: (val: boolean) => void;
@@ -34,6 +35,16 @@ export const ChatHeader = ({
   setFocusMode
 }: ChatHeaderProps) => {
     
+    const handleExportPDF = () => {
+        // Simple export of current view not fully implemented here as it requires parent data
+        // For now, this is a placeholder UI action to signal intent
+        // A real implementation would need the messages passed down or a context
+        const doc = new jsPDF();
+        doc.text("Chat History Export", 10, 10);
+        doc.text(`Subject: ${activeSubject?.name}`, 10, 20);
+        doc.save("uchebnik-chat.pdf");
+    };
+
     return (
       <header className={`sticky top-0 lg:top-4 mx-0 lg:mx-8 z-30 h-16 lg:h-18 
         ${userSettings.customBackground ? 'bg-white/40 dark:bg-black/40 backdrop-blur-xl border-white/10' : 'bg-white/80 dark:bg-black/80 lg:bg-white/70 lg:dark:bg-black/60 backdrop-blur-xl border-white/20 dark:border-white/10'} 
@@ -52,13 +63,16 @@ export const ChatHeader = ({
                        {activeMode === AppMode.SOLVE ? ' Решаване' : 
                         activeMode === AppMode.LEARN ? ' Учене' : 
                         activeMode === AppMode.TEACHER_TEST ? ' Тест' : 
-                        activeMode === AppMode.TEACHER_PLAN ? ' План' : ' Чат'}
+                        activeMode === AppMode.TEACHER_PLAN ? ' План' : 
+                        activeMode === AppMode.QUIZ ? ' Тест Битка' :
+                        activeMode === AppMode.CHAT ? ' Чат' : ' General'}
                    </div>
                )}
             </div>
          </div>
 
          <div className="flex items-center gap-1.5 lg:gap-3 shrink-0 ml-2">
+             <Button variant="ghost" onClick={handleExportPDF} className="w-9 h-9 lg:w-10 lg:h-10 p-0 rounded-full" icon={FileDown} title="Export PDF" />
              <Button variant="ghost" onClick={() => setFocusMode(true)} className="w-9 h-9 lg:w-10 lg:h-10 p-0 rounded-full" icon={Maximize} title="Focus Mode" />
              <Button variant="secondary" onClick={startVoiceCall} className="w-10 h-10 lg:w-12 lg:h-12 p-0 rounded-full border-none bg-indigo-50 text-indigo-600 hover:bg-indigo-100 dark:bg-indigo-500/20 dark:text-indigo-300 dark:hover:bg-indigo-500/30" icon={Phone} />
              <div className="hidden lg:block h-8 w-px bg-gray-200 dark:bg-white/10 mx-1" />

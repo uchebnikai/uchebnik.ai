@@ -78,7 +78,7 @@ export const generateResponse = async (
 
   if (isImageRequest) {
       // Draw instructions handled
-  } else if (mode === AppMode.TEACHER_TEST || mode === AppMode.PRESENTATION) {
+  } else if (mode === AppMode.TEACHER_TEST || mode === AppMode.PRESENTATION || mode === AppMode.QUIZ) {
       forceJson = true;
   }
 
@@ -88,7 +88,7 @@ export const generateResponse = async (
       const ai = new GoogleGenAI({ apiKey });
       
       const historyContents: any[] = [];
-      history.filter(msg => !msg.isError && msg.text && msg.type !== 'image_generated' && msg.type !== 'slides').forEach(msg => {
+      history.filter(msg => !msg.isError && msg.text && msg.type !== 'image_generated' && msg.type !== 'slides' && msg.type !== 'quiz_generated').forEach(msg => {
           let content = msg.text;
           if (msg.imageAnalysis) {
               content += `\n\n[CONTEXT FROM PREVIOUS IMAGE: ${msg.imageAnalysis}]`;
@@ -125,7 +125,7 @@ export const generateResponse = async (
 
       const tools: Tool[] = [];
       if (modelName.includes('gemini-3') && 
-         (subjectId === SubjectId.GENERAL || subjectId === SubjectId.HISTORY || subjectId === SubjectId.GEOGRAPHY)) {
+         (subjectId === SubjectId.GENERAL || subjectId === SubjectId.HISTORY || subjectId === SubjectId.GEOGRAPHY || subjectId === SubjectId.CAREER)) {
           tools.push({ googleSearch: {} });
       }
 
@@ -224,6 +224,25 @@ export const generateResponse = async (
                  };
              }
           } catch (e) { console.error("Test JSON parse error", e); }
+      }
+
+      if (mode === AppMode.QUIZ) {
+          try {
+             const jsonStr = extractJson(processedText);
+             if (jsonStr) {
+                 const quizData: TestData = JSON.parse(jsonStr);
+                 return {
+                     id: Date.now().toString(),
+                     role: 'model',
+                     text: `Готов ли си за битка? Ето куиз на тема: ${quizData.title || promptText}`,
+                     type: 'quiz_generated',
+                     testData: quizData,
+                     timestamp: Date.now(),
+                     reasoning: "",
+                     usage: tokenUsage
+                 };
+             }
+          } catch (e) { console.error("Quiz JSON parse error", e); }
       }
 
       let chartData: ChartData | undefined;

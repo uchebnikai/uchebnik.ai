@@ -109,6 +109,25 @@ export const getSystemPrompt = (mode: string, lang: Language, teachingStyle: Tea
       return `${baseInstructions}
       Create a presentation plan. Structure it in slides. For each slide give a title, content (bullets), and speaker notes. Return the response ONLY in JSON format array of slides.`;
 
+    case 'QUIZ':
+      return `${baseInstructions}
+      You are a Quiz Master. Generate a quiz with 10 questions based on the user's topic.
+      Return the result in STRICT JSON format matching the schema:
+      {
+        "title": "Quiz Title",
+        "subject": "Subject",
+        "questions": [
+           {
+             "id": 1,
+             "question": "Question text",
+             "type": "multiple_choice",
+             "options": ["A) ...", "B) ...", "C) ...", "D) ..."], 
+             "correctAnswer": "Correct Answer Text"
+           }
+        ]
+      }
+      Do not use Markdown outside the JSON.`;
+
     case 'TEACHER_TEST':
       return `${baseInstructions}
       You are a teacher's assistant. Create a test.
@@ -140,6 +159,11 @@ export const getSystemPrompt = (mode: string, lang: Language, teachingStyle: Tea
       You are a teacher's assistant. Suggest additional materials, academic sources, interactive activities, and projects.`;
 
     default:
+      if (mode === 'CAREER_ADVISOR' || mode === 'career') {
+          return `${baseInstructions}
+          You are an expert Career Advisor for students. Analyze their interests, strengths, and favorite subjects to suggest suitable university majors and career paths. 
+          Be encouraging, practical, and provide specific examples of professions. Ask probing questions if you need more info about their interests.`;
+      }
       return `${baseInstructions} ${latexInstructions}`;
   }
 };
@@ -155,11 +179,20 @@ export const SUBJECTS: SubjectConfig[] = [
     categories: ['school', 'university']
   },
   {
+    id: SubjectId.CAREER,
+    name: 'Кариерен Съветник',
+    icon: 'Briefcase',
+    color: 'bg-indigo-600',
+    modes: [AppMode.CHAT],
+    description: 'Открий бъдещата си професия.',
+    categories: ['school', 'university']
+  },
+  {
     id: SubjectId.MATH,
     name: 'Математика',
     icon: 'Calculator',
     color: 'bg-blue-500',
-    modes: [AppMode.SOLVE, AppMode.LEARN],
+    modes: [AppMode.SOLVE, AppMode.LEARN, AppMode.QUIZ],
     description: 'Алгебра, геометрия и задачи.',
     categories: ['school']
   },
@@ -168,7 +201,7 @@ export const SUBJECTS: SubjectConfig[] = [
     name: 'Български език',
     icon: 'BookOpen',
     color: 'bg-red-500',
-    modes: [AppMode.SOLVE, AppMode.LEARN],
+    modes: [AppMode.SOLVE, AppMode.LEARN, AppMode.QUIZ],
     description: 'Граматика и литература.',
     categories: ['school']
   },
@@ -177,7 +210,7 @@ export const SUBJECTS: SubjectConfig[] = [
     name: 'Английски език',
     icon: 'Languages',
     color: 'bg-blue-400',
-    modes: [AppMode.SOLVE, AppMode.LEARN, AppMode.CHAT],
+    modes: [AppMode.SOLVE, AppMode.LEARN, AppMode.CHAT, AppMode.QUIZ],
     description: 'Превод и упражнения.',
     categories: ['school', 'university']
   },
@@ -222,7 +255,7 @@ export const SUBJECTS: SubjectConfig[] = [
     name: 'Физика',
     icon: 'Atom',
     color: 'bg-violet-500',
-    modes: [AppMode.SOLVE, AppMode.LEARN],
+    modes: [AppMode.SOLVE, AppMode.LEARN, AppMode.QUIZ],
     description: 'Закони и формули.',
     categories: ['school']
   },
@@ -231,7 +264,7 @@ export const SUBJECTS: SubjectConfig[] = [
     name: 'Химия',
     icon: 'FlaskConical',
     color: 'bg-green-500',
-    modes: [AppMode.SOLVE, AppMode.LEARN],
+    modes: [AppMode.SOLVE, AppMode.LEARN, AppMode.QUIZ],
     description: 'Реакции и елементи.',
     categories: ['school', 'university']
   },
@@ -240,7 +273,7 @@ export const SUBJECTS: SubjectConfig[] = [
     name: 'Биология',
     icon: 'Dna',
     color: 'bg-emerald-500',
-    modes: [AppMode.LEARN],
+    modes: [AppMode.LEARN, AppMode.QUIZ],
     description: 'Живот и природа.',
     categories: ['school']
   },
@@ -249,7 +282,7 @@ export const SUBJECTS: SubjectConfig[] = [
     name: 'История',
     icon: 'Landmark',
     color: 'bg-amber-600',
-    modes: [AppMode.LEARN],
+    modes: [AppMode.LEARN, AppMode.QUIZ],
     description: 'Събития и дати.',
     categories: ['school', 'university']
   },
@@ -258,7 +291,7 @@ export const SUBJECTS: SubjectConfig[] = [
     name: 'География',
     icon: 'Globe',
     color: 'bg-cyan-500',
-    modes: [AppMode.LEARN],
+    modes: [AppMode.LEARN, AppMode.QUIZ],
     description: 'Държави и карти.',
     categories: ['school']
   },
@@ -285,7 +318,7 @@ export const SUBJECTS: SubjectConfig[] = [
     name: 'Информатика',
     icon: 'Cpu',
     color: 'bg-slate-600',
-    modes: [AppMode.SOLVE, AppMode.LEARN],
+    modes: [AppMode.SOLVE, AppMode.LEARN, AppMode.QUIZ],
     description: 'Програмиране и технологии.',
     categories: ['school']
   },

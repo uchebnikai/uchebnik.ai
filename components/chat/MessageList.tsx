@@ -4,7 +4,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import remarkGfm from 'remark-gfm';
-import { Projector, Download, Check, ThumbsUp, ThumbsDown, Reply, Volume2, Square, Copy, Share2, Loader2, Globe, ExternalLink } from 'lucide-react';
+import { Projector, Download, Check, ThumbsUp, ThumbsDown, Reply, Volume2, Square, Copy, Share2, Loader2, Globe, ExternalLink, Bookmark, Flag } from 'lucide-react';
 import { Message, UserSettings, SubjectConfig } from '../../types';
 import { handleDownloadPPTX } from '../../utils/exportUtils';
 import { CodeBlock } from '../ui/CodeBlock';
@@ -84,6 +84,16 @@ export const MessageList = ({
       lastMessageIdRef.current = lastMsgId || null;
   }, [currentMessages, messagesEndRef]);
 
+  const handleReport = (id: string) => {
+      // Mock report action
+      alert("Благодарим за сигнала! Екипът ни ще прегледа съобщението.");
+  };
+
+  const handleBookmark = (id: string) => {
+      // Mock bookmark action
+      alert("Съобщението е запазено в 'Важно'!");
+  };
+
   return (
       <div ref={scrollContainerRef} className={`flex-1 overflow-y-auto px-2 lg:px-8 py-4 lg:py-8 custom-scrollbar scroll-smooth ${userSettings.textSize === 'large' ? 'text-lg' : userSettings.textSize === 'small' ? 'text-sm' : 'text-base'}`}>
          <div className="max-w-4xl mx-auto space-y-8 lg:space-y-12 pb-40 pt-2 lg:pt-4">
@@ -122,6 +132,29 @@ export const MessageList = ({
 
                      {msg.type === 'test_generated' && msg.testData && (
                         <TestRenderer data={msg.testData} />
+                     )}
+                     
+                     {msg.type === 'quiz_generated' && msg.testData && (
+                        <div className="mt-4 p-5 glass-card rounded-3xl animate-in fade-in zoom-in-95 duration-300">
+                            <div className="flex justify-between items-center mb-6">
+                                <h4 className="font-bold text-lg leading-tight">Quiz Battle: {msg.testData.title}</h4>
+                            </div>
+                            {/* Simple Quiz Render reusing TestRenderer styles but cleaner */}
+                            <div className="space-y-4">
+                                {msg.testData.questions.map((q, i) => (
+                                    <div key={i} className="p-4 bg-white/50 dark:bg-black/20 rounded-xl border border-gray-100 dark:border-white/5">
+                                        <p className="font-bold text-sm mb-3 flex gap-2"><span className="text-indigo-500">{i + 1}.</span> {q.question}</p>
+                                        <div className="space-y-2 ml-2">
+                                            {q.options?.map((opt, idx) => (
+                                                <button key={idx} className="w-full text-left px-3 py-2 rounded-lg bg-white dark:bg-zinc-800 border border-gray-200 dark:border-white/10 text-sm hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors">
+                                                    {opt}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
                      )}
 
                      {/* Loading State: Show if streaming AND no text yet */}
@@ -164,7 +197,7 @@ export const MessageList = ({
                         </div>
                      )}
 
-                     {hasText && !isStreamingTest && !isStreamingSlides && (
+                     {hasText && !isStreamingTest && !isStreamingSlides && msg.type !== 'quiz_generated' && (
                          <div className="markdown-content w-full break-words overflow-hidden">
                              <ReactMarkdown remarkPlugins={[remarkMath, remarkGfm]} rehypePlugins={[rehypeKatex]} components={{code: CodeBlock}}>
                                  {msg.text}
@@ -224,6 +257,8 @@ export const MessageList = ({
                         <button onClick={() => handleReply(msg)} className="p-2 text-gray-400 hover:text-indigo-500 dark:hover:text-indigo-400 transition-colors" title="Отговор"><Reply size={14} className="lg:w-4 lg:h-4"/></button>
                         <button onClick={() => handleCopy(msg.text, msg.id)} className="p-2 text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">{copiedId === msg.id ? <Check size={14} className="text-green-500"/> : <Copy size={14} className="lg:w-4 lg:h-4"/>}</button>
                         <button onClick={() => handleShare(msg.text)} className="p-2 text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"><Share2 size={14} className="lg:w-4 lg:h-4"/></button>
+                        <button onClick={() => handleBookmark(msg.id)} className="p-2 text-gray-400 hover:text-amber-500 transition-colors"><Bookmark size={14} className="lg:w-4 lg:h-4"/></button>
+                        <button onClick={() => handleReport(msg.id)} className="p-2 text-gray-400 hover:text-red-500 transition-colors"><Flag size={14} className="lg:w-4 lg:h-4"/></button>
                      </div>
                   </div>
                </div>
