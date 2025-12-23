@@ -146,35 +146,36 @@ export const UpgradeModal = ({
                     <div className="text-3xl md:text-4xl font-black text-zinc-900 dark:text-white">0 €<span className="text-sm md:text-lg font-medium text-gray-500"> / месец</span></div>
                  </div>
                  <div className="space-y-3 md:space-y-4 flex-1 mb-6 md:mb-8">
-                    <div className="flex items-start gap-3 text-sm font-medium text-gray-600 dark:text-gray-400">
-                        <CheckCircle size={18} className="text-gray-400 shrink-0 mt-0.5"/> 
+                    <div className="flex items-start gap-3 text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                        <CheckCircle size={18} className="text-zinc-400 shrink-0 mt-0.5"/> 
                         <span>4 снимки дневно</span>
                     </div>
-                    <div className="flex items-start gap-3 text-sm font-medium text-gray-600 dark:text-gray-400">
-                        <CheckCircle size={18} className="text-gray-400 shrink-0 mt-0.5"/> 
-                        <span>Стандартен AI интелект</span>
+                    <div className="flex items-start gap-3 text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                        <CheckCircle size={18} className="text-zinc-400 shrink-0 mt-0.5"/> 
+                        <span>Standard AI (Бърз)</span>
                     </div>
-                    <div className="flex items-start gap-3 text-sm font-medium text-gray-600 dark:text-gray-400">
-                        <CheckCircle size={18} className="text-gray-400 shrink-0 mt-0.5"/> 
-                        <span>Всички предмети</span>
+                    <div className="flex items-start gap-3 text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                        <CheckCircle size={18} className="text-zinc-400 shrink-0 mt-0.5"/> 
+                        <span>Помощ за всички предмети</span>
                     </div>
                     
-                    {/* Missing Features */}
-                    <div className="flex items-start gap-3 text-sm font-medium text-gray-400 dark:text-gray-600 opacity-80">
-                        <XCircle size={18} className="shrink-0 mt-0.5"/> 
-                        <span>XP Boost</span>
-                    </div>
-                    <div className="flex items-start gap-3 text-sm font-medium text-gray-400 dark:text-gray-600 opacity-80">
-                        <XCircle size={18} className="shrink-0 mt-0.5"/> 
-                        <span>Гласов режим</span>
-                    </div>
-                    <div className="flex items-start gap-3 text-sm font-medium text-gray-400 dark:text-gray-600 opacity-80">
-                        <XCircle size={18} className="shrink-0 mt-0.5"/> 
-                        <span>Google Търсене</span>
-                    </div>
-                    <div className="flex items-start gap-3 text-sm font-medium text-gray-400 dark:text-gray-600 opacity-80">
-                        <XCircle size={18} className="shrink-0 mt-0.5"/> 
-                        <span>Advanced AI</span>
+                    <div className="pt-2 border-t border-dashed border-gray-200 dark:border-white/10 space-y-3">
+                        <div className="flex items-start gap-3 text-sm font-medium text-zinc-400 dark:text-zinc-600 opacity-80">
+                            <XCircle size={18} className="shrink-0 mt-0.5"/> 
+                            <span>XP Boost (По-бърз левел)</span>
+                        </div>
+                        <div className="flex items-start gap-3 text-sm font-medium text-zinc-400 dark:text-zinc-600 opacity-80">
+                            <XCircle size={18} className="shrink-0 mt-0.5"/> 
+                            <span>Гласов режим (Разговори)</span>
+                        </div>
+                        <div className="flex items-start gap-3 text-sm font-medium text-zinc-400 dark:text-zinc-600 opacity-80">
+                            <XCircle size={18} className="shrink-0 mt-0.5"/> 
+                            <span>Търсене в Google (Актуалност)</span>
+                        </div>
+                        <div className="flex items-start gap-3 text-sm font-medium text-zinc-400 dark:text-zinc-600 opacity-80">
+                            <XCircle size={18} className="shrink-0 mt-0.5"/> 
+                            <span>Advanced AI (По-умен)</span>
+                        </div>
                     </div>
                  </div>
                  <button 
@@ -199,7 +200,6 @@ export const UpgradeModal = ({
                     <div className="text-4xl md:text-5xl font-black text-zinc-900 dark:text-white tracking-tight">6.99 €<span className="text-sm md:text-lg font-medium text-gray-500"> / месец</span></div>
                  </div>
                  <div className="space-y-3 md:space-y-4 flex-1 mb-6 md:mb-8">
-                    {/* Upgrade Logic: Shows "Everything from Free" as a stack */}
                     <div className="flex items-center gap-3 text-sm font-bold text-zinc-500 dark:text-zinc-400 pb-3 border-b border-gray-100 dark:border-white/5">
                         <div className="p-1 bg-indigo-100 dark:bg-indigo-500/20 rounded-full text-indigo-500">
                             <Layers size={14} />
@@ -213,23 +213,34 @@ export const UpgradeModal = ({
                     </div>
                     <div className="flex items-start gap-3 text-sm font-bold text-zinc-800 dark:text-white">
                         <CheckCircle size={18} className="text-indigo-500 shrink-0 mt-0.5"/> 
-                        <span>+15% XP Boost</span>
+                        <span>+15% XP Boost (По-бърз левел)</span>
                     </div>
-                    <div className="flex items-start gap-3 text-sm font-bold text-zinc-400 dark:text-zinc-600 opacity-70">
-                        <XCircle size={18} className="shrink-0 mt-0.5"/> 
+                    <div className="flex items-start gap-3 text-sm font-bold text-zinc-800 dark:text-white">
+                        <CheckCircle size={18} className="text-indigo-500 shrink-0 mt-0.5"/> 
+                        <span>Advanced AI (По-умен)</span>
+                    </div>
+                    <div className="flex items-start gap-3 text-sm font-bold text-zinc-800 dark:text-white">
+                        <CheckCircle size={18} className="text-indigo-500 shrink-0 mt-0.5"/> 
                         <span>Гласов режим (Разговори)</span>
                     </div>
                     <div className="flex items-start gap-3 text-sm font-bold text-zinc-800 dark:text-white">
                         <CheckCircle size={18} className="text-indigo-500 shrink-0 mt-0.5"/> 
-                        <span>По-умен AI (Advanced)</span>
-                    </div>
-                    <div className="flex items-start gap-3 text-sm font-bold text-zinc-800 dark:text-white">
-                        <CheckCircle size={18} className="text-indigo-500 shrink-0 mt-0.5"/> 
-                        <span>Търсене в Google</span>
+                        <span>Търсене в Google (Актуалност)</span>
                     </div>
                     <div className="flex items-start gap-3 text-sm font-bold text-zinc-800 dark:text-white">
                         <CheckCircle size={18} className="text-indigo-500 shrink-0 mt-0.5"/> 
                         <span>Персонализация (Теми)</span>
+                    </div>
+
+                    <div className="pt-2 border-t border-dashed border-gray-200 dark:border-white/10 space-y-3">
+                        <div className="flex items-start gap-3 text-sm font-medium text-zinc-400 dark:text-zinc-600 opacity-80">
+                            <XCircle size={18} className="shrink-0 mt-0.5"/> 
+                            <span>Неограничени снимки</span>
+                        </div>
+                        <div className="flex items-start gap-3 text-sm font-medium text-zinc-400 dark:text-zinc-600 opacity-80">
+                            <XCircle size={18} className="shrink-0 mt-0.5"/> 
+                            <span>AI Роли (Personas)</span>
+                        </div>
                     </div>
                  </div>
                  <button 
@@ -256,7 +267,6 @@ export const UpgradeModal = ({
                  </div>
                  
                  <div className="space-y-3 md:space-y-4 flex-1 mb-6 md:mb-8 relative">
-                    {/* Upgrade Logic: Updated text as requested */}
                     <div className="flex items-center gap-3 text-sm font-bold text-zinc-500 dark:text-zinc-400 pb-3 border-b border-gray-100 dark:border-white/5">
                         <div className="p-1 bg-amber-100 dark:bg-amber-900/30 rounded-full text-amber-600 dark:text-amber-400">
                             <ArrowUp size={14} />
@@ -270,15 +280,15 @@ export const UpgradeModal = ({
                     </div>
                     <div className="flex items-start gap-3 text-sm font-medium text-zinc-700 dark:text-zinc-100">
                         <CheckCircle size={18} className="text-amber-500 shrink-0 mt-0.5"/> 
-                        <span>+50% XP Boost</span>
+                        <span>+50% XP Boost (Максимален)</span>
                     </div>
                     <div className="flex items-start gap-3 text-sm font-medium text-zinc-700 dark:text-zinc-100">
                         <CheckCircle size={18} className="text-amber-500 shrink-0 mt-0.5"/> 
-                        <span>Най-мощният AI (Ultimate)</span>
+                        <span>Ultimate AI (Max Speed)</span>
                     </div>
                     <div className="flex items-start gap-3 text-sm font-medium text-zinc-700 dark:text-zinc-100">
                         <CheckCircle size={18} className="text-amber-500 shrink-0 mt-0.5"/> 
-                        <span>Персонализирани AI Роли</span>
+                        <span>AI Роли (Custom Personas)</span>
                     </div>
                     <div className="flex items-start gap-3 text-sm font-medium text-zinc-700 dark:text-zinc-100">
                         <CheckCircle size={18} className="text-amber-500 shrink-0 mt-0.5"/> 
