@@ -93,17 +93,29 @@ export const getSystemPrompt = (mode: string, lang: Language, teachingStyle: Tea
   \`\`\`
   `;
 
+  const codingInstructions = `
+  IMPORTANT FOR WEB DEVELOPMENT/CODING:
+  If the user asks for web code (HTML, CSS, JS) or a website/app:
+  1. Return a SINGLE complete index.html code block.
+  2. Embed all CSS styles inside <style> tags in the <head>.
+  3. Embed all JavaScript logic inside <script> tags in the <body>.
+  4. Do not output separate CSS or JS code blocks unless explicitly requested to explain file structure.
+  5. This ensures the user can preview the interactive result instantly via the "Preview" button.
+  `;
+
   switch(mode) {
     case 'LEARN':
       return `${baseInstructions}
       You are a teacher. Your goal is to teach the user about a topic. Do not just give answers, explain concepts. Use examples and analogies. Structure information logically.
-      ${latexInstructions}`;
+      ${latexInstructions}
+      ${codingInstructions}`;
     
     case 'SOLVE':
       return `${baseInstructions}
       You are an expert problem solver. Solve step-by-step. Explain every step clearly.
       ${latexInstructions}
-      ${svInstructions}`;
+      ${svInstructions}
+      ${codingInstructions}`;
 
     case 'PRESENTATION':
       return `${baseInstructions}
@@ -140,7 +152,7 @@ export const getSystemPrompt = (mode: string, lang: Language, teachingStyle: Tea
       You are a teacher's assistant. Suggest additional materials, academic sources, interactive activities, and projects.`;
 
     default:
-      return `${baseInstructions} ${latexInstructions}`;
+      return `${baseInstructions} ${latexInstructions} ${codingInstructions}`;
   }
 };
 
