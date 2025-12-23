@@ -947,7 +947,7 @@ export const App = () => {
     }
   };
 
-  // Grant XP Logic
+  // Grant XP Logic - Refactored to use functional update
   const grantXP = (amount: number) => {
       const boostedAmount = calculateXPWithBoost(amount, userPlan);
       
@@ -956,10 +956,12 @@ export const App = () => {
           const newLevel = calculateLevel(newXP);
           
           if (newLevel > prev.level) {
-              addToast(`Поздравления! Достигнахте ниво ${newLevel}! 🎉`, 'success');
-              if (prev.sound) {
-                  new Audio('https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3').play().catch(()=>{});
-              }
+              setTimeout(() => {
+                  addToast(`Поздравления! Достигнахте ниво ${newLevel}! 🎉`, 'success');
+                  if (prev.sound) {
+                      new Audio('https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3').play().catch(()=>{});
+                  }
+              }, 0);
           }
           
           return {
@@ -970,39 +972,52 @@ export const App = () => {
       });
   };
 
-  // Update Daily Quests logic wrapper
-  const updateQuests = (type: 'message' | 'image' | 'voice', subjectId: string) => {
-      if (!userSettings.dailyQuests) return;
-      
-      const { updatedQuests, xpGained, completedQuests } = updateQuestProgress(
-          userSettings.dailyQuests.quests,
-          type,
-          subjectId
-      );
+  // Update Daily Quests logic wrapper - Now functional update based
+  const updateQuests = (updates: { type: 'message' | 'image' | 'voice', amount?: number }[], subjectId: string) => {
+      setUserSettings(prev => {
+          if (!prev.dailyQuests) return prev;
 
-      if (xpGained > 0) {
-          grantXP(xpGained);
-          completedQuests.forEach(desc => {
-              addToast(`Мисия изпълнена: ${desc} (+ XP)`, 'success');
+          let currentQuests = [...prev.dailyQuests.quests];
+          let totalXpGained = 0;
+          let newCompleted: string[] = [];
+
+          updates.forEach(({ type, amount = 1 }) => {
+              const res = updateQuestProgress(currentQuests, type, subjectId, amount);
+              currentQuests = res.updatedQuests;
+              totalXpGained += res.xpGained;
+              newCompleted.push(...res.completedQuests);
           });
-          
-          setUserSettings(prev => ({
+
+          if (totalXpGained === 0 && JSON.stringify(currentQuests) === JSON.stringify(prev.dailyQuests.quests)) {
+              return prev;
+          }
+
+          const questXP = calculateXPWithBoost(totalXpGained, userPlan); 
+          const newXP = prev.xp + questXP;
+          const newLevel = calculateLevel(newXP);
+
+          if (newCompleted.length > 0) {
+              setTimeout(() => {
+                  newCompleted.forEach(desc => addToast(`Мисия изпълнена: ${desc} (+ XP)`, 'success'));
+              }, 0);
+          }
+          if (newLevel > prev.level) {
+              setTimeout(() => {
+                  addToast(`Поздравления! Достигнахте ниво ${newLevel}! 🎉`, 'success');
+                  if (prev.sound) new Audio('https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3').play().catch(()=>{});
+              }, 500);
+          }
+
+          return {
               ...prev,
+              xp: newXP,
+              level: newLevel,
               dailyQuests: {
                   ...prev.dailyQuests!,
-                  quests: updatedQuests
+                  quests: currentQuests
               }
-          }));
-      } else {
-          // Just update progress without XP grant if nothing completed
-          setUserSettings(prev => ({
-              ...prev,
-              dailyQuests: {
-                  ...prev.dailyQuests!,
-                  quests: updatedQuests
-              }
-          }));
-      }
+          };
+      });
   };
 
   const handleSend = async (overrideText?: string, overrideImages?: string[]) => {
@@ -1073,6 +1088,25 @@ export const App = () => {
 
     startWatchdog();
 
+    // --- PROGRESS & XP LOGIC ---
+    // Handle generic XP
+    let earnedXP = XP_PER_MESSAGE;
+    if (currentImgs.length > 0) earnedXP += (currentImgs.length * XP_PER_IMAGE);
+    grantXP(earnedXP);
+
+    // Handle Quests (Batch Update to avoid race conditions)
+    if (currentImgs.length > 0) {
+        incrementImageCount(currentImgs.length);
+    }
+    const questUpdates: {type: 'message'|'image'|'voice', amount: number}[] = [];
+    if (currentImgs.length > 0) {
+        questUpdates.push({ type: 'image', amount: currentImgs.length });
+    }
+    questUpdates.push({ type: 'message', amount: 1 });
+    
+    updateQuests(questUpdates, currentSubId);
+    // ---------------------------
+
     let finalPrompt = textToSend;
     if (replyContext) {
         const snippet = replyContext.text.substring(0, 300) + (replyContext.text.length > 300 ? '...' : '');
@@ -1135,20 +1169,6 @@ export const App = () => {
           setTotalInputTokens(prev => prev + response.usage!.inputTokens);
           setTotalOutputTokens(prev => prev + response.usage!.outputTokens);
       }
-
-      if (currentImgs.length > 0) { 
-          incrementImageCount(currentImgs.length);
-          // Quest Progress: Image
-          updateQuests('image', currentSubId);
-      }
-      
-      // Calculate and Grant XP
-      let earnedXP = XP_PER_MESSAGE;
-      if (currentImgs.length > 0) earnedXP += (currentImgs.length * XP_PER_IMAGE);
-      grantXP(earnedXP);
-      
-      // Quest Progress: Message
-      updateQuests('message', currentSubId);
 
       setSessions(prev => prev.map(s => {
           if (s.id === sessId) {
@@ -1378,9 +1398,9 @@ export const App = () => {
                           
                           // Optional: Grant small XP for voice interaction
                           grantXP(XP_PER_VOICE / 10); 
-                          // Update Quest Progress for Voice
+                          
                           if (activeSubjectRef.current) {
-                              updateQuests('voice', activeSubjectRef.current.id);
+                              updateQuests([{ type: 'voice', amount: 1 }], activeSubjectRef.current.id);
                           }
                       }
                       

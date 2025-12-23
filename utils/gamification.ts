@@ -119,12 +119,19 @@ export const getRank = (level: number): RankInfo => {
 
 // --- DAILY QUESTS LOGIC ---
 
+const LANGUAGE_SUBJECTS = [
+    SubjectId.ENGLISH, SubjectId.GERMAN, SubjectId.FRENCH, 
+    SubjectId.SPANISH, SubjectId.RUSSIAN, SubjectId.JAPANESE,
+    SubjectId.BULGARIAN
+];
+
 // Helper to get icon based on quest type
 export const getQuestIcon = (type: string) => {
     switch (type) {
         case 'message': return MessageSquare;
         case 'image': return Image;
         case 'voice': return Mic;
+        case 'language': return Globe;
         case SubjectId.MATH: return Calculator;
         case SubjectId.ENGLISH: 
         case SubjectId.GERMAN:
@@ -140,7 +147,8 @@ const QUEST_TEMPLATES = [
     { desc: 'Изпрати {n} съобщения', type: 'message', min: 3, max: 8, xpPerUnit: 20 },
     { desc: 'Качи {n} снимки', type: 'image', min: 1, max: 3, xpPerUnit: 40 },
     { desc: 'Реши {n} задачи по Математика', type: SubjectId.MATH, min: 2, max: 5, xpPerUnit: 30 },
-    { desc: 'Упражнявай Английски ({n} съобщ.)', type: SubjectId.ENGLISH, min: 3, max: 6, xpPerUnit: 20 },
+    // Generic Language Quest (matches any language subject)
+    { desc: 'Упражнявай език ({n} съобщ.)', type: 'language', min: 3, max: 6, xpPerUnit: 20 },
     { desc: 'Научи нещо по История ({n} въпр.)', type: SubjectId.HISTORY, min: 2, max: 4, xpPerUnit: 25 },
     { desc: 'Програмирай с AI ({n} заявки)', type: SubjectId.IT, min: 2, max: 4, xpPerUnit: 30 },
     { desc: 'Гласов разговор ({n} реплики)', type: 'voice', min: 3, max: 10, xpPerUnit: 15 },
@@ -184,7 +192,14 @@ export const updateQuestProgress = (
             match = true;
         }
         
-        // 2. Subject Specific Match
+        // 2. Language Quest Match
+        if (q.type === 'language' && (actionType === 'message' || actionType === 'voice')) {
+            if (LANGUAGE_SUBJECTS.includes(subjectId as SubjectId)) {
+                match = true;
+            }
+        }
+        
+        // 3. Subject Specific Match
         // We only count messages or voice towards subject specific quests
         if ((actionType === 'message' || actionType === 'voice') && q.type === subjectId) {
             match = true;
