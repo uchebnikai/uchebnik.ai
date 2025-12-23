@@ -222,22 +222,6 @@ export const App = () => {
 
   // Auth & URL Logic (Referrals)
   useEffect(() => {
-    // 1. Check for Referral Code in URL
-    const searchParams = new URLSearchParams(window.location.search);
-    const refCode = searchParams.get('ref');
-    if (refCode) {
-        localStorage.setItem('uchebnik_invite_code', refCode);
-        addToast(t('referral_applied', userSettings.language) || 'Invite code applied! Sign up to claim reward.', 'success');
-        
-        // Auto-open registration modal
-        setInitialAuthMode('register');
-        setShowAuthModal(true);
-
-        // Clean URL
-        const newUrl = window.location.pathname;
-        window.history.replaceState({}, '', newUrl);
-    }
-
     const handleAuthRedirects = () => {
         const hash = window.location.hash;
         
@@ -270,12 +254,194 @@ export const App = () => {
                 setHomeView('auth_success');
             }
         }
+        
+        // Check for Referral Code in URL
+        const searchParams = new URLSearchParams(window.location.search);
+        const refCode = searchParams.get('ref');
+        if (refCode) {
+            localStorage.setItem('uchebnik_invite_code', refCode);
+            addToast(t('referral_applied', userSettings.language) || 'Invite code applied! Sign up to claim reward.', 'success');
+            
+            // Auto-open registration modal
+            setInitialAuthMode('register');
+            setShowAuthModal(true);
+
+            // Clean URL
+            const newUrl = window.location.pathname;
+            window.history.replaceState({}, '', newUrl);
+        }
     };
     handleAuthRedirects();
 
-    const syncProfile = async (session: SupabaseSession | null) => {
+    // Data Fetching Logic Consolidated
+    const loadLocalStorageData = async () => {
+        const sessionsKey = 'uchebnik_sessions';
+        const settingsKey = 'uchebnik_settings';
+        const planKey = 'uchebnik_user_plan';
+        const lastVisitKey = 'uchebnik_last_visit';
+
+        try {
+            const loadedSessions = await getSessionsFromStorage(sessionsKey);
+            if (loadedSessions && loadedSessions.length > 0) setSessions(loadedSessions);
+            else {
+                const lsSessions = localStorage.getItem(sessionsKey);
+                if (lsSessions) {
+                    try {
+                        const parsed = JSON.parse(lsSessions);
+                        setSessions(parsed);
+                        await saveSessionsToStorage(sessionsKey, parsed);
+                    } catch(e){}
+                }
+            }
+            
+            const loadedSettings = await getSettingsFromStorage(settingsKey);
+            if (loadedSettings) setUserSettings(loadedSettings);
+            else {
+                 const lsSettings = localStorage.getItem(settingsKey);
+                 if (lsSettings) setUserSettings(JSON.parse(lsSettings));
+            }
+        } catch (err) { console.error("Initialization Error", err); }
+
+        const savedPlan = localStorage.getItem(planKey);
+        if (savedPlan) setUserPlan(savedPlan as UserPlan);
+        else {
+           const oldPro = localStorage.getItem('uchebnik_pro_status');
+           if (oldPro === 'unlocked') {
+               setUserPlan('pro');
+               localStorage.setItem('uchebnik_user_plan', 'pro');
+           }
+        }
+        
+        const savedAdminKeys = localStorage.getItem('uchebnik_admin_keys');
+        if (savedAdminKeys) setGeneratedKeys(JSON.parse(savedAdminKeys));
+
+        const today = new Date().toDateString();
+        const lastUsageDate = localStorage.getItem('uchebnik_image_date');
+        const lastUsageCount = localStorage.getItem('uchebnik_image_count');
+        if (lastUsageDate !== today) {
+            setDailyImageCount(0);
+            localStorage.setItem('uchebnik_image_date', today);
+            localStorage.setItem('uchebnik_image_count', '0');
+        } else {
+            setDailyImageCount(parseInt(lastUsageCount || '0'));
+        }
+        localStorage.setItem(lastVisitKey, today);
+    };
+
+    const loadRemoteUserData = async (userId: string) => {
+        setIsRemoteDataLoaded(false);
+        isRemoteDataLoadedRef.current = false;
+        setSyncStatus('syncing');
+        setMissingDbTables(false);
+        
+        const dbStart = performance.now();
+        try {
+            const { data: profileData, error: profileError } = await supabase
+                .from('profiles')
+                .select('settings, theme_color, custom_background, referral_code, pro_expires_at, xp, level')
+                .eq('id', userId)
+                .single();
+            
+            if (profileError && profileError.code === '42P01') {
+                setMissingDbTables(true);
+                throw new Error("Missing tables");
+            }
+
+            if (profileData) {
+                // Merge new referral fields + XP/Level
+                const referralCode = profileData.referral_code;
+                const proExpiresAt = profileData.pro_expires_at;
+                const xp = profileData.xp || 0;
+                const level = profileData.level || 1;
+
+                if (profileData.settings) {
+                    const { plan, stats, ...restSettings } = profileData.settings;
+                    const merged = { ...restSettings, themeColor: profileData.theme_color, customBackground: profileData.custom_background, referralCode, proExpiresAt, xp, level };
+                    
+                    if (!merged.language) merged.language = 'bg';
+                    if (!merged.teachingStyle) merged.teachingStyle = 'normal';
+                    if (merged.socraticMode === undefined) merged.socraticMode = false;
+                    if (!merged.customPersona) merged.customPersona = '';
+                    if (merged.christmasMode === undefined) merged.christmasMode = false;
+                    if (!merged.preferredVoice) merged.preferredVoice = DEFAULT_VOICE;
+                    
+                    setUserSettings(prev => ({ ...prev, ...merged }));
+                    
+                    let effectivePlan = plan;
+                    if (proExpiresAt && new Date(proExpiresAt) < new Date()) {
+                        if (plan !== 'free') {
+                            effectivePlan = 'free';
+                            console.warn("Pro plan expired.");
+                        }
+                    }
+                    
+                    if (effectivePlan) setUserPlan(effectivePlan);
+                    
+                    if (stats) {
+                        setTotalInputTokens(stats.totalInputTokens || 0);
+                        setTotalOutputTokens(stats.totalOutputTokens || 0);
+                        setCostCorrection(stats.costCorrection || 0);
+                        
+                        const today = new Date().toDateString();
+                        if (stats.lastImageDate === today) {
+                            setDailyImageCount(stats.dailyImageCount || 0);
+                        } else {
+                            setDailyImageCount(0);
+                        }
+                    }
+                } else {
+                    if (profileData.theme_color) setUserSettings(prev => ({...prev, themeColor: profileData.theme_color}));
+                    if (profileData.custom_background) setUserSettings(prev => ({...prev, customBackground: profileData.custom_background}));
+                    setUserSettings(prev => ({...prev, referralCode, proExpiresAt, xp, level}));
+                }
+            }
+
+            const { data: sessionData, error: sessionError } = await supabase
+                .from('user_data')
+                .select('data')
+                .eq('user_id', userId)
+                .single();
+            
+            if (sessionError) {
+                if (sessionError.code === '42P01') {
+                    setMissingDbTables(true);
+                } else if (sessionError.code !== 'PGRST116') {
+                    console.warn("Session load error:", sessionError);
+                }
+            }
+                
+            if (sessionData && sessionData.data) {
+                isIncomingUpdateRef.current = true;
+                const remoteSessions = sessionData.data;
+                setSessions(prev => {
+                    const localOnly = prev.filter(p => !remoteSessions.find((r: Session) => r.id === p.id));
+                    return [...localOnly, ...remoteSessions].sort((a: Session, b: Session) => b.lastModified - a.lastModified);
+                });
+            }
+            setSyncStatus('synced');
+            
+            localStorage.setItem('sys_monitor_db', JSON.stringify({
+                status: 'operational',
+                latency: Math.round(performance.now() - dbStart),
+                timestamp: Date.now()
+            }));
+
+        } catch (err) {
+            console.error("Failed to load remote data", err);
+            localStorage.setItem('sys_monitor_db', JSON.stringify({
+                status: 'down',
+                latency: Math.round(performance.now() - dbStart),
+                timestamp: Date.now()
+            }));
+        } finally {
+            setIsRemoteDataLoaded(true);
+            isRemoteDataLoadedRef.current = true;
+        }
+    };
+
+    const initializeApp = async (session: SupabaseSession | null) => {
         setSession(session);
-        setAuthLoading(false);
+        
         if (session) {
             setShowAuthModal(false);
             
@@ -298,40 +464,56 @@ export const App = () => {
                 }
             }
 
+            if (session.user.user_metadata) {
+                const meta = session.user.user_metadata;
+                setUserMeta({ 
+                    firstName: meta.first_name || '', 
+                    lastName: meta.last_name || '', 
+                    avatar: meta.avatar_url || '' 
+                });
+                setEditProfile({ 
+                    firstName: meta.first_name || '', 
+                    lastName: meta.last_name || '', 
+                    avatar: meta.avatar_url || '', 
+                    email: session.user.email || '', 
+                    password: '', 
+                    currentPassword: '' 
+                });
+
+                setUserSettings(prev => {
+                    const fullName = meta.full_name || `${meta.first_name || ''} ${meta.last_name || ''}`.trim();
+                    if (!prev.userName && fullName) return { ...prev, userName: fullName };
+                    return prev;
+                });
+            }
+
+            // Await remote data BEFORE closing loader to prevent flash
+            await loadRemoteUserData(session.user.id);
+
         } else {
+            // If no user, load local storage
             setSessions([]);
             setSyncStatus('synced');
             setIsRemoteDataLoaded(false);
+            await loadLocalStorageData();
         }
-
-        if (session?.user?.user_metadata) {
-            const meta = session.user.user_metadata;
-            setUserMeta({ 
-                firstName: meta.first_name || '', 
-                lastName: meta.last_name || '', 
-                avatar: meta.avatar_url || '' 
-            });
-            setEditProfile({ 
-                firstName: meta.first_name || '', 
-                lastName: meta.last_name || '', 
-                avatar: meta.avatar_url || '', 
-                email: session.user.email || '', 
-                password: '', 
-                currentPassword: '' 
-            });
-
-            setUserSettings(prev => {
-                const fullName = meta.full_name || `${meta.first_name || ''} ${meta.last_name || ''}`.trim();
-                if (!prev.userName && fullName) return { ...prev, userName: fullName };
-                return prev;
-            });
-        }
+        
+        setAuthLoading(false); // Only now reveal the UI
     };
 
-    supabase.auth.getSession().then(({ data: { session } }) => syncProfile(session));
+    supabase.auth.getSession().then(({ data: { session } }) => initializeApp(session));
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      syncProfile(session);
+      // Re-run initialization on state change, but careful not to flicker
+      // If already loaded and session ID matches, skip full reload?
+      // For simplicity, we rerun logic but since authLoading is false, user sees updates reactively.
+      // However, for initial load, the promise above handles it.
+      if (!authLoading) {
+          setSession(session);
+          if (session) {
+              loadRemoteUserData(session.user.id);
+          }
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -361,128 +543,6 @@ export const App = () => {
           supabase.removeChannel(channel);
       };
   }, [userSettings.sound]);
-
-  // Cloud Sync Effects (Rest of the file remains same, adding minimal diff around this)
-  useEffect(() => {
-      if (!session?.user?.id) {
-          setIsRemoteDataLoaded(false);
-          isRemoteDataLoadedRef.current = false;
-          return;
-      }
-      
-      const loadRemoteData = async () => {
-          setIsRemoteDataLoaded(false);
-          isRemoteDataLoadedRef.current = false;
-          setSyncStatus('syncing');
-          setMissingDbTables(false);
-          
-          const dbStart = performance.now();
-          try {
-              const { data: profileData, error: profileError } = await supabase
-                  .from('profiles')
-                  .select('settings, theme_color, custom_background, referral_code, pro_expires_at, xp, level')
-                  .eq('id', session.user.id)
-                  .single();
-              
-              if (profileError && profileError.code === '42P01') {
-                  setMissingDbTables(true);
-                  throw new Error("Missing tables");
-              }
-
-              if (profileData) {
-                  // Merge new referral fields + XP/Level
-                  const referralCode = profileData.referral_code;
-                  const proExpiresAt = profileData.pro_expires_at;
-                  const xp = profileData.xp || 0;
-                  const level = profileData.level || 1;
-
-                  if (profileData.settings) {
-                      const { plan, stats, ...restSettings } = profileData.settings;
-                      const merged = { ...restSettings, themeColor: profileData.theme_color, customBackground: profileData.custom_background, referralCode, proExpiresAt, xp, level };
-                      
-                      if (!merged.language) merged.language = 'bg';
-                      if (!merged.teachingStyle) merged.teachingStyle = 'normal';
-                      if (merged.socraticMode === undefined) merged.socraticMode = false;
-                      if (!merged.customPersona) merged.customPersona = '';
-                      if (merged.christmasMode === undefined) merged.christmasMode = false;
-                      if (!merged.preferredVoice) merged.preferredVoice = DEFAULT_VOICE;
-                      
-                      setUserSettings(prev => ({ ...prev, ...merged }));
-                      
-                      let effectivePlan = plan;
-                      if (proExpiresAt && new Date(proExpiresAt) < new Date()) {
-                          if (plan !== 'free') {
-                              effectivePlan = 'free';
-                              console.warn("Pro plan expired.");
-                          }
-                      }
-                      
-                      if (effectivePlan) setUserPlan(effectivePlan);
-                      
-                      if (stats) {
-                          setTotalInputTokens(stats.totalInputTokens || 0);
-                          setTotalOutputTokens(stats.totalOutputTokens || 0);
-                          setCostCorrection(stats.costCorrection || 0);
-                          
-                          const today = new Date().toDateString();
-                          if (stats.lastImageDate === today) {
-                              setDailyImageCount(stats.dailyImageCount || 0);
-                          } else {
-                              setDailyImageCount(0);
-                          }
-                      }
-                  } else {
-                      if (profileData.theme_color) setUserSettings(prev => ({...prev, themeColor: profileData.theme_color}));
-                      if (profileData.custom_background) setUserSettings(prev => ({...prev, customBackground: profileData.custom_background}));
-                      setUserSettings(prev => ({...prev, referralCode, proExpiresAt, xp, level}));
-                  }
-              }
-
-              const { data: sessionData, error: sessionError } = await supabase
-                  .from('user_data')
-                  .select('data')
-                  .eq('user_id', session.user.id)
-                  .single();
-              
-              if (sessionError) {
-                  if (sessionError.code === '42P01') {
-                      setMissingDbTables(true);
-                  } else if (sessionError.code !== 'PGRST116') {
-                      console.warn("Session load error:", sessionError);
-                  }
-              }
-                  
-              if (sessionData && sessionData.data) {
-                  isIncomingUpdateRef.current = true;
-                  const remoteSessions = sessionData.data;
-                  setSessions(prev => {
-                      const localOnly = prev.filter(p => !remoteSessions.find((r: Session) => r.id === p.id));
-                      return [...localOnly, ...remoteSessions].sort((a: Session, b: Session) => b.lastModified - a.lastModified);
-                  });
-              }
-              setSyncStatus('synced');
-              
-              localStorage.setItem('sys_monitor_db', JSON.stringify({
-                  status: 'operational',
-                  latency: Math.round(performance.now() - dbStart),
-                  timestamp: Date.now()
-              }));
-
-          } catch (err) {
-              console.error("Failed to load remote data", err);
-              localStorage.setItem('sys_monitor_db', JSON.stringify({
-                  status: 'down',
-                  latency: Math.round(performance.now() - dbStart),
-                  timestamp: Date.now()
-              }));
-          } finally {
-              setIsRemoteDataLoaded(true);
-              isRemoteDataLoadedRef.current = true;
-          }
-      };
-      
-      loadRemoteData();
-  }, [session?.user?.id]);
 
   // Subscriptions and Saving Effects
   useEffect(() => {
@@ -638,100 +698,6 @@ export const App = () => {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
-
-  // Initialization Data Loading
-  useEffect(() => {
-    const initData = async () => {
-        const userId = session?.user?.id;
-        const sessionsKey = userId ? `uchebnik_sessions_${userId}` : 'uchebnik_sessions';
-        const settingsKey = userId ? `uchebnik_settings_${userId}` : 'uchebnik_settings';
-        const planKey = userId ? `uchebnik_plan_${userId}` : 'uchebnik_user_plan';
-        const lastVisitKey = userId ? `uchebnik_last_visit_${userId}` : 'uchebnik_last_visit';
-
-        try {
-            const loadedSessions = await getSessionsFromStorage(sessionsKey);
-            if (!isRemoteDataLoadedRef.current) {
-                if (loadedSessions && loadedSessions.length > 0) setSessions(loadedSessions);
-                else {
-                    const lsSessions = localStorage.getItem(sessionsKey);
-                    if (lsSessions) {
-                        try {
-                            const parsed = JSON.parse(lsSessions);
-                            setSessions(parsed);
-                            await saveSessionsToStorage(sessionsKey, parsed);
-                        } catch(e){}
-                    }
-                }
-            }
-            const loadedSettings = await getSettingsFromStorage(settingsKey);
-            if (!isRemoteDataLoadedRef.current) {
-                if (loadedSettings) setUserSettings(loadedSettings);
-                else {
-                     const lsSettings = localStorage.getItem(settingsKey);
-                     if (lsSettings) setUserSettings(JSON.parse(lsSettings));
-                     else if (userId) {
-                        setUserSettings({
-                            userName: session?.user?.user_metadata?.full_name || '', 
-                            textSize: 'normal', 
-                            haptics: true, 
-                            notifications: true, 
-                            sound: true, 
-                            responseLength: 'concise', 
-                            creativity: 'balanced', 
-                            languageLevel: 'standard', 
-                            preferredModel: 'auto', 
-                            themeColor: '#6366f1', 
-                            customBackground: null, 
-                            language: 'bg',
-                            teachingStyle: 'normal', 
-                            socraticMode: false,
-                            enterToSend: true,
-                            fontFamily: 'inter',
-                            customPersona: '',
-                            christmasMode: false,
-                            preferredVoice: DEFAULT_VOICE,
-                            referralCode: '',
-                            proExpiresAt: '',
-                            xp: 0,
-                            level: 1
-                        });
-                     }
-                }
-            }
-        } catch (err) { console.error("Initialization Error", err); }
-
-        if (!isRemoteDataLoadedRef.current) {
-            const savedPlan = localStorage.getItem(planKey);
-            if (savedPlan) setUserPlan(savedPlan as UserPlan);
-            else {
-               if (!userId) {
-                   const oldPro = localStorage.getItem('uchebnik_pro_status');
-                   if (oldPro === 'unlocked') {
-                       setUserPlan('pro');
-                       localStorage.setItem('uchebnik_user_plan', 'pro');
-                   }
-               }
-            }
-        }
-        const savedAdminKeys = localStorage.getItem('uchebnik_admin_keys');
-        if (savedAdminKeys) setGeneratedKeys(JSON.parse(savedAdminKeys));
-
-        const today = new Date().toDateString();
-        if (!isRemoteDataLoadedRef.current) {
-            const lastUsageDate = localStorage.getItem('uchebnik_image_date');
-            const lastUsageCount = localStorage.getItem('uchebnik_image_count');
-            if (lastUsageDate !== today) {
-                setDailyImageCount(0);
-                localStorage.setItem('uchebnik_image_date', today);
-                localStorage.setItem('uchebnik_image_count', '0');
-            } else {
-                setDailyImageCount(parseInt(lastUsageCount || '0'));
-            }
-            localStorage.setItem(lastVisitKey, today);
-        }
-    };
-    initData();
-  }, [session, isRemoteDataLoaded]);
 
   // Persist Data
   useEffect(() => { const userId = session?.user?.id; const key = userId ? `uchebnik_sessions_${userId}` : 'uchebnik_sessions'; saveSessionsToStorage(key, sessions); }, [sessions, session]);
