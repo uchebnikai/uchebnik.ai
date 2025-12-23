@@ -24,7 +24,6 @@ export enum SubjectId {
   TECHNOLOGIES = 'technologies', 
   CITIZENSHIP = 'citizenship', 
   RELIGION = 'religion', 
-  CAREER = 'career', // New
   
   // University Subjects
   HIGHER_MATH = 'higher_math',
@@ -56,8 +55,7 @@ export enum AppMode {
   LEARN = 'learn', 
   DRAW = 'draw',   
   PRESENTATION = 'presentation', 
-  CHAT = 'chat',
-  QUIZ = 'quiz', // New
+  CHAT = 'chat',    
   
   TEACHER_TEST = 'teacher_test',
   TEACHER_PLAN = 'teacher_plan',
@@ -129,10 +127,9 @@ export interface Message {
   images?: string[]; 
   imageAnalysis?: string; 
   isError?: boolean;
-  type?: 'text' | 'image_generated' | 'slides' | 'test_generated' | 'quiz_generated';
+  type?: 'text' | 'image_generated' | 'slides' | 'test_generated';
   slidesData?: Slide[]; 
-  testData?: TestData;
-  quizData?: TestData; // Reusing TestData structure for Quiz
+  testData?: TestData; 
   chartData?: ChartData; 
   geometryData?: GeometryData; 
   rating?: 'up' | 'down'; 
@@ -141,7 +138,6 @@ export interface Message {
   isStreaming?: boolean; 
   sources?: SearchSource[]; 
   usage?: TokenUsage;
-  isBookmarked?: boolean; // New
 }
 
 export interface Session {
@@ -153,8 +149,7 @@ export interface Session {
   messages: Message[];
   preview: string; 
   role?: UserRole; 
-  mode?: AppMode;
-  folderId?: string; // New
+  mode?: AppMode;  
 }
 
 export interface Slide {
@@ -198,7 +193,6 @@ export interface UserSettings {
   preferredVoice: string; 
   referralCode?: string; 
   proExpiresAt?: string; 
-  highContrast?: boolean; // New
   
   // Gamification
   xp: number;
