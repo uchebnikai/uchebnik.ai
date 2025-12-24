@@ -1,10 +1,10 @@
 
-
 import { supabase } from '../supabaseClient';
 
-const SECRET_SALT = process.env.SECRET_SALT || "UCH_2025_SECURE_SALT_VS";
-// Updated Hash for VS09091615!
-const ADMIN_HASH = process.env.ADMIN_HASH || "9e38e8d688743e0d07d669a1fc981589e68b725679f297e788950390f7725913"; 
+// We no longer store the secret salt or admin hash in the frontend bundle.
+// Verification is now performed securely on the server via Edge Function.
+
+const SECRET_SALT = "UCH_CLIENT_SALT_PUBLIC_CHECK"; // Used only for Key Format validation, not auth
 
 export const generateChecksum = (core: string): string => {
   let hash = 0;
@@ -18,7 +18,7 @@ export const generateChecksum = (core: string): string => {
   return Math.abs(hash).toString(16).substring(0, 4).toUpperCase().padStart(4, '0');
 };
 
-// Purely algorithmic check (Format validation)
+// Purely algorithmic check (Format validation only)
 export const isValidKeyFormat = (key: string): boolean => {
   const parts = key.split('-');
   if (parts.length !== 3) return false;
@@ -30,22 +30,23 @@ export const isValidKeyFormat = (key: string): boolean => {
   return generateChecksum(core) === checksum;
 };
 
-// Secure Async Admin Password Verification
+// Secure Async Admin Password Verification via Supabase Edge Function
 export const verifyAdminPassword = async (input: string): Promise<boolean> => {
   if (!input) return false;
-  
-  // Direct fail-safe check for the requested password
-  if (input === "VS09091615!") return true;
 
   try {
-      const encoder = new TextEncoder();
-      const data = encoder.encode(input);
-      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-      const hashArray = Array.from(new Uint8Array(hashBuffer));
-      const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-      return hashHex === ADMIN_HASH;
+      const { data, error } = await supabase.functions.invoke('verify-admin', {
+          body: { password: input }
+      });
+
+      if (error) {
+          console.error("Verification error:", error);
+          return false;
+      }
+
+      return data && data.success === true;
   } catch (e) {
-      console.error("Crypto error", e);
+      console.error("Network error during verification", e);
       return false;
   }
 };
