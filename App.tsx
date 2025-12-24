@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { GoogleGenAI, LiveServerMessage, Modality } from "@google/genai";
 import { SubjectConfig, SubjectId, AppMode, Message, Slide, UserSettings, Session, UserPlan, UserRole, HomeViewType } from './types';
@@ -51,7 +50,7 @@ interface GeneratedKey {
   plan?: 'plus' | 'pro';
 }
 
-const LIVE_MODEL = 'gemini-2.5-flash-native-audio-preview-09-2025';
+const LIVE_MODEL = 'gemini-2.5-flash-native-audio-preview-12-2025';
 
 export const App = () => {
   // --- Auth State ---
@@ -1328,7 +1327,8 @@ export const App = () => {
   const startVoiceCall = async () => { 
     if (!session) { setShowAuthModal(true); return; } 
     
-    if (userPlan === 'free') {
+    // Strict Pro Check
+    if (userPlan !== 'pro') {
         setShowUnlockModal(true);
         return;
     }
