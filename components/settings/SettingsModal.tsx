@@ -150,7 +150,7 @@ export const SettingsModal = ({
                     onClick={() => setActiveTab(tab.id as SettingsTab)}
                     className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all whitespace-nowrap md:whitespace-normal ${
                         activeTab === tab.id 
-                        ? 'bg-white dark:bg-white/10 text-indigo-600 dark:text-indigo-400 shadow-sm' 
+                        ? 'bg-white dark:bg-white/10 text-indigo-600 dark:text-white shadow-sm' 
                         : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-gray-300'
                     }`}
                 >
@@ -483,11 +483,28 @@ export const SettingsModal = ({
                       </div>
 
                       {/* AI Model Selection */}
+                      {/* ... existing model selection ... */}
                       <section className="space-y-4">
                           <label className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
                               <Cpu size={18} className="text-blue-500"/> AI Модел
                           </label>
                           <div className="grid grid-cols-1 gap-3">
+                              {/* Auto Option */}
+                              <button
+                                  onClick={() => setUserSettings({...userSettings, preferredModel: 'auto'})}
+                                  className={`p-4 rounded-xl text-left border transition-all flex items-center gap-4 ${userSettings.preferredModel === 'auto'
+                                      ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-500 text-blue-700 dark:text-blue-300 shadow-md'
+                                      : 'bg-white dark:bg-white/5 border-gray-200 dark:border-white/10 hover:border-blue-300'}`}
+                              >
+                                  <div className={`p-2 rounded-full ${userSettings.preferredModel === 'auto' ? 'bg-blue-200 dark:bg-blue-500/30' : 'bg-gray-100 dark:bg-white/10'}`}>
+                                      <Sparkles size={20} />
+                                  </div>
+                                  <div>
+                                      <div className="font-bold text-sm">Автоматично (Препоръчително)</div>
+                                      <div className="text-xs opacity-70">Избира най-добрия модел според плана ви.</div>
+                                  </div>
+                              </button>
+
                               {/* Gemini 2.5 Flash -> Standard AI */}
                               <button
                                   onClick={() => setUserSettings({...userSettings, preferredModel: 'gemini-2.5-flash'})}
@@ -499,24 +516,24 @@ export const SettingsModal = ({
                                       <Zap size={20} />
                                   </div>
                                   <div>
-                                      <div className="font-bold text-sm">Standard AI (v1)</div>
+                                      <div className="font-bold text-sm">Standard AI</div>
                                       <div className="text-xs opacity-70">Бърз и лек. Идеален за прости задачи.</div>
                                   </div>
                               </button>
 
-                              {/* Gemini 3 Flash -> Advanced AI */}
+                              {/* Gemini 3 Flash Preview -> Advanced AI */}
                               <button
-                                  onClick={() => isPremium ? setUserSettings({...userSettings, preferredModel: 'gemini-3-flash'}) : addToast('Този модел изисква Plus или Pro план.', 'info')}
-                                  className={`p-4 rounded-xl text-left border transition-all flex items-center gap-4 relative overflow-hidden ${userSettings.preferredModel === 'gemini-3-flash'
+                                  onClick={() => isPremium ? setUserSettings({...userSettings, preferredModel: 'gemini-3-flash-preview'}) : addToast('Този модел изисква Plus или Pro план.', 'info')}
+                                  className={`p-4 rounded-xl text-left border transition-all flex items-center gap-4 relative overflow-hidden ${userSettings.preferredModel === 'gemini-3-flash-preview'
                                       ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-500 text-amber-700 dark:text-amber-300 shadow-md'
                                       : `bg-white dark:bg-white/5 border-gray-200 dark:border-white/10 ${isPremium ? 'hover:border-amber-300' : 'opacity-60 cursor-not-allowed'}`}`}
                               >
-                                  <div className={`p-2 rounded-full ${userSettings.preferredModel === 'gemini-3-flash' ? 'bg-amber-200 dark:bg-amber-500/30' : 'bg-gray-100 dark:bg-white/10'}`}>
+                                  <div className={`p-2 rounded-full ${userSettings.preferredModel === 'gemini-3-flash-preview' ? 'bg-amber-200 dark:bg-amber-500/30' : 'bg-gray-100 dark:bg-white/10'}`}>
                                       <Brain size={20} />
                                   </div>
                                   <div>
                                       <div className="font-bold text-sm flex items-center gap-2">
-                                          Advanced AI (v1)
+                                          Advanced AI 
                                           {!isPremium && <span className="text-[10px] bg-amber-500 text-white px-2 py-0.5 rounded-full uppercase tracking-wider">Plus / Pro</span>}
                                       </div>
                                       <div className="text-xs opacity-70">Следващо поколение интелект и логика.</div>

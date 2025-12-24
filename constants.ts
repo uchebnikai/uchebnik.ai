@@ -10,7 +10,7 @@ export const STRIPE_PRICES = {
 
 export const AI_MODELS = [
   { id: 'gemini-2.5-flash', name: 'Standard AI', description: 'Бърз и ефективен модел за ежедневни задачи.' },
-  { id: 'gemini-3-flash', name: 'Advanced AI', description: 'Най-новият модел от следващо поколение.' }
+  { id: 'gemini-3-flash-preview', name: 'Advanced AI', description: 'Най-новият модел от следващо поколение.' }
 ];
 
 export const VOICES = [
@@ -41,6 +41,7 @@ export const getSystemPrompt = (mode: string, lang: Language, teachingStyle: Tea
 
   let personalityInstruction = "";
   
+  // Custom Persona overrides Teaching Style if present
   if (customPersona && customPersona.trim().length > 0) {
       personalityInstruction = `IMPORTANT: Adopt the following persona/role strictly: "${customPersona}". Maintain this persona throughout the conversation.`;
   } else {

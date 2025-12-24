@@ -51,8 +51,7 @@ interface GeneratedKey {
   plan?: 'plus' | 'pro';
 }
 
-// Strictly using the allowed Live API model
-const LIVE_MODEL = 'gemini-2.5-flash-native-audio-dialog';
+const LIVE_MODEL = 'gemini-2.5-flash-native-audio-preview-09-2025';
 
 export const App = () => {
   // --- Auth State ---
@@ -138,7 +137,7 @@ export const App = () => {
     responseLength: 'concise', 
     creativity: 'balanced', 
     languageLevel: 'standard', 
-    preferredModel: 'gemini-2.5-flash',
+    preferredModel: 'auto',
     themeColor: '#6366f1',
     customBackground: null, 
     language: 'bg',
@@ -1155,17 +1154,13 @@ export const App = () => {
 
       if (!userSettings.preferredModel || userSettings.preferredModel === 'auto') {
           if (userPlan === 'plus' || userPlan === 'pro') {
-              selectedModel = 'gemini-3-flash';
+              selectedModel = 'gemini-3-flash-preview';
           } else {
               selectedModel = 'gemini-2.5-flash';
           }
       } else {
           selectedModel = userSettings.preferredModel;
-          // Ensure fallback if somehow an invalid model is selected
-          if (selectedModel !== 'gemini-2.5-flash' && selectedModel !== 'gemini-3-flash') {
-              selectedModel = 'gemini-2.5-flash';
-          }
-          if (selectedModel === 'gemini-3-flash' && userPlan === 'free') {
+          if (selectedModel === 'gemini-3-flash-preview' && userPlan === 'free') {
               selectedModel = 'gemini-2.5-flash';
           }
       }
@@ -1183,8 +1178,15 @@ export const App = () => {
           selectedModel, 
           (textChunk, reasoningChunk) => {
               startWatchdog(); 
-              // Note: Direct REST fetch in generateResponse might not stream chunks granularly in this implementation
-              // depending on the fetch reader logic, but the promise resolves with full text.
+              setSessions(prev => prev.map(s => {
+                  if (s.id === sessId) {
+                      return { ...s, messages: s.messages.map(m => {
+                              if (m.id === tempAiMsgId) { return { ...m, text: textChunk, reasoning: reasoningChunk, isStreaming: true }; }
+                              return m;
+                          }) };
+                  }
+                  return s;
+              }));
           },
           controller.signal,
           userSettings.language,
@@ -1372,11 +1374,8 @@ export const App = () => {
           let nextStartTime = 0;
           const sources = new Set<AudioBufferSourceNode>();
 
-          // IMPORTANT: Live API (Multimodal Live) is handled by the SDK.
-          // This model string MUST be supported by the SDK's live.connect method.
-          // We are adhering to "gemini-2.5-flash-native-audio-dialog" as requested.
           const sessionPromise = ai.live.connect({
-              model: LIVE_MODEL, 
+              model: LIVE_MODEL,
               config: {
                   responseModalities: [Modality.AUDIO],
                   speechConfig: {
