@@ -8,6 +8,7 @@ import { Message, UserSettings, AppMode } from '../../types';
 import { t } from '../../utils/translations';
 import { INPUT_AREA_BASE, INPUT_AREA_CUSTOM_BG, INPUT_AREA_DEFAULT_BG } from '../../styles/chat';
 import { SLIDE_UP, FADE_IN, ZOOM_IN } from '../../animations/transitions';
+import { resizeImage } from '../../utils/image';
 
 interface ChatInputAreaProps {
   replyingTo: Message | null;
@@ -27,6 +28,7 @@ interface ChatInputAreaProps {
   handleRemoveImage: (index: number) => void;
   onCameraCapture?: (base64: string) => void;
   onStopGeneration: () => void;
+  onImagesAdd?: (base64s: string[]) => void;
 }
 
 const MATH_SYMBOLS = [
@@ -47,6 +49,8 @@ const MATH_SYMBOLS = [
   { label: 'β', val: '\\beta' },
 ];
 
+const MAX_CHARS = 10000;
+
 export const ChatInputArea = ({
   replyingTo,
   setReplyingTo,
@@ -63,7 +67,8 @@ export const ChatInputArea = ({
   handleSend,
   selectedImages,
   handleRemoveImage,
-  onStopGeneration
+  onStopGeneration,
+  onImagesAdd
 }: ChatInputAreaProps) => {
   
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -80,16 +85,20 @@ export const ChatInputArea = ({
     if (textareaRef.current) {
       const start = textareaRef.current.selectionStart;
       const end = textareaRef.current.selectionEnd;
-      const newValue = inputValue.substring(0, start) + latex + inputValue.substring(end);
-      setInputValue(newValue);
-      // Focus back and move cursor inside brackets if present
-      setTimeout(() => {
-        if(textareaRef.current) {
-            textareaRef.current.focus();
-            const offset = latex.includes('{}') ? latex.indexOf('{}') + 1 : latex.length;
-            textareaRef.current.setSelectionRange(start + offset, start + offset);
-        }
-      }, 0);
+      
+      // Ensure we don't exceed max chars with math
+      const newVal = inputValue.substring(0, start) + latex + inputValue.substring(end);
+      if (newVal.length <= MAX_CHARS) {
+          setInputValue(newVal);
+          // Focus back and move cursor inside brackets if present
+          setTimeout(() => {
+            if(textareaRef.current) {
+                textareaRef.current.focus();
+                const offset = latex.includes('{}') ? latex.indexOf('{}') + 1 : latex.length;
+                textareaRef.current.setSelectionRange(start + offset, start + offset);
+            }
+          }, 0);
+      }
     }
   };
 
@@ -100,6 +109,37 @@ export const ChatInputArea = ({
               if (!loadingSubject) handleSend();
           }
           // If enterToSend is false, or shift+enter, it defaults to new line naturally
+      }
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+      const val = e.target.value;
+      if (val.length <= MAX_CHARS) {
+          setInputValue(val);
+      }
+  };
+
+  const handlePaste = async (e: React.ClipboardEvent) => {
+      const items = e.clipboardData.items;
+      const imagesToProcess: File[] = [];
+
+      for (let i = 0; i < items.length; i++) {
+          if (items[i].type.indexOf('image') !== -1) {
+              const file = items[i].getAsFile();
+              if (file) imagesToProcess.push(file);
+          }
+      }
+
+      if (imagesToProcess.length > 0 && onImagesAdd) {
+          e.preventDefault(); // Prevent text paste of binary data
+          try {
+              const processedImages = await Promise.all(
+                  imagesToProcess.map(file => resizeImage(file, 800, 0.6))
+              );
+              onImagesAdd(processedImages);
+          } catch (err) {
+              console.error("Paste processing error", err);
+          }
       }
   };
 
@@ -122,6 +162,7 @@ export const ChatInputArea = ({
 
   const hasMath = /[\\^_{}]/.test(inputValue) || showMath;
   const isSocratic = !!userSettings.socraticMode;
+  const remainingChars = MAX_CHARS - inputValue.length;
 
   return (
       <>
@@ -209,17 +250,28 @@ export const ChatInputArea = ({
                 </button>
 
                 {/* Textarea */}
-                <div className="flex-1 py-2">
+                <div className="flex-1 py-2 relative">
                     <textarea 
                         ref={textareaRef}
                         value={inputValue}
-                        onChange={e => setInputValue(e.target.value)}
+                        onChange={handleChange}
                         onKeyDown={handleKeyDown}
+                        onPaste={handlePaste}
                         placeholder={replyingTo ? "Напиши отговор..." : loadingSubject ? "AI генерира отговор..." : "Напиши съобщение..."}
                         disabled={loadingSubject}
                         className="w-full bg-transparent border-none focus:ring-0 p-0 text-base text-zinc-900 dark:text-zinc-100 placeholder-gray-400 resize-none max-h-24 min-h-[24px] leading-6 disabled:opacity-60 disabled:cursor-not-allowed"
                         rows={1}
+                        maxLength={MAX_CHARS}
                     />
+                    {/* Character Count */}
+                    {inputValue.length > 0 && (
+                        <div className={`absolute bottom-0 right-0 text-[9px] font-mono font-bold pointer-events-none transition-colors ${
+                            remainingChars < 100 ? 'text-red-500' : 
+                            remainingChars < 1000 ? 'text-amber-500' : 'text-gray-400/50'
+                        }`}>
+                            {remainingChars}
+                        </div>
+                    )}
                 </div>
 
                 {/* Send / Stop Button */}

@@ -928,24 +928,53 @@ export const App = () => {
   const handleReply = (msg: Message) => { setReplyingTo(msg); };
 
   const handleStopGeneration = () => {
+    // 1. Abort the network request
     if (abortControllerRef.current) {
         abortControllerRef.current.abort();
         abortControllerRef.current = null;
     }
+    // 2. Clear watchdog
     if (responseWatchdogRef.current) {
         clearTimeout(responseWatchdogRef.current);
         responseWatchdogRef.current = null;
     }
+    
+    // 3. Update loading states
     if (activeSubject) {
         setLoadingSubjects(prev => ({ ...prev, [activeSubject.id]: false }));
     }
     isStreamingRef.current = false; 
+    
+    // 4. Stop Voice listening
     if (isListening) {
         if (recognitionRef.current) {
             recognitionRef.current.onend = null;
             recognitionRef.current.stop();
         }
         setIsListening(false);
+    }
+
+    // 5. Explicitly update the message in the session to stop showing the streaming indicator
+    if (activeSessionId) {
+        setSessions(prev => prev.map(s => {
+            if (s.id === activeSessionId) {
+                return {
+                    ...s,
+                    messages: s.messages.map(m => {
+                        // Find any message that is currently marked as streaming and turn it off
+                        if (m.isStreaming) {
+                            return { 
+                                ...m, 
+                                isStreaming: false,
+                                text: m.text + (m.text ? "" : " (Stopped)") // Append text if empty to show something
+                            };
+                        }
+                        return m;
+                    })
+                };
+            }
+            return s;
+        }));
     }
   };
 
@@ -1231,6 +1260,12 @@ export const App = () => {
       try { const processedImages = await Promise.all(Array.from(files).map(file => resizeImage(file as File, 800, 0.6))); setSelectedImages(prev => [...prev, ...processedImages]); } catch (err) { console.error("Image processing error", err); addToast("Грешка при обработката на изображението.", "error"); } finally { setIsImageProcessing(false); }
       e.target.value = '';
     }
+  };
+  
+  const handleImagesAdd = (newImages: string[]) => {
+      if (!session) { setShowAuthModal(true); return; }
+      if (!checkImageLimit(newImages.length)) return;
+      setSelectedImages(prev => [...prev, ...newImages]);
   };
 
   // Camera capture is now unified into file upload via native behavior, separate logic removed
@@ -1800,6 +1835,7 @@ export const App = () => {
                     selectedImages={selectedImages}
                     handleRemoveImage={handleRemoveImage}
                     onStopGeneration={handleStopGeneration}
+                    onImagesAdd={handleImagesAdd}
                 />
             </div>
         )}
