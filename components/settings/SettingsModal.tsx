@@ -521,14 +521,14 @@ export const SettingsModal = ({
                                   </div>
                               </button>
 
-                              {/* Gemini 3 Flash Preview -> Advanced AI */}
+                              {/* Gemini 3 Flash -> Advanced AI */}
                               <button
-                                  onClick={() => isPremium ? setUserSettings({...userSettings, preferredModel: 'gemini-3-flash-preview'}) : addToast('Този модел изисква Plus или Pro план.', 'info')}
-                                  className={`p-4 rounded-xl text-left border transition-all flex items-center gap-4 relative overflow-hidden ${userSettings.preferredModel === 'gemini-3-flash-preview'
+                                  onClick={() => isPremium ? setUserSettings({...userSettings, preferredModel: 'gemini-3-flash'}) : addToast('Този модел изисква Plus или Pro план.', 'info')}
+                                  className={`p-4 rounded-xl text-left border transition-all flex items-center gap-4 relative overflow-hidden ${userSettings.preferredModel === 'gemini-3-flash'
                                       ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-500 text-amber-700 dark:text-amber-300 shadow-md'
                                       : `bg-white dark:bg-white/5 border-gray-200 dark:border-white/10 ${isPremium ? 'hover:border-amber-300' : 'opacity-60 cursor-not-allowed'}`}`}
                               >
-                                  <div className={`p-2 rounded-full ${userSettings.preferredModel === 'gemini-3-flash-preview' ? 'bg-amber-200 dark:bg-amber-500/30' : 'bg-gray-100 dark:bg-white/10'}`}>
+                                  <div className={`p-2 rounded-full ${userSettings.preferredModel === 'gemini-3-flash' ? 'bg-amber-200 dark:bg-amber-500/30' : 'bg-gray-100 dark:bg-white/10'}`}>
                                       <Brain size={20} />
                                   </div>
                                   <div>
