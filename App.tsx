@@ -947,24 +947,6 @@ export const App = () => {
         }
         setIsListening(false);
     }
-    // FIX: Update session state to remove streaming indicator
-    setSessions(prev => prev.map(s => {
-        if (s.id === activeSessionIdRef.current) {
-            // Find the last message (which is typically the AI response being streamed)
-            const lastMsg = s.messages[s.messages.length - 1];
-            if (lastMsg && lastMsg.role === 'model' && lastMsg.isStreaming) {
-                return {
-                    ...s,
-                    messages: s.messages.map(m => 
-                        m.id === lastMsg.id 
-                        ? { ...m, isStreaming: false, text: m.text || "Генерирането е спряно." } 
-                        : m
-                    )
-                };
-            }
-        }
-        return s;
-    }));
   };
 
   // Grant XP Logic - Refactored to use functional update
@@ -1063,18 +1045,7 @@ export const App = () => {
     const currentSessionsList = sessionsRef.current;
     const currentLoading = loadingSubjectsRef.current;
     const textToSend = overrideText || inputValue;
-    
-    // Check word limit (10,000 words)
-    const trimmedText = textToSend.trim();
-    if (trimmedText.length > 0) {
-        const wordCount = trimmedText.split(/\s+/).length;
-        if (wordCount > 10000) {
-            addToast('Съобщението е твърде дълго (макс 10000 думи).', 'error');
-            return;
-        }
-    }
-
-    if ((!trimmedText && selectedImages.length === 0 && (!overrideImages || overrideImages.length === 0)) || !currentSubject || !currentSessionId) return;
+    if ((!textToSend.trim() && selectedImages.length === 0 && (!overrideImages || overrideImages.length === 0)) || !currentSubject || !currentSessionId) return;
     if (currentLoading[currentSubject.id]) return;
     if (isListening) { 
         if (recognitionRef.current) {
@@ -1251,28 +1222,13 @@ export const App = () => {
     }
   };
 
-  const processAndAddImages = async (files: File[]) => {
-      if (!session) { setShowAuthModal(true); return; }
-      if (!checkImageLimit(files.length)) return;
-      
-      setIsImageProcessing(true);
-      try {
-          const processedImages = await Promise.all(
-              files.map(file => resizeImage(file, 800, 0.6))
-          );
-          setSelectedImages(prev => [...prev, ...processedImages]);
-      } catch (err) {
-          console.error("Image processing error", err);
-          addToast("Грешка при обработката на изображенията.", "error");
-      } finally {
-          setIsImageProcessing(false);
-      }
-  };
-
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!session) { setShowAuthModal(true); e.target.value = ''; return; }
     const files = e.target.files;
     if (files && files.length > 0) {
-      await processAndAddImages(Array.from(files));
+      if (!checkImageLimit(files.length)) { e.target.value = ''; return; }
+      setIsImageProcessing(true);
+      try { const processedImages = await Promise.all(Array.from(files).map(file => resizeImage(file as File, 800, 0.6))); setSelectedImages(prev => [...prev, ...processedImages]); } catch (err) { console.error("Image processing error", err); addToast("Грешка при обработката на изображението.", "error"); } finally { setIsImageProcessing(false); }
       e.target.value = '';
     }
   };
@@ -1844,7 +1800,6 @@ export const App = () => {
                     selectedImages={selectedImages}
                     handleRemoveImage={handleRemoveImage}
                     onStopGeneration={handleStopGeneration}
-                    onImagesSelected={processAndAddImages}
                 />
             </div>
         )}
