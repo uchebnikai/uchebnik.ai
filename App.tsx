@@ -51,7 +51,7 @@ interface GeneratedKey {
   plan?: 'plus' | 'pro';
 }
 
-const LIVE_MODEL = 'gemini-2.5-flash-native-audio-dialog';
+const LIVE_MODEL = 'gemini-2.5-flash-native-audio-preview-09-2025';
 
 export const App = () => {
   // --- Auth State ---
@@ -1154,18 +1154,14 @@ export const App = () => {
 
       if (!userSettings.preferredModel || userSettings.preferredModel === 'auto') {
           if (userPlan === 'plus' || userPlan === 'pro') {
-              selectedModel = 'gemini-3-flash';
+              selectedModel = 'gemini-3-flash-preview';
           } else {
               selectedModel = 'gemini-2.5-flash';
           }
       } else {
           selectedModel = userSettings.preferredModel;
-          // Updated fallback for old preferences or free plan downgrade
-          if ((selectedModel === 'gemini-3-flash' || selectedModel === 'gemini-3-flash-preview') && userPlan === 'free') {
+          if (selectedModel === 'gemini-3-flash-preview' && userPlan === 'free') {
               selectedModel = 'gemini-2.5-flash';
-          } else if (selectedModel === 'gemini-3-flash-preview') {
-              // Migrate legacy setting
-              selectedModel = 'gemini-3-flash';
           }
       }
       
