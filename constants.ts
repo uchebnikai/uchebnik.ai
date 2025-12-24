@@ -41,7 +41,6 @@ export const getSystemPrompt = (mode: string, lang: Language, teachingStyle: Tea
 
   let personalityInstruction = "";
   
-  // Custom Persona overrides Teaching Style if present
   if (customPersona && customPersona.trim().length > 0) {
       personalityInstruction = `IMPORTANT: Adopt the following persona/role strictly: "${customPersona}". Maintain this persona throughout the conversation.`;
   } else {

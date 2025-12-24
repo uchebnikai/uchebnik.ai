@@ -1,11 +1,7 @@
 
-import { GoogleGenAI, GenerateContentResponse, Tool } from "@google/genai";
 import { AppMode, SubjectId, Slide, ChartData, GeometryData, Message, TestData, TeachingStyle, SearchSource, TokenUsage } from "../types";
 import { getSystemPrompt, SUBJECTS } from "../constants";
 import { Language } from '../utils/translations';
-
-// Helper for delay
-const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 // Helper to log system status
 const logStatus = (status: 'operational' | 'degraded' | 'outage', latency: number) => {
@@ -56,7 +52,7 @@ export const generateResponse = async (
       return {
           id: Date.now().toString(),
           role: 'model',
-          text: "Грешка: Не е намерен Google API ключ. Моля, проверете настройките на Vercel (GOOGLE_API_KEY).",
+          text: "Грешка: Не е намерен Google API ключ.",
           isError: true,
           timestamp: Date.now()
       };
@@ -64,29 +60,22 @@ export const generateResponse = async (
 
   const subjectConfig = SUBJECTS.find(s => s.id === subjectId);
   const subjectName = subjectConfig ? subjectConfig.name : "Unknown Subject";
-  const modelName = preferredModel || 'gemini-2.5-flash';
   
-  console.log(`[AI Service] Generating response using model: ${modelName} for subject: ${subjectName}`);
+  // Enforce allowed models strictly. Defaults to 2.5-flash if invalid.
+  const allowedModels = ['gemini-2.5-flash', 'gemini-3-flash'];
+  const modelName = allowedModels.includes(preferredModel) ? preferredModel : 'gemini-2.5-flash';
+  
+  console.log(`[AI Service] Generating response using model: ${modelName} (v1) for subject: ${subjectName}`);
 
   const hasImages = imagesBase64 && imagesBase64.length > 0;
   
   const imageKeywords = /(draw|paint|generate image|create a picture|make an image|нарисувай|рисувай|генерирай изображение|генерирай снимка|направи снимка|изображение на)/i;
   const isImageRequest = (subjectId === SubjectId.ART && mode === AppMode.DRAW) || imageKeywords.test(promptText);
 
-  let systemInstruction = getSystemPrompt(isImageRequest ? 'DRAW' : mode, language, teachingStyle, customPersona);
-  let forceJson = false;
-
-  if (isImageRequest) {
-      // Draw instructions handled
-  } else if (mode === AppMode.TEACHER_TEST || mode === AppMode.PRESENTATION) {
-      forceJson = true;
-  }
-
-  systemInstruction = `CURRENT SUBJECT CONTEXT: ${subjectName}. All responses must relate to ${subjectName}.\n\n${systemInstruction}`;
+  let systemInstructionText = getSystemPrompt(isImageRequest ? 'DRAW' : mode, language, teachingStyle, customPersona);
+  systemInstructionText = `CURRENT SUBJECT CONTEXT: ${subjectName}. All responses must relate to ${subjectName}.\n\n${systemInstructionText}`;
 
   try {
-      const ai = new GoogleGenAI({ apiKey });
-      
       const historyContents: any[] = [];
       history.filter(msg => !msg.isError && msg.text && msg.type !== 'image_generated' && msg.type !== 'slides').forEach(msg => {
           let content = msg.text;
@@ -114,83 +103,84 @@ export const generateResponse = async (
                 const data = base64.replace(/^data:image\/\w+;base64,/, "");
                 const mimeType = base64.match(/^data:(image\/\w+);base64,/)?.[1] || "image/jpeg";
                 currentParts.push({
-                    inlineData: {
+                    inline_data: {
                         data: data,
-                        mimeType: mimeType
+                        mime_type: mimeType
                     }
                 });
           }
       }
       currentParts.push({ text: finalUserPrompt });
 
-      const tools: Tool[] = [];
-      if (modelName.includes('gemini-3') && 
+      const contents = [...historyContents, { role: "user", parts: currentParts }];
+
+      const tools: any[] = [];
+      if (modelName === 'gemini-3-flash' && 
          (subjectId === SubjectId.GENERAL || subjectId === SubjectId.HISTORY || subjectId === SubjectId.GEOGRAPHY)) {
-          tools.push({ googleSearch: {} });
+          tools.push({ google_search: {} });
       }
 
-      const chat = ai.chats.create({
-          model: modelName,
-          config: {
-              systemInstruction: systemInstruction,
-              tools: tools.length > 0 ? tools : undefined
+      // Explicit v1 URL construction
+      const url = `https://generativelanguage.googleapis.com/v1/models/${modelName}:generateContent?key=${apiKey}`;
+
+      const requestBody = {
+          contents: contents,
+          system_instruction: { parts: [{ text: systemInstructionText }] },
+          tools: tools.length > 0 ? tools : undefined
+      };
+
+      const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+              'Content-Type': 'application/json'
           },
-          history: historyContents
+          body: JSON.stringify(requestBody),
+          signal: signal
       });
 
-      const result = await chat.sendMessageStream({ message: currentParts });
-      
-      let finalContent = "";
-      let fullText = "";
-      let sources: SearchSource[] = [];
-      let tokenUsage: TokenUsage | undefined;
-
-      for await (const chunk of result) {
-          if (signal?.aborted) {
-              break;
-          }
-
-          const chunkText = chunk.text;
-          if (chunkText) {
-              fullText += chunkText;
-              finalContent = fullText.replace(/<think>[\s\S]*?(?:<\/think>|$)/gi, "").trim();
-              if (onStreamUpdate) {
-                  onStreamUpdate(finalContent, "");
-              }
-          }
-
-          const grounding = chunk.candidates?.[0]?.groundingMetadata || (chunk as any).groundingMetadata;
-          if (grounding && grounding.groundingChunks) {
-              const webChunks = grounding.groundingChunks
-                  .filter((c: any) => c.web)
-                  .map((c: any) => ({
-                      title: c.web.title || "Web Source",
-                      uri: c.web.uri
-                  }));
-              webChunks.forEach((s: SearchSource) => {
-                  if (!sources.some(existing => existing.uri === s.uri)) {
-                      sources.push(s);
-                  }
-              });
-          }
-          
-          if (chunk.usageMetadata) {
-              tokenUsage = {
-                  inputTokens: chunk.usageMetadata.promptTokenCount || 0,
-                  outputTokens: chunk.usageMetadata.candidatesTokenCount || 0,
-                  totalTokens: chunk.usageMetadata.totalTokenCount || 0
-              };
-          }
+      if (!response.ok) {
+          const errData = await response.json().catch(() => ({}));
+          throw new Error(errData.error?.message || response.statusText);
       }
 
-      // Log success latency
+      const data = await response.json();
+      
+      const candidate = data.candidates?.[0];
+      const processedText = candidate?.content?.parts?.map((p: any) => p.text).join('') || "";
+      
+      // Extract Token Usage
+      let tokenUsage: TokenUsage | undefined;
+      if (data.usageMetadata) {
+          tokenUsage = {
+              inputTokens: data.usageMetadata.promptTokenCount || 0,
+              outputTokens: data.usageMetadata.candidatesTokenCount || 0,
+              totalTokens: data.usageMetadata.totalTokenCount || 0
+          };
+      }
+
+      // Extract Grounding (Search Sources)
+      let sources: SearchSource[] = [];
+      const grounding = candidate?.groundingMetadata;
+      if (grounding && grounding.groundingChunks) {
+          const webChunks = grounding.groundingChunks
+              .filter((c: any) => c.web)
+              .map((c: any) => ({
+                  title: c.web.title || "Web Source",
+                  uri: c.web.uri
+              }));
+          // Deduplicate
+          const uniqueMap = new Map();
+          webChunks.forEach((s: SearchSource) => uniqueMap.set(s.uri, s));
+          sources = Array.from(uniqueMap.values());
+      }
+
       logStatus('operational', Math.round(performance.now() - startTime));
 
-      let processedText = fullText.replace(/<think>[\s\S]*?(?:<\/think>|$)/gi, "").trim();
+      let cleanText = processedText;
 
       if (mode === AppMode.PRESENTATION) {
          try {
-             const jsonStr = extractJson(processedText);
+             const jsonStr = extractJson(cleanText);
              if (jsonStr) {
                  const slides: Slide[] = JSON.parse(jsonStr);
                  return {
@@ -209,7 +199,7 @@ export const generateResponse = async (
 
       if (mode === AppMode.TEACHER_TEST) {
           try {
-             const jsonStr = extractJson(processedText);
+             const jsonStr = extractJson(cleanText);
              if (jsonStr) {
                  const testData: TestData = JSON.parse(jsonStr);
                  return {
@@ -229,26 +219,26 @@ export const generateResponse = async (
       let chartData: ChartData | undefined;
       let geometryData: GeometryData | undefined;
 
-      const chartMatch = processedText.match(/```json:chart\n([\s\S]*?)\n```/);
+      const chartMatch = cleanText.match(/```json:chart\n([\s\S]*?)\n```/);
       if (chartMatch) {
         try {
           chartData = JSON.parse(chartMatch[1]);
-          processedText = processedText.replace(chartMatch[0], "").trim();
+          cleanText = cleanText.replace(chartMatch[0], "").trim();
         } catch (e) {}
       }
 
-      const geoMatch = processedText.match(/```json:geometry\n([\s\S]*?)\n```/);
+      const geoMatch = cleanText.match(/```json:geometry\n([\s\S]*?)\n```/);
       if (geoMatch) {
         try {
           geometryData = JSON.parse(geoMatch[1]);
-          processedText = processedText.replace(geoMatch[0], "").trim();
+          cleanText = cleanText.replace(geoMatch[0], "").trim();
         } catch (e) {}
       }
 
       return {
           id: Date.now().toString(),
           role: 'model',
-          text: processedText,
+          text: cleanText,
           type: 'text',
           chartData: chartData,
           geometryData: geometryData,
@@ -260,11 +250,11 @@ export const generateResponse = async (
 
   } catch (error: any) {
       logStatus('outage', Math.round(performance.now() - startTime));
-      console.error("Gemini API Error:", error);
+      console.error("Gemini API Error (REST):", error);
       let errorMessage = error.message || "Unknown error";
       let displayMessage = `Възникна грешка при връзката с AI: ${errorMessage}`;
 
-      if (errorMessage.includes("429")) {
+      if (errorMessage.includes("429") || errorMessage.includes("Too Many Requests")) {
           displayMessage = "⚠️ Достигнат е лимитът на заявките към Google Gemini. Моля, опитайте по-късно.";
       }
 
