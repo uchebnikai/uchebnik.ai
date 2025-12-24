@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { supabase } from '../../supabaseClient';
-import { Loader2, Mail, Lock, User, ArrowRight, Sparkles, CheckCircle, AlertCircle, Calendar } from 'lucide-react';
+import { Loader2, Mail, Lock, User, ArrowRight, Sparkles, CheckCircle, AlertCircle, Calendar, Eye, EyeOff } from 'lucide-react';
 import { GLASS_PANEL, INPUT_AUTH } from '../../styles/ui';
 import { ZOOM_IN } from '../../animations/transitions';
 
@@ -17,6 +17,7 @@ export const Auth = ({ isModal = false, onSuccess, initialMode = 'login' }: Auth
   const [mode, setMode] = useState<AuthMode>(initialMode);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   
   // Registration Fields
   const [firstName, setFirstName] = useState('');
@@ -254,14 +255,21 @@ export const Auth = ({ isModal = false, onSuccess, initialMode = 'login' }: Auth
                 <div className="relative">
                     <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                     <input
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
                     minLength={6}
-                    className={INPUT_AUTH}
+                    className={`${INPUT_AUTH} pr-10`}
                     placeholder="••••••••"
                     />
+                    <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 focus:outline-none"
+                    >
+                        {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
                 </div>
             </div>
           )}

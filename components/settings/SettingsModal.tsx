@@ -5,7 +5,8 @@ import {
   ImageIcon, Edit2, Cpu, ChevronDown, Database, Trash2, 
   ArrowRight, Settings, CreditCard, Loader2, Globe, 
   Layout, Smartphone, Monitor, Sparkles, LogOut, Volume2, 
-  Keyboard, Type, Download, Zap, Brain, MessageCircle, Gift, Copy
+  Keyboard, Type, Download, Zap, Brain, MessageCircle, Gift, Copy,
+  Eye, EyeOff
 } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { UserSettings, UserPlan } from '../../types';
@@ -79,6 +80,8 @@ export const SettingsModal = ({
   const [activeTab, setActiveTab] = useState<SettingsTab>('account');
   const [loadingPortal, setLoadingPortal] = useState(false);
   const [isLangOpen, setIsLangOpen] = useState(false);
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
 
   const isCustomColor = !PRESET_COLORS.includes(userSettings.themeColor);
   const isCustomBackground = userSettings.customBackground && !PRESET_BACKGROUNDS.includes(userSettings.customBackground);
@@ -215,11 +218,41 @@ export const SettingsModal = ({
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                                   <div className="space-y-2">
                                       <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">{t('current_password', userSettings.language)}</label>
-                                      <input type="password" value={editProfile.currentPassword} onChange={e => setEditProfile({...editProfile, currentPassword: e.target.value})} className="w-full bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 outline-none focus:border-indigo-500 transition-all font-medium" placeholder="••••••••"/>
+                                      <div className="relative">
+                                          <input 
+                                            type={showCurrentPassword ? "text" : "password"} 
+                                            value={editProfile.currentPassword} 
+                                            onChange={e => setEditProfile({...editProfile, currentPassword: e.target.value})} 
+                                            className="w-full bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 pr-10 outline-none focus:border-indigo-500 transition-all font-medium" 
+                                            placeholder="••••••••"
+                                          />
+                                          <button
+                                            type="button"
+                                            onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 focus:outline-none"
+                                          >
+                                            {showCurrentPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                                          </button>
+                                      </div>
                                   </div>
                                   <div className="space-y-2">
                                       <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">{t('new_password', userSettings.language)}</label>
-                                      <input type="password" value={editProfile.password} onChange={e => setEditProfile({...editProfile, password: e.target.value})} className="w-full bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 outline-none focus:border-indigo-500 transition-all font-medium" placeholder="••••••••"/>
+                                      <div className="relative">
+                                          <input 
+                                            type={showNewPassword ? "text" : "password"} 
+                                            value={editProfile.password} 
+                                            onChange={e => setEditProfile({...editProfile, password: e.target.value})} 
+                                            className="w-full bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 pr-10 outline-none focus:border-indigo-500 transition-all font-medium" 
+                                            placeholder="••••••••"
+                                          />
+                                          <button
+                                            type="button"
+                                            onClick={() => setShowNewPassword(!showNewPassword)}
+                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 focus:outline-none"
+                                          >
+                                            {showNewPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                                          </button>
+                                      </div>
                                   </div>
                               </div>
                           </div>

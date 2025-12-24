@@ -9,7 +9,8 @@ import {
   TrendingUp, TrendingDown, Wallet, CreditCard,
   Settings, HelpCircle, ExternalLink, Cloud, Sliders, Cpu, Server, Info, AlertCircle, PenTool, History, Wrench,
   BarChart2, UserCheck, FileText, Smartphone, Wifi, Globe, HardDrive, Lock, Brain, LayoutDashboard,
-  RotateCcw, CalendarDays, Coins, Radio, Send, PieChart as PieChartIcon, MessageSquare, Flag, CheckSquare, Square
+  RotateCcw, CalendarDays, Coins, Radio, Send, PieChart as PieChartIcon, MessageSquare, Flag, CheckSquare, Square,
+  Eye, EyeOff
 } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { supabase } from '../../supabaseClient';
@@ -154,6 +155,7 @@ export const AdminPanel = ({
     const [userSessions, setUserSessions] = useState<Session[]>([]);
     const [loadingSessions, setLoadingSessions] = useState(false);
     const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+    const [showPassword, setShowPassword] = useState(false);
 
     // Initial State - will be updated by real checks
     const [systemHealth, setSystemHealth] = useState<SystemService[]>([
@@ -659,7 +661,23 @@ export const AdminPanel = ({
                     <p className="text-zinc-500 text-sm">Въведете парола за достъп</p>
                 </div>
                 <div className="w-full space-y-3">
-                    <input type="password" value={adminPasswordInput} onChange={e => setAdminPasswordInput(e.target.value)} placeholder="••••••••" className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-center text-white outline-none focus:border-indigo-500 transition-colors font-mono tracking-widest" autoFocus />
+                    <div className="relative w-full">
+                        <input 
+                            type={showPassword ? "text" : "password"} 
+                            value={adminPasswordInput} 
+                            onChange={e => setAdminPasswordInput(e.target.value)} 
+                            placeholder="••••••••" 
+                            className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-center text-white outline-none focus:border-indigo-500 transition-colors font-mono tracking-widest pr-10" 
+                            autoFocus 
+                        />
+                        <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white"
+                        >
+                            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                        </button>
+                    </div>
                     <Button onClick={handleAdminLogin} className="w-full py-3 bg-white text-black hover:bg-zinc-200">Вход</Button>
                 </div>
              </div>
@@ -669,6 +687,7 @@ export const AdminPanel = ({
     }
 
     if (showAdminPanel) {
+      // ... existing AdminPanel layout code ...
       return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md p-0 md:p-4 animate-in fade-in duration-300">
            <div className="w-full max-w-7xl h-full md:h-[90vh] bg-[#09090b] md:bg-[#09090b]/95 border-none md:border border-white/10 rounded-none md:rounded-[32px] shadow-2xl flex flex-col md:flex-row overflow-hidden backdrop-blur-2xl relative">
