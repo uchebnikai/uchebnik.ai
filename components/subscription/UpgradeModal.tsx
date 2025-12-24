@@ -186,7 +186,7 @@ export const UpgradeModal = ({
                     // onClick={() => { if(userPlan !== 'free') handleManageSubscription(); }}
                     className={`w-full py-3 md:py-4 rounded-xl md:rounded-2xl font-bold transition-all ${userPlan === 'free' ? 'bg-gray-100 dark:bg-white/5 text-gray-400 cursor-default' : 'bg-white/50 dark:bg-white/10 text-zinc-900 dark:text-white border border-gray-200 dark:border-white/5 opacity-70 cursor-not-allowed'}`}
                  >
-                    {userPlan === 'free' ? 'Текущ план' : 'Очаквайте скоро'}
+                    {userPlan === 'free' ? 'Текущ план' : 'Безплатно'}
                  </button>
               </div>
 
