@@ -957,7 +957,7 @@ export const App = () => {
                     ...s,
                     messages: s.messages.map(m => 
                         m.id === lastMsg.id 
-                        ? { ...m, isStreaming: false, text: m.text || "Generiraneto e sprqno." } 
+                        ? { ...m, isStreaming: false, text: m.text || "Генерирането е спряно." } 
                         : m
                     )
                 };
@@ -1065,13 +1065,16 @@ export const App = () => {
     const textToSend = overrideText || inputValue;
     
     // Check word limit (10,000 words)
-    const wordCount = textToSend.trim().split(/\s+/).length;
-    if (wordCount > 10000) {
-        addToast('Съобщението е твърде дълго (макс 10000 думи).', 'error');
-        return;
+    const trimmedText = textToSend.trim();
+    if (trimmedText.length > 0) {
+        const wordCount = trimmedText.split(/\s+/).length;
+        if (wordCount > 10000) {
+            addToast('Съобщението е твърде дълго (макс 10000 думи).', 'error');
+            return;
+        }
     }
 
-    if ((!textToSend.trim() && selectedImages.length === 0 && (!overrideImages || overrideImages.length === 0)) || !currentSubject || !currentSessionId) return;
+    if ((!trimmedText && selectedImages.length === 0 && (!overrideImages || overrideImages.length === 0)) || !currentSubject || !currentSessionId) return;
     if (currentLoading[currentSubject.id]) return;
     if (isListening) { 
         if (recognitionRef.current) {
