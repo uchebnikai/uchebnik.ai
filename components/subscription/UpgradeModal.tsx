@@ -34,6 +34,8 @@ export const UpgradeModal = ({
     
     const [loading, setLoading] = useState(false);
 
+    // Payments temporarily disabled
+    /*
     const handleCheckout = async (plan: 'plus' | 'pro') => {
         setLoading(true);
         try {
@@ -78,6 +80,7 @@ export const UpgradeModal = ({
             setLoading(false);
         }
     };
+    */
 
     if (!showUnlockModal) return null;
 
@@ -179,13 +182,11 @@ export const UpgradeModal = ({
                     </div>
                  </div>
                  <button 
-                    disabled={userPlan === 'free'} 
-                    onClick={() => {
-                        if(userPlan !== 'free') handleManageSubscription();
-                    }}
-                    className={`w-full py-3 md:py-4 rounded-xl md:rounded-2xl font-bold transition-all ${userPlan === 'free' ? 'bg-gray-100 dark:bg-white/5 text-gray-400 cursor-default' : 'bg-white/50 dark:bg-white/10 hover:bg-white/80 dark:hover:bg-white/20 text-zinc-900 dark:text-white border border-gray-200 dark:border-white/5'}`}
+                    disabled={true} 
+                    // onClick={() => { if(userPlan !== 'free') handleManageSubscription(); }}
+                    className={`w-full py-3 md:py-4 rounded-xl md:rounded-2xl font-bold transition-all ${userPlan === 'free' ? 'bg-gray-100 dark:bg-white/5 text-gray-400 cursor-default' : 'bg-white/50 dark:bg-white/10 text-zinc-900 dark:text-white border border-gray-200 dark:border-white/5 opacity-70 cursor-not-allowed'}`}
                  >
-                    {userPlan === 'free' ? 'Текущ план' : 'Управление'}
+                    {userPlan === 'free' ? 'Текущ план' : 'Очаквайте скоро'}
                  </button>
               </div>
 
@@ -244,11 +245,12 @@ export const UpgradeModal = ({
                     </div>
                  </div>
                  <button 
-                    onClick={() => userPlan === 'plus' ? handleManageSubscription() : handleCheckout('plus')} 
-                    disabled={loading}
-                    className={`w-full py-3 md:py-4 rounded-xl md:rounded-2xl font-bold transition-all shadow-xl flex items-center justify-center gap-2 ${userPlan === 'plus' ? 'bg-indigo-100 dark:bg-indigo-500/20 text-indigo-500' : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-500/30'}`}
+                    // onClick={() => userPlan === 'plus' ? handleManageSubscription() : handleCheckout('plus')} 
+                    disabled={true}
+                    className={`w-full py-3 md:py-4 rounded-xl md:rounded-2xl font-bold transition-all shadow-xl flex items-center justify-center gap-2 ${userPlan === 'plus' ? 'bg-indigo-100 dark:bg-indigo-500/20 text-indigo-500' : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-500/30'} opacity-70 cursor-not-allowed`}
                  >
-                    {loading ? <Loader2 className="animate-spin" size={20}/> : (userPlan === 'plus' ? 'Управление' : 'Избери Plus')}
+                    {/* {loading ? <Loader2 className="animate-spin" size={20}/> : (userPlan === 'plus' ? 'Управление' : 'Избери Plus')} */}
+                    Очаквайте скоро
                  </button>
               </div>
 
@@ -300,12 +302,13 @@ export const UpgradeModal = ({
                     </div>
                  </div>
                  <button 
-                    onClick={() => userPlan === 'pro' ? handleManageSubscription() : handleCheckout('pro')}
-                    disabled={loading}
-                    className={`w-full py-3 md:py-4 rounded-xl md:rounded-2xl font-bold transition-all shadow-lg flex items-center justify-center gap-2 relative overflow-hidden group ${userPlan === 'pro' ? 'bg-amber-100 dark:bg-amber-500/20 text-amber-500' : 'bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white shadow-orange-500/25'}`}
+                    // onClick={() => userPlan === 'pro' ? handleManageSubscription() : handleCheckout('pro')}
+                    disabled={true}
+                    className={`w-full py-3 md:py-4 rounded-xl md:rounded-2xl font-bold transition-all shadow-lg flex items-center justify-center gap-2 relative overflow-hidden group ${userPlan === 'pro' ? 'bg-amber-100 dark:bg-amber-500/20 text-amber-500' : 'bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white shadow-orange-500/25'} opacity-70 cursor-not-allowed`}
                  >
                     <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 pointer-events-none"/>
-                    {loading ? <Loader2 className="animate-spin" size={20}/> : (userPlan === 'pro' ? 'Управление' : 'Избери Pro')}
+                    {/* {loading ? <Loader2 className="animate-spin" size={20}/> : (userPlan === 'pro' ? 'Управление' : 'Избери Pro')} */}
+                    Очаквайте скоро
                  </button>
               </div>
            </div>

@@ -86,6 +86,8 @@ export const SettingsModal = ({
   const isCustomColor = !PRESET_COLORS.includes(userSettings.themeColor);
   const isCustomBackground = userSettings.customBackground && !PRESET_BACKGROUNDS.includes(userSettings.customBackground);
 
+  // Temporarily Disabled
+  /*
   const handleManageSubscription = async () => {
       setLoadingPortal(true);
       try {
@@ -105,6 +107,7 @@ export const SettingsModal = ({
           setLoadingPortal(false);
       }
   };
+  */
 
   const handleExportData = () => {
       const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(localStorage));
@@ -270,8 +273,13 @@ export const SettingsModal = ({
                                          </p>
                                      )}
                                  </div>
-                                 <Button onClick={handleManageSubscription} disabled={loadingPortal} className="bg-white text-indigo-600 hover:bg-indigo-50 border-none shadow-none">
-                                    {loadingPortal ? <Loader2 size={18} className="animate-spin"/> : 'Управление'}
+                                 <Button 
+                                    // onClick={handleManageSubscription} 
+                                    disabled={true} // Temporarily disabled
+                                    className="bg-white text-indigo-600 hover:bg-indigo-50 border-none shadow-none opacity-80"
+                                >
+                                    {/* {loadingPortal ? <Loader2 size={18} className="animate-spin"/> : 'Управление'} */}
+                                    Очаквайте скоро
                                  </Button>
                              </div>
                              <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-16 -mt-16 blur-3xl"/>
