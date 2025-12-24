@@ -27,6 +27,7 @@ interface ChatInputAreaProps {
   handleRemoveImage: (index: number) => void;
   onCameraCapture?: (base64: string) => void;
   onStopGeneration: () => void;
+  onImagesSelected: (files: File[]) => void;
 }
 
 const MATH_SYMBOLS = [
@@ -63,7 +64,8 @@ export const ChatInputArea = ({
   handleSend,
   selectedImages,
   handleRemoveImage,
-  onStopGeneration
+  onStopGeneration,
+  onImagesSelected
 }: ChatInputAreaProps) => {
   
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -100,6 +102,21 @@ export const ChatInputArea = ({
               if (!loadingSubject) handleSend();
           }
           // If enterToSend is false, or shift+enter, it defaults to new line naturally
+      }
+  };
+
+  const handlePaste = (e: React.ClipboardEvent) => {
+      const items = e.clipboardData.items;
+      const files: File[] = [];
+      for (let i = 0; i < items.length; i++) {
+          if (items[i].type.startsWith('image/')) {
+              const file = items[i].getAsFile();
+              if (file) files.push(file);
+          }
+      }
+      if (files.length > 0) {
+          e.preventDefault(); 
+          onImagesSelected(files);
       }
   };
 
@@ -215,6 +232,7 @@ export const ChatInputArea = ({
                         value={inputValue}
                         onChange={e => setInputValue(e.target.value)}
                         onKeyDown={handleKeyDown}
+                        onPaste={handlePaste}
                         placeholder={replyingTo ? "Напиши отговор..." : loadingSubject ? "AI генерира отговор..." : "Напиши съобщение..."}
                         disabled={loadingSubject}
                         className="w-full bg-transparent border-none focus:ring-0 p-0 text-base text-zinc-900 dark:text-zinc-100 placeholder-gray-400 resize-none max-h-24 min-h-[24px] leading-6 disabled:opacity-60 disabled:cursor-not-allowed"
