@@ -557,7 +557,7 @@ export const SettingsModal = ({
                                       <Zap size={20} />
                                   </div>
                                   <div>
-                                      <div className="font-bold text-sm">Standard AI</div>
+                                      <div className="font-bold text-sm">Gemini 2.5 Flash</div>
                                       <div className="text-xs opacity-70">Бърз и лек. Идеален за прости задачи.</div>
                                   </div>
                               </button>
@@ -574,10 +574,10 @@ export const SettingsModal = ({
                                   </div>
                                   <div>
                                       <div className="font-bold text-sm flex items-center gap-2">
-                                          Advanced AI 
+                                          Gemini 3 Flash
                                           {!isPremium && <span className="text-[10px] bg-amber-500 text-white px-2 py-0.5 rounded-full uppercase tracking-wider">Plus / Pro</span>}
                                       </div>
-                                      <div className="text-xs opacity-70">Следващо поколение интелект и логика.</div>
+                                      <div className="text-xs opacity-70">Висок интелект и логика (High Intelligence).</div>
                                   </div>
                               </button>
                           </div>
