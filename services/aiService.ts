@@ -34,6 +34,12 @@ function extractJson(text: string): string | null {
   return null;
 }
 
+// STRICT MODEL WHITELIST to prevent billing leaks
+const ALLOWED_MODELS = [
+    'gemini-2.5-flash',
+    'gemini-3-flash-preview',
+];
+
 export const generateResponse = async (
   subjectId: SubjectId,
   mode: AppMode,
@@ -64,7 +70,13 @@ export const generateResponse = async (
 
   const subjectConfig = SUBJECTS.find(s => s.id === subjectId);
   const subjectName = subjectConfig ? subjectConfig.name : "Unknown Subject";
-  const modelName = preferredModel || 'gemini-2.5-flash';
+  
+  // BILLING SAFETY CHECK
+  let modelName = preferredModel || 'gemini-2.5-flash';
+  if (!ALLOWED_MODELS.includes(modelName)) {
+      console.warn(`[Billing Safety] Model '${modelName}' is not in the allowed list. Enforcing 'gemini-2.5-flash'.`);
+      modelName = 'gemini-2.5-flash';
+  }
   
   console.log(`[AI Service] Generating response using model: ${modelName} for subject: ${subjectName}`);
 
@@ -74,13 +86,11 @@ export const generateResponse = async (
   const isImageRequest = (subjectId === SubjectId.ART && mode === AppMode.DRAW) || imageKeywords.test(promptText);
 
   let systemInstruction = getSystemPrompt(isImageRequest ? 'DRAW' : mode, language, teachingStyle, customPersona);
-  let forceJson = false;
-
+  
+  // Handle mode-specific instructions
   if (isImageRequest) {
-      // Draw instructions handled
-  } else if (mode === AppMode.TEACHER_TEST || mode === AppMode.PRESENTATION) {
-      forceJson = true;
-  }
+      // Draw instructions handled in getSystemPrompt or specialized tool if available
+  } 
 
   systemInstruction = `CURRENT SUBJECT CONTEXT: ${subjectName}. All responses must relate to ${subjectName}.\n\n${systemInstruction}`;
 
@@ -124,6 +134,7 @@ export const generateResponse = async (
       currentParts.push({ text: finalUserPrompt });
 
       const tools: Tool[] = [];
+      // Google Search is permitted on Flash 2.0/3.0 models if available
       if (modelName.includes('gemini-3') && 
          (subjectId === SubjectId.GENERAL || subjectId === SubjectId.HISTORY || subjectId === SubjectId.GEOGRAPHY)) {
           tools.push({ googleSearch: {} });
