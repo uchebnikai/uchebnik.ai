@@ -82,15 +82,7 @@ export const generateResponse = async (
 
   const hasImages = imagesBase64 && imagesBase64.length > 0;
   
-  const imageKeywords = /(draw|paint|generate image|create a picture|make an image|нарисувай|рисувай|генерирай изображение|генерирай снимка|направи снимка|изображение на)/i;
-  const isImageRequest = (subjectId === SubjectId.ART && mode === AppMode.DRAW) || imageKeywords.test(promptText);
-
-  let systemInstruction = getSystemPrompt(isImageRequest ? 'DRAW' : mode, language, teachingStyle, customPersona);
-  
-  // Handle mode-specific instructions
-  if (isImageRequest) {
-      // Draw instructions handled in getSystemPrompt or specialized tool if available
-  } 
+  let systemInstruction = getSystemPrompt(mode, language, teachingStyle, customPersona);
 
   systemInstruction = `CURRENT SUBJECT CONTEXT: ${subjectName}. All responses must relate to ${subjectName}.\n\n${systemInstruction}`;
 

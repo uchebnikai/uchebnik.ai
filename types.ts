@@ -53,7 +53,6 @@ export enum SubjectId {
 export enum AppMode {
   SOLVE = 'solve', 
   LEARN = 'learn', 
-  DRAW = 'draw',   
   PRESENTATION = 'presentation', 
   CHAT = 'chat',    
   

@@ -342,7 +342,7 @@ export const SUBJECTS: SubjectConfig[] = [
     name: 'Изкуство',
     icon: 'Palette',
     color: 'bg-pink-500',
-    modes: [AppMode.DRAW, AppMode.PRESENTATION, AppMode.LEARN],
+    modes: [AppMode.SOLVE, AppMode.PRESENTATION, AppMode.LEARN],
     description: 'Рисуване и дизайн.',
     categories: ['school', 'university']
   },
@@ -461,7 +461,7 @@ export const SUBJECTS: SubjectConfig[] = [
     name: 'Архитектура',
     icon: 'Ruler',
     color: 'bg-stone-500',
-    modes: [AppMode.DRAW, AppMode.LEARN],
+    modes: [AppMode.SOLVE, AppMode.LEARN],
     description: 'Сгради и дизайн.',
     categories: ['university']
   },
