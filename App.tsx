@@ -51,7 +51,7 @@ interface GeneratedKey {
   plan?: 'plus' | 'pro';
 }
 
-const LIVE_MODEL = 'gemini-2.5-flash-native-audio-preview-09-2025';
+const LIVE_MODEL = 'gemini-2.5-flash-native-audio-preview-12-2025';
 
 export const App = () => {
   // --- Auth State ---

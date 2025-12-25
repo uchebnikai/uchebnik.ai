@@ -74,11 +74,11 @@ export const generateResponse = async (
   // BILLING SAFETY CHECK
   let modelName = preferredModel || 'gemini-2.5-flash';
   if (!ALLOWED_MODELS.includes(modelName)) {
-      console.warn(`[Billing Safety] Model '${modelName}' is not in the allowed list. Enforcing 'gemini-2.5-flash'.`);
+      console.warn(`[Billing Safety] Model request rejected. Enforcing standard tier.`);
       modelName = 'gemini-2.5-flash';
   }
   
-  console.log(`[AI Service] Generating response using model: ${modelName} for subject: ${subjectName}`);
+  console.log(`[AI Service] Generating response...`);
 
   const hasImages = imagesBase64 && imagesBase64.length > 0;
   
@@ -271,12 +271,12 @@ export const generateResponse = async (
 
   } catch (error: any) {
       logStatus('outage', Math.round(performance.now() - startTime));
-      console.error("Gemini API Error:", error);
+      console.error("AI Service Error:", error);
       let errorMessage = error.message || "Unknown error";
       let displayMessage = `Възникна грешка при връзката с AI: ${errorMessage}`;
 
       if (errorMessage.includes("429")) {
-          displayMessage = "⚠️ Достигнат е лимитът на заявките към Google Gemini. Моля, опитайте по-късно.";
+          displayMessage = "⚠️ Достигнат е лимитът на заявките. Моля, опитайте по-късно.";
       }
 
       return {

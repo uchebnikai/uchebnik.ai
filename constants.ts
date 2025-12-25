@@ -9,8 +9,8 @@ export const STRIPE_PRICES = {
 };
 
 export const AI_MODELS = [
-  { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', description: 'Бърз, ефективен и икономичен.' },
-  { id: 'gemini-3-flash-preview', name: 'Gemini 3 Flash', description: 'Висок интелект, оптимизирана цена.' }
+  { id: 'gemini-2.5-flash', name: 'Standard AI', description: 'Бърз, ефективен и икономичен.' },
+  { id: 'gemini-3-flash-preview', name: 'Advanced AI', description: 'Висок интелект, оптимизирана цена.' }
 ];
 
 export const VOICES = [
