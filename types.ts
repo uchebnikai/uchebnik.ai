@@ -9,6 +9,7 @@ export enum SubjectId {
   SPANISH = 'spanish',
   GERMAN = 'german', 
   RUSSIAN = 'russian', 
+  ITALIAN = 'italian',
   JAPANESE = 'japanese',
   CHEMISTRY = 'chemistry',
   PHYSICS = 'physics',
@@ -24,30 +25,92 @@ export enum SubjectId {
   TECHNOLOGIES = 'technologies', 
   CITIZENSHIP = 'citizenship', 
   RELIGION = 'religion', 
+  ENTREPRENEURSHIP = 'entrepreneurship',
+  CHOREOGRAPHY = 'choreography',
+  PROGRAMMING = 'programming',
   
-  // University Subjects
-  HIGHER_MATH = 'higher_math',
-  COMPUTER_SCIENCE = 'computer_science',
-  ECONOMICS = 'economics',
-  LAW = 'law',
-  MEDICINE = 'medicine',
-  DENTAL_MEDICINE = 'dental_medicine', 
-  PHARMACY = 'pharmacy', 
-  VETERINARY_MEDICINE = 'veterinary_medicine', 
-  ENGINEERING = 'engineering',
-  ARCHITECTURE = 'architecture', 
-  MARKETING = 'marketing',
-  FINANCE = 'finance', 
-  MANAGEMENT = 'management', 
-  PSYCHOLOGY = 'psychology',
-  STATISTICS = 'statistics',
-  PEDAGOGY = 'pedagogy', 
-  POLITICAL_SCIENCE = 'political_science', 
-  INT_RELATIONS = 'int_relations', 
-  JOURNALISM = 'journalism', 
-  SOCIOLOGY = 'sociology', 
-  ECOLOGY = 'ecology', 
-  TOURISM = 'tourism' 
+  // UNIVERSITY - Humanities & Social Sciences
+  UNI_PHILOSOPHY = 'uni_philosophy',
+  UNI_HISTORY = 'uni_history',
+  UNI_SOCIOLOGY = 'uni_sociology',
+  UNI_PSYCHOLOGY = 'uni_psychology',
+  UNI_POLITICAL_SCIENCE = 'uni_political_science',
+  UNI_INT_RELATIONS = 'uni_int_relations',
+  UNI_CULTURAL_STUDIES = 'uni_cultural_studies',
+  UNI_LINGUISTICS = 'uni_linguistics',
+  UNI_LITERATURE = 'uni_literature',
+  
+  // UNIVERSITY - Law & Governance
+  LAW_CONSTITUTIONAL = 'law_constitutional',
+  LAW_CIVIL = 'law_civil',
+  LAW_CRIMINAL = 'law_criminal',
+  LAW_ADMINISTRATIVE = 'law_administrative',
+  LAW_INTERNATIONAL = 'law_international',
+  LAW_EU = 'law_eu',
+  
+  // UNIVERSITY - Economics & Business
+  ECON_MICRO = 'econ_micro',
+  ECON_MACRO = 'econ_macro',
+  ECON_ACCOUNTING = 'econ_accounting',
+  ECON_FINANCE = 'econ_finance',
+  ECON_BIZ_ADMIN = 'econ_biz_admin',
+  ECON_MANAGEMENT = 'econ_management',
+  ECON_MARKETING = 'econ_marketing',
+  ECON_INT_BUSINESS = 'econ_int_business',
+  ECON_ENTREPRENEURSHIP = 'econ_entrepreneurship',
+  ECON_STRATEGIC_MGMT = 'econ_strategic_mgmt',
+  
+  // UNIVERSITY - STEM
+  STEM_MATH = 'stem_math',
+  STEM_PHYSICS = 'stem_physics',
+  STEM_CHEMISTRY = 'stem_chemistry',
+  STEM_BIOLOGY = 'stem_biology',
+  STEM_CS_PROG = 'stem_cs_prog',
+  STEM_INFO_SYSTEMS = 'stem_info_systems',
+  STEM_SW_ENGINEERING = 'stem_sw_engineering',
+  STEM_DSA = 'stem_dsa',
+  STEM_DATABASES = 'stem_databases',
+  STEM_CYBERSECURITY = 'stem_cybersecurity',
+  STEM_ELECTRICAL_ENG = 'stem_electrical_eng',
+  STEM_MECHANICAL_ENG = 'stem_mechanical_eng',
+  STEM_CIVIL_ENG = 'stem_civil_eng',
+  STEM_ENV_ENGINEERING = 'stem_env_engineering',
+  
+  // UNIVERSITY - Medical & Health
+  MED_ANATOMY = 'med_anatomy',
+  MED_PHYSIOLOGY = 'med_physiology',
+  MED_BIOCHEMISTRY = 'med_biochemistry',
+  MED_PATHOLOGY = 'med_pathology',
+  MED_SURGERY = 'med_surgery',
+  MED_INTERNAL = 'med_internal',
+  MED_PEDIATRICS = 'med_pediatrics',
+  MED_PUBLIC_HEALTH = 'med_public_health',
+  MED_NURSING = 'med_nursing',
+  MED_PHARMACY = 'med_pharmacy',
+  MED_DENTAL = 'med_dental',
+  MED_HEALTH_MGMT = 'med_health_mgmt',
+  
+  // UNIVERSITY - Arts & Design
+  ARTS_VISUAL = 'arts_visual',
+  ARTS_GRAPHIC_DESIGN = 'arts_graphic_design',
+  ARTS_MUSIC = 'arts_music',
+  ARTS_PERFORMING = 'arts_performing',
+  ARTS_THEATRE = 'arts_theatre',
+  ARTS_FILM_MEDIA = 'arts_film_media',
+  
+  // UNIVERSITY - Education
+  EDU_PEDAGOGY = 'edu_pedagogy',
+  EDU_CURRICULUM = 'edu_curriculum',
+  EDU_PSYCHOLOGY = 'edu_psychology',
+  EDU_SPECIAL = 'edu_special',
+  
+  // UNIVERSITY - Other
+  OTHER_TOURISM = 'other_tourism',
+  OTHER_ENV_STUDIES = 'other_env_studies',
+  OTHER_GEOGRAPHY = 'other_geography',
+  OTHER_GEOLOGY = 'other_geology',
+  OTHER_THEOLOGY = 'other_theology',
+  OTHER_JOURNALISM = 'other_journalism'
 }
 
 export enum AppMode {
