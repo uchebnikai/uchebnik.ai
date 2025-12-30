@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { UserPlan } from '../../types';
 import { Info, X } from 'lucide-react';
@@ -11,26 +10,30 @@ export const AdSenseContainer = ({ userPlan }: AdSenseContainerProps) => {
   const [adLoaded, setAdLoaded] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
 
-  // Constants - Replace these with your actual AdSense values
-  const AD_CLIENT = "ca-pub-XXXXXXXXXXXXXXXX"; // Your Publisher ID
-  const AD_SLOT = "XXXXXXXXXX"; // Your Ad Slot ID
+  // Constants - Actual AdSense values for uchebnikai.com
+  const AD_CLIENT = "ca-pub-7792843462232007"; 
+  const AD_SLOT = "default"; // Will show auto-ads if slot is not specified or use specific unit ID if available
 
   useEffect(() => {
     // Strict plan check: only run for free users
     if (userPlan !== 'free') return;
 
-    // Inject Google AdSense Script dynamically
-    const script = document.createElement("script");
-    script.src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${AD_CLIENT}`;
-    script.async = true;
-    script.crossOrigin = "anonymous";
-    document.head.appendChild(script);
+    // Inject Google AdSense Script dynamically if not already present
+    if (!document.querySelector(`script[src*="${AD_CLIENT}"]`)) {
+      const script = document.createElement("script");
+      script.src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${AD_CLIENT}`;
+      script.async = true;
+      script.crossOrigin = "anonymous";
+      document.head.appendChild(script);
+    }
 
     // Trigger the ad push once script is ready
     const timer = setTimeout(() => {
       try {
-        ((window as any).adsbygoogle = (window as any).adsbygoogle || []).push({});
-        setAdLoaded(true);
+        if (typeof window !== 'undefined') {
+          ((window as any).adsbygoogle = (window as any).adsbygoogle || []).push({});
+          setAdLoaded(true);
+        }
       } catch (e) {
         console.error("AdSense push error:", e);
       }
@@ -38,11 +41,10 @@ export const AdSenseContainer = ({ userPlan }: AdSenseContainerProps) => {
 
     return () => {
       clearTimeout(timer);
-      // Optional: Cleanup script tag if needed, though usually not necessary for SPAs
     };
   }, [userPlan]);
 
-  // If user is not on free plan or manually closed the ad container (if allowed)
+  // If user is not on free plan or manually closed the ad container
   if (userPlan !== 'free' || !isVisible) return null;
 
   return (
@@ -67,7 +69,7 @@ export const AdSenseContainer = ({ userPlan }: AdSenseContainerProps) => {
             <ins className="adsbygoogle"
                  style={{ display: 'block' }}
                  data-ad-client={AD_CLIENT}
-                 data-ad-slot={AD_SLOT}
+                 data-ad-slot={AD_SLOT === 'default' ? undefined : AD_SLOT}
                  data-ad-format="rectangle"
                  data-full-width-responsive="true"></ins>
             {!adLoaded && <span>Loading premium sponsor...</span>}
@@ -86,7 +88,7 @@ export const AdSenseContainer = ({ userPlan }: AdSenseContainerProps) => {
                 <ins className="adsbygoogle"
                      style={{ display: 'inline-block', width: '320px', height: '50px' }}
                      data-ad-client={AD_CLIENT}
-                     data-ad-slot={AD_SLOT}></ins>
+                     data-ad-slot={AD_SLOT === 'default' ? undefined : AD_SLOT}></ins>
                 {!adLoaded && <span>Sponsor Space</span>}
             </div>
         </div>
