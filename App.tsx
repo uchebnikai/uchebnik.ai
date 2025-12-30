@@ -44,6 +44,7 @@ import { ChatInputArea } from './components/chat/ChatInputArea';
 import { TermsOfService, PrivacyPolicy, CookiePolicy, About, Contact } from './components/pages/StaticPages';
 import { Snowfall } from './components/ui/Snowfall';
 import { ReportModal } from './components/support/ReportModal';
+import { AdSenseContainer } from './components/ads/AdSenseContainer';
 
 interface GeneratedKey {
   code: string;
@@ -1779,6 +1780,9 @@ export const App = () => {
                     />
                 )}
                 
+                {/* Ad Placement for Free Users */}
+                <AdSenseContainer userPlan={userPlan} />
+
                 <HistoryDrawer 
                     historyDrawerOpen={historyDrawerOpen}
                     setHistoryDrawerOpen={setHistoryDrawerOpen}
