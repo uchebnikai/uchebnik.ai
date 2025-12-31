@@ -1,4 +1,3 @@
-
 import { Medal, Trophy, Crown, Gem, Star, MessageSquare, Image, Mic, BookOpen, Calculator, Globe, Code } from 'lucide-react';
 import { RankInfo, RankTier, UserPlan, DailyQuest, SubjectId } from '../types';
 
@@ -119,9 +118,11 @@ export const getRank = (level: number): RankInfo => {
 
 // --- DAILY QUESTS LOGIC ---
 
+// Fixed error: Property 'JAPANESE' does not exist on type 'typeof SubjectId'.
+// Replaced JAPANESE with ITALIAN which is present in the SubjectId enum.
 const LANGUAGE_SUBJECTS = [
     SubjectId.ENGLISH, SubjectId.GERMAN, SubjectId.FRENCH, 
-    SubjectId.SPANISH, SubjectId.RUSSIAN, SubjectId.JAPANESE,
+    SubjectId.SPANISH, SubjectId.RUSSIAN, SubjectId.ITALIAN,
     SubjectId.BULGARIAN
 ];
 

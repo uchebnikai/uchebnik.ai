@@ -10,7 +10,7 @@ export enum SubjectId {
   GERMAN = 'german', 
   RUSSIAN = 'russian', 
   ITALIAN = 'italian',
-  JAPANESE = 'japanese',
+  OTHER_LANGUAGES = 'other_languages',
   CHEMISTRY = 'chemistry',
   PHYSICS = 'physics',
   BIOLOGY = 'biology',
@@ -28,6 +28,15 @@ export enum SubjectId {
   ENTREPRENEURSHIP = 'entrepreneurship',
   CHOREOGRAPHY = 'choreography',
   PROGRAMMING = 'programming',
+  ECOLOGY = 'ecology',
+  FINANCE_LITERACY = 'finance_literacy',
+  HEALTH_EDU = 'health_edu',
+
+  // Advanced School Subjects
+  ADV_MATH = 'adv_math',
+  ADV_PHYSICS = 'adv_physics',
+  ADV_CHEMISTRY = 'adv_chemistry',
+  ADV_BIOLOGY = 'adv_biology',
   
   // UNIVERSITY - Humanities & Social Sciences
   UNI_PHILOSOPHY = 'uni_philosophy',
