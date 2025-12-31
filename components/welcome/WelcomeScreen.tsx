@@ -187,7 +187,7 @@ export const WelcomeScreen = ({
         const greetingName = userSettings.userName ? userSettings.userName.split(' ')[0] : 'Uchebnik';
 
         return (
-            <div className="w-full h-full overflow-y-auto custom-scrollbar flex flex-col relative">
+            <div className="w-full h-full overflow-y-auto overflow-x-hidden custom-scrollbar flex flex-col relative">
                 <div className="flex-1 flex flex-col items-center justify-center p-4 lg:p-8 w-full max-w-7xl mx-auto min-h-[calc(100vh-140px)]">
                     
                     {/* Greeting */}
@@ -312,9 +312,9 @@ export const WelcomeScreen = ({
 
     // --- LOGGED OUT LANDING VIEW ---
     return (
-    <div className={`flex flex-col h-full w-full overflow-x-hidden items-center bg-transparent relative selection:bg-indigo-500/30`}>
+    <div className={`flex flex-col h-full w-full items-center bg-transparent relative selection:bg-indigo-500/30 overflow-hidden`}>
       {homeView === 'landing' && (
-        <div className="w-full h-full overflow-y-auto custom-scrollbar flex flex-col items-center">
+        <div className="w-full h-full overflow-y-auto overflow-x-hidden custom-scrollbar flex flex-col items-center">
             
             <nav className="w-full flex items-center justify-between p-6 px-8 md:px-12 shrink-0 relative z-50">
                 <div className="flex items-center gap-3">
@@ -335,7 +335,7 @@ export const WelcomeScreen = ({
 
             {/* HERO SECTION */}
             <section className="w-full grid grid-cols-1 lg:grid-cols-12 gap-12 px-8 md:px-12 py-12 md:py-20 lg:py-28 items-start lg:items-center relative">
-                <div className={`lg:col-span-6 flex flex-col items-start text-left ${SLIDE_RIGHT} duration-1000 lg:-translate-y-32`}>
+                <div className={`lg:col-span-6 flex flex-col items-start text-left ${SLIDE_RIGHT} duration-1000 lg:mb-32`}>
                     <h1 className="text-5xl md:text-7xl lg:text-8xl font-black tracking-tighter leading-[1.05] text-zinc-900 dark:text-white font-display mb-6">
                         {t('landing_hero_title', userSettings.language)}
                     </h1>
@@ -359,9 +359,9 @@ export const WelcomeScreen = ({
                     </div>
                 </div>
 
-                <div className={`lg:col-span-6 relative flex items-center justify-center gap-28 ${ZOOM_IN} duration-1000 delay-300 hidden lg:flex lg:-translate-y-40 lg:translate-x-8`}>
+                <div className={`lg:col-span-6 relative flex items-center justify-center gap-12 md:gap-28 ${ZOOM_IN} duration-1000 delay-300 hidden lg:flex lg:mb-40`}>
                     {/* PHONE MOCKUP */}
-                    <div className="relative z-10 p-3 bg-white/10 dark:bg-black/40 backdrop-blur-3xl rounded-[56px] border border-white/20 shadow-[0_40px_100px_rgba(0,0,0,0.4)] rotate-2 max-w-[380px] w-full group shrink-0">
+                    <div className="relative z-10 p-3 bg-white/10 dark:bg-black/40 backdrop-blur-3xl rounded-[56px] border border-white/20 shadow-[0_40px_100px_rgba(0,0,0,0.4)] rotate-2 max-w-[320px] xl:max-w-[380px] w-full group shrink-0">
                         <div className="absolute top-8 left-1/2 -translate-x-1/2 w-32 h-6 bg-black rounded-full z-30 flex items-center justify-center px-4 overflow-hidden border border-white/5">
                             <div className="w-2 h-2 rounded-full bg-indigo-500 mr-2 animate-pulse"/>
                             <div className="text-[7px] font-black text-white/60 tracking-widest uppercase">UCHEBNIK AI OS</div>
@@ -435,7 +435,7 @@ export const WelcomeScreen = ({
                     </div>
 
                     {/* NEW: SIDE FEATURES GRID (Right of phone) */}
-                    <div className="flex flex-col gap-6 w-[280px] pt-12">
+                    <div className="flex flex-col gap-6 w-[240px] xl:w-[280px] pt-12">
                         <div className={`p-6 bg-white/5 backdrop-blur-xl border border-white/10 rounded-[32px] shadow-2xl ${SLIDE_UP} delay-500`}>
                             <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-500 flex items-center justify-center mb-4">
                                 <Trophy size={20} />
