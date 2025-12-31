@@ -545,10 +545,6 @@ export const App = () => {
     supabase.auth.getSession().then(({ data: { session } }) => initializeApp(session));
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      // Re-run initialization on state change, but careful not to flicker
-      // If already loaded and session ID matches, skip full reload?
-      // For simplicity, we rerun logic but since authLoading is false, user sees updates reactively.
-      // However, for initial load, the promise above handles it.
       if (!authLoading) {
           setSession(session);
           if (session) {
@@ -797,7 +793,7 @@ export const App = () => {
   // --- Logic Helpers ---
   const checkImageLimit = (count = 1): boolean => {
       let limit = 4;
-      if (userPlan === 'plus') limit = 12;
+      if (userPlan === 'plus' || userPlan === 'pro') limit = 12;
       if (userPlan === 'pro') limit = 9999;
       if (dailyImageCount + count > limit) { setShowUnlockModal(true); return false; }
       return true;
@@ -871,7 +867,6 @@ export const App = () => {
           const { error } = await supabase.auth.updateUser(updates, { emailRedirectTo: window.location.origin });
           if (error) throw error;
 
-          // Sync with profiles table immediately for Admin/Leaderboard visibility
           if (session?.user?.id) {
               const { error: profileError } = await supabase.from('profiles').update({
                   avatar_url: editProfile.avatar,
@@ -929,24 +924,20 @@ export const App = () => {
   const handleReply = (msg: Message) => { setReplyingTo(msg); };
 
   const handleStopGeneration = () => {
-    // 1. Abort the network request
     if (abortControllerRef.current) {
         abortControllerRef.current.abort();
         abortControllerRef.current = null;
     }
-    // 2. Clear watchdog
     if (responseWatchdogRef.current) {
         clearTimeout(responseWatchdogRef.current);
         responseWatchdogRef.current = null;
     }
     
-    // 3. Update loading states
     if (activeSubject) {
         setLoadingSubjects(prev => ({ ...prev, [activeSubject.id]: false }));
     }
     isStreamingRef.current = false; 
     
-    // 4. Stop Voice listening
     if (isListening) {
         if (recognitionRef.current) {
             recognitionRef.current.onend = null;
@@ -955,19 +946,17 @@ export const App = () => {
         setIsListening(false);
     }
 
-    // 5. Explicitly update the message in the session to stop showing the streaming indicator
     if (activeSessionId) {
         setSessions(prev => prev.map(s => {
             if (s.id === activeSessionId) {
                 return {
                     ...s,
                     messages: s.messages.map(m => {
-                        // Find any message that is currently marked as streaming and turn it off
                         if (m.isStreaming) {
                             return { 
                                 ...m, 
                                 isStreaming: false,
-                                text: m.text + (m.text ? "" : " (Stopped)") // Append text if empty to show something
+                                text: m.text + (m.text ? "" : " (Stopped)") 
                             };
                         }
                         return m;
@@ -979,7 +968,6 @@ export const App = () => {
     }
   };
 
-  // Grant XP Logic - Refactored to use functional update
   const grantXP = (amount: number) => {
       const boostedAmount = calculateXPWithBoost(amount, userPlan);
       
@@ -1004,7 +992,6 @@ export const App = () => {
       });
   };
 
-  // Update Daily Quests logic wrapper - Now functional update based
   const updateQuests = (updates: { type: 'message' | 'image' | 'voice', amount?: number }[], subjectId: string) => {
       setUserSettings(prev => {
           if (!prev.dailyQuests) return prev;
@@ -1098,18 +1085,15 @@ export const App = () => {
     }));
     setInputValue(''); setSelectedImages([]); if(fileInputRef.current) fileInputRef.current.value = '';
     
-    // Start Loading and Setup Controller
     isStreamingRef.current = true;
     setLoadingSubjects(prev => ({ ...prev, [currentSubId]: true }));
     const controller = new AbortController();
     abortControllerRef.current = controller;
 
-    // Watchdog logic
     const startWatchdog = () => {
         if (responseWatchdogRef.current) clearTimeout(responseWatchdogRef.current);
         responseWatchdogRef.current = setTimeout(() => {
             if (abortControllerRef.current === controller) {
-                console.warn("AI Response Watchdog Timeout - Aborting");
                 controller.abort();
                 const errorMsg: Message = { id: Date.now().toString(), role: 'model', text: t('error', userSettings.language) + " (Timeout)", isError: true, timestamp: Date.now(), isStreaming: false };
                 setSessions(prev => prev.map(s => { if (s.id === sessId) { return { ...s, messages: s.messages.map(m => m.id === tempAiMsgId ? errorMsg : m) }; } return s; }));
@@ -1120,13 +1104,10 @@ export const App = () => {
 
     startWatchdog();
 
-    // --- PROGRESS & XP LOGIC ---
-    // Handle generic XP
     let earnedXP = XP_PER_MESSAGE;
     if (currentImgs.length > 0) earnedXP += (currentImgs.length * XP_PER_IMAGE);
     grantXP(earnedXP);
 
-    // Handle Quests (Batch Update to avoid race conditions)
     if (currentImgs.length > 0) {
         incrementImageCount(currentImgs.length);
     }
@@ -1137,7 +1118,6 @@ export const App = () => {
     questUpdates.push({ type: 'message', amount: 1 });
     
     updateQuests(questUpdates, currentSubId);
-    // ---------------------------
 
     let finalPrompt = textToSend;
     if (replyContext) {
@@ -1235,12 +1215,9 @@ export const App = () => {
       } else if (userSettings.notifications && userSettings.sound) { new Audio('https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3').play().catch(()=>{}); }
       return response.text;
     } catch (error: any) {
-       console.error("HandleSend Error:", error);
-       
        if (error.name === 'AbortError' || controller.signal.aborted) {
            return "Aborted";
        }
-
        const errorMsg: Message = { id: Date.now().toString(), role: 'model', text: t('error', userSettings.language), isError: true, timestamp: Date.now(), isStreaming: false };
        setSessions(prev => prev.map(s => { if (s.id === sessId) { return { ...s, messages: s.messages.map(m => m.id === tempAiMsgId ? errorMsg : m) }; } return s; }));
        return "Error.";
@@ -1258,7 +1235,11 @@ export const App = () => {
     if (files && files.length > 0) {
       if (!checkImageLimit(files.length)) { e.target.value = ''; return; }
       setIsImageProcessing(true);
-      try { const processedImages = await Promise.all(Array.from(files).map(file => resizeImage(file as File, 800, 0.6))); setSelectedImages(prev => [...prev, ...processedImages]); } catch (err) { console.error("Image processing error", err); addToast("Грешка при обработката на изображението.", "error"); } finally { setIsImageProcessing(false); }
+      try { 
+        // Cast each file to File to satisfy TypeScript
+        const processedImages = await Promise.all(Array.from(files).map(file => resizeImage(file as File, 800, 0.6))); 
+        setSelectedImages(prev => [...prev, ...processedImages]); 
+      } catch (err) { addToast("Грешка при обработката на изображението.", "error"); } finally { setIsImageProcessing(false); }
       e.target.value = '';
     }
   };
@@ -1269,8 +1250,6 @@ export const App = () => {
       setSelectedImages(prev => [...prev, ...newImages]);
   };
 
-  // Camera capture is now unified into file upload via native behavior, separate logic removed
-
   const handleBackgroundUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -1280,7 +1259,7 @@ export const App = () => {
             finalImage = await new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(reader.result as string); reader.onerror = reject; reader.readAsDataURL(file); });
         } else { finalImage = await resizeImage(file, 4096, 0.95); }
         setUserSettings(prev => ({ ...prev, customBackground: finalImage }));
-      } catch (err) { console.error("Background processing error", err); addToast("Грешка при обработката на фона.", "error"); }
+      } catch (err) { addToast("Грешка при обработката на фона.", "error"); }
     }
     e.target.value = '';
   };
@@ -1328,13 +1307,10 @@ export const App = () => {
 
   const startVoiceCall = async () => { 
     if (!session) { setShowAuthModal(true); return; } 
-    
-    // Strict Pro Check
     if (userPlan !== 'pro') {
         setShowUnlockModal(true);
         return;
     }
-
     try {
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         stream.getTracks().forEach(track => track.stop());
@@ -1342,7 +1318,6 @@ export const App = () => {
         addToast('Моля, разрешете достъп до микрофона.', 'error');
         return;
     }
-
     setIsVoiceCallActive(true); 
     startLiveSession();
   };
@@ -1395,75 +1370,54 @@ export const App = () => {
                       
                       scriptProcessor.onaudioprocess = (audioProcessingEvent) => {
                           if (voiceMutedRef.current) return;
-                          
                           const inputData = audioProcessingEvent.inputBuffer.getChannelData(0);
                           const pcmBlob = createBlob(inputData);
-                          
                           sessionPromise.then((session) => {
                               session.sendRealtimeInput({ media: pcmBlob });
                           });
                       };
-                      
                       source.connect(scriptProcessor);
                       scriptProcessor.connect(inputAudioContext.destination);
                   },
                   onmessage: async (message: LiveServerMessage) => {
                       const base64Audio = message.serverContent?.modelTurn?.parts?.[0]?.inlineData?.data;
-                      
                       if (base64Audio) {
                           setVoiceCallStatus('speaking');
                           nextStartTime = Math.max(nextStartTime, outputAudioContext.currentTime);
-                          
                           const audioBuffer = await decodeAudioData(
                               decode(base64Audio),
                               outputAudioContext,
                               24000,
                               1
                           );
-                          
                           const source = outputAudioContext.createBufferSource();
                           source.buffer = audioBuffer;
                           source.connect(outputNode);
                           source.connect(outputAudioContext.destination);
-                          
                           source.addEventListener('ended', () => {
                               sources.delete(source);
                               if (sources.size === 0) setVoiceCallStatus('listening');
                           });
-                          
                           source.start(nextStartTime);
                           nextStartTime += audioBuffer.duration;
                           sources.add(source);
-                          
-                          // Optional: Grant small XP for voice interaction
                           grantXP(XP_PER_VOICE / 10); 
-                          
                           if (activeSubjectRef.current) {
                               updateQuests([{ type: 'voice', amount: 1 }], activeSubjectRef.current.id);
                           }
                       }
-                      
                       if (message.serverContent?.interrupted) {
                           sources.forEach(s => { s.stop(); sources.delete(s); });
                           nextStartTime = 0;
                           setVoiceCallStatus('listening');
                       }
                   },
-                  onclose: () => {
-                      endVoiceCall();
-                  },
-                  onerror: (e: ErrorEvent) => {
-                      console.error("Live Session Error", e);
-                      addToast("Грешка при връзката с Live AI.", "error");
-                      endVoiceCall();
-                  }
+                  onclose: () => { endVoiceCall(); },
+                  onerror: (e: ErrorEvent) => { addToast("Грешка при връзката с Live AI.", "error"); endVoiceCall(); }
               }
           });
-          
           liveSessionRef.current = await sessionPromise;
-
       } catch (e) {
-          console.error("Start Live Session Failed", e);
           addToast("Неуспешно стартиране на разговор.", "error");
           endVoiceCall();
       }
@@ -1472,28 +1426,19 @@ export const App = () => {
   function createBlob(data: Float32Array): { data: string; mimeType: string } {
       const l = data.length;
       const int16 = new Int16Array(l);
-      for (let i = 0; i < l; i++) {
-          int16[i] = data[i] * 32768;
-      }
+      for (let i = 0; i < l; i++) { int16[i] = data[i] * 32768; }
       const bytes = new Uint8Array(int16.buffer);
       let binary = '';
       const len = bytes.byteLength;
-      for (let i = 0; i < len; i++) {
-          binary += String.fromCharCode(bytes[i]);
-      }
-      return {
-          data: btoa(binary),
-          mimeType: 'audio/pcm;rate=16000',
-      };
+      for (let i = 0; i < len; i++) { binary += String.fromCharCode(bytes[i]); }
+      return { data: btoa(binary), mimeType: 'audio/pcm;rate=16000' };
   }
 
   function decode(base64: string) {
       const binaryString = atob(base64);
       const len = binaryString.length;
       const bytes = new Uint8Array(len);
-      for (let i = 0; i < len; i++) {
-          bytes[i] = binaryString.charCodeAt(i);
-      }
+      for (let i = 0; i < len; i++) { bytes[i] = binaryString.charCodeAt(i); }
       return bytes;
   }
 
@@ -1503,9 +1448,7 @@ export const App = () => {
       const buffer = ctx.createBuffer(numChannels, frameCount, sampleRate);
       for (let channel = 0; channel < numChannels; channel++) {
           const channelData = buffer.getChannelData(channel);
-          for (let i = 0; i < frameCount; i++) {
-              channelData[i] = dataInt16[i * numChannels + channel] / 32768.0;
-          }
+          for (let i = 0; i < frameCount; i++) { channelData[i] = dataInt16[i * numChannels + channel] / 32768.0; }
       }
       return buffer;
   }
@@ -1520,46 +1463,30 @@ export const App = () => {
         setIsListening(false); 
         return; 
     }
-    
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if(!SR) { addToast('Гласовата услуга не се поддържа от този браузър.', 'error'); return; }
-    
     if (recognitionRef.current) {
         recognitionRef.current.onend = null;
         try { recognitionRef.current.stop(); } catch(e) {}
     }
-
     const rec = new SR();
     rec.lang = activeSubject?.id === SubjectId.ENGLISH ? 'en-US' : activeSubject?.id === SubjectId.FRENCH ? 'fr-FR' : (userSettings.language === 'en' ? 'en-US' : 'bg-BG');
     rec.interimResults = true; 
     rec.continuous = false;
     startingTextRef.current = inputValue;
-
     rec.onresult = (e: any) => {
         let f = '', inter = '';
-        for(let i=e.resultIndex; i<e.results.length; ++i) e.results[i].isFinal ? f+=e.results[i][0].transcript : inter+=e.results[i][0].transcript;
+        for(let i=e.resultIndex; i<e.results.length; ++i) e.resultIndex[i].isFinal ? f+=e.results[i][0].transcript : inter+=e.results[i][0].transcript;
         setInputValue((startingTextRef.current + ' ' + f + inter).trim());
     };
-    
     rec.onstart = () => setIsListening(true); 
     rec.onend = () => setIsListening(false);
     rec.onerror = (e: any) => { 
-        console.error("Mic error:", e.error);
-        if(e.error === 'not-allowed' || e.error === 'service-not-allowed') {
-            addToast('Не мога да започна запис. Моля, уверете се, че сте позволили достъп до микрофона.', 'error');
-        } else {
-            addToast('Проблем с микрофона. Моля, опитайте отново.', 'info');
-        }
+        if(e.error === 'not-allowed' || e.error === 'service-not-allowed') { addToast('Не мога да започна запис. Моля, уверете се, че сте позволили достъп до микрофона.', 'error'); }
         setIsListening(false); 
     };
-
     recognitionRef.current = rec; 
-    try {
-        rec.start();
-    } catch (err) {
-        console.error("Start speech failed:", err);
-        setIsListening(false);
-    }
+    try { rec.start(); } catch (err) { setIsListening(false); }
   };
 
   const handleRate = (messageId: string, rating: 'up' | 'down') => { if (!activeSessionId) return; setSessions(prev => prev.map(s => { if (s.id === activeSessionId) { return { ...s, messages: s.messages.map(m => m.id === messageId ? { ...m, rating } : m) }; } return s; })); };
@@ -1653,12 +1580,7 @@ export const App = () => {
       )}
       
       {showAuthModal && (
-        <div className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in" onClick={(e) => { if(e.target === e.currentTarget) closeAuthModal() }}>
-           <div className="relative w-full max-w-md">
-              <button onClick={closeAuthModal} className="absolute top-4 right-4 z-50 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"><X size={20}/></button>
-              <Auth isModal={true} onSuccess={closeAuthModal} initialMode={initialAuthMode} />
-           </div>
-        </div>
+        <Auth isModal={false} onSuccess={closeAuthModal} initialMode={initialAuthMode} />
       )}
 
       {focusMode && (
@@ -1698,7 +1620,7 @@ export const App = () => {
             addToast={addToast}
             setShowSubjectDashboard={setShowSubjectDashboard}
             userRole={userRole}
-            streak={0} // Streak is removed
+            streak={0} 
             syncStatus={syncStatus}
             homeView={homeView}
             dailyImageCount={dailyImageCount}
@@ -1784,7 +1706,6 @@ export const App = () => {
                     />
                 )}
                 
-                {/* Ad Placement for Free Users */}
                 <AdSenseContainer userPlan={userPlan} />
 
                 <HistoryDrawer 

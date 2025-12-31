@@ -1,9 +1,9 @@
 
 import React, { useState } from 'react';
 import { supabase } from '../../supabaseClient';
-import { Loader2, Mail, Lock, User, ArrowRight, Sparkles, CheckCircle, AlertCircle, Calendar, Eye, EyeOff } from 'lucide-react';
-import { GLASS_PANEL, INPUT_AUTH } from '../../styles/ui';
-import { ZOOM_IN } from '../../animations/transitions';
+import { Loader2, Mail, Lock, User, ArrowRight, Sparkles, CheckCircle, AlertCircle, Calendar, Eye, EyeOff, ArrowLeft, GraduationCap, Brain, Zap, ShieldCheck, X } from 'lucide-react';
+import { INPUT_AUTH } from '../../styles/ui';
+import { FADE_IN, SLIDE_UP, ZOOM_IN } from '../../animations/transitions';
 
 type AuthMode = 'login' | 'register' | 'forgot_password' | 'update_password';
 
@@ -38,13 +38,10 @@ export const Auth = ({ isModal = false, onSuccess, initialMode = 'login' }: Auth
 
     try {
       if (mode === 'register') {
-        // Future date validation
         if (new Date(birthDate) > new Date()) {
             throw new Error("Датата на раждане не може да бъде в бъдещето.");
         }
-
         const referralCode = localStorage.getItem('uchebnik_invite_code');
-        
         const { error } = await supabase.auth.signUp({
           email,
           password,
@@ -54,7 +51,7 @@ export const Auth = ({ isModal = false, onSuccess, initialMode = 'login' }: Auth
               last_name: lastName,
               full_name: `${firstName} ${lastName}`.trim(),
               birth_date: birthDate,
-              referral_code: referralCode || null // Send the code to trigger the reward logic on verify
+              referral_code: referralCode || null
             },
             emailRedirectTo: window.location.origin,
           }
@@ -82,7 +79,7 @@ export const Auth = ({ isModal = false, onSuccess, initialMode = 'login' }: Auth
       }
     } catch (err: any) {
       if (err.message && (err.message.includes('Database error') || err.message.includes('saving new user'))) {
-          setError('Възникна системна грешка при регистрацията (DB). Моля, опитайте отново по-късно или се свържете с поддръжката.');
+          setError('Възникна системна грешка при регистрацията (DB). Моля, опитайте отново по-късно.');
       } else {
           setError(err.message || 'Възникна грешка.');
       }
@@ -100,7 +97,6 @@ export const Auth = ({ isModal = false, onSuccess, initialMode = 'login' }: Auth
         options: {
           redirectTo: window.location.origin,
           queryParams: {
-            // Explicitly pass the client_id to ensure Google receives the correct app ID
             client_id: '632370938906-f6daog6qh4aqtaic1o2bao63t4gceomd.apps.googleusercontent.com',
             access_type: 'offline',
             prompt: 'consent',
@@ -114,7 +110,6 @@ export const Auth = ({ isModal = false, onSuccess, initialMode = 'login' }: Auth
     }
   };
 
-  // Check for password recovery hash in URL
   React.useEffect(() => {
       const hash = window.location.hash;
       if (hash && hash.includes('type=recovery')) {
@@ -123,205 +118,277 @@ export const Auth = ({ isModal = false, onSuccess, initialMode = 'login' }: Auth
   }, []);
 
   return (
-    <div className={`flex items-center justify-center w-full relative ${isModal ? 'bg-transparent p-0' : 'bg-background min-h-screen overflow-hidden'}`}>
-        {!isModal && (
-            <>
-                {/* Background Effects */}
-                <div className="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] bg-indigo-500/20 rounded-full blur-[120px] pointer-events-none" />
-                <div className="absolute bottom-[-10%] left-[-5%] w-[400px] h-[400px] bg-accent-500/20 rounded-full blur-[100px] pointer-events-none" />
-            </>
-        )}
-
-      <div className={`w-full max-w-md p-8 ${GLASS_PANEL} ${ZOOM_IN} duration-500 relative z-10 ${isModal ? '' : 'mx-4'}`}>
-        <div className="flex flex-col items-center mb-8">
-            <img src="https://i.ibb.co/LDgTCm9N/6151f23e-b922-4c62-930f-853884bf4c89.png" alt="Logo" className="w-24 h-24 mb-6 rounded-[2rem] object-contain drop-shadow-2xl animate-in zoom-in-50 duration-500" />
-          <h1 className="text-3xl font-bold text-center tracking-tight text-foreground font-display">
-             Uchebnik AI
-          </h1>
-          <p className="text-gray-500 mt-2 text-center text-sm font-medium">
-            {mode === 'login' && 'Влезте в акаунта си'}
-            {mode === 'register' && 'Създайте нов акаунт'}
-            {mode === 'forgot_password' && 'Възстановяване на парола'}
-            {mode === 'update_password' && 'Въведете нова парола'}
-          </p>
-        </div>
-
-        {error && (
-          <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-sm flex gap-3 items-start animate-in slide-in-from-top-2">
-            <AlertCircle size={18} className="shrink-0 mt-0.5" />
-            <span>{error}</span>
-          </div>
-        )}
-
-        {successMsg && (
-          <div className="mb-6 p-4 rounded-xl bg-green-500/10 border border-green-500/20 text-green-600 dark:text-green-400 text-sm flex gap-3 items-start animate-in slide-in-from-top-2">
-            <CheckCircle size={18} className="shrink-0 mt-0.5" />
-            <span>{successMsg}</span>
-          </div>
-        )}
-
-        {(mode === 'login' || mode === 'register') && (
-            <>
-                <button
-                    onClick={handleGoogleLogin}
-                    type="button"
-                    disabled={loading}
-                    className="w-full py-3.5 rounded-xl bg-white hover:bg-gray-50 text-gray-800 font-bold shadow-lg border border-gray-200 transition-all active:scale-95 disabled:opacity-70 flex items-center justify-center gap-3 mb-6 group"
-                >
-                    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/1200px-Google_%22G%22_logo.svg.png" className="w-5 h-5 group-hover:scale-110 transition-transform" alt="Google" />
-                    <span>{mode === 'register' ? 'Регистрация с Google' : 'Вход с Google'}</span>
-                </button>
-
-                <div className="flex items-center gap-4 mb-6">
-                    <div className="h-px bg-gray-200 dark:bg-white/10 flex-1" />
-                    <span className="text-xs text-gray-400 font-bold uppercase tracking-wider">или с имейл</span>
-                    <div className="h-px bg-gray-200 dark:bg-white/10 flex-1" />
-                </div>
-            </>
-        )}
-
-        <form onSubmit={handleAuth} className="space-y-4">
-          
-          {mode === 'register' && (
-            <>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                    <label className="text-xs font-bold text-gray-500 uppercase ml-1">Име</label>
-                    <div className="relative">
-                        <User className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                        <input
-                        type="text"
-                        value={firstName}
-                        onChange={(e) => setFirstName(e.target.value)}
-                        required
-                        className={INPUT_AUTH}
-                        placeholder="Иван"
-                        />
+    <div className="fixed inset-0 z-[200] bg-[#09090b] flex flex-col md:flex-row overflow-hidden animate-in fade-in duration-500">
+        
+        {/* Left Side: Immersive Branding (Hidden on mobile or becomes a header) */}
+        <div className="hidden md:flex md:w-1/2 lg:w-3/5 bg-[#0d0d0f] relative items-center justify-center p-12 overflow-hidden border-r border-white/5">
+            {/* Background Decor */}
+            <div className="absolute top-[-10%] left-[-10%] w-[600px] h-[600px] bg-indigo-600/10 rounded-full blur-[120px] animate-pulse-slow" />
+            <div className="absolute bottom-[-5%] right-[-5%] w-[400px] h-[400px] bg-purple-600/10 rounded-full blur-[100px] animate-pulse-slow delay-1000" />
+            
+            <div className="relative z-10 max-w-xl">
+                <div className="flex items-center gap-4 mb-8 group cursor-default">
+                    <div className="w-16 h-16 rounded-[2rem] bg-gradient-to-br from-indigo-500 to-indigo-700 flex items-center justify-center text-white shadow-2xl shadow-indigo-500/40 group-hover:scale-110 transition-transform duration-500">
+                        <span className="sr-only">Uchebnik AI Logo</span>
+                        <Sparkles size={36} fill="currentColor" />
+                    </div>
+                    <div>
+                        <h1 className="text-4xl font-black text-white tracking-tighter font-display leading-none">Uchebnik AI</h1>
+                        <p className="text-indigo-400 font-bold uppercase tracking-[0.2em] text-[10px] mt-1">Intelligence Redefined</p>
                     </div>
                 </div>
-                <div className="space-y-1">
-                    <label className="text-xs font-bold text-gray-500 uppercase ml-1">Фамилия</label>
-                    <div className="relative">
-                        <User className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                        <input
-                        type="text"
-                        value={lastName}
-                        onChange={(e) => setLastName(e.target.value)}
-                        required
-                        className={INPUT_AUTH}
-                        placeholder="Иванов"
-                        />
+
+                <h2 className="text-5xl lg:text-6xl font-black text-white leading-[1.1] tracking-tight mb-10">
+                    Учи по-умно, не по-трудно.
+                </h2>
+
+                <div className="grid grid-cols-1 gap-8">
+                    {[
+                        { icon: GraduationCap, title: 'За училище и университет', desc: 'Персонализирана помощ за всяка образователна степен.' },
+                        { icon: Brain, title: 'Интелигентни решения', desc: 'Подробни обяснения стъпка по стъпка за всяка задача.' },
+                        { icon: ShieldCheck, title: 'Сигурно и надеждно', desc: 'Вашите данни са защитени и винаги под ръка.' }
+                    ].map((feature, i) => (
+                        <div key={i} className="flex gap-5 group">
+                            <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center text-zinc-400 group-hover:text-white group-hover:bg-white/10 transition-all duration-300 border border-white/5">
+                                <feature.icon size={22} />
+                            </div>
+                            <div>
+                                <h4 className="text-white font-bold text-lg mb-1">{feature.title}</h4>
+                                <p className="text-zinc-500 text-sm leading-relaxed">{feature.desc}</p>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </div>
+
+        {/* Right Side: Auth Form */}
+        <div className="flex-1 flex flex-col bg-zinc-950 relative overflow-y-auto custom-scrollbar">
+            {/* Mobile Header */}
+            <div className="md:hidden p-6 flex justify-between items-center bg-zinc-950/50 backdrop-blur-md sticky top-0 z-50 border-b border-white/5">
+                <div className="flex items-center gap-3">
+                    <img src="https://i.ibb.co/LDgTCm9N/6151f23e-b922-4c62-930f-853884bf4c89.png" className="w-8 h-8 rounded-lg" alt="Logo" />
+                    <span className="font-display font-black text-white text-lg">Uchebnik AI</span>
+                </div>
+                {onSuccess && (
+                    <button onClick={onSuccess} className="p-2 text-zinc-400"><X size={20}/></button>
+                )}
+            </div>
+
+            <div className="flex-1 flex items-center justify-center p-6 lg:p-12">
+                <div className={`w-full max-w-md ${SLIDE_UP} duration-500`}>
+                    
+                    {onSuccess && (
+                        <button 
+                            onClick={onSuccess} 
+                            className="hidden md:flex items-center gap-2 text-zinc-500 hover:text-white mb-8 transition-colors group font-bold text-sm"
+                        >
+                            <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
+                            Назад към сайта
+                        </button>
+                    )}
+
+                    <div className="mb-10">
+                        <h3 className="text-3xl font-black text-white tracking-tight mb-2">
+                            {mode === 'login' && 'Добре дошли отново'}
+                            {mode === 'register' && 'Създаване на акаунт'}
+                            {mode === 'forgot_password' && 'Забравена парола'}
+                            {mode === 'update_password' && 'Нова парола'}
+                        </h3>
+                        <p className="text-zinc-500 font-medium">
+                            {mode === 'login' && 'Влезте, за да продължите ученето.'}
+                            {mode === 'register' && 'Присъединете се към бъдещето на образованието.'}
+                            {mode === 'forgot_password' && 'Въведете имейла си за възстановяване.'}
+                            {mode === 'update_password' && 'Изберете сигурна парола.'}
+                        </p>
+                    </div>
+
+                    {error && (
+                        <div className="mb-6 p-4 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm flex gap-3 items-start animate-in slide-in-from-top-2">
+                            <AlertCircle size={18} className="shrink-0 mt-0.5" />
+                            <span>{error}</span>
+                        </div>
+                    )}
+
+                    {successMsg && (
+                        <div className="mb-6 p-4 rounded-2xl bg-green-500/10 border border-green-500/20 text-green-400 text-sm flex gap-3 items-start animate-in slide-in-from-top-2">
+                            <CheckCircle size={18} className="shrink-0 mt-0.5" />
+                            <span>{successMsg}</span>
+                        </div>
+                    )}
+
+                    <form onSubmit={handleAuth} className="space-y-4">
+                        {(mode === 'login' || mode === 'register') && (
+                            <button
+                                onClick={handleGoogleLogin}
+                                type="button"
+                                disabled={loading}
+                                className="w-full py-3.5 rounded-xl bg-white hover:bg-zinc-100 text-zinc-950 font-bold shadow-xl transition-all active:scale-95 disabled:opacity-70 flex items-center justify-center gap-3 group"
+                            >
+                                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/1200px-Google_%22G%22_logo.svg.png" className="w-5 h-5" alt="Google" />
+                                <span>Продължи с Google</span>
+                            </button>
+                        )}
+
+                        {(mode === 'login' || mode === 'register') && (
+                            <div className="flex items-center gap-4 py-4">
+                                <div className="h-px bg-white/5 flex-1" />
+                                <span className="text-[10px] text-zinc-600 font-black uppercase tracking-widest">или с имейл</span>
+                                <div className="h-px bg-white/5 flex-1" />
+                            </div>
+                        )}
+
+                        {mode === 'register' && (
+                            <div className="space-y-4">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">Име</label>
+                                        <div className="relative group">
+                                            <User className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-indigo-500 transition-colors" size={18} />
+                                            <input
+                                                type="text"
+                                                value={firstName}
+                                                onChange={(e) => setFirstName(e.target.value)}
+                                                required
+                                                className="w-full pl-11 pr-4 py-3.5 bg-white/5 border border-white/10 rounded-2xl text-white placeholder-zinc-600 outline-none focus:border-indigo-500 transition-all"
+                                                placeholder="Иван"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">Фамилия</label>
+                                        <div className="relative group">
+                                            <User className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-indigo-500 transition-colors" size={18} />
+                                            <input
+                                                type="text"
+                                                value={lastName}
+                                                onChange={(e) => setLastName(e.target.value)}
+                                                required
+                                                className="w-full pl-11 pr-4 py-3.5 bg-white/5 border border-white/10 rounded-2xl text-white placeholder-zinc-600 outline-none focus:border-indigo-500 transition-all"
+                                                placeholder="Иванов"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">Дата на раждане</label>
+                                    <div className="relative group">
+                                        <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-indigo-500 transition-colors" size={18} />
+                                        <input
+                                            type="date"
+                                            value={birthDate}
+                                            onChange={(e) => setBirthDate(e.target.value)}
+                                            required
+                                            max={today}
+                                            className="w-full pl-11 pr-4 py-3.5 bg-white/5 border border-white/10 rounded-2xl text-white placeholder-zinc-600 outline-none focus:border-indigo-500 transition-all"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {mode !== 'update_password' && (
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">Имейл адрес</label>
+                                <div className="relative group">
+                                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-indigo-500 transition-colors" size={18} />
+                                    <input
+                                        type="email"
+                                        value={email}
+                                        onChange={(e) => setEmail(e.target.value)}
+                                        required
+                                        className="w-full pl-11 pr-4 py-3.5 bg-white/5 border border-white/10 rounded-2xl text-white placeholder-zinc-600 outline-none focus:border-indigo-500 transition-all"
+                                        placeholder="name@example.com"
+                                    />
+                                </div>
+                            </div>
+                        )}
+
+                        {mode !== 'forgot_password' && (
+                            <div className="space-y-2">
+                                <div className="flex justify-between items-center px-1">
+                                    <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Парола</label>
+                                    {mode === 'login' && (
+                                        <button 
+                                            type="button" 
+                                            onClick={() => setMode('forgot_password')} 
+                                            className="text-[10px] font-bold text-zinc-400 hover:text-white transition-colors"
+                                        >
+                                            Забравена парола?
+                                        </button>
+                                    )}
+                                </div>
+                                <div className="relative group">
+                                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-indigo-500 transition-colors" size={18} />
+                                    <input
+                                        type={showPassword ? "text" : "password"}
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                        required
+                                        minLength={6}
+                                        className="w-full pl-11 pr-12 py-3.5 bg-white/5 border border-white/10 rounded-2xl text-white placeholder-zinc-600 outline-none focus:border-indigo-500 transition-all"
+                                        placeholder="••••••••"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                        className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white transition-colors"
+                                    >
+                                        {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        <button
+                            type="submit"
+                            disabled={loading}
+                            className="w-full py-4 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-black shadow-2xl shadow-indigo-500/20 transition-all active:scale-95 disabled:opacity-70 disabled:scale-100 flex items-center justify-center gap-3 mt-4 group"
+                        >
+                            {loading ? <Loader2 size={22} className="animate-spin" /> : (
+                                <>
+                                    <span>
+                                        {mode === 'login' && 'Вход в системата'}
+                                        {mode === 'register' && 'Регистрация'}
+                                        {mode === 'forgot_password' && 'Изпрати линк'}
+                                        {mode === 'update_password' && 'Обнови парола'}
+                                    </span>
+                                    <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
+                                </>
+                            )}
+                        </button>
+                    </form>
+
+                    <div className="mt-8 pt-8 border-t border-white/5 text-center">
+                        {mode === 'login' && (
+                            <p className="text-zinc-500 text-sm font-medium">
+                                Нямате акаунт?{' '}
+                                <button onClick={() => setMode('register')} className="text-white font-bold hover:underline">
+                                    Създайте нов безплатно
+                                </button>
+                            </p>
+                        )}
+                        {mode === 'register' && (
+                            <p className="text-zinc-500 text-sm font-medium">
+                                Вече имате акаунт?{' '}
+                                <button onClick={() => setMode('login')} className="text-white font-bold hover:underline">
+                                    Влезте тук
+                                </button>
+                            </p>
+                        )}
+                        {(mode === 'forgot_password' || mode === 'update_password') && (
+                            <button onClick={() => setMode('login')} className="text-zinc-400 font-bold hover:text-white text-sm transition-colors flex items-center gap-2 mx-auto">
+                                <ArrowLeft size={16}/> Назад към вход
+                            </button>
+                        )}
                     </div>
                 </div>
-              </div>
-
-              <div className="space-y-1">
-                  <label className="text-xs font-bold text-gray-500 uppercase ml-1">Дата на раждане</label>
-                  <div className="relative">
-                      <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                      <input
-                      type="date"
-                      value={birthDate}
-                      onChange={(e) => setBirthDate(e.target.value)}
-                      required
-                      max={today}
-                      className={`${INPUT_AUTH} text-gray-500`}
-                      />
-                  </div>
-              </div>
-            </>
-          )}
-
-          {mode !== 'update_password' && (
-            <div className="space-y-1">
-                <label className="text-xs font-bold text-gray-500 uppercase ml-1">Имейл</label>
-                <div className="relative">
-                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                    <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    className={INPUT_AUTH}
-                    placeholder="name@example.com"
-                    />
-                </div>
             </div>
-          )}
 
-          {mode !== 'forgot_password' && (
-            <div className="space-y-1">
-                <label className="text-xs font-bold text-gray-500 uppercase ml-1">Парола</label>
-                <div className="relative">
-                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                    <input
-                    type={showPassword ? "text" : "password"}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    minLength={6}
-                    className={`${INPUT_AUTH} pr-10`}
-                    placeholder="••••••••"
-                    />
-                    <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 focus:outline-none"
-                    >
-                        {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                    </button>
-                </div>
+            <div className="p-8 mt-auto text-center text-[10px] text-zinc-600 font-bold uppercase tracking-[0.2em] border-t border-white/5">
+                © {new Date().getFullYear()} Uchebnik AI • Privacy Policy • Terms of Service
             </div>
-          )}
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold shadow-lg shadow-indigo-500/25 transition-all active:scale-95 disabled:opacity-70 disabled:scale-100 flex items-center justify-center gap-2 mt-2"
-          >
-            {loading ? <Loader2 size={20} className="animate-spin" /> : (
-                <>
-                    {mode === 'login' && 'Вход'}
-                    {mode === 'register' && 'Регистрация'}
-                    {mode === 'forgot_password' && 'Изпрати линк'}
-                    {mode === 'update_password' && 'Обнови парола'}
-                    {!loading && <ArrowRight size={18} />}
-                </>
-            )}
-          </button>
-        </form>
-
-        <div className="mt-6 pt-6 border-t border-gray-200 dark:border-white/10 flex flex-col gap-3 text-center text-sm">
-          {mode === 'login' && (
-            <>
-              <p className="text-gray-500">
-                Нямате акаунт?{' '}
-                <button onClick={() => setMode('register')} className="text-indigo-500 font-bold hover:underline">
-                  Регистрация
-                </button>
-              </p>
-              <button onClick={() => setMode('forgot_password')} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-xs">
-                Забравена парола?
-              </button>
-            </>
-          )}
-
-          {mode === 'register' && (
-            <p className="text-gray-500">
-              Имате акаунт?{' '}
-              <button onClick={() => setMode('login')} className="text-indigo-500 font-bold hover:underline">
-                Вход
-              </button>
-            </p>
-          )}
-
-          {(mode === 'forgot_password' || mode === 'update_password') && (
-            <button onClick={() => setMode('login')} className="text-indigo-500 font-bold hover:underline">
-              Назад към вход
-            </button>
-          )}
         </div>
-      </div>
     </div>
   );
 };
