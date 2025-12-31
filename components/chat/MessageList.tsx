@@ -4,7 +4,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import remarkGfm from 'remark-gfm';
-import { Projector, Download, Check, ThumbsUp, ThumbsDown, Reply, Volume2, Square, Copy, Share2, Loader2, Globe, ExternalLink } from 'lucide-react';
+import { Projector, Download, Check, ThumbsUp, ThumbsDown, Reply, Volume2, Square, Copy, Share2, Loader2, Globe, ExternalLink, Lock, Sparkles, UserPlus } from 'lucide-react';
 import { Message, UserSettings, SubjectConfig } from '../../types';
 import { handleDownloadPPTX } from '../../utils/exportUtils';
 import { CodeBlock } from '../ui/CodeBlock';
@@ -12,7 +12,7 @@ import { ChartRenderer } from './ChartRenderer';
 import { GeometryRenderer } from './GeometryRenderer';
 import { TestRenderer } from './TestRenderer';
 import { MSG_BUBBLE_USER, MSG_BUBBLE_MODEL, MSG_CONTAINER_BASE } from '../../styles/chat';
-import { SLIDE_UP } from '../../animations/transitions';
+import { SLIDE_UP, FADE_IN } from '../../animations/transitions';
 
 interface MessageListProps {
   currentMessages: Message[];
@@ -26,26 +26,21 @@ interface MessageListProps {
   loadingSubject: boolean;
   activeSubject: SubjectConfig | null;
   messagesEndRef: React.RefObject<HTMLDivElement | null>;
+  setShowAuthModal?: (val: boolean) => void;
+  isGuest?: boolean;
 }
 
-// Clear and simple loading messages
 const LOADING_MESSAGES = [
     "Търся в интернет...",
     "Проверявам информацията...",
     "Подготвям отговора...",
     "Анализирам въпроса...",
-    "Разглеждам източници...",
-    "Формулирам решение...",
-    "Осмислям контекста...",
-    "Генерирам идеи...",
-    "Структурирам данните..."
+    "Формулирам решение..."
 ];
 
 const getLoadingMessage = (id: string) => {
     let sum = 0;
-    for (let i = 0; i < id.length; i++) {
-        sum += id.charCodeAt(i);
-    }
+    for (let i = 0; i < id.length; i++) { sum += id.charCodeAt(i); }
     return LOADING_MESSAGES[sum % LOADING_MESSAGES.length];
 };
 
@@ -60,27 +55,21 @@ export const MessageList = ({
   handleShare,
   loadingSubject,
   activeSubject,
-  messagesEndRef
+  messagesEndRef,
+  setShowAuthModal,
+  isGuest = false
 }: MessageListProps) => {
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const lastMessageIdRef = useRef<string | null>(null);
 
-  // Smart Auto-Scroll Logic
   useEffect(() => {
       const container = scrollContainerRef.current;
       if (!container) return;
-
-      const lastMsg = currentMessages[currentMessages.length - 1];
-      const lastMsgId = lastMsg?.id;
-      
-      const isNewMessage = lastMsgId !== lastMessageIdRef.current;
-      const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 150;
-
-      if (isNewMessage || isNearBottom) {
+      const lastMsgId = currentMessages[currentMessages.length - 1]?.id;
+      if (lastMsgId !== lastMessageIdRef.current || (container.scrollHeight - container.scrollTop - container.clientHeight < 150)) {
           messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
       }
-      
       lastMessageIdRef.current = lastMsgId || null;
   }, [currentMessages, messagesEndRef]);
 
@@ -89,13 +78,12 @@ export const MessageList = ({
          <div className="max-w-4xl mx-auto space-y-8 lg:space-y-12 pb-40 pt-2 lg:pt-4">
             {currentMessages.map((msg, index) => {
                const isStreaming = msg.isStreaming;
-               const isStreamingTest = isStreaming && msg.type === 'test_generated';
-               const isStreamingSlides = isStreaming && msg.type === 'slides';
                const hasText = msg.text && msg.text.trim().length > 0;
+               const isBlurred = msg.isDemo && isGuest;
 
                return (
                <div key={msg.id} id={msg.id} className={`group flex flex-col gap-2 ${SLIDE_UP} duration-700 ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
-                  <div className={`${MSG_CONTAINER_BASE} ${msg.role === 'user' ? MSG_BUBBLE_USER : MSG_BUBBLE_MODEL}`}>
+                  <div className={`${MSG_CONTAINER_BASE} ${msg.role === 'user' ? MSG_BUBBLE_USER : MSG_BUBBLE_MODEL} relative min-h-[60px]`}>
                      
                      {msg.replyToId && (() => {
                         const rMsg = currentMessages.find(m => m.id === msg.replyToId);
@@ -109,22 +97,19 @@ export const MessageList = ({
 
                      {Array.isArray(msg.images) && msg.images.length > 0 && (
                         <div className="flex gap-3 mb-5 overflow-x-auto pb-2 snap-x">
-                            {msg.images.map((img, i) => ( img && typeof img === 'string' ? ( <img key={i} src={img} onClick={() => setZoomedImage(img)} className="h-40 lg:h-56 rounded-2xl object-cover border border-white/20 snap-center shadow-lg cursor-pointer hover:scale-[1.02] transition-transform"/> ) : null ))}
+                            {msg.images.map((img, i) => img && ( <img key={i} src={img} onClick={() => setZoomedImage(img)} className="h-40 lg:h-56 rounded-2xl object-cover border border-white/20 snap-center shadow-lg cursor-pointer hover:scale-[1.02] transition-transform"/> ))}
                         </div>
                      )}
                      
                      {msg.type === 'slides' && msg.slidesData && (
                         <div className="space-y-4">
-                           <div className="flex justify-between items-center pb-4 border-b border-indigo-500/20"><span className="font-bold flex gap-2 items-center text-sm"><Projector size={18} className="text-indigo-500"/> Генерирана Презентация</span><button onClick={() => handleDownloadPPTX(msg.slidesData!, activeSubject, userSettings)} className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-xl text-xs font-bold flex gap-2 transition-colors shadow-lg shadow-emerald-500/20"><Download size={14}/> Изтегли PPTX</button></div>
+                           <div className="flex justify-between items-center pb-4 border-b border-indigo-500/20"><span className="font-bold flex gap-2 items-center text-sm"><Projector size={18} className="text-indigo-500"/> Презентация</span><button onClick={() => handleDownloadPPTX(msg.slidesData!, activeSubject, userSettings)} className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-xl text-xs font-bold flex gap-2 transition-colors shadow-lg shadow-emerald-500/20"><Download size={14}/> PPTX</button></div>
                            <div className="grid gap-4">{msg.slidesData.map((s, i) => (<div key={i} className="bg-white/40 dark:bg-black/40 p-5 rounded-2xl border border-indigo-500/10"><h4 className="font-bold mb-3 text-base text-indigo-600 dark:text-indigo-400">{i+1}. {s.title}</h4><ul className="space-y-2">{s.content.map((p, j) => <li key={j} className="text-sm opacity-80 flex gap-2"><div className="w-1.5 h-1.5 rounded-full bg-gray-400 mt-2 shrink-0"/>{p}</li>)}</ul></div>))}</div>
                         </div>
                      )}
 
-                     {msg.type === 'test_generated' && msg.testData && (
-                        <TestRenderer data={msg.testData} />
-                     )}
+                     {msg.type === 'test_generated' && msg.testData && <TestRenderer data={msg.testData} />}
 
-                     {/* Loading State: Show if streaming AND no text yet */}
                      {isStreaming && !hasText && (
                         <div className="flex items-center gap-3 text-sm text-gray-500 italic py-2 animate-pulse">
                            <Loader2 className="animate-spin text-indigo-500" size={18}/>
@@ -132,72 +117,72 @@ export const MessageList = ({
                         </div>
                      )}
 
-                     {isStreamingTest && (
-                        <div className="w-full p-6 bg-white/50 dark:bg-zinc-800/50 rounded-2xl border border-indigo-500/20 shadow-sm backdrop-blur-sm animate-pulse flex flex-col items-center justify-center text-center gap-3 my-2">
-                            <div className="p-3 bg-indigo-500/10 rounded-full text-indigo-500 shadow-sm">
-                                <Loader2 size={24} className="animate-spin"/>
-                            </div>
-                            <div>
-                                <span className="font-bold text-zinc-800 dark:text-zinc-200 block text-sm mb-1">Генериране на тест...</span>
-                                <span className="text-xs text-zinc-500 dark:text-zinc-400 font-mono bg-white/50 dark:bg-black/20 px-2 py-1 rounded-md">
-                                    {(msg.text.match(/"question"\s*:/g) || []).length > 0 
-                                        ? `Въпроси готови: ${(msg.text.match(/"question"\s*:/g) || []).length}` 
-                                        : 'Структуриране на данни...'}
-                                </span>
-                            </div>
-                        </div>
+                     {hasText && (
+                         <div className={`markdown-content w-full relative transition-all duration-700 ${isBlurred ? 'max-h-[180px] overflow-hidden' : ''}`}>
+                             <div className={`${isBlurred ? 'select-none pointer-events-none' : ''}`}>
+                                <ReactMarkdown remarkPlugins={[remarkMath, remarkGfm]} rehypePlugins={[rehypeKatex]} components={{code: CodeBlock}}>
+                                    {msg.text}
+                                </ReactMarkdown>
+                                {isStreaming && <span className="inline-block w-2 h-4 ml-0.5 bg-indigo-500 opacity-80 animate-pulse align-middle rounded-sm"/>}
+                             </div>
+                             
+                             {isBlurred && (
+                                 <div className="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-white via-white/90 to-transparent dark:from-[#18181b] dark:via-[#18181b]/90 dark:to-transparent z-10 flex flex-col items-center justify-end pb-8">
+                                     <div className="w-full h-full absolute inset-0 backdrop-blur-[6px] [mask-image:linear-gradient(to_top,black_60%,transparent_100%)] pointer-events-none" />
+                                 </div>
+                             )}
+                         </div>
                      )}
 
-                     {isStreamingSlides && (
-                        <div className="w-full p-6 bg-white/50 dark:bg-zinc-800/50 rounded-2xl border border-pink-500/20 shadow-sm backdrop-blur-sm animate-pulse flex flex-col items-center justify-center text-center gap-3 my-2">
-                            <div className="p-3 bg-pink-500/10 rounded-full text-pink-500 shadow-sm">
-                                <Loader2 size={24} className="animate-spin"/>
-                            </div>
-                            <div>
-                                <span className="font-bold text-zinc-800 dark:text-zinc-200 block text-sm mb-1">Създаване на презентация...</span>
-                                <span className="text-xs text-zinc-500 dark:text-zinc-400 font-mono bg-white/50 dark:bg-black/20 px-2 py-1 rounded-md">
-                                    {(msg.text.match(/"title"\s*:/g) || []).length > 0 
-                                        ? `Слайдове: ${(msg.text.match(/"title"\s*:/g) || []).length}` 
-                                        : 'Подготовка на съдържание...'}
-                                </span>
-                            </div>
-                        </div>
-                     )}
+                     {isBlurred && (
+                         <div className={`mt-6 p-8 bg-white/40 dark:bg-black/60 border border-indigo-500/30 rounded-3xl backdrop-blur-2xl shadow-[0_20px_50px_rgba(0,0,0,0.3)] relative z-20 flex flex-col items-center text-center gap-6 animate-in zoom-in-95 slide-in-from-bottom-6 duration-700 ring-1 ring-white/10`}>
+                             <div className="flex -space-x-3">
+                                <div className="w-12 h-12 rounded-2xl bg-indigo-600 flex items-center justify-center text-white ring-4 ring-white dark:ring-zinc-900 shadow-xl transform -rotate-6">
+                                    <Sparkles size={24} fill="currentColor" />
+                                </div>
+                                <div className="w-12 h-12 rounded-2xl bg-emerald-500 flex items-center justify-center text-white ring-4 ring-white dark:ring-zinc-900 shadow-xl transform rotate-6">
+                                    <Lock size={24} />
+                                </div>
+                             </div>
+                             
+                             <div className="space-y-2">
+                                <h3 className="text-2xl font-black text-zinc-900 dark:text-white tracking-tight leading-tight">
+                                    Отключи пълното решение
+                                </h3>
+                                <p className="text-sm text-zinc-600 dark:text-zinc-400 font-medium max-w-[280px] mx-auto leading-relaxed">
+                                    Влез в профила си, за да видиш детайлното обяснение, да ползваш гласовия режим и да запазиш историята си.
+                                </p>
+                             </div>
 
-                     {hasText && !isStreamingTest && !isStreamingSlides && (
-                         <div className="markdown-content w-full break-words overflow-hidden">
-                             <ReactMarkdown remarkPlugins={[remarkMath, remarkGfm]} rehypePlugins={[rehypeKatex]} components={{code: CodeBlock}}>
-                                 {msg.text}
-                             </ReactMarkdown>
-                             {/* Small cursor indicator at the end if streaming, instead of big loader */}
-                             {isStreaming && <span className="inline-block w-2 h-4 ml-0.5 bg-indigo-500 opacity-80 animate-pulse align-middle rounded-sm"/>}
+                             <div className="flex flex-col gap-4 w-full">
+                                 <button 
+                                    onClick={() => setShowAuthModal?.(true)}
+                                    className="w-full px-8 py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-black text-base shadow-2xl shadow-indigo-600/30 transition-all active:scale-95 flex items-center justify-center gap-3 group"
+                                 >
+                                    <UserPlus size={20} />
+                                    Влез Безплатно
+                                    <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+                                 </button>
+                                 <div className="flex items-center justify-center gap-2">
+                                     <div className="h-px w-8 bg-zinc-300 dark:bg-zinc-800" />
+                                     <p className="text-[10px] text-zinc-500 font-black uppercase tracking-[0.2em]">100% Безплатно</p>
+                                     <div className="h-px w-8 bg-zinc-300 dark:bg-zinc-800" />
+                                 </div>
+                             </div>
                          </div>
                      )}
                      
-                     {msg.chartData && <ChartRenderer data={msg.chartData} />}
-                     {msg.geometryData && <GeometryRenderer data={msg.geometryData} />}
+                     {msg.chartData && !isBlurred && <ChartRenderer data={msg.chartData} />}
+                     {msg.geometryData && !isBlurred && <GeometryRenderer data={msg.geometryData} />}
                      
-                     {msg.sources && msg.sources.length > 0 && (
+                     {msg.sources && msg.sources.length > 0 && !isBlurred && (
                          <div className="mt-4 pt-3 border-t border-gray-200 dark:border-white/10">
                              <div className="flex items-center gap-2 text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
                                  <Globe size={12} /> Използвани източници
                              </div>
                              <div className="flex flex-wrap gap-2">
                                  {msg.sources.map((source, i) => (
-                                     <a 
-                                        key={i} 
-                                        href={source.uri} 
-                                        target="_blank" 
-                                        rel="noopener noreferrer"
-                                        className="flex items-center gap-2 px-3 py-1.5 bg-white/50 dark:bg-black/20 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 border border-gray-200 dark:border-white/10 rounded-lg text-xs font-medium text-gray-700 dark:text-gray-300 transition-colors group/link max-w-[200px] truncate"
-                                     >
-                                         <div className="w-4 h-4 rounded-full bg-gray-100 dark:bg-white/10 flex items-center justify-center shrink-0">
-                                             <img 
-                                                src={`https://www.google.com/s2/favicons?domain=${source.uri}&sz=32`} 
-                                                className="w-3 h-3 object-contain"
-                                                onError={(e) => { e.currentTarget.style.display='none'; }}
-                                             />
-                                         </div>
+                                     <a key={i} href={source.uri} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-3 py-1.5 bg-white/50 dark:bg-black/20 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 border border-gray-200 dark:border-white/10 rounded-lg text-xs font-medium text-gray-700 dark:text-gray-300 transition-colors group/link max-w-[200px] truncate">
                                          <span className="truncate">{source.title || new URL(source.uri).hostname}</span>
                                          <ExternalLink size={10} className="opacity-0 group-hover/link:opacity-50 transition-opacity ml-auto shrink-0"/>
                                      </a>
@@ -206,32 +191,35 @@ export const MessageList = ({
                          </div>
                      )}
 
-                     <div className={`text-[10px] mt-2 lg:mt-4 font-bold tracking-wide flex items-center justify-end gap-1.5 opacity-60`}>
+                     <div className={`text-[10px] mt-2 lg:mt-4 font-bold tracking-wide flex items-center justify-end gap-1.5 opacity-40`}>
                         {msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : ''}
                         {msg.role === 'user' && <Check size={12} />}
                      </div>
                   </div>
 
-                  <div className={`flex gap-1 px-4 transition-all duration-300 ${msg.role === 'user' ? 'opacity-0 group-hover:opacity-100' : 'opacity-100'}`}>
-                     <div className="flex bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border border-indigo-500/20 rounded-full p-1.5 shadow-sm mt-1">
-                        {msg.role === 'model' && (
-                           <>
-                             <button onClick={() => handleRate(msg.id, 'up')} className={`p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 transition-colors ${msg.rating === 'up' ? 'text-green-500' : 'text-gray-400'}`}><ThumbsUp size={14} className="lg:w-4 lg:h-4"/></button>
-                             <button onClick={() => handleRate(msg.id, 'down')} className={`p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 transition-colors ${msg.rating === 'down' ? 'text-red-500' : 'text-gray-400'}`}><ThumbsDown size={14} className="lg:w-4 lg:h-4"/></button>
-                             <div className="w-px h-4 bg-gray-200 dark:bg-white/10 mx-1 self-center"/>
-                           </>
-                        )}
-                        <button onClick={() => handleReply(msg)} className="p-2 text-gray-400 hover:text-indigo-500 dark:hover:text-indigo-400 transition-colors" title="Отговор"><Reply size={14} className="lg:w-4 lg:h-4"/></button>
-                        <button onClick={() => handleCopy(msg.text, msg.id)} className="p-2 text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">{copiedId === msg.id ? <Check size={14} className="text-green-500"/> : <Copy size={14} className="lg:w-4 lg:h-4"/>}</button>
-                        <button onClick={() => handleShare(msg.text)} className="p-2 text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"><Share2 size={14} className="lg:w-4 lg:h-4"/></button>
-                     </div>
-                  </div>
+                  {!isBlurred && (
+                    <div className={`flex gap-1 px-4 transition-all duration-300 ${msg.role === 'user' ? 'opacity-0 group-hover:opacity-100' : 'opacity-100'}`}>
+                        <div className="flex bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border border-indigo-500/10 rounded-full p-1 shadow-sm mt-1">
+                            {msg.role === 'model' && (
+                            <>
+                                <button onClick={() => handleRate(msg.id, 'up')} className={`p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 transition-colors ${msg.rating === 'up' ? 'text-green-500' : 'text-gray-400'}`}><ThumbsUp size={14}/></button>
+                                <button onClick={() => handleRate(msg.id, 'down')} className={`p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/10 transition-colors ${msg.rating === 'down' ? 'text-red-500' : 'text-gray-400'}`}><ThumbsDown size={14}/></button>
+                            </>
+                            )}
+                            <button onClick={() => handleReply(msg)} className="p-2 text-gray-400 hover:text-indigo-500 dark:hover:text-indigo-400 transition-colors"><Reply size={14}/></button>
+                            <button onClick={() => handleCopy(msg.text, msg.id)} className="p-2 text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">{copiedId === msg.id ? <Check size={14} className="text-green-500"/> : <Copy size={14}/>}</button>
+                        </div>
+                    </div>
+                  )}
                </div>
                );
             })}
-            
             <div ref={messagesEndRef} className="h-6 lg:h-10"/>
          </div>
       </div>
   );
 };
+
+const ArrowRight = ({ size, className }: { size: number, className?: string }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+);

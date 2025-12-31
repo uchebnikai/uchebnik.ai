@@ -189,6 +189,7 @@ export interface Message {
   images?: string[]; 
   imageAnalysis?: string; 
   isError?: boolean;
+  isDemo?: boolean;
   type?: 'text' | 'image_generated' | 'slides' | 'test_generated';
   slidesData?: Slide[]; 
   testData?: TestData; 
