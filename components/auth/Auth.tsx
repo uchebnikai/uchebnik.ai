@@ -361,7 +361,7 @@ export const Auth = ({ isModal = false, onSuccess, initialMode = 'login', onNavi
                             {loading ? <Loader2 size={22} className="animate-spin" /> : (
                                 <>
                                     <span>
-                                        {mode === 'login' && 'Вход в системата'}
+                                        {mode === 'login' && 'Вход'}
                                         {mode === 'register' && 'Регистрация'}
                                         {mode === 'forgot_password' && 'Изпрати линк'}
                                         {mode === 'update_password' && 'Обнови парола'}
