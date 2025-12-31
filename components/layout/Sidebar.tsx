@@ -486,7 +486,7 @@ export const Sidebar = ({
                  )}
              </button>
 
-             {/* Referral Button - Highly Visible - Only show if shouldShowReferral is true */}
+             {/* Referral Button - Highly Visible - Only show if shouldShowReferral is true AND logged in */}
              {session && !collapsed && shouldShowReferral && (
                <button onClick={() => setShowReferralModal(true)} className={`w-full mb-1 group relative overflow-hidden rounded-2xl p-4 text-left shadow-lg transition-all hover:scale-[1.02] active:scale-[0.98] bg-gradient-to-r from-amber-500 to-orange-500 text-white`}>
                   <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20" />
@@ -513,7 +513,7 @@ export const Sidebar = ({
                  </button>
              )}
 
-             {session ? (
+             {session && (
                  <div className="relative mb-1">
                     {profileMenuOpen && (
                         <>
@@ -588,17 +588,6 @@ export const Sidebar = ({
                          )}
                     </button>
                  </div>
-             ) : (
-                 <button onClick={() => setShowAuthModal(true)} className={`w-full mb-1 flex items-center gap-3 p-3 rounded-2xl bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-600 text-white font-bold transition-all shadow-xl shadow-indigo-500/25 active:scale-95 group relative overflow-hidden ${collapsed ? 'justify-center' : ''}`}>
-                     <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 pointer-events-none" />
-                     <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center border border-white/20 shrink-0 relative z-10"><LogIn size={20}/></div>
-                     {!collapsed && (
-                         <div className="text-left relative z-10">
-                             <div className="text-sm">{t('login', userSettings.language)}</div>
-                             <div className="text-[10px] opacity-80 font-medium">Запази прогреса си</div>
-                         </div>
-                     )}
-                 </button>
              )}
           </div>
         </aside>

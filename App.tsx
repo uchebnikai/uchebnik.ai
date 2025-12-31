@@ -1669,7 +1669,7 @@ export const App = () => {
           </div>
       )}
 
-      {!focusMode && (
+      {!focusMode && session && (
           <Sidebar 
             sidebarOpen={sidebarOpen}
             setSidebarOpen={setSidebarOpen}
@@ -1754,6 +1754,7 @@ export const App = () => {
                 setSidebarOpen={setSidebarOpen}
                 setShowAuthModal={setShowAuthModal}
                 session={session}
+                setShowSettings={setShowSettings}
             />
         ) : showSubjectDashboard ? (
             <SubjectDashboard 

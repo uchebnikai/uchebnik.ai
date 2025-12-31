@@ -1,7 +1,7 @@
 
 import React, { useState, useRef } from 'react';
 // Added missing 'Users' import from lucide-react
-import { Shield, MessageSquare, ArrowRight, School, GraduationCap, Briefcase, ArrowLeft, ArrowUpRight, Search, ImageIcon, Mic, MicOff, X, Menu, Landmark, Sparkles, BookOpen, Brain, Zap, CheckCircle2, Users } from 'lucide-react';
+import { Shield, MessageSquare, ArrowRight, School, GraduationCap, Briefcase, ArrowLeft, ArrowUpRight, Search, ImageIcon, Mic, MicOff, X, Menu, Landmark, Sparkles, BookOpen, Brain, Zap, CheckCircle2, Users, LayoutDashboard, Settings } from 'lucide-react';
 import { SubjectConfig, UserRole, UserSettings, HomeViewType, SubjectId } from '../../types';
 import { SUBJECTS } from '../../constants';
 import { DynamicIcon } from '../ui/DynamicIcon';
@@ -22,6 +22,7 @@ interface WelcomeScreenProps {
   setSidebarOpen: (val: boolean) => void;
   setShowAuthModal: (val: boolean) => void;
   session?: any;
+  setShowSettings?: (val: boolean) => void;
 }
 
 export const WelcomeScreen = ({
@@ -35,7 +36,8 @@ export const WelcomeScreen = ({
   onQuickStart,
   setSidebarOpen,
   setShowAuthModal,
-  session
+  session,
+  setShowSettings
 }: WelcomeScreenProps) => {
 
     const [inputValue, setInputValue] = useState('');
@@ -132,21 +134,134 @@ export const WelcomeScreen = ({
         }
     };
 
+    // --- LOGGED IN DASHBOARD VIEW ---
+    if (session && homeView === 'landing') {
+        const greeting = () => {
+            const hour = new Date().getHours();
+            if (hour < 12) return 'Добро утро';
+            if (hour < 18) return 'Добър ден';
+            return 'Добър вечер';
+        };
+
+        return (
+            <div className="w-full h-full overflow-y-auto custom-scrollbar flex flex-col items-center p-4 lg:p-8">
+                {/* Dashboard Header */}
+                <div className="w-full max-w-5xl flex justify-between items-center mb-8 lg:mb-12 mt-4 lg:mt-8">
+                    <div className="flex flex-col">
+                        <h1 className="text-3xl lg:text-4xl font-black text-zinc-900 dark:text-white tracking-tight flex items-center gap-3 font-display">
+                            {greeting()}, {userSettings.userName ? userSettings.userName.split(' ')[0] : 'Ученико'}!
+                            <span className="animate-wave inline-block origin-[70%_70%]">👋</span>
+                        </h1>
+                        <p className="text-zinc-500 font-medium mt-1">Готов ли си да научиш нещо ново днес?</p>
+                    </div>
+                    <button 
+                        onClick={() => setShowSettings && setShowSettings(true)}
+                        className="hidden lg:flex items-center gap-2 p-1 pl-3 pr-1 bg-white/50 dark:bg-zinc-800/50 backdrop-blur-md rounded-full border border-white/20 hover:bg-white dark:hover:bg-zinc-800 transition-all shadow-sm group"
+                    >
+                        <span className="text-xs font-bold text-zinc-600 dark:text-zinc-300">Настройки</span>
+                        <div className="w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-700 overflow-hidden relative">
+                             {userMeta.avatar ? (
+                                 <img src={userMeta.avatar} className="w-full h-full object-cover" />
+                             ) : (
+                                 <div className="w-full h-full flex items-center justify-center text-xs font-bold text-zinc-500">
+                                     <Settings size={14}/>
+                                 </div>
+                             )}
+                        </div>
+                    </button>
+                </div>
+
+                {/* Quick Action Bar */}
+                <div className="w-full max-w-3xl mb-12">
+                    <div className={`bg-white/60 dark:bg-black/40 backdrop-blur-xl p-4 rounded-[32px] border border-white/30 dark:border-white/10 shadow-2xl ${SLIDE_UP}`}>
+                        <div className="relative bg-white dark:bg-zinc-900 rounded-3xl p-2 flex items-center gap-2 shadow-inner border border-zinc-100 dark:border-white/5 transition-all focus-within:ring-2 focus-within:ring-indigo-500/20">
+                            <div className="flex items-center gap-1 pl-2">
+                                <button onClick={() => fileInputRef.current?.click()} className="p-3 text-zinc-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-white/10 rounded-2xl transition-colors">
+                                    <ImageIcon size={22} />
+                                </button>
+                                <input type="file" ref={fileInputRef} onChange={handleImageUpload} className="hidden" accept="image/*" multiple />
+                                
+                                <button onClick={toggleListening} className={`p-3 rounded-2xl transition-all ${isListening ? 'bg-red-500 text-white animate-pulse' : 'text-zinc-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-white/10'}`}>
+                                    {isListening ? <MicOff size={22}/> : <Mic size={22}/>}
+                                </button>
+                            </div>
+
+                            <div className="w-px h-8 bg-zinc-200 dark:bg-white/10 mx-2"></div>
+
+                            <input 
+                                type="text"
+                                value={inputValue}
+                                onChange={(e) => setInputValue(e.target.value)}
+                                onKeyDown={handleKeyDown}
+                                placeholder={t('ask_anything', userSettings.language)}
+                                className="flex-1 bg-transparent border-none outline-none px-2 py-4 text-lg text-zinc-900 dark:text-white placeholder-zinc-400"
+                            />
+                            
+                            <button 
+                                onClick={() => (inputValue.trim() || selectedImages.length > 0) && onQuickStart(inputValue, selectedImages)}
+                                disabled={!inputValue.trim() && selectedImages.length === 0}
+                                className="w-14 h-14 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white flex items-center justify-center shadow-xl shadow-indigo-600/30 disabled:opacity-50 transition-all active:scale-95 group"
+                            >
+                                <ArrowUpRight size={28} className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+                            </button>
+                        </div>
+                        {selectedImages.length > 0 && (
+                            <div className="flex gap-2 mt-4 overflow-x-auto pb-1 px-2">
+                                {selectedImages.map((img, i) => ( 
+                                    <div key={i} className={`relative group shrink-0 ${ZOOM_IN}`}>
+                                        <img src={img} className="h-16 w-16 rounded-xl object-cover border-2 border-white dark:border-zinc-800 shadow-md"/>
+                                        <button onClick={() => handleRemoveImage(i)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-md hover:scale-110 transition-transform"><X size={10}/></button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Quick Subject Access */}
+                <div className="w-full max-w-5xl">
+                    <h3 className="text-sm font-bold text-zinc-500 uppercase tracking-widest mb-6 px-2">Бърз достъп</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                        <button onClick={() => handleSubjectChange(SUBJECTS[0])} className="group p-6 bg-indigo-600 text-white rounded-3xl shadow-lg shadow-indigo-500/20 hover:scale-105 transition-all flex flex-col items-center justify-center text-center gap-3">
+                            <MessageSquare size={32} className="opacity-90"/>
+                            <span className="font-bold">{t('chat_general', userSettings.language)}</span>
+                        </button>
+                        
+                        {SUBJECTS.slice(1, 5).map(s => (
+                            <button 
+                                key={s.id} 
+                                onClick={() => handleSubjectChange(s)}
+                                className="group p-6 bg-white dark:bg-white/5 border border-white/20 hover:border-indigo-500/30 rounded-3xl shadow-sm hover:shadow-xl hover:scale-105 transition-all flex flex-col items-center justify-center text-center gap-3"
+                            >
+                                <div className={`w-10 h-10 rounded-xl ${s.color} flex items-center justify-center text-white shadow-md`}>
+                                    <DynamicIcon name={s.icon} className="w-5 h-5"/>
+                                </div>
+                                <span className="font-bold text-zinc-800 dark:text-zinc-200 text-sm">{t(`subject_${s.id}`, userSettings.language)}</span>
+                            </button>
+                        ))}
+                        
+                        <button onClick={() => setHomeView('school_select')} className="group p-6 bg-gray-100 dark:bg-white/5 border border-dashed border-gray-300 dark:border-white/10 hover:border-indigo-500/50 rounded-3xl hover:bg-white dark:hover:bg-white/10 transition-all flex flex-col items-center justify-center text-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-gray-200 dark:bg-white/10 flex items-center justify-center text-zinc-500 dark:text-zinc-400">
+                                <LayoutDashboard size={20}/>
+                            </div>
+                            <span className="font-bold text-zinc-500 dark:text-zinc-400 text-sm">Всички предмети</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    // --- LOGGED OUT LANDING VIEW ---
     return (
     <div className={`flex flex-col h-full w-full overflow-x-hidden items-center bg-transparent relative selection:bg-indigo-500/30`}>
       
       {homeView === 'landing' && (
         <div className="w-full h-full overflow-y-auto custom-scrollbar flex flex-col items-center">
             
-            {/* Header / Navbar */}
+            {/* Landing Navbar */}
             <nav className="w-full max-w-7xl flex items-center justify-between p-6 shrink-0 relative z-50">
                 <div className="flex items-center gap-3">
-                    <button 
-                        onClick={() => setSidebarOpen(true)} 
-                        className="lg:hidden p-2 text-zinc-500 hover:bg-white/10 rounded-xl transition-colors"
-                    >
-                        <Menu size={24} />
-                    </button>
                     <div className="flex items-center gap-2">
                         <img src="https://i.ibb.co/LDgTCm9N/6151f23e-b922-4c62-930f-853884bf4c89.png" className="w-8 h-8 rounded-lg" />
                         <span className="font-display font-black text-xl tracking-tight hidden sm:inline">Uchebnik AI</span>
@@ -156,11 +271,9 @@ export const WelcomeScreen = ({
                     <button onClick={() => setShowAdminAuth(true)} className="p-2 text-zinc-400 hover:text-indigo-500 transition-colors">
                         <Shield size={18} />
                     </button>
-                    {!session && (
-                        <button onClick={() => setShowAuthModal(true)} className="flex items-center gap-2 px-5 py-2.5 bg-zinc-900 dark:bg-white text-white dark:text-black rounded-full font-bold text-sm shadow-xl hover:scale-105 active:scale-95 transition-all">
-                            {t('enter', userSettings.language)}
-                        </button>
-                    )}
+                    <button onClick={() => setShowAuthModal(true)} className="flex items-center gap-2 px-5 py-2.5 bg-zinc-900 dark:bg-white text-white dark:text-black rounded-full font-bold text-sm shadow-xl hover:scale-105 active:scale-95 transition-all">
+                        {t('enter', userSettings.language)}
+                    </button>
                 </div>
             </nav>
 
@@ -176,7 +289,7 @@ export const WelcomeScreen = ({
                     
                     <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
                         <button 
-                            onClick={() => handleSubjectChange(SUBJECTS[0])} 
+                            onClick={() => setShowAuthModal(true)} 
                             className="px-8 py-4 bg-indigo-600 text-white rounded-2xl font-bold text-lg shadow-2xl shadow-indigo-500/30 hover:bg-indigo-500 hover:-translate-y-1 active:translate-y-0 transition-all flex items-center justify-center gap-3 group"
                         >
                             {t('landing_cta_main', userSettings.language)}
@@ -218,55 +331,23 @@ export const WelcomeScreen = ({
                 </div>
             </section>
 
-            {/* Quick Interactive Tool Section */}
+            {/* Quick Interactive Tool Section (Demo only for logged out) */}
             <section className="w-full max-w-4xl px-6 py-12 relative z-20">
                 <div className={`bg-white/40 dark:bg-black/40 backdrop-blur-3xl p-4 md:p-6 rounded-[32px] md:rounded-[48px] border border-white/30 dark:border-white/10 shadow-2xl ${SLIDE_UP}`}>
-                    <h3 className="text-center text-sm font-bold text-zinc-400 uppercase tracking-widest mb-6">{t('ask_anything', userSettings.language)}</h3>
-                    
-                    {selectedImages.length > 0 && (
-                        <div className="flex gap-2 mb-4 overflow-x-auto pb-1 px-2">
-                            {selectedImages.map((img, i) => ( 
-                                <div key={i} className={`relative group shrink-0 ${ZOOM_IN}`}>
-                                    <img src={img} className="h-20 w-20 rounded-2xl object-cover border-2 border-white dark:border-zinc-800 shadow-xl"/>
-                                    <button onClick={() => handleRemoveImage(i)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1.5 shadow-md hover:scale-110 transition-transform"><X size={12}/></button>
-                                </div>
-                            ))}
+                    <h3 className="text-center text-sm font-bold text-zinc-400 uppercase tracking-widest mb-6">Изпробвай демо</h3>
+                    <div className="relative bg-white dark:bg-black/60 rounded-3xl p-2 flex items-center gap-2 shadow-inner border border-zinc-100 dark:border-white/5 transition-all opacity-80 cursor-pointer" onClick={() => setShowAuthModal(true)}>
+                        <div className="flex items-center gap-1 pl-2 pointer-events-none">
+                            <div className="p-3 text-zinc-400 rounded-2xl"><ImageIcon size={22} /></div>
+                            <div className="p-3 text-zinc-400 rounded-2xl"><Mic size={22}/></div>
                         </div>
-                    )}
-
-                    <div className="relative bg-white dark:bg-black/60 rounded-3xl p-2 flex items-center gap-2 shadow-inner border border-zinc-100 dark:border-white/5 transition-all focus-within:ring-2 focus-within:ring-indigo-500/20">
-                        <div className="flex items-center gap-1 pl-2">
-                            <button onClick={() => fileInputRef.current?.click()} className="p-3 text-zinc-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-white/10 rounded-2xl transition-colors">
-                                <ImageIcon size={22} />
-                            </button>
-                            <input type="file" ref={fileInputRef} onChange={handleImageUpload} className="hidden" accept="image/*" multiple />
-                            
-                            <button onClick={toggleListening} className={`p-3 rounded-2xl transition-all ${isListening ? 'bg-red-500 text-white animate-pulse' : 'text-zinc-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-white/10'}`}>
-                                {isListening ? <MicOff size={22}/> : <Mic size={22}/>}
-                            </button>
-                        </div>
-
                         <div className="w-px h-8 bg-zinc-200 dark:bg-white/10 mx-2"></div>
-
-                        <input 
-                            type="text"
-                            value={inputValue}
-                            onChange={(e) => setInputValue(e.target.value)}
-                            onKeyDown={handleKeyDown}
-                            placeholder={t('ask_anything', userSettings.language)}
-                            className="flex-1 bg-transparent border-none outline-none px-2 py-4 text-lg text-zinc-900 dark:text-white placeholder-zinc-400"
-                        />
-                        
-                        <button 
-                            onClick={() => (inputValue.trim() || selectedImages.length > 0) && onQuickStart(inputValue, selectedImages)}
-                            disabled={!inputValue.trim() && selectedImages.length === 0}
-                            className="w-14 h-14 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white flex items-center justify-center shadow-xl shadow-indigo-600/30 disabled:opacity-50 transition-all active:scale-90 group"
-                        >
-                            <ArrowUpRight size={28} className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
-                        </button>
+                        <div className="flex-1 px-2 py-4 text-lg text-zinc-500 dark:text-zinc-400">Попитай ме каквото и да е...</div>
+                        <div className="w-14 h-14 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-xl shadow-indigo-600/30">
+                            <ArrowUpRight size={28} />
+                        </div>
                     </div>
                     <p className="text-center text-[11px] text-zinc-400 mt-4 font-medium opacity-70">
-                        {t('ai_warning', userSettings.language)}
+                        Влезте в профила си, за да използвате пълната функционалност.
                     </p>
                 </div>
             </section>
@@ -281,7 +362,7 @@ export const WelcomeScreen = ({
                     
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full">
                         <button 
-                            onClick={() => setHomeView('school_select')} 
+                            onClick={() => setShowAuthModal(true)} 
                             className="group relative h-[400px] rounded-[56px] p-12 text-left bg-gradient-to-br from-indigo-600 to-indigo-800 overflow-hidden shadow-2xl transition-all hover:scale-[1.01] active:scale-[0.99]"
                         >
                             <div className="relative z-10 flex flex-col h-full justify-between">
@@ -302,7 +383,7 @@ export const WelcomeScreen = ({
                         </button>
 
                         <button 
-                            onClick={() => setHomeView('university_select')} 
+                            onClick={() => setShowAuthModal(true)} 
                             className="group relative h-[400px] rounded-[56px] p-12 text-left bg-zinc-800 border border-white/5 overflow-hidden shadow-2xl transition-all hover:scale-[1.01] active:scale-[0.99] hover:bg-zinc-700/50"
                         >
                             <div className="relative z-10 flex flex-col h-full justify-between">
@@ -351,6 +432,7 @@ export const WelcomeScreen = ({
         </div>
       )}
 
+      {/* Render other views (School Select, etc.) only if logged in or navigating within context - logic handled by App.tsx generally, but kept here for fallback */}
       {homeView === 'school_select' && (
         <div className={`max-w-5xl w-full flex-1 flex flex-col items-center justify-center relative z-10 ${SLIDE_UP} duration-500 overflow-y-auto custom-scrollbar p-4 md:p-8`}>
              <button onClick={() => setHomeView('landing')} className="absolute top-0 left-0 flex items-center gap-2 text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors font-bold z-20 m-4 md:m-8"><ArrowLeft size={20}/> {t('back', userSettings.language)}</button>
