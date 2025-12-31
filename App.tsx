@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { GoogleGenAI, LiveServerMessage, Modality } from "@google/genai";
 import { SubjectConfig, SubjectId, AppMode, Message, Slide, UserSettings, Session, UserPlan, UserRole, HomeViewType } from './types';
@@ -1580,7 +1579,7 @@ export const App = () => {
       )}
       
       {showAuthModal && (
-        <Auth isModal={false} onSuccess={closeAuthModal} initialMode={initialAuthMode} />
+        <Auth isModal={false} onSuccess={closeAuthModal} initialMode={initialAuthMode} onNavigate={setHomeView} />
       )}
 
       {focusMode && (
@@ -1764,6 +1763,7 @@ export const App = () => {
                     handleSend={() => handleSend()}
                     selectedImages={selectedImages}
                     handleRemoveImage={handleRemoveImage}
+                    /* Fixed handleStopGeneration passed to onStopGeneration prop */
                     onStopGeneration={handleStopGeneration}
                     onImagesAdd={handleImagesAdd}
                 />

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { supabase } from '../../supabaseClient';
 import { Loader2, Mail, Lock, User, ArrowRight, Sparkles, CheckCircle, AlertCircle, Calendar, Eye, EyeOff, ArrowLeft, GraduationCap, Brain, Zap, ShieldCheck, X } from 'lucide-react';
@@ -11,13 +10,15 @@ interface AuthProps {
   isModal?: boolean;
   onSuccess?: () => void;
   initialMode?: AuthMode;
+  onNavigate?: (view: any) => void;
 }
 
-export const Auth = ({ isModal = false, onSuccess, initialMode = 'login' }: AuthProps) => {
+export const Auth = ({ isModal = false, onSuccess, initialMode = 'login', onNavigate }: AuthProps) => {
   const [mode, setMode] = useState<AuthMode>(initialMode);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [isExiting, setIsExiting] = useState(false);
   
   // Registration Fields
   const [firstName, setFirstName] = useState('');
@@ -29,6 +30,13 @@ export const Auth = ({ isModal = false, onSuccess, initialMode = 'login' }: Auth
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   const today = new Date().toISOString().split('T')[0];
+
+  const handleClose = () => {
+    setIsExiting(true);
+    setTimeout(() => {
+      if (onSuccess) onSuccess();
+    }, 200);
+  };
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,7 +72,7 @@ export const Auth = ({ isModal = false, onSuccess, initialMode = 'login' }: Auth
           password,
         });
         if (error) throw error;
-        if (onSuccess) onSuccess();
+        handleClose();
       } else if (mode === 'forgot_password') {
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
           redirectTo: window.location.origin,
@@ -117,10 +125,17 @@ export const Auth = ({ isModal = false, onSuccess, initialMode = 'login' }: Auth
       }
   }, []);
 
+  const handleFooterNavigate = (view: any) => {
+    if (onNavigate) {
+      onNavigate(view);
+      handleClose();
+    }
+  };
+
   return (
-    <div className="fixed inset-0 z-[200] bg-[#09090b] flex flex-col md:flex-row overflow-hidden animate-in fade-in duration-500">
+    <div className={`fixed inset-0 z-[200] bg-[#09090b] flex flex-col md:flex-row overflow-hidden ${isExiting ? 'animate-out fade-out duration-200' : 'animate-in fade-in duration-500'}`}>
         
-        {/* Left Side: Immersive Branding (Hidden on mobile or becomes a header) */}
+        {/* Left Side: Immersive Branding */}
         <div className="hidden md:flex md:w-1/2 lg:w-3/5 bg-[#0d0d0f] relative items-center justify-center p-12 overflow-hidden border-r border-white/5">
             {/* Background Decor */}
             <div className="absolute top-[-10%] left-[-10%] w-[600px] h-[600px] bg-indigo-600/10 rounded-full blur-[120px] animate-pulse-slow" />
@@ -128,18 +143,14 @@ export const Auth = ({ isModal = false, onSuccess, initialMode = 'login' }: Auth
             
             <div className="relative z-10 max-w-xl">
                 <div className="flex items-center gap-4 mb-8 group cursor-default">
-                    <div className="w-16 h-16 rounded-[2rem] bg-gradient-to-br from-indigo-500 to-indigo-700 flex items-center justify-center text-white shadow-2xl shadow-indigo-500/40 group-hover:scale-110 transition-transform duration-500">
-                        <span className="sr-only">Uchebnik AI Logo</span>
-                        <Sparkles size={36} fill="currentColor" />
-                    </div>
+                    <img src="https://i.ibb.co/LDgTCm9N/6151f23e-b922-4c62-930f-853884bf4c89.png" className="w-14 h-14 rounded-2xl shadow-2xl shadow-indigo-500/20 group-hover:scale-110 transition-transform duration-500" alt="Logo" />
                     <div>
                         <h1 className="text-4xl font-black text-white tracking-tighter font-display leading-none">Uchebnik AI</h1>
-                        <p className="text-indigo-400 font-bold uppercase tracking-[0.2em] text-[10px] mt-1">Intelligence Redefined</p>
                     </div>
                 </div>
 
                 <h2 className="text-5xl lg:text-6xl font-black text-white leading-[1.1] tracking-tight mb-10">
-                    Учи по-умно, не по-трудно.
+                    Учи по-лесно с изкуствен интелект
                 </h2>
 
                 <div className="grid grid-cols-1 gap-8">
@@ -171,19 +182,21 @@ export const Auth = ({ isModal = false, onSuccess, initialMode = 'login' }: Auth
                     <span className="font-display font-black text-white text-lg">Uchebnik AI</span>
                 </div>
                 {onSuccess && (
-                    <button onClick={onSuccess} className="p-2 text-zinc-400"><X size={20}/></button>
+                    <button onClick={handleClose} className="p-2 text-zinc-400"><X size={20}/></button>
                 )}
             </div>
 
             <div className="flex-1 flex items-center justify-center p-6 lg:p-12">
-                <div className={`w-full max-w-md ${SLIDE_UP} duration-500`}>
+                <div className={`w-full max-w-md ${isExiting ? 'animate-out zoom-out-95 duration-200' : `${SLIDE_UP} duration-500`}`}>
                     
                     {onSuccess && (
                         <button 
-                            onClick={onSuccess} 
-                            className="hidden md:flex items-center gap-2 text-zinc-500 hover:text-white mb-8 transition-colors group font-bold text-sm"
+                            onClick={handleClose} 
+                            className="hidden md:flex items-center gap-2 text-zinc-400 hover:text-white mb-10 transition-all group font-bold text-sm"
                         >
-                            <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
+                            <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center group-hover:bg-white/10 transition-colors">
+                                <ArrowLeft size={16} className="group-hover:-translate-x-0.5 transition-transform" />
+                            </div>
                             Назад към сайта
                         </button>
                     )}
@@ -385,8 +398,16 @@ export const Auth = ({ isModal = false, onSuccess, initialMode = 'login' }: Auth
                 </div>
             </div>
 
-            <div className="p-8 mt-auto text-center text-[10px] text-zinc-600 font-bold uppercase tracking-[0.2em] border-t border-white/5">
-                © {new Date().getFullYear()} Uchebnik AI • Privacy Policy • Terms of Service
+            <div className="p-8 mt-auto text-center flex flex-col items-center gap-4 border-t border-white/5">
+                <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-[10px] font-black uppercase tracking-widest text-zinc-500">
+                    <button onClick={() => handleFooterNavigate('about')} className="hover:text-white transition-colors">За нас</button>
+                    <button onClick={() => handleFooterNavigate('privacy')} className="hover:text-white transition-colors">Поверителност</button>
+                    <button onClick={() => handleFooterNavigate('terms')} className="hover:text-white transition-colors">Условия</button>
+                    <button onClick={() => handleFooterNavigate('contact')} className="hover:text-white transition-colors">Контакти</button>
+                </div>
+                <div className="text-[10px] text-zinc-600 font-bold uppercase tracking-[0.2em]">
+                    © {new Date().getFullYear()} Uchebnik AI. Всички права запазени.
+                </div>
             </div>
         </div>
     </div>
