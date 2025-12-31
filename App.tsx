@@ -1753,6 +1753,7 @@ export const App = () => {
                 onQuickStart={handleQuickStart}
                 setSidebarOpen={setSidebarOpen}
                 setShowAuthModal={setShowAuthModal}
+                session={session}
             />
         ) : showSubjectDashboard ? (
             <SubjectDashboard 

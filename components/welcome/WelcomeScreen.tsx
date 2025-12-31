@@ -21,6 +21,7 @@ interface WelcomeScreenProps {
   onQuickStart: (message: string, images?: string[]) => void;
   setSidebarOpen: (val: boolean) => void;
   setShowAuthModal: (val: boolean) => void;
+  session?: any;
 }
 
 export const WelcomeScreen = ({
@@ -33,7 +34,8 @@ export const WelcomeScreen = ({
   setShowAdminAuth,
   onQuickStart,
   setSidebarOpen,
-  setShowAuthModal
+  setShowAuthModal,
+  session
 }: WelcomeScreenProps) => {
 
     const [inputValue, setInputValue] = useState('');
@@ -154,9 +156,11 @@ export const WelcomeScreen = ({
                     <button onClick={() => setShowAdminAuth(true)} className="p-2 text-zinc-400 hover:text-indigo-500 transition-colors">
                         <Shield size={18} />
                     </button>
-                    <button onClick={() => setShowAuthModal(true)} className="hidden sm:flex items-center gap-2 px-5 py-2.5 bg-zinc-900 dark:bg-white text-white dark:text-black rounded-full font-bold text-sm shadow-xl hover:scale-105 active:scale-95 transition-all">
-                        {t('enter', userSettings.language)}
-                    </button>
+                    {!session && (
+                        <button onClick={() => setShowAuthModal(true)} className="flex items-center gap-2 px-5 py-2.5 bg-zinc-900 dark:bg-white text-white dark:text-black rounded-full font-bold text-sm shadow-xl hover:scale-105 active:scale-95 transition-all">
+                            {t('enter', userSettings.language)}
+                        </button>
+                    )}
                 </div>
             </nav>
 
