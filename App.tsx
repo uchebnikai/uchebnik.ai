@@ -292,11 +292,12 @@ export const App = () => {
   };
 
   const resetAppState = async () => {
-      // Scrub all session-related states
+      // Scrub all UI-affecting states immediately
       setSessions([]);
       setActiveSessionId(null);
       setActiveSubject(null);
       setHomeView('landing');
+      setShowSubjectDashboard(false);
       setUserRole(null);
       setUserPlan('free');
       setUserMeta({ firstName: '', lastName: '', avatar: '' });
@@ -401,9 +402,8 @@ export const App = () => {
 
     supabase.auth.getSession().then(({ data: { session } }) => initializeApp(session));
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!authLoading) {
-          initializeApp(session);
-      }
+      // Removed authLoading check to ensure state changes (like sign out) always trigger initializeApp
+      initializeApp(session);
     });
     return () => subscription.unsubscribe();
   }, []);
@@ -647,7 +647,9 @@ export const App = () => {
   };
 
   const handleLogout = async () => {
-    // Just trigger the auth change, initializeApp(null) will handle state resetting
+    // 1. First trigger UI reset to guarantee immediate redirection to landing
+    await resetAppState();
+    // 2. Then perform Supabase signout
     await supabase.auth.signOut();
     addToast('Излязохте успешно.', 'info');
   };
