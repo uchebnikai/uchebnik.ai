@@ -137,7 +137,7 @@ export const SUBJECTS: SubjectConfig[] = [
     categories: ['school', 'university']
   },
   
-  // SCHOOL SUBJECTS
+  // CORE DISCIPLINES (Shared)
   {
     id: SubjectId.BULGARIAN,
     name: 'Български език и Литература',
@@ -156,6 +156,71 @@ export const SUBJECTS: SubjectConfig[] = [
     description: 'Алгебра, геометрия и тригонометрия.',
     categories: ['school']
   },
+  {
+    id: SubjectId.PHYSICS,
+    name: 'Физика и Астрономия',
+    icon: 'Atom',
+    color: 'bg-violet-500',
+    modes: [AppMode.SOLVE, AppMode.LEARN],
+    description: 'Природни закони и Космос.',
+    categories: ['school', 'university']
+  },
+  {
+    id: SubjectId.CHEMISTRY,
+    name: 'Химия и ООС',
+    icon: 'FlaskConical',
+    color: 'bg-green-500',
+    modes: [AppMode.SOLVE, AppMode.LEARN],
+    description: 'Химични елементи и реакции.',
+    categories: ['school', 'university']
+  },
+  {
+    id: SubjectId.BIOLOGY,
+    name: 'Биология и ЗО',
+    icon: 'Dna',
+    color: 'bg-emerald-500',
+    modes: [AppMode.SOLVE, AppMode.LEARN],
+    description: 'Жива природа и човек.',
+    categories: ['school', 'university']
+  },
+  {
+    id: SubjectId.HISTORY,
+    name: 'История и Цивилизации',
+    icon: 'Landmark',
+    color: 'bg-amber-600',
+    modes: [AppMode.SOLVE, AppMode.LEARN],
+    description: 'Българска и световна история.',
+    categories: ['school', 'university']
+  },
+  {
+    id: SubjectId.GEOGRAPHY,
+    name: 'География и Икономика',
+    icon: 'Globe',
+    color: 'bg-cyan-500',
+    modes: [AppMode.SOLVE, AppMode.LEARN],
+    description: 'Региони и стопанство.',
+    categories: ['school', 'university']
+  },
+  {
+    id: SubjectId.PHILOSOPHY,
+    name: 'Философия',
+    icon: 'Brain',
+    color: 'bg-purple-400',
+    modes: [AppMode.LEARN, AppMode.CHAT],
+    description: 'Логика, етика и мислене.',
+    categories: ['school', 'university']
+  },
+  {
+    id: SubjectId.PROGRAMMING,
+    name: 'Програмиране',
+    icon: 'Code',
+    color: 'bg-zinc-800',
+    modes: [AppMode.SOLVE, AppMode.LEARN, AppMode.CHAT],
+    description: 'Кодене, алгоритми и разработка.',
+    categories: ['school', 'university']
+  },
+
+  // SCHOOL SPECIFIC
   {
     id: SubjectId.ENGLISH,
     name: 'Английски език',
@@ -211,51 +276,6 @@ export const SUBJECTS: SubjectConfig[] = [
     categories: ['school']
   },
   {
-    id: SubjectId.PHYSICS,
-    name: 'Физика и Астрономия',
-    icon: 'Atom',
-    color: 'bg-violet-500',
-    modes: [AppMode.SOLVE, AppMode.LEARN],
-    description: 'Природни закони и Космос.',
-    categories: ['school']
-  },
-  {
-    id: SubjectId.CHEMISTRY,
-    name: 'Химия и ООС',
-    icon: 'FlaskConical',
-    color: 'bg-green-500',
-    modes: [AppMode.SOLVE, AppMode.LEARN],
-    description: 'Химични елементи и реакции.',
-    categories: ['school']
-  },
-  {
-    id: SubjectId.BIOLOGY,
-    name: 'Биология и ЗО',
-    icon: 'Dna',
-    color: 'bg-emerald-500',
-    modes: [AppMode.SOLVE, AppMode.LEARN],
-    description: 'Жива природа и човек.',
-    categories: ['school']
-  },
-  {
-    id: SubjectId.HISTORY,
-    name: 'История и Цивилизации',
-    icon: 'Landmark',
-    color: 'bg-amber-600',
-    modes: [AppMode.SOLVE, AppMode.LEARN],
-    description: 'Българска и световна история.',
-    categories: ['school']
-  },
-  {
-    id: SubjectId.GEOGRAPHY,
-    name: 'География и Икономика',
-    icon: 'Globe',
-    color: 'bg-cyan-500',
-    modes: [AppMode.SOLVE, AppMode.LEARN],
-    description: 'Региони и стопанство.',
-    categories: ['school']
-  },
-  {
     id: SubjectId.IT,
     name: 'Информационни Технологии',
     icon: 'Monitor',
@@ -265,30 +285,12 @@ export const SUBJECTS: SubjectConfig[] = [
     categories: ['school']
   },
   {
-    id: SubjectId.PROGRAMMING,
-    name: 'Програмиране',
-    icon: 'Code',
-    color: 'bg-zinc-800',
-    modes: [AppMode.SOLVE, AppMode.LEARN],
-    description: 'Кодене, алгоритми и разработка.',
-    categories: ['school']
-  },
-  {
     id: SubjectId.CITIZENSHIP,
     name: 'Гражданско Образование',
     icon: 'Users',
     color: 'bg-blue-400',
     modes: [AppMode.LEARN],
     description: 'Общество, права и задължения.',
-    categories: ['school']
-  },
-  {
-    id: SubjectId.PHILOSOPHY,
-    name: 'Философия',
-    icon: 'Brain',
-    color: 'bg-purple-400',
-    modes: [AppMode.LEARN],
-    description: 'Логика, етика и мислене.',
     categories: ['school']
   },
   {
@@ -346,25 +348,7 @@ export const SUBJECTS: SubjectConfig[] = [
     categories: ['school']
   },
 
-  // UNIVERSITY SUBJECTS - Humanities
-  {
-    id: SubjectId.UNI_PHILOSOPHY,
-    name: 'Философия (Акад.)',
-    icon: 'Brain',
-    color: 'bg-purple-700',
-    modes: [AppMode.LEARN, AppMode.CHAT],
-    description: 'Академична философия.',
-    categories: ['university']
-  },
-  {
-    id: SubjectId.UNI_HISTORY,
-    name: 'История (Акад.)',
-    icon: 'Landmark',
-    color: 'bg-amber-800',
-    modes: [AppMode.LEARN, AppMode.CHAT],
-    description: 'Исторически изследвания.',
-    categories: ['university']
-  },
+  // UNIVERSITY SPECIFIC
   {
     id: SubjectId.UNI_SOCIOLOGY,
     name: 'Социология',
@@ -401,8 +385,6 @@ export const SUBJECTS: SubjectConfig[] = [
     description: 'Глобална политика.',
     categories: ['university']
   },
-
-  // UNIVERSITY - Law
   {
     id: SubjectId.LAW_CIVIL,
     name: 'Гражданско Право',
@@ -430,8 +412,6 @@ export const SUBJECTS: SubjectConfig[] = [
     description: 'Европейско законодателство.',
     categories: ['university']
   },
-
-  // UNIVERSITY - Economics
   {
     id: SubjectId.ECON_MICRO,
     name: 'Микроикономика',
@@ -447,7 +427,7 @@ export const SUBJECTS: SubjectConfig[] = [
     icon: 'Banknote',
     color: 'bg-green-700',
     modes: [AppMode.SOLVE, AppMode.LEARN],
-    description: 'Управление на капитала.',
+    description: 'Управление на корпоративния капитал.',
     categories: ['university']
   },
   {
@@ -459,8 +439,6 @@ export const SUBJECTS: SubjectConfig[] = [
     description: 'Пазарни проучвания и реклама.',
     categories: ['university']
   },
-
-  // UNIVERSITY - STEM
   {
     id: SubjectId.STEM_MATH,
     name: 'Висша Математика',
@@ -468,15 +446,6 @@ export const SUBJECTS: SubjectConfig[] = [
     color: 'bg-blue-900',
     modes: [AppMode.SOLVE, AppMode.LEARN],
     description: 'Анализ, линейна алгебра и вероятности.',
-    categories: ['university']
-  },
-  {
-    id: SubjectId.STEM_CS_PROG,
-    name: 'Компютърни Науки',
-    icon: 'Cpu',
-    color: 'bg-gray-900',
-    modes: [AppMode.SOLVE, AppMode.LEARN, AppMode.CHAT],
-    description: 'Софтуерна разработка.',
     categories: ['university']
   },
   {
@@ -497,8 +466,6 @@ export const SUBJECTS: SubjectConfig[] = [
     description: 'Мрежова сигурност и криптография.',
     categories: ['university']
   },
-
-  // UNIVERSITY - Medical
   {
     id: SubjectId.MED_ANATOMY,
     name: 'Анатомия',
@@ -526,8 +493,6 @@ export const SUBJECTS: SubjectConfig[] = [
     description: 'Стоматология.',
     categories: ['university']
   },
-
-  // UNIVERSITY - Arts
   {
     id: SubjectId.ARTS_GRAPHIC_DESIGN,
     name: 'Графичен Дизайн',

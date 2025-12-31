@@ -39,8 +39,6 @@ export enum SubjectId {
   ADV_BIOLOGY = 'adv_biology',
   
   // UNIVERSITY - Humanities & Social Sciences
-  UNI_PHILOSOPHY = 'uni_philosophy',
-  UNI_HISTORY = 'uni_history',
   UNI_SOCIOLOGY = 'uni_sociology',
   UNI_PSYCHOLOGY = 'uni_psychology',
   UNI_POLITICAL_SCIENCE = 'uni_political_science',
@@ -71,10 +69,6 @@ export enum SubjectId {
   
   // UNIVERSITY - STEM
   STEM_MATH = 'stem_math',
-  STEM_PHYSICS = 'stem_physics',
-  STEM_CHEMISTRY = 'stem_chemistry',
-  STEM_BIOLOGY = 'stem_biology',
-  STEM_CS_PROG = 'stem_cs_prog',
   STEM_INFO_SYSTEMS = 'stem_info_systems',
   STEM_SW_ENGINEERING = 'stem_sw_engineering',
   STEM_DSA = 'stem_dsa',
@@ -116,7 +110,6 @@ export enum SubjectId {
   // UNIVERSITY - Other
   OTHER_TOURISM = 'other_tourism',
   OTHER_ENV_STUDIES = 'other_env_studies',
-  OTHER_GEOGRAPHY = 'other_geography',
   OTHER_GEOLOGY = 'other_geology',
   OTHER_THEOLOGY = 'other_theology',
   OTHER_JOURNALISM = 'other_journalism'
