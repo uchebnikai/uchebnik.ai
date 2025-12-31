@@ -114,6 +114,18 @@ const translations: Record<string, Record<string, string>> = {
   'manage_plan': { bg: 'Управление на плана', en: 'Manage Plan' },
   'unlock_potential': { bg: 'Отключи пълния потенциал', en: 'Unlock full potential' },
 
+  // Redesign Landing Strings
+  'landing_hero_title': { bg: 'Учи по-умно с изкуствен интелект', en: 'Learn Smarter with Artificial Intelligence' },
+  'landing_hero_desc': { bg: 'Uchebnik AI е твоят универсален помощник за училище и университет. Решавай задачи, учи нови езици и се подготвяй за изпити по-бързо от всякога.', en: 'Uchebnik AI is your all-in-one assistant for school and university. Solve problems, learn new languages, and prepare for exams faster than ever.' },
+  'landing_feature_1_title': { bg: 'Точни решения', en: 'Accurate Solutions' },
+  'landing_feature_1_desc': { bg: 'Стъпка по стъпка решения за математика, химия и физика.', en: 'Step-by-step solutions for math, chemistry, and physics.' },
+  'landing_feature_2_title': { bg: 'Гласов режим', en: 'Voice Mode' },
+  'landing_feature_2_desc': { bg: 'Говори с AI на различни езици за максимално потапяне.', en: 'Talk to AI in different languages for maximum immersion.' },
+  'landing_feature_3_title': { bg: 'За всеки етап', en: 'For Every Stage' },
+  'landing_feature_3_desc': { bg: 'Персонализирани инструменти за ученици, студенти и учители.', en: 'Customized tools for students and teachers.' },
+  'landing_cta_main': { bg: 'Започни безплатно', en: 'Start for free' },
+  'landing_path_title': { bg: 'Избери своя път', en: 'Choose your path' },
+
   // Subjects - School
   'subject_math': { bg: 'Математика', en: 'Mathematics' },
   'subject_bulgarian': { bg: 'Български език', en: 'Bulgarian' },
