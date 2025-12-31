@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Shield, MessageSquare, ArrowRight, School, GraduationCap, Briefcase, ArrowLeft, ArrowUpRight, Search, ImageIcon, Mic, MicOff, X, Menu, Landmark, Sparkles, BookOpen, Brain, Zap, CheckCircle2, Users, LayoutDashboard, Settings, MapPin, Mail, Globe, MoreVertical, Paperclip, Send, Lock, Star, Trophy, Target, AlertTriangle } from 'lucide-react';
 import { SubjectConfig, UserRole, UserSettings, HomeViewType, SubjectId } from '../../types';
@@ -78,7 +77,6 @@ export const WelcomeScreen = ({
     const isMockDisabled = mockMessages.length >= 4;
 
     const handleMockSend = () => {
-        // Restrict to exactly 1 interaction in the mockup
         if (!mockInputValue.trim() || isMockTyping || isMockDisabled) return;
         
         const userMsg = mockInputValue;
@@ -182,12 +180,19 @@ export const WelcomeScreen = ({
         }
     };
 
-    // --- LOGGED IN DASHBOARD VIEW ---
     if (session && homeView === 'landing') {
         const greetingName = userSettings.userName ? userSettings.userName.split(' ')[0] : 'Uchebnik';
 
         return (
             <div className="w-full h-full overflow-y-auto overflow-x-hidden custom-scrollbar flex flex-col relative">
+                
+                {/* Admin Access for Logged In Users */}
+                <div className="absolute top-6 left-6 z-30">
+                    <button onClick={() => setShowAdminAuth(true)} className="p-2.5 bg-white/10 dark:bg-black/20 hover:bg-white/20 backdrop-blur-md rounded-xl text-zinc-500 hover:text-indigo-500 transition-all border border-white/5 shadow-sm">
+                        <Shield size={20} />
+                    </button>
+                </div>
+
                 <div className="flex-1 flex flex-col items-center justify-center p-4 lg:p-8 w-full max-w-7xl mx-auto min-h-[calc(100vh-140px)]">
                     
                     {/* Greeting */}
@@ -310,7 +315,6 @@ export const WelcomeScreen = ({
         );
     }
 
-    // --- LOGGED OUT LANDING VIEW ---
     return (
     <div className={`flex flex-col h-full w-full items-center bg-transparent relative selection:bg-indigo-500/30 overflow-hidden`}>
       {homeView === 'landing' && (
@@ -333,7 +337,6 @@ export const WelcomeScreen = ({
                 </div>
             </nav>
 
-            {/* HERO SECTION */}
             <section className="w-full grid grid-cols-1 lg:grid-cols-12 gap-12 px-8 md:px-12 py-12 md:py-20 lg:py-28 items-start lg:items-center relative">
                 <div className={`lg:col-span-6 flex flex-col items-start text-left ${SLIDE_RIGHT} duration-1000 lg:mb-32`}>
                     <h1 className="text-5xl md:text-7xl lg:text-8xl font-black tracking-tighter leading-[1.05] text-zinc-900 dark:text-white font-display mb-6">
@@ -360,7 +363,6 @@ export const WelcomeScreen = ({
                 </div>
 
                 <div className={`lg:col-span-6 relative flex items-center justify-center gap-12 md:gap-28 ${ZOOM_IN} duration-1000 delay-300 hidden lg:flex lg:mb-40`}>
-                    {/* PHONE MOCKUP */}
                     <div className="relative z-10 p-3 bg-white/10 dark:bg-black/40 backdrop-blur-3xl rounded-[56px] border border-white/20 shadow-[0_40px_100px_rgba(0,0,0,0.4)] rotate-2 max-w-[320px] xl:max-w-[380px] w-full group shrink-0">
                         <div className="absolute top-8 left-1/2 -translate-x-1/2 w-32 h-6 bg-black rounded-full z-30 flex items-center justify-center px-4 overflow-hidden border border-white/5">
                             <div className="w-2 h-2 rounded-full bg-indigo-500 mr-2 animate-pulse"/>
@@ -387,7 +389,6 @@ export const WelcomeScreen = ({
                                 </div>
                             </div>
 
-                            {/* CHAT CONTENT */}
                             <div className="flex-1 p-4 space-y-4 overflow-hidden pb-10">
                                 {mockMessages.map((msg, i) => (
                                     <div key={i} className={`p-4 text-[13px] leading-relaxed border border-white/5 ${msg.role === 'user' ? 'bg-gradient-to-br from-indigo-600 to-indigo-700 text-white rounded-[24px] rounded-br-none font-bold max-w-[85%] ml-auto shadow-xl shadow-indigo-500/20' : 'bg-zinc-100 dark:bg-white/5 rounded-[24px] rounded-bl-none font-medium text-zinc-800 dark:text-zinc-200 max-w-[90%] mr-auto'} ${SLIDE_UP}`}>
@@ -409,7 +410,6 @@ export const WelcomeScreen = ({
                                 )}
                             </div>
 
-                            {/* MOCK INPUT AREA */}
                             <div className="p-4 bg-white dark:bg-zinc-900/50 border-t border-zinc-100 dark:border-white/5 flex items-center gap-3 mt-auto">
                                 <div className="w-10 h-10 rounded-full bg-zinc-100 dark:bg-white/5 flex items-center justify-center text-zinc-400"><Paperclip size={18}/></div>
                                 <div className={`flex-1 h-10 rounded-full border flex items-center px-4 relative transition-all ${isMockDisabled ? 'bg-indigo-500/10 border-indigo-500/30' : 'bg-zinc-100 dark:bg-white/5 border-zinc-200 dark:border-white/10'}`}>
@@ -426,7 +426,7 @@ export const WelcomeScreen = ({
                                 </div>
                                 <button 
                                     onClick={isMockDisabled ? () => setShowAuthModal(true) : handleMockSend} 
-                                    className={`w-10 h-10 rounded-full flex items-center justify-center text-white shadow-lg transition-all active:scale-90 ${isMockDisabled ? 'bg-indigo-500 hover:bg-indigo-600' : 'bg-indigo-600'}`}
+                                    className={`w-10 h-10 rounded-full flex items-center justify-center text-white shadow-lg transition-all active:scale-90 ${isMockDisabled ? 'bg-indigo-50 hover:bg-indigo-600' : 'bg-indigo-600'}`}
                                 >
                                     {isMockDisabled ? <ArrowRight size={16}/> : <Send size={16}/>}
                                 </button>
@@ -434,7 +434,6 @@ export const WelcomeScreen = ({
                         </div>
                     </div>
 
-                    {/* NEW: SIDE FEATURES GRID (Right of phone) */}
                     <div className="flex flex-col gap-6 w-[240px] xl:w-[280px] pt-12">
                         <div className={`p-6 bg-white/5 backdrop-blur-xl border border-white/10 rounded-[32px] shadow-2xl ${SLIDE_UP} delay-500`}>
                             <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-500 flex items-center justify-center mb-4">

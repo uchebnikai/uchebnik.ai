@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { GoogleGenAI, LiveServerMessage, Modality } from "@google/genai";
 import { SubjectConfig, SubjectId, AppMode, Message, Slide, UserSettings, Session, UserPlan, UserRole, HomeViewType } from './types';
@@ -224,6 +223,27 @@ export const App = () => {
   // --- Custom Hooks ---
   useTheme(userSettings);
 
+  // --- Admin Logic ---
+  const handleAdminLogin = async () => {
+    const success = await verifyAdminPassword(adminPasswordInput);
+    if (success) {
+      setShowAdminAuth(false);
+      setShowAdminPanel(true);
+      addToast('Добре дошли, админ!', 'success');
+      setAdminPasswordInput('');
+    } else {
+      addToast('Грешна парола.', 'error');
+    }
+  };
+
+  const handleGenerateKey = async (plan: 'plus' | 'pro') => {
+    const core = Math.random().toString(36).substring(2, 10).toUpperCase();
+    const checksum = generateChecksum(core);
+    const code = `UCH-${core}-${checksum}`;
+    await registerKeyInDb(code, plan);
+    setGeneratedKeys(prev => [{ code, isUsed: false, plan }, ...prev]);
+  };
+
   // --- Effects ---
 
   useEffect(() => {
@@ -292,7 +312,6 @@ export const App = () => {
   };
 
   const resetAppState = async () => {
-      // Scrub all UI-affecting states immediately
       setSessions([]);
       setActiveSessionId(null);
       setActiveSubject(null);
@@ -304,8 +323,6 @@ export const App = () => {
       setIsRemoteDataLoaded(false);
       isRemoteDataLoadedRef.current = false;
       setSyncStatus('synced');
-      
-      // Load fallback local data
       await loadLocalStorageData();
   };
 
@@ -402,7 +419,6 @@ export const App = () => {
 
     supabase.auth.getSession().then(({ data: { session } }) => initializeApp(session));
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      // Removed authLoading check to ensure state changes (like sign out) always trigger initializeApp
       initializeApp(session);
     });
     return () => subscription.unsubscribe();
@@ -647,9 +663,7 @@ export const App = () => {
   };
 
   const handleLogout = async () => {
-    // 1. First trigger UI reset to guarantee immediate redirection to landing
     await resetAppState();
-    // 2. Then perform Supabase signout
     await supabase.auth.signOut();
     addToast('Излязохте успешно.', 'info');
   };
@@ -691,6 +705,7 @@ export const App = () => {
       <LeaderboardModal isOpen={showLeaderboard} onClose={() => setShowLeaderboard(false)} currentUserId={session?.user?.id} />
       <DailyQuestsModal isOpen={showQuests} onClose={() => setShowQuests(false)} quests={userSettings.dailyQuests?.quests || []} />
       <ReportModal isOpen={showReportModal} onClose={() => setShowReportModal(false)} userSettings={userSettings} addToast={addToast} userId={session?.user?.id} />
+      <AdminPanel showAdminAuth={showAdminAuth} setShowAdminAuth={setShowAdminAuth} showAdminPanel={showAdminPanel} setShowAdminPanel={setShowAdminPanel} adminPasswordInput={adminPasswordInput} setAdminPasswordInput={setAdminPasswordInput} handleAdminLogin={handleAdminLogin} generateKey={handleGenerateKey} generatedKeys={generatedKeys as any} addToast={addToast} />
       <Lightbox image={zoomedImage} onClose={() => setZoomedImage(null)} />
       <ConfirmModal isOpen={!!confirmModal} title={confirmModal?.title || ''} message={confirmModal?.message || ''} onConfirm={confirmModal?.onConfirm || (()=>{})} onCancel={() => setConfirmModal(null)} />
 
@@ -710,7 +725,7 @@ export const App = () => {
         setActiveSubject={setActiveSubject} 
       />
 
-      <div className="fixed top-4 right-4 z-[100] flex flex-col gap-2 pointer-events-none">
+      <div className="fixed top-4 right-4 z-[210] flex flex-col gap-2 pointer-events-none">
         {toasts.map(t => (
           <div key={t.id} className={`${TOAST_CONTAINER} ${t.type === 'error' ? TOAST_ERROR : t.type === 'success' ? TOAST_SUCCESS : TOAST_INFO}`}>
              {t.type === 'error' ? <AlertCircle size={18}/> : t.type === 'success' ? <CheckCircle size={18}/> : <Info size={18}/>}
