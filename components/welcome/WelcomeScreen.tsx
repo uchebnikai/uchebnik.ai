@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Shield, MessageSquare, ArrowRight, School, GraduationCap, Briefcase, ArrowLeft, ArrowUpRight, Search, ImageIcon, Mic, MicOff, X, Menu, Landmark, Sparkles, BookOpen, Brain, Zap, CheckCircle2, Users, LayoutDashboard, Settings, MapPin, Mail, Globe, MoreVertical, Paperclip, Send, Lock } from 'lucide-react';
+import { Shield, MessageSquare, ArrowRight, School, GraduationCap, Briefcase, ArrowLeft, ArrowUpRight, Search, ImageIcon, Mic, MicOff, X, Menu, Landmark, Sparkles, BookOpen, Brain, Zap, CheckCircle2, Users, LayoutDashboard, Settings, MapPin, Mail, Globe, MoreVertical, Paperclip, Send, Lock, Star, Trophy, Target, AlertTriangle } from 'lucide-react';
 import { SubjectConfig, UserRole, UserSettings, HomeViewType, SubjectId } from '../../types';
 import { SUBJECTS } from '../../constants';
 import { DynamicIcon } from '../ui/DynamicIcon';
@@ -59,14 +59,14 @@ export const WelcomeScreen = ({
             role: 'model', 
             text: (
                 <div className="flex flex-col gap-2">
-                    <span>Разбира се! Първо нека намерим моларната маса на веществото. Формулата, която ти трябва е:</span>
-                    <div className="mt-2 p-4 bg-white/10 rounded-2xl flex items-center justify-center border border-white/10 shadow-inner backdrop-blur-sm">
-                        <div className="flex items-center gap-3 font-serif text-2xl italic tracking-wider text-white">
+                    <span>Разбира се! Ето формулата за моларна маса, която ти трябва:</span>
+                    <div className="mt-1 p-3 bg-zinc-200 dark:bg-white/10 rounded-2xl flex items-center justify-center border border-black/5 shadow-inner backdrop-blur-sm">
+                        <div className="flex items-center gap-2 font-serif text-xl italic tracking-wider text-zinc-800 dark:text-white">
                             <span>M</span>
                             <span>=</span>
-                            <div className="flex flex-col items-center gap-1">
-                                <span className="border-b-2 border-white/60 px-2 leading-none">m</span>
-                                <span className="leading-none">n</span>
+                            <div className="flex flex-col items-center">
+                                <span className="border-b border-black/30 dark:border-white/60 px-1 leading-none">m</span>
+                                <span className="leading-none text-sm">n</span>
                             </div>
                         </div>
                     </div>
@@ -89,7 +89,7 @@ export const WelcomeScreen = ({
         setTimeout(() => {
             setMockMessages(prev => [...prev, { 
                 role: 'model', 
-                text: 'Страхотен въпрос! За да получиш пълното решение, просто влез в профила си. Безплатно е и отнема секунди! 🚀' 
+                text: 'Това е само началото! Влез в профила си, за да получиш пълното решение на всяка задача абсолютно безплатно. ✨' 
             }]);
             setIsMockTyping(false);
         }, 1200);
@@ -303,7 +303,7 @@ export const WelcomeScreen = ({
                     </div>
                     <div className="flex flex-col items-center gap-1 text-[10px] font-medium text-zinc-600">
                         <p>&copy; 2025 Uchebnik AI. Всички права запазени.</p>
-                        <p>Designed with ❤️ by Vanyo, Svetlyo & Bella.</p>
+                        <p>Designed with ❤️ by Vanyo, Светльо & Белла.</p>
                     </div>
                 </div>
             </div>
@@ -333,7 +333,7 @@ export const WelcomeScreen = ({
                 </div>
             </nav>
 
-            {/* HERO SECTION REPOSITIONED HIGHER AND FURTHER RIGHT */}
+            {/* HERO SECTION */}
             <section className="w-full grid grid-cols-1 lg:grid-cols-12 gap-12 px-8 md:px-12 py-12 md:py-20 lg:py-28 items-start lg:items-center relative">
                 <div className={`lg:col-span-6 flex flex-col items-start text-left ${SLIDE_RIGHT} duration-1000 lg:-translate-y-32`}>
                     <h1 className="text-5xl md:text-7xl lg:text-8xl font-black tracking-tighter leading-[1.05] text-zinc-900 dark:text-white font-display mb-6">
@@ -359,21 +359,22 @@ export const WelcomeScreen = ({
                     </div>
                 </div>
 
-                <div className={`lg:col-span-6 relative flex justify-center ${ZOOM_IN} duration-1000 delay-300 hidden lg:block lg:-translate-y-40 lg:translate-x-24`}>
-                    <div className="relative z-10 p-3 bg-white/10 dark:bg-black/40 backdrop-blur-3xl rounded-[56px] border border-white/20 shadow-[0_40px_100px_rgba(0,0,0,0.4)] rotate-2 max-w-[420px] w-full group">
+                <div className={`lg:col-span-6 relative flex items-center justify-center gap-28 ${ZOOM_IN} duration-1000 delay-300 hidden lg:flex lg:-translate-y-40 lg:translate-x-8`}>
+                    {/* PHONE MOCKUP */}
+                    <div className="relative z-10 p-3 bg-white/10 dark:bg-black/40 backdrop-blur-3xl rounded-[56px] border border-white/20 shadow-[0_40px_100px_rgba(0,0,0,0.4)] rotate-2 max-w-[380px] w-full group shrink-0">
                         <div className="absolute top-8 left-1/2 -translate-x-1/2 w-32 h-6 bg-black rounded-full z-30 flex items-center justify-center px-4 overflow-hidden border border-white/5">
                             <div className="w-2 h-2 rounded-full bg-indigo-500 mr-2 animate-pulse"/>
-                            <div className="text-[8px] font-black text-white/50 tracking-widest uppercase">Uchebnik OS</div>
+                            <div className="text-[7px] font-black text-white/60 tracking-widest uppercase">UCHEBNIK AI OS</div>
                         </div>
 
                         <div className="bg-[#f8fafc] dark:bg-[#0c0c0e] rounded-[44px] overflow-hidden aspect-[9/18.5] border border-white/5 shadow-inner flex flex-col relative">
                             <div className="pt-16 pb-4 px-6 bg-white dark:bg-zinc-900/50 border-b border-zinc-100 dark:border-white/5 flex items-center justify-between">
                                 <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-500/20">
-                                        <Brain size={20} />
+                                    <div className="w-10 h-10 rounded-xl bg-white dark:bg-zinc-800 p-1 flex items-center justify-center shadow-lg shadow-black/5 overflow-hidden">
+                                        <img src="https://i.ibb.co/LDgTCm9N/6151f23e-b922-4c62-930f-853884bf4c89.png" className="w-full h-full object-contain" />
                                     </div>
                                     <div>
-                                        <div className="text-xs font-black text-zinc-900 dark:text-white leading-none mb-1 tracking-tight">AI Учител</div>
+                                        <div className="text-xs font-black text-zinc-900 dark:text-white leading-none mb-1 tracking-tight">Uchebnik AI</div>
                                         <div className="flex items-center gap-1.5">
                                             <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"/>
                                             <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">На линия</span>
@@ -386,29 +387,29 @@ export const WelcomeScreen = ({
                                 </div>
                             </div>
 
-                            {/* CHAT CONTENT - NO SCROLLING, FIXED SIZE */}
-                            <div className="flex-1 p-6 space-y-6 overflow-hidden pb-10">
+                            {/* CHAT CONTENT */}
+                            <div className="flex-1 p-4 space-y-4 overflow-hidden pb-10">
                                 {mockMessages.map((msg, i) => (
-                                    <div key={i} className={`p-5 text-sm leading-relaxed border border-white/5 ${msg.role === 'user' ? 'bg-zinc-100 dark:bg-white/5 rounded-[24px] rounded-bl-none font-bold text-zinc-800 dark:text-zinc-200 max-w-[85%]' : 'bg-gradient-to-br from-indigo-600 to-indigo-700 text-white rounded-[24px] rounded-br-none font-medium max-w-[90%] ml-auto shadow-xl shadow-indigo-500/20'} ${SLIDE_UP}`}>
+                                    <div key={i} className={`p-4 text-[13px] leading-relaxed border border-white/5 ${msg.role === 'user' ? 'bg-gradient-to-br from-indigo-600 to-indigo-700 text-white rounded-[24px] rounded-br-none font-bold max-w-[85%] ml-auto shadow-xl shadow-indigo-500/20' : 'bg-zinc-100 dark:bg-white/5 rounded-[24px] rounded-bl-none font-medium text-zinc-800 dark:text-zinc-200 max-w-[90%] mr-auto'} ${SLIDE_UP}`}>
                                         {msg.role === 'model' && (
-                                            <div className="flex items-center gap-2 mb-2 pb-2 border-b border-white/10">
-                                                <Zap size={14} fill="currentColor"/>
-                                                <span className="text-[10px] font-black uppercase tracking-widest">Експертно Решение</span>
+                                            <div className="flex items-center gap-2 mb-1 pb-1 border-b border-black/5 dark:border-white/10">
+                                                <Zap size={12} fill="currentColor" className="text-indigo-500"/>
+                                                <span className="text-[9px] font-black uppercase tracking-widest text-zinc-500">Uchebnik AI</span>
                                             </div>
                                         )}
                                         {msg.text}
                                     </div>
                                 ))}
                                 {isMockTyping && (
-                                    <div className="flex gap-2 items-center text-indigo-500 ml-auto mr-4 animate-pulse">
-                                        <div className="w-1.5 h-1.5 bg-current rounded-full animate-bounce"/>
-                                        <div className="w-1.5 h-1.5 bg-current rounded-full animate-bounce [animation-delay:0.2s]"/>
-                                        <div className="w-1.5 h-1.5 bg-current rounded-full animate-bounce [animation-delay:0.4s]"/>
+                                    <div className="flex gap-2 items-center text-indigo-500 mr-auto ml-2 animate-pulse">
+                                        <div className="w-1 h-1 bg-current rounded-full animate-bounce"/>
+                                        <div className="w-1 h-1 bg-current rounded-full animate-bounce [animation-delay:0.2s]"/>
+                                        <div className="w-1 h-1 bg-current rounded-full animate-bounce [animation-delay:0.4s]"/>
                                     </div>
                                 )}
                             </div>
 
-                            {/* MOCK INPUT AREA - DISABLED AFTER ONE USE */}
+                            {/* MOCK INPUT AREA */}
                             <div className="p-4 bg-white dark:bg-zinc-900/50 border-t border-zinc-100 dark:border-white/5 flex items-center gap-3 mt-auto">
                                 <div className="w-10 h-10 rounded-full bg-zinc-100 dark:bg-white/5 flex items-center justify-center text-zinc-400"><Paperclip size={18}/></div>
                                 <div className={`flex-1 h-10 rounded-full border flex items-center px-4 relative transition-all ${isMockDisabled ? 'bg-indigo-500/10 border-indigo-500/30' : 'bg-zinc-100 dark:bg-white/5 border-zinc-200 dark:border-white/10'}`}>
@@ -417,7 +418,7 @@ export const WelcomeScreen = ({
                                         value={mockInputValue}
                                         onChange={(e) => setMockInputValue(e.target.value)}
                                         onKeyDown={(e) => e.key === 'Enter' && handleMockSend()}
-                                        placeholder={isMockDisabled ? "Регистрирай се за още" : "Напиши съобщение..."}
+                                        placeholder={isMockDisabled ? "Регистрирай се за още" : "Напиши..."}
                                         disabled={isMockDisabled}
                                         className="w-full bg-transparent border-none outline-none text-[11px] text-zinc-700 dark:text-zinc-200 font-medium placeholder:italic disabled:opacity-80"
                                     />
@@ -432,9 +433,40 @@ export const WelcomeScreen = ({
                             </div>
                         </div>
                     </div>
-                    <div className="absolute -top-12 -right-12 w-64 h-64 bg-indigo-600/30 blur-[120px] rounded-full animate-pulse-slow" />
-                    <div className="absolute -bottom-12 -left-12 w-80 h-80 bg-purple-600/20 blur-[140px] rounded-full animate-pulse-slow delay-700" />
+
+                    {/* NEW: SIDE FEATURES GRID (Right of phone) */}
+                    <div className="flex flex-col gap-6 w-[280px] pt-12">
+                        <div className={`p-6 bg-white/5 backdrop-blur-xl border border-white/10 rounded-[32px] shadow-2xl ${SLIDE_UP} delay-500`}>
+                            <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-500 flex items-center justify-center mb-4">
+                                <Trophy size={20} />
+                            </div>
+                            <h4 className="text-white font-bold text-sm mb-1 tracking-tight">Система за Класации</h4>
+                            <p className="text-zinc-500 text-[11px] font-medium leading-relaxed">Печели XP за всяка решена задача и се състезавай с ученици от цяла България.</p>
+                        </div>
+
+                        <div className={`p-6 bg-white/5 backdrop-blur-xl border border-white/10 rounded-[32px] shadow-2xl ${SLIDE_UP} delay-700`}>
+                            <div className="w-10 h-10 rounded-xl bg-pink-500/20 text-pink-500 flex items-center justify-center mb-4">
+                                <Target size={20} />
+                            </div>
+                            <h4 className="text-white font-bold text-sm mb-1 tracking-tight">Дневни Мисии</h4>
+                            <p className="text-zinc-500 text-[11px] font-medium leading-relaxed">Изпълнявай мисии всеки ден, за да трупаш точки и да отключваш нови нива на знание.</p>
+                        </div>
+
+                        <div className={`p-6 bg-indigo-600/10 backdrop-blur-xl border border-indigo-500/20 rounded-[32px] shadow-2xl ${SLIDE_UP} delay-900 border-dashed`}>
+                            <div className="flex items-center gap-3 mb-4">
+                                <div className="w-10 h-10 rounded-xl bg-indigo-500 text-white flex items-center justify-center">
+                                    <Sparkles size={20} fill="currentColor" />
+                                </div>
+                                <span className="text-indigo-400 font-black text-[10px] uppercase tracking-widest">НОВА ФУНКЦИЯ</span>
+                            </div>
+                            <h4 className="text-white font-bold text-sm mb-1 tracking-tight">Гласови разговори</h4>
+                            <p className="text-zinc-500 text-[11px] font-medium leading-relaxed">Вече можеш да говориш директно с Uchebnik AI за още по-лесно учене на езици.</p>
+                        </div>
+                    </div>
                 </div>
+
+                <div className="absolute -top-12 -right-12 w-64 h-64 bg-indigo-600/30 blur-[120px] rounded-full animate-pulse-slow" />
+                <div className="absolute -bottom-12 -left-12 w-80 h-80 bg-purple-600/20 blur-[140px] rounded-full animate-pulse-slow delay-700" />
             </section>
 
             <section className="w-full bg-transparent py-12 md:py-20 px-8 md:px-12 mt-12">
@@ -480,7 +512,7 @@ export const WelcomeScreen = ({
                 </div>
                 <div className="w-full mt-16 pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-4 text-xs font-bold text-zinc-600">
                     <p>&copy; {new Date().getFullYear()} Uchebnik AI. Всички права запазени.</p>
-                    <p>Designed with ❤️ by Vanyo, Svetlyo & Bella.</p>
+                    <p>Designed with ❤️ by Vanyo, Светльо & Белла.</p>
                 </div>
             </footer>
         </div>

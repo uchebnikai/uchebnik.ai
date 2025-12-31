@@ -115,7 +115,7 @@ const translations: Record<string, Record<string, string>> = {
   'unlock_potential': { bg: 'Отключи пълния потенциал', en: 'Unlock full potential' },
 
   // Redesign Landing Strings
-  'landing_hero_title': { bg: 'Учи по-умно с изкуствен интелект', en: 'Learn Smarter with Artificial Intelligence' },
+  'landing_hero_title': { bg: 'Учи по-лесно с изкуствен интелект', en: 'Learn Easier with Artificial Intelligence' },
   'landing_hero_desc': { bg: 'Uchebnik AI е твоят универсален помощник за училище и университет. Решавай задачи, учи нови езици и се подготвяй за изпити по-бързо от всякога.', en: 'Uchebnik AI is your all-in-one assistant for school and university. Solve problems, learn new languages, and prepare for exams faster than ever.' },
   'landing_feature_1_title': { bg: 'Точни решения', en: 'Accurate Solutions' },
   'landing_feature_1_desc': { bg: 'Стъпка по стъпка решения за математика, химия и физика.', en: 'Step-by-step solutions for math, chemistry, and physics.' },
