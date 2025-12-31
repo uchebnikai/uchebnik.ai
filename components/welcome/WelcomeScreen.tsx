@@ -1,7 +1,6 @@
 
-import React, { useState, useRef } from 'react';
-// Added missing 'Users' import from lucide-react
-import { Shield, MessageSquare, ArrowRight, School, GraduationCap, Briefcase, ArrowLeft, ArrowUpRight, Search, ImageIcon, Mic, MicOff, X, Menu, Landmark, Sparkles, BookOpen, Brain, Zap, CheckCircle2, Users, LayoutDashboard, Settings, MapPin, Mail, Globe } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Shield, MessageSquare, ArrowRight, School, GraduationCap, Briefcase, ArrowLeft, ArrowUpRight, Search, ImageIcon, Mic, MicOff, X, Menu, Landmark, Sparkles, BookOpen, Brain, Zap, CheckCircle2, Users, LayoutDashboard, Settings, MapPin, Mail, Globe, MoreVertical, Paperclip, Send, Lock } from 'lucide-react';
 import { SubjectConfig, UserRole, UserSettings, HomeViewType, SubjectId } from '../../types';
 import { SUBJECTS } from '../../constants';
 import { DynamicIcon } from '../ui/DynamicIcon';
@@ -25,6 +24,11 @@ interface WelcomeScreenProps {
   setShowSettings?: (val: boolean) => void;
 }
 
+interface MockMessage {
+    role: 'user' | 'model';
+    text: string | React.ReactNode;
+}
+
 export const WelcomeScreen = ({
   homeView,
   userMeta,
@@ -46,6 +50,50 @@ export const WelcomeScreen = ({
     const recognitionRef = useRef<any>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const startingTextRef = useRef('');
+
+    // --- Mock Chat State for Landing Page Mockup ---
+    const [mockInputValue, setMockInputValue] = useState('');
+    const [mockMessages, setMockMessages] = useState<MockMessage[]>([
+        { role: 'user', text: 'Здравей! Трябва ми помощ със задача по органична химия... 🧪' },
+        { 
+            role: 'model', 
+            text: (
+                <div className="flex flex-col gap-2">
+                    <span>Разбира се! Първо нека намерим моларната маса на веществото. Формулата, която ти трябва е:</span>
+                    <div className="mt-2 p-4 bg-white/10 rounded-2xl flex items-center justify-center border border-white/10 shadow-inner backdrop-blur-sm">
+                        <div className="flex items-center gap-3 font-serif text-2xl italic tracking-wider text-white">
+                            <span>M</span>
+                            <span>=</span>
+                            <div className="flex flex-col items-center gap-1">
+                                <span className="border-b-2 border-white/60 px-2 leading-none">m</span>
+                                <span className="leading-none">n</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )
+        }
+    ]);
+    const [isMockTyping, setIsMockTyping] = useState(false);
+    const isMockDisabled = mockMessages.length >= 4;
+
+    const handleMockSend = () => {
+        // Restrict to exactly 1 interaction in the mockup
+        if (!mockInputValue.trim() || isMockTyping || isMockDisabled) return;
+        
+        const userMsg = mockInputValue;
+        setMockMessages(prev => [...prev, { role: 'user', text: userMsg }]);
+        setMockInputValue('');
+        setIsMockTyping(true);
+
+        setTimeout(() => {
+            setMockMessages(prev => [...prev, { 
+                role: 'model', 
+                text: 'Страхотен въпрос! За да получиш пълното решение, просто влез в профила си. Безплатно е и отнема секунди! 🚀' 
+            }]);
+            setIsMockTyping(false);
+        }, 1200);
+    };
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
         if (e.key === 'Enter' && !e.shiftKey) {
@@ -140,7 +188,6 @@ export const WelcomeScreen = ({
 
         return (
             <div className="w-full h-full overflow-y-auto custom-scrollbar flex flex-col relative">
-                
                 <div className="flex-1 flex flex-col items-center justify-center p-4 lg:p-8 w-full max-w-7xl mx-auto min-h-[calc(100vh-140px)]">
                     
                     {/* Greeting */}
@@ -155,13 +202,11 @@ export const WelcomeScreen = ({
 
                     {/* Navigation Cards */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-5xl mb-14">
-                        {/* General Chat Card */}
                         <button 
                             onClick={() => handleSubjectChange(SUBJECTS[0])}
                             className="group relative bg-[#121214]/60 hover:bg-[#18181b]/80 border border-white/5 hover:border-indigo-500/30 rounded-[32px] p-8 transition-all duration-300 hover:-translate-y-2 overflow-hidden shadow-2xl backdrop-blur-md text-left flex flex-col items-start h-full"
                         >
                             <div className="absolute inset-0 bg-gradient-to-b from-indigo-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"/>
-                            
                             <div className="w-14 h-14 bg-white/5 text-indigo-300 rounded-2xl flex items-center justify-center mb-6 border border-white/5 shadow-inner group-hover:scale-110 transition-transform duration-300">
                                 <MessageSquare size={28} />
                             </div>
@@ -172,13 +217,11 @@ export const WelcomeScreen = ({
                             </div>
                         </button>
 
-                        {/* School Card */}
                         <button 
                             onClick={() => setHomeView('school_select')}
                             className="group relative bg-[#121214]/60 hover:bg-[#18181b]/80 border border-white/5 hover:border-blue-500/30 rounded-[32px] p-8 transition-all duration-300 hover:-translate-y-2 overflow-hidden shadow-2xl backdrop-blur-md text-left flex flex-col items-start h-full"
                         >
                             <div className="absolute inset-0 bg-gradient-to-b from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"/>
-
                             <div className="w-14 h-14 bg-white/5 text-blue-300 rounded-2xl flex items-center justify-center mb-6 border border-white/5 shadow-inner group-hover:scale-110 transition-transform duration-300">
                                 <School size={28} />
                             </div>
@@ -189,13 +232,11 @@ export const WelcomeScreen = ({
                             </div>
                         </button>
 
-                        {/* University Card */}
                         <button 
                             onClick={() => setHomeView('university_select')}
                             className="group relative bg-[#121214]/60 hover:bg-[#18181b]/80 border border-white/5 hover:border-emerald-500/30 rounded-[32px] p-8 transition-all duration-300 hover:-translate-y-2 overflow-hidden shadow-2xl backdrop-blur-md text-left flex flex-col items-start h-full"
                         >
                             <div className="absolute inset-0 bg-gradient-to-b from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"/>
-
                             <div className="w-14 h-14 bg-white/5 text-emerald-300 rounded-2xl flex items-center justify-center mb-6 border border-white/5 shadow-inner group-hover:scale-110 transition-transform duration-300">
                                 <Landmark size={28} />
                             </div>
@@ -226,14 +267,11 @@ export const WelcomeScreen = ({
                                     <ImageIcon size={20} />
                                 </button>
                                 <input type="file" ref={fileInputRef} onChange={handleImageUpload} className="hidden" accept="image/*" multiple />
-                                
                                 <button onClick={toggleListening} className={`p-2 rounded-full transition-all ${isListening ? 'bg-red-500 text-white animate-pulse' : 'text-zinc-500 hover:text-white hover:bg-white/10'}`}>
-                                    {isListening ? <MicOff size={20}/> : <Mic size={20}/>}
+                                    {isListening ? <MicOff size={20}/> : <Mic size={20} strokeWidth={2}/>}
                                 </button>
                             </div>
-
                             <div className="w-px h-6 bg-white/10"></div>
-
                             <input 
                                 type="text"
                                 value={inputValue}
@@ -242,7 +280,6 @@ export const WelcomeScreen = ({
                                 placeholder={t('ask_anything', userSettings.language)}
                                 className="flex-1 bg-transparent border-none outline-none py-3 text-base text-zinc-200 placeholder-zinc-600 font-medium"
                             />
-                            
                             <button 
                                 onClick={() => (inputValue.trim() || selectedImages.length > 0) && onQuickStart(inputValue, selectedImages)}
                                 disabled={!inputValue.trim() && selectedImages.length === 0}
@@ -255,10 +292,8 @@ export const WelcomeScreen = ({
                             {t('ai_warning', userSettings.language)}
                         </p>
                     </div>
-
                 </div>
 
-                {/* Footer Links & Credits */}
                 <div className="w-full py-8 flex flex-col items-center gap-6 border-t border-white/5 bg-black/20 backdrop-blur-sm mt-auto">
                     <div className="flex flex-wrap justify-center gap-8 text-xs font-bold text-zinc-500">
                         <button onClick={() => setHomeView('about')} className="hover:text-zinc-300 transition-colors">{t('about_us', userSettings.language)}</button>
@@ -266,7 +301,6 @@ export const WelcomeScreen = ({
                         <button onClick={() => setHomeView('terms')} className="hover:text-zinc-300 transition-colors">{t('terms', userSettings.language)}</button>
                         <button onClick={() => setHomeView('privacy')} className="hover:text-zinc-300 transition-colors">{t('privacy', userSettings.language)}</button>
                     </div>
-                    
                     <div className="flex flex-col items-center gap-1 text-[10px] font-medium text-zinc-600">
                         <p>&copy; 2025 Uchebnik AI. Всички права запазени.</p>
                         <p>Designed with ❤️ by Vanyo, Svetlyo & Bella.</p>
@@ -279,12 +313,10 @@ export const WelcomeScreen = ({
     // --- LOGGED OUT LANDING VIEW ---
     return (
     <div className={`flex flex-col h-full w-full overflow-x-hidden items-center bg-transparent relative selection:bg-indigo-500/30`}>
-      
       {homeView === 'landing' && (
         <div className="w-full h-full overflow-y-auto custom-scrollbar flex flex-col items-center">
             
-            {/* Landing Navbar */}
-            <nav className="w-full max-w-7xl flex items-center justify-between p-6 shrink-0 relative z-50">
+            <nav className="w-full flex items-center justify-between p-6 px-8 md:px-12 shrink-0 relative z-50">
                 <div className="flex items-center gap-3">
                     <div className="flex items-center gap-2">
                         <img src="https://i.ibb.co/LDgTCm9N/6151f23e-b922-4c62-930f-853884bf4c89.png" className="w-8 h-8 rounded-lg" />
@@ -301,16 +333,15 @@ export const WelcomeScreen = ({
                 </div>
             </nav>
 
-            {/* Hero Section */}
-            <section className="w-full max-w-7xl grid grid-cols-1 lg:grid-cols-12 gap-12 px-6 py-12 md:py-24 items-center">
-                <div className={`lg:col-span-7 flex flex-col items-start text-left ${SLIDE_RIGHT} duration-1000`}>
+            {/* HERO SECTION REPOSITIONED HIGHER AND FURTHER RIGHT */}
+            <section className="w-full grid grid-cols-1 lg:grid-cols-12 gap-12 px-8 md:px-12 py-12 md:py-20 lg:py-28 items-start lg:items-center relative">
+                <div className={`lg:col-span-6 flex flex-col items-start text-left ${SLIDE_RIGHT} duration-1000 lg:-translate-y-32`}>
                     <h1 className="text-5xl md:text-7xl lg:text-8xl font-black tracking-tighter leading-[1.05] text-zinc-900 dark:text-white font-display mb-6">
                         {t('landing_hero_title', userSettings.language)}
                     </h1>
                     <p className="text-lg md:text-xl text-zinc-500 dark:text-zinc-400 font-medium max-w-xl mb-10 leading-relaxed">
                         {t('landing_hero_desc', userSettings.language)}
                     </p>
-                    
                     <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
                         <button 
                             onClick={() => handleSubjectChange(SUBJECTS[0])} 
@@ -328,118 +359,117 @@ export const WelcomeScreen = ({
                     </div>
                 </div>
 
-                <div className={`lg:col-span-5 relative ${ZOOM_IN} duration-1000 delay-300 hidden lg:block`}>
-                    {/* Mockup / Visual Element */}
-                    <div className="relative z-10 p-2 bg-white/20 dark:bg-black/20 backdrop-blur-3xl rounded-[48px] border border-white/20 shadow-2xl rotate-3">
-                        <div className="bg-white dark:bg-zinc-900 rounded-[40px] overflow-hidden aspect-[4/5] border border-white/10 shadow-inner p-6 flex flex-col gap-4">
-                            <div className="flex items-center gap-3 border-b border-zinc-100 dark:border-white/5 pb-4">
-                                <div className="w-10 h-10 rounded-xl bg-transparent flex items-center justify-center text-white overflow-hidden">
-                                    <img src="https://i.ibb.co/LDgTCm9N/6151f23e-b922-4c62-930f-853884bf4c89.png" className="w-full h-full object-cover"/>
-                                </div>
-                                <span className="font-bold text-sm">Uchebnik AI</span>
-                            </div>
-                            <div className="space-y-4 flex-1">
-                                <div className="p-3 bg-zinc-100 dark:bg-white/5 rounded-2xl text-xs max-w-[80%]">Как да реша тази задача по физика?</div>
-                                <div className="p-3 bg-indigo-600 text-white rounded-2xl text-xs max-w-[85%] ml-auto">Разбира се! Първо нека намерим силата на триене чрез формулата...</div>
-                                <div className="p-4 bg-zinc-50 dark:bg-white/5 border border-zinc-100 dark:border-white/5 rounded-2xl">
-                                    <div className="w-full h-32 bg-indigo-500/10 rounded-xl border border-dashed border-indigo-500/30 flex items-center justify-center">
-                                        <Zap size={24} className="text-indigo-500 animate-pulse"/>
+                <div className={`lg:col-span-6 relative flex justify-center ${ZOOM_IN} duration-1000 delay-300 hidden lg:block lg:-translate-y-40 lg:translate-x-24`}>
+                    <div className="relative z-10 p-3 bg-white/10 dark:bg-black/40 backdrop-blur-3xl rounded-[56px] border border-white/20 shadow-[0_40px_100px_rgba(0,0,0,0.4)] rotate-2 max-w-[420px] w-full group">
+                        <div className="absolute top-8 left-1/2 -translate-x-1/2 w-32 h-6 bg-black rounded-full z-30 flex items-center justify-center px-4 overflow-hidden border border-white/5">
+                            <div className="w-2 h-2 rounded-full bg-indigo-500 mr-2 animate-pulse"/>
+                            <div className="text-[8px] font-black text-white/50 tracking-widest uppercase">Uchebnik OS</div>
+                        </div>
+
+                        <div className="bg-[#f8fafc] dark:bg-[#0c0c0e] rounded-[44px] overflow-hidden aspect-[9/18.5] border border-white/5 shadow-inner flex flex-col relative">
+                            <div className="pt-16 pb-4 px-6 bg-white dark:bg-zinc-900/50 border-b border-zinc-100 dark:border-white/5 flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-500/20">
+                                        <Brain size={20} />
+                                    </div>
+                                    <div>
+                                        <div className="text-xs font-black text-zinc-900 dark:text-white leading-none mb-1 tracking-tight">AI Учител</div>
+                                        <div className="flex items-center gap-1.5">
+                                            <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"/>
+                                            <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">На линия</span>
+                                        </div>
                                     </div>
                                 </div>
+                                <div className="flex gap-2">
+                                    <div className="w-8 h-8 rounded-lg bg-zinc-100 dark:bg-white/5 flex items-center justify-center text-zinc-400"><Settings size={14}/></div>
+                                    <div className="w-8 h-8 rounded-lg bg-zinc-100 dark:bg-white/5 flex items-center justify-center text-zinc-400"><MoreVertical size={14}/></div>
+                                </div>
+                            </div>
+
+                            {/* CHAT CONTENT - NO SCROLLING, FIXED SIZE */}
+                            <div className="flex-1 p-6 space-y-6 overflow-hidden pb-10">
+                                {mockMessages.map((msg, i) => (
+                                    <div key={i} className={`p-5 text-sm leading-relaxed border border-white/5 ${msg.role === 'user' ? 'bg-zinc-100 dark:bg-white/5 rounded-[24px] rounded-bl-none font-bold text-zinc-800 dark:text-zinc-200 max-w-[85%]' : 'bg-gradient-to-br from-indigo-600 to-indigo-700 text-white rounded-[24px] rounded-br-none font-medium max-w-[90%] ml-auto shadow-xl shadow-indigo-500/20'} ${SLIDE_UP}`}>
+                                        {msg.role === 'model' && (
+                                            <div className="flex items-center gap-2 mb-2 pb-2 border-b border-white/10">
+                                                <Zap size={14} fill="currentColor"/>
+                                                <span className="text-[10px] font-black uppercase tracking-widest">Експертно Решение</span>
+                                            </div>
+                                        )}
+                                        {msg.text}
+                                    </div>
+                                ))}
+                                {isMockTyping && (
+                                    <div className="flex gap-2 items-center text-indigo-500 ml-auto mr-4 animate-pulse">
+                                        <div className="w-1.5 h-1.5 bg-current rounded-full animate-bounce"/>
+                                        <div className="w-1.5 h-1.5 bg-current rounded-full animate-bounce [animation-delay:0.2s]"/>
+                                        <div className="w-1.5 h-1.5 bg-current rounded-full animate-bounce [animation-delay:0.4s]"/>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* MOCK INPUT AREA - DISABLED AFTER ONE USE */}
+                            <div className="p-4 bg-white dark:bg-zinc-900/50 border-t border-zinc-100 dark:border-white/5 flex items-center gap-3 mt-auto">
+                                <div className="w-10 h-10 rounded-full bg-zinc-100 dark:bg-white/5 flex items-center justify-center text-zinc-400"><Paperclip size={18}/></div>
+                                <div className={`flex-1 h-10 rounded-full border flex items-center px-4 relative transition-all ${isMockDisabled ? 'bg-indigo-500/10 border-indigo-500/30' : 'bg-zinc-100 dark:bg-white/5 border-zinc-200 dark:border-white/10'}`}>
+                                    <input 
+                                        type="text"
+                                        value={mockInputValue}
+                                        onChange={(e) => setMockInputValue(e.target.value)}
+                                        onKeyDown={(e) => e.key === 'Enter' && handleMockSend()}
+                                        placeholder={isMockDisabled ? "Регистрирай се за още" : "Напиши съобщение..."}
+                                        disabled={isMockDisabled}
+                                        className="w-full bg-transparent border-none outline-none text-[11px] text-zinc-700 dark:text-zinc-200 font-medium placeholder:italic disabled:opacity-80"
+                                    />
+                                    {isMockDisabled && <Lock size={12} className="text-indigo-500 ml-2 shrink-0"/>}
+                                </div>
+                                <button 
+                                    onClick={isMockDisabled ? () => setShowAuthModal(true) : handleMockSend} 
+                                    className={`w-10 h-10 rounded-full flex items-center justify-center text-white shadow-lg transition-all active:scale-90 ${isMockDisabled ? 'bg-indigo-500 hover:bg-indigo-600' : 'bg-indigo-600'}`}
+                                >
+                                    {isMockDisabled ? <ArrowRight size={16}/> : <Send size={16}/>}
+                                </button>
                             </div>
                         </div>
                     </div>
-                    {/* Decorative Blobs */}
-                    <div className="absolute -top-12 -right-12 w-64 h-64 bg-indigo-600/30 blur-[100px] rounded-full animate-pulse-slow" />
-                    <div className="absolute -bottom-12 -left-12 w-64 h-64 bg-purple-600/20 blur-[100px] rounded-full animate-pulse-slow delay-700" />
+                    <div className="absolute -top-12 -right-12 w-64 h-64 bg-indigo-600/30 blur-[120px] rounded-full animate-pulse-slow" />
+                    <div className="absolute -bottom-12 -left-12 w-80 h-80 bg-purple-600/20 blur-[140px] rounded-full animate-pulse-slow delay-700" />
                 </div>
             </section>
 
-            {/* Quick Interactive Tool Section (Demo only for logged out) */}
-            <section className="w-full max-w-4xl px-6 py-12 relative z-20">
-                <div className={`bg-white/40 dark:bg-black/40 backdrop-blur-3xl p-4 md:p-6 rounded-[32px] md:rounded-[48px] border border-white/30 dark:border-white/10 shadow-2xl ${SLIDE_UP}`}>
-                    <h3 className="text-center text-sm font-bold text-zinc-400 uppercase tracking-widest mb-6">Изпробвай демо</h3>
-                    <div className="relative bg-white dark:bg-black/60 rounded-3xl p-2 flex items-center gap-2 shadow-inner border border-zinc-100 dark:border-white/5 transition-all opacity-80 cursor-pointer" onClick={() => handleSubjectChange(SUBJECTS[0])}>
-                        <div className="flex items-center gap-1 pl-2 pointer-events-none">
-                            <div className="p-3 text-zinc-400 rounded-2xl"><ImageIcon size={22} /></div>
-                            <div className="p-3 text-zinc-400 rounded-2xl"><Mic size={22}/></div>
-                        </div>
-                        <div className="w-px h-8 bg-zinc-200 dark:bg-white/10 mx-2"></div>
-                        <div className="flex-1 px-2 py-4 text-lg text-zinc-500 dark:text-zinc-400">Попитай ме каквото и да е...</div>
-                        <div className="w-14 h-14 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-xl shadow-indigo-600/30">
-                            <ArrowUpRight size={28} />
-                        </div>
-                    </div>
-                    <p className="text-center text-[11px] text-zinc-400 mt-4 font-medium opacity-70">
-                        Влезте в профила си, за да използвате пълната функционалност.
-                    </p>
-                </div>
-            </section>
-
-            {/* Paths Section */}
-            <section className="w-full bg-transparent py-12 md:py-20 px-6 mt-12">
-                <div className="max-w-7xl mx-auto flex flex-col items-center">
-                    <h2 className="text-4xl md:text-5xl font-black text-white text-center mb-4 tracking-tight">
-                        {t('landing_path_title', userSettings.language)}
-                    </h2>
+            <section className="w-full bg-transparent py-12 md:py-20 px-8 md:px-12 mt-12">
+                <div className="w-full flex flex-col items-center">
+                    <h2 className="text-4xl md:text-5xl font-black text-white text-center mb-4 tracking-tight">{t('landing_path_title', userSettings.language)}</h2>
                     <p className="text-zinc-400 text-center max-w-lg mb-10 text-lg">Изберете образователната степен, за да видите специализираните ни инструменти.</p>
-                    
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full">
-                        <button 
-                            onClick={() => setShowAuthModal(true)} 
-                            className="group relative h-[400px] rounded-[56px] p-12 text-left bg-gradient-to-br from-indigo-600 to-indigo-800 overflow-hidden shadow-2xl transition-all hover:scale-[1.01] active:scale-[0.99]"
-                        >
+                        <button onClick={() => setShowAuthModal(true)} className="group relative h-[400px] rounded-[56px] p-12 text-left bg-gradient-to-br from-indigo-600 to-indigo-800 overflow-hidden shadow-2xl transition-all hover:scale-[1.01] active:scale-[0.99]">
                             <div className="relative z-10 flex flex-col h-full justify-between">
-                                <div className="p-6 bg-white/20 rounded-[32px] w-fit backdrop-blur-xl group-hover:scale-110 transition-transform duration-500">
-                                    <School size={56} className="text-white" />
-                                </div>
-                                <div>
-                                    <h3 className="text-4xl md:text-5xl font-black text-white mb-4 tracking-tighter leading-none">{t('school', userSettings.language)}</h3>
-                                    <p className="text-white/80 text-xl font-medium max-w-xs">{t('desc_student', userSettings.language)}</p>
-                                </div>
+                                <div className="p-6 bg-white/20 rounded-[32px] w-fit backdrop-blur-xl group-hover:scale-110 transition-transform duration-500"><School size={56} className="text-white" /></div>
+                                <div><h3 className="text-4xl md:text-5xl font-black text-white mb-4 tracking-tighter leading-none">{t('school', userSettings.language)}</h3><p className="text-white/80 text-xl font-medium max-w-xs">{t('desc_student', userSettings.language)}</p></div>
                             </div>
-                            <div className="absolute top-0 right-0 p-12 opacity-10 group-hover:scale-125 transition-transform duration-1000">
-                                <GraduationCap size={240} />
-                            </div>
-                            <div className="absolute bottom-12 right-12 bg-white/20 p-4 rounded-full text-white backdrop-blur-md opacity-0 group-hover:opacity-100 translate-y-4 group-hover:translate-y-0 transition-all">
-                                <ArrowRight size={32}/>
-                            </div>
+                            <div className="absolute top-0 right-0 p-12 opacity-10 group-hover:scale-125 transition-transform duration-1000"><GraduationCap size={240} /></div>
+                            <div className="absolute bottom-12 right-12 bg-white/20 p-4 rounded-full text-white backdrop-blur-md opacity-0 group-hover:opacity-100 translate-y-4 group-hover:translate-y-0 transition-all"><ArrowRight size={32}/></div>
                         </button>
-
-                        <button 
-                            onClick={() => setShowAuthModal(true)} 
-                            className="group relative h-[400px] rounded-[56px] p-12 text-left bg-zinc-800 border border-white/5 overflow-hidden shadow-2xl transition-all hover:scale-[1.01] active:scale-[0.99] hover:bg-zinc-700/50"
-                        >
+                        <button onClick={() => setShowAuthModal(true)} className="group relative h-[400px] rounded-[56px] p-12 text-left bg-zinc-800 border border-white/5 overflow-hidden shadow-2xl transition-all hover:scale-[1.01] active:scale-[0.99] hover:bg-zinc-700/50">
                             <div className="relative z-10 flex flex-col h-full justify-between">
-                                <div className="p-6 bg-emerald-500/10 text-emerald-500 rounded-[32px] w-fit border border-emerald-500/20 group-hover:scale-110 transition-transform duration-500">
-                                    <Landmark size={56} />
-                                </div>
-                                <div>
-                                    <h3 className="text-4xl md:text-5xl font-black text-white mb-4 tracking-tighter leading-none">{t('university', userSettings.language)}</h3>
-                                    <p className="text-zinc-400 text-xl font-medium max-w-xs">{t('desc_uni_student', userSettings.language)}</p>
-                                </div>
+                                <div className="p-6 bg-emerald-500/10 text-emerald-500 rounded-[32px] w-fit border border-emerald-500/20 group-hover:scale-110 transition-transform duration-500"><Landmark size={56} /></div>
+                                <div><h3 className="text-4xl md:text-5xl font-black text-white mb-4 tracking-tighter leading-none">{t('university', userSettings.language)}</h3><p className="text-zinc-400 text-xl font-medium max-w-xs">{t('desc_uni_student', userSettings.language)}</p></div>
                             </div>
-                            <div className="absolute top-0 right-0 p-12 opacity-5 text-white group-hover:scale-125 transition-transform duration-1000">
-                                <Briefcase size={240} />
-                            </div>
-                            <div className="absolute bottom-12 right-12 bg-emerald-500/20 p-4 rounded-full text-emerald-500 backdrop-blur-md opacity-0 group-hover:opacity-100 translate-y-4 group-hover:translate-y-0 transition-all border border-emerald-500/20">
-                                <ArrowRight size={32}/>
-                            </div>
+                            <div className="absolute top-0 right-0 p-12 opacity-5 text-white group-hover:scale-125 transition-transform duration-1000"><Briefcase size={240} /></div>
+                            <div className="absolute bottom-12 right-12 bg-emerald-500/20 p-4 rounded-full text-emerald-500 backdrop-blur-md opacity-0 group-hover:opacity-100 translate-y-4 group-hover:translate-y-0 transition-all border border-emerald-500/20"><ArrowRight size={32}/></div>
                         </button>
                     </div>
                 </div>
             </section>
 
-            <footer className="w-full py-16 bg-zinc-950 px-6 border-t border-white/5">
-                <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-12">
+            <footer className="w-full py-16 bg-zinc-950 px-8 md:px-12 border-t border-white/5">
+                <div className="w-full flex flex-col md:flex-row justify-between items-center gap-12">
                     <div className="flex flex-col items-center md:items-start gap-4">
                         <div className="flex items-center gap-2">
                             <img src="https://i.ibb.co/LDgTCm9N/6151f23e-b922-4c62-930f-853884bf4c89.png" className="w-8 h-8 rounded-lg" />
                             <span className="font-display font-black text-xl tracking-tight text-white">Uchebnik AI</span>
                         </div>
-                        <p className="text-zinc-500 text-sm font-medium text-center md:text-left max-w-xs">
-                            Бъдещето на образованието в България, подкрепено от най-новите технологии.
-                        </p>
+                        <p className="text-zinc-500 text-sm font-medium text-center md:text-left max-w-xs">Бъдещето на образованието в България, подкрепено от най-новите технологии.</p>
                     </div>
                     <div className="flex flex-wrap justify-center gap-x-12 gap-y-6 text-sm font-bold text-zinc-400">
                         <button onClick={() => setHomeView('about')} className="hover:text-white transition-colors">{t('about_us', userSettings.language)}</button>
@@ -448,7 +478,7 @@ export const WelcomeScreen = ({
                         <button onClick={() => setHomeView('privacy')} className="hover:text-white transition-colors">{t('privacy', userSettings.language)}</button>
                     </div>
                 </div>
-                <div className="max-w-7xl mx-auto mt-16 pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-4 text-xs font-bold text-zinc-600">
+                <div className="w-full mt-16 pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-4 text-xs font-bold text-zinc-600">
                     <p>&copy; {new Date().getFullYear()} Uchebnik AI. Всички права запазени.</p>
                     <p>Designed with ❤️ by Vanyo, Svetlyo & Bella.</p>
                 </div>
@@ -456,12 +486,10 @@ export const WelcomeScreen = ({
         </div>
       )}
 
-      {/* Render other views (School Select, etc.) only if logged in or navigating within context - logic handled by App.tsx generally, but kept here for fallback */}
       {homeView === 'school_select' && (
         <div className={`max-w-5xl w-full flex-1 flex flex-col items-center justify-center relative z-10 ${SLIDE_UP} duration-500 overflow-y-auto custom-scrollbar p-4 md:p-8`}>
              <button onClick={() => setHomeView('landing')} className="absolute top-0 left-0 flex items-center gap-2 text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors font-bold z-20 m-4 md:m-8"><ArrowLeft size={20}/> {t('back', userSettings.language)}</button>
              <h2 className="text-4xl md:text-5xl font-black text-zinc-900 dark:text-white mb-8 md:mb-12 tracking-tight mt-16 md:mt-0">{t('select_role', userSettings.language)}</h2>
-             
              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full px-2 md:px-12">
                  <button onClick={() => { setHomeView('student_subjects'); setUserRole('student'); }} className="group relative h-64 md:h-72 rounded-[40px] p-8 text-left bg-indigo-600/90 backdrop-blur-xl text-white shadow-2xl hover:scale-[1.02] active:scale-[0.98] transition-all border border-white/10 overflow-hidden">
                      <div className="relative z-10 flex flex-col h-full justify-between">
@@ -470,7 +498,6 @@ export const WelcomeScreen = ({
                      </div>
                      <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 to-blue-600 opacity-50 rounded-[40px]"/>
                  </button>
-
                  <button onClick={() => { setHomeView('teacher_subjects'); setUserRole('teacher'); }} className="group relative h-64 md:h-72 rounded-[40px] p-8 text-left bg-white/60 dark:bg-black/40 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-2xl hover:scale-[1.02] active:scale-[0.98] transition-all overflow-hidden">
                      <div className="relative z-10 flex flex-col h-full justify-between">
                          <div className="p-4 bg-gray-100 dark:bg-white/5 text-indigo-600 dark:text-indigo-400 rounded-3xl w-fit group-hover:scale-110 transition-transform duration-300"><Briefcase size={40}/></div>
@@ -485,7 +512,6 @@ export const WelcomeScreen = ({
         <div className={`max-w-5xl w-full flex-1 flex flex-col items-center justify-center relative z-10 ${SLIDE_UP} duration-500 overflow-y-auto custom-scrollbar p-4 md:p-8`}>
              <button onClick={() => setHomeView('landing')} className="absolute top-0 left-0 flex items-center gap-2 text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors font-bold z-20 m-4 md:m-8"><ArrowLeft size={20}/> {t('back', userSettings.language)}</button>
              <h2 className="text-4xl md:text-5xl font-black text-zinc-900 dark:text-white mb-8 md:mb-12 tracking-tight mt-16 md:mt-0">{t('select_role_uni', userSettings.language)}</h2>
-             
              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full px-2 md:px-12">
                  <button onClick={() => { setHomeView('uni_student_subjects'); setUserRole('uni_student'); }} className="group relative h-64 md:h-72 rounded-[40px] p-8 text-left bg-emerald-600/90 backdrop-blur-xl text-white shadow-2xl hover:scale-[1.02] active:scale-[0.98] transition-all border border-white/10 overflow-hidden">
                      <div className="relative z-10 flex flex-col h-full justify-between">
@@ -494,7 +520,6 @@ export const WelcomeScreen = ({
                      </div>
                      <div className="absolute inset-0 bg-gradient-to-br from-emerald-500 to-teal-600 opacity-50 rounded-[40px]"/>
                  </button>
-
                  <button onClick={() => { setHomeView('uni_teacher_subjects'); setUserRole('uni_teacher'); }} className="group relative h-64 md:h-72 rounded-[40px] p-8 text-left bg-white/60 dark:bg-black/40 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-2xl hover:scale-[1.02] active:scale-[0.98] transition-all overflow-hidden">
                      <div className="relative z-10 flex flex-col h-full justify-between">
                          <div className="p-4 bg-gray-100 dark:bg-white/5 text-emerald-600 dark:text-emerald-400 rounded-3xl w-fit group-hover:scale-110 transition-transform duration-300"><Briefcase size={40}/></div>
@@ -514,7 +539,6 @@ export const WelcomeScreen = ({
                 homeView === 'uni_student_subjects' ? t('role_uni_student', userSettings.language) : t('role_uni_professor', userSettings.language)} • {t('select_subject', userSettings.language)}
            </h2>
            <p className="text-gray-500 px-2 mb-8 md:mb-10 font-medium">{t('choose_subject', userSettings.language)}</p>
-
            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-6 pb-20">
               {SUBJECTS.filter(s => s.id !== SubjectId.GENERAL && s.categories.includes(homeView.includes('uni') ? 'university' : 'school')).map((s, i) => (
                 <button key={s.id} onClick={() => handleSubjectChange(s)} style={getStaggeredDelay(i)} className={`group flex flex-col items-center text-center p-4 md:p-8 bg-white/40 dark:bg-white/5 backdrop-blur-xl rounded-[24px] md:rounded-[32px] border border-white/30 dark:border-white/10 hover:border-indigo-500/50 shadow-sm hover:shadow-2xl hover:shadow-indigo-500/10 transition-all duration-300 hover:-translate-y-2 ${FADE_IN} fill-mode-backwards`}>
