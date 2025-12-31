@@ -1,7 +1,7 @@
 
 import React, { useState, useRef } from 'react';
 // Added missing 'Users' import from lucide-react
-import { Shield, MessageSquare, ArrowRight, School, GraduationCap, Briefcase, ArrowLeft, ArrowUpRight, Search, ImageIcon, Mic, MicOff, X, Menu, Landmark, Sparkles, BookOpen, Brain, Zap, CheckCircle2, Users, LayoutDashboard, Settings } from 'lucide-react';
+import { Shield, MessageSquare, ArrowRight, School, GraduationCap, Briefcase, ArrowLeft, ArrowUpRight, Search, ImageIcon, Mic, MicOff, X, Menu, Landmark, Sparkles, BookOpen, Brain, Zap, CheckCircle2, Users, LayoutDashboard, Settings, MapPin, Mail, Globe } from 'lucide-react';
 import { SubjectConfig, UserRole, UserSettings, HomeViewType, SubjectId } from '../../types';
 import { SUBJECTS } from '../../constants';
 import { DynamicIcon } from '../ui/DynamicIcon';
@@ -141,70 +141,70 @@ export const WelcomeScreen = ({
         return (
             <div className="w-full h-full overflow-y-auto custom-scrollbar flex flex-col relative">
                 
-                <div className="flex-1 flex flex-col items-center justify-center p-4 lg:p-8 w-full max-w-7xl mx-auto">
+                <div className="flex-1 flex flex-col items-center justify-center p-4 lg:p-8 w-full max-w-7xl mx-auto min-h-[calc(100vh-140px)]">
                     
                     {/* Greeting */}
-                    <div className="text-center mb-8 lg:mb-12 animate-in slide-in-from-bottom-4 duration-700">
-                        <h1 className="text-5xl lg:text-7xl font-black text-zinc-900 dark:text-white tracking-tight mb-4 font-display">
-                            {t('hello', userSettings.language)}, <span className="text-transparent bg-clip-text bg-gradient-to-r from-gray-400 to-white">{greetingName}</span>.
+                    <div className="text-center mb-10 lg:mb-14 animate-in slide-in-from-bottom-4 duration-700">
+                        <h1 className="text-5xl lg:text-7xl font-black text-zinc-900 dark:text-white tracking-tight mb-4 font-display drop-shadow-xl">
+                            {t('hello', userSettings.language)}, <span className="text-transparent bg-clip-text bg-gradient-to-r from-zinc-400 to-white">{greetingName}</span>.
                         </h1>
-                        <p className="text-xl text-zinc-500 dark:text-zinc-400 font-medium">
+                        <p className="text-xl text-zinc-500 dark:text-zinc-400 font-medium tracking-wide">
                             {t('subtitle', userSettings.language)}
                         </p>
                     </div>
 
                     {/* Navigation Cards */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-5xl mb-12">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-5xl mb-14">
                         {/* General Chat Card */}
-                        <div className="group relative bg-[#09090b]/40 hover:bg-[#09090b]/60 border border-white/5 hover:border-white/10 rounded-3xl p-8 transition-all duration-300 hover:-translate-y-1 overflow-hidden shadow-2xl backdrop-blur-sm">
-                            <div className="relative z-10 flex flex-col h-full items-start text-left">
-                                <div className="w-12 h-12 bg-white/5 text-white rounded-2xl flex items-center justify-center mb-6 border border-white/5">
-                                    <MessageSquare size={24} />
-                                </div>
-                                <h3 className="text-2xl font-bold text-white mb-2">{t('chat_general', userSettings.language)}</h3>
-                                <p className="text-zinc-400 text-sm mb-8 flex-1">Попитай ме каквото и да е...</p>
-                                <button 
-                                    onClick={() => handleSubjectChange(SUBJECTS[0])}
-                                    className="px-6 py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-full font-bold text-sm flex items-center gap-2 transition-all group-hover:pl-8 border border-white/5"
-                                >
-                                    {t('start', userSettings.language)} <ArrowRight size={16} />
-                                </button>
+                        <button 
+                            onClick={() => handleSubjectChange(SUBJECTS[0])}
+                            className="group relative bg-[#121214]/60 hover:bg-[#18181b]/80 border border-white/5 hover:border-indigo-500/30 rounded-[32px] p-8 transition-all duration-300 hover:-translate-y-2 overflow-hidden shadow-2xl backdrop-blur-md text-left flex flex-col items-start h-full"
+                        >
+                            <div className="absolute inset-0 bg-gradient-to-b from-indigo-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"/>
+                            
+                            <div className="w-14 h-14 bg-white/5 text-indigo-300 rounded-2xl flex items-center justify-center mb-6 border border-white/5 shadow-inner group-hover:scale-110 transition-transform duration-300">
+                                <MessageSquare size={28} />
                             </div>
-                        </div>
+                            <h3 className="text-2xl font-bold text-white mb-2">{t('chat_general', userSettings.language)}</h3>
+                            <p className="text-zinc-500 text-sm font-medium mb-8 flex-1">Попитай ме каквото и да е за училище или университет.</p>
+                            <div className="px-6 py-2.5 bg-white/5 hover:bg-indigo-500 text-zinc-300 hover:text-white rounded-full font-bold text-xs flex items-center gap-2 transition-all group-hover:pl-8 border border-white/5 self-start">
+                                {t('start', userSettings.language)} <ArrowRight size={14} />
+                            </div>
+                        </button>
 
                         {/* School Card */}
-                        <div className="group relative bg-[#09090b]/40 hover:bg-[#09090b]/60 border border-white/5 hover:border-white/10 rounded-3xl p-8 transition-all duration-300 hover:-translate-y-1 overflow-hidden shadow-2xl backdrop-blur-sm">
-                            <div className="relative z-10 flex flex-col h-full items-start text-left">
-                                <div className="w-12 h-12 bg-indigo-500/10 text-indigo-400 rounded-2xl flex items-center justify-center mb-6 border border-indigo-500/10">
-                                    <School size={24} />
-                                </div>
-                                <h3 className="text-2xl font-bold text-white mb-2">{t('school', userSettings.language)}</h3>
-                                <p className="text-zinc-400 text-sm mb-8 flex-1">{t('students', userSettings.language)} & {t('teachers', userSettings.language)}</p>
-                                <button 
-                                    onClick={() => setHomeView('school_select')}
-                                    className="px-6 py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-full font-bold text-sm flex items-center gap-2 transition-all group-hover:pl-8 border border-white/5"
-                                >
-                                    {t('enter', userSettings.language)} <ArrowRight size={16} />
-                                </button>
+                        <button 
+                            onClick={() => setHomeView('school_select')}
+                            className="group relative bg-[#121214]/60 hover:bg-[#18181b]/80 border border-white/5 hover:border-blue-500/30 rounded-[32px] p-8 transition-all duration-300 hover:-translate-y-2 overflow-hidden shadow-2xl backdrop-blur-md text-left flex flex-col items-start h-full"
+                        >
+                            <div className="absolute inset-0 bg-gradient-to-b from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"/>
+
+                            <div className="w-14 h-14 bg-white/5 text-blue-300 rounded-2xl flex items-center justify-center mb-6 border border-white/5 shadow-inner group-hover:scale-110 transition-transform duration-300">
+                                <School size={28} />
                             </div>
-                        </div>
+                            <h3 className="text-2xl font-bold text-white mb-2">{t('school', userSettings.language)}</h3>
+                            <p className="text-zinc-500 text-sm font-medium mb-8 flex-1">{t('students', userSettings.language)} & {t('teachers', userSettings.language)}</p>
+                            <div className="px-6 py-2.5 bg-white/5 hover:bg-blue-600 text-zinc-300 hover:text-white rounded-full font-bold text-xs flex items-center gap-2 transition-all group-hover:pl-8 border border-white/5 self-start">
+                                {t('enter', userSettings.language)} <ArrowRight size={14} />
+                            </div>
+                        </button>
 
                         {/* University Card */}
-                        <div className="group relative bg-[#09090b]/40 hover:bg-[#09090b]/60 border border-white/5 hover:border-white/10 rounded-3xl p-8 transition-all duration-300 hover:-translate-y-1 overflow-hidden shadow-2xl backdrop-blur-sm">
-                            <div className="relative z-10 flex flex-col h-full items-start text-left">
-                                <div className="w-12 h-12 bg-emerald-500/10 text-emerald-400 rounded-2xl flex items-center justify-center mb-6 border border-emerald-500/10">
-                                    <Landmark size={24} />
-                                </div>
-                                <h3 className="text-2xl font-bold text-white mb-2">{t('university', userSettings.language)}</h3>
-                                <p className="text-zinc-400 text-sm mb-8 flex-1">{t('uni_students', userSettings.language)} & {t('uni_professors', userSettings.language)}</p>
-                                <button 
-                                    onClick={() => setHomeView('university_select')}
-                                    className="px-6 py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-full font-bold text-sm flex items-center gap-2 transition-all group-hover:pl-8 border border-white/5"
-                                >
-                                    {t('enter', userSettings.language)} <ArrowRight size={16} />
-                                </button>
+                        <button 
+                            onClick={() => setHomeView('university_select')}
+                            className="group relative bg-[#121214]/60 hover:bg-[#18181b]/80 border border-white/5 hover:border-emerald-500/30 rounded-[32px] p-8 transition-all duration-300 hover:-translate-y-2 overflow-hidden shadow-2xl backdrop-blur-md text-left flex flex-col items-start h-full"
+                        >
+                            <div className="absolute inset-0 bg-gradient-to-b from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"/>
+
+                            <div className="w-14 h-14 bg-white/5 text-emerald-300 rounded-2xl flex items-center justify-center mb-6 border border-white/5 shadow-inner group-hover:scale-110 transition-transform duration-300">
+                                <Landmark size={28} />
                             </div>
-                        </div>
+                            <h3 className="text-2xl font-bold text-white mb-2">{t('university', userSettings.language)}</h3>
+                            <p className="text-zinc-500 text-sm font-medium mb-8 flex-1">{t('uni_students', userSettings.language)} & {t('uni_professors', userSettings.language)}</p>
+                            <div className="px-6 py-2.5 bg-white/5 hover:bg-emerald-600 text-zinc-300 hover:text-white rounded-full font-bold text-xs flex items-center gap-2 transition-all group-hover:pl-8 border border-white/5 self-start">
+                                {t('enter', userSettings.language)} <ArrowRight size={14} />
+                            </div>
+                        </button>
                     </div>
 
                     {/* Quick Input Bar */}
@@ -220,19 +220,19 @@ export const WelcomeScreen = ({
                             </div>
                         )}
 
-                        <div className="relative bg-[#09090b] border border-white/10 rounded-full p-2 pl-4 flex items-center gap-2 shadow-2xl transition-all focus-within:ring-2 focus-within:ring-white/10 focus-within:border-white/20">
+                        <div className="relative bg-[#09090b]/80 border border-white/10 rounded-full p-2 pl-5 flex items-center gap-3 shadow-2xl transition-all focus-within:ring-2 focus-within:ring-indigo-500/50 focus-within:border-indigo-500/50 backdrop-blur-xl">
                             <div className="flex items-center gap-1">
-                                <button onClick={() => fileInputRef.current?.click()} className="p-2 text-zinc-500 hover:text-white hover:bg-white/5 rounded-full transition-colors">
+                                <button onClick={() => fileInputRef.current?.click()} className="p-2 text-zinc-500 hover:text-white hover:bg-white/10 rounded-full transition-colors">
                                     <ImageIcon size={20} />
                                 </button>
                                 <input type="file" ref={fileInputRef} onChange={handleImageUpload} className="hidden" accept="image/*" multiple />
                                 
-                                <button onClick={toggleListening} className={`p-2 rounded-full transition-all ${isListening ? 'bg-red-500 text-white animate-pulse' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}>
+                                <button onClick={toggleListening} className={`p-2 rounded-full transition-all ${isListening ? 'bg-red-500 text-white animate-pulse' : 'text-zinc-500 hover:text-white hover:bg-white/10'}`}>
                                     {isListening ? <MicOff size={20}/> : <Mic size={20}/>}
                                 </button>
                             </div>
 
-                            <div className="w-px h-6 bg-white/10 mx-2"></div>
+                            <div className="w-px h-6 bg-white/10"></div>
 
                             <input 
                                 type="text"
@@ -240,30 +240,37 @@ export const WelcomeScreen = ({
                                 onChange={(e) => setInputValue(e.target.value)}
                                 onKeyDown={handleKeyDown}
                                 placeholder={t('ask_anything', userSettings.language)}
-                                className="flex-1 bg-transparent border-none outline-none py-3 text-base text-zinc-300 placeholder-zinc-600 font-medium"
+                                className="flex-1 bg-transparent border-none outline-none py-3 text-base text-zinc-200 placeholder-zinc-600 font-medium"
                             />
                             
                             <button 
                                 onClick={() => (inputValue.trim() || selectedImages.length > 0) && onQuickStart(inputValue, selectedImages)}
                                 disabled={!inputValue.trim() && selectedImages.length === 0}
-                                className="w-10 h-10 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white flex items-center justify-center shadow-lg shadow-indigo-600/20 disabled:opacity-30 disabled:bg-white/5 disabled:text-zinc-500 transition-all active:scale-95"
+                                className="w-10 h-10 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white flex items-center justify-center shadow-lg shadow-indigo-600/20 disabled:opacity-30 disabled:bg-white/5 disabled:text-zinc-500 transition-all active:scale-95 shrink-0"
                             >
                                 <ArrowUpRight size={20} />
                             </button>
                         </div>
-                        <p className="text-center text-[10px] text-zinc-600 mt-3 font-medium">
+                        <p className="text-center text-[10px] text-zinc-600 mt-3 font-medium tracking-wide">
                             {t('ai_warning', userSettings.language)}
                         </p>
                     </div>
 
                 </div>
 
-                {/* Footer Links */}
-                <div className="w-full py-6 flex justify-center gap-6 text-xs font-bold text-zinc-600">
-                    <button onClick={() => setHomeView('about')} className="hover:text-zinc-300 transition-colors">{t('about_us', userSettings.language)}</button>
-                    <button onClick={() => setHomeView('contact')} className="hover:text-zinc-300 transition-colors">{t('contact', userSettings.language)}</button>
-                    <button onClick={() => setHomeView('terms')} className="hover:text-zinc-300 transition-colors">{t('terms', userSettings.language)}</button>
-                    <button onClick={() => setHomeView('privacy')} className="hover:text-zinc-300 transition-colors">{t('privacy', userSettings.language)}</button>
+                {/* Footer Links & Credits */}
+                <div className="w-full py-8 flex flex-col items-center gap-6 border-t border-white/5 bg-black/20 backdrop-blur-sm mt-auto">
+                    <div className="flex flex-wrap justify-center gap-8 text-xs font-bold text-zinc-500">
+                        <button onClick={() => setHomeView('about')} className="hover:text-zinc-300 transition-colors">{t('about_us', userSettings.language)}</button>
+                        <button onClick={() => setHomeView('contact')} className="hover:text-zinc-300 transition-colors">{t('contact', userSettings.language)}</button>
+                        <button onClick={() => setHomeView('terms')} className="hover:text-zinc-300 transition-colors">{t('terms', userSettings.language)}</button>
+                        <button onClick={() => setHomeView('privacy')} className="hover:text-zinc-300 transition-colors">{t('privacy', userSettings.language)}</button>
+                    </div>
+                    
+                    <div className="flex flex-col items-center gap-1 text-[10px] font-medium text-zinc-600">
+                        <p>&copy; 2025 Uchebnik AI. Всички права запазени.</p>
+                        <p>Designed with ❤️ by Vanyo, Svetlyo & Bella.</p>
+                    </div>
                 </div>
             </div>
         );
