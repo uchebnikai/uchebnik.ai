@@ -469,31 +469,6 @@ export const WelcomeScreen = ({
                 <div className="absolute -bottom-12 -left-12 w-80 h-80 bg-purple-600/20 blur-[140px] rounded-full animate-pulse-slow delay-700" />
             </section>
 
-            <section className="w-full bg-transparent py-12 md:py-20 px-8 md:px-12 mt-12">
-                <div className="w-full flex flex-col items-center">
-                    <h2 className="text-4xl md:text-5xl font-black text-white text-center mb-4 tracking-tight">{t('landing_path_title', userSettings.language)}</h2>
-                    <p className="text-zinc-400 text-center max-w-lg mb-10 text-lg">Изберете образователната степен, за да видите специализираните ни инструменти.</p>
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full">
-                        <button onClick={() => setShowAuthModal(true)} className="group relative h-[400px] rounded-[56px] p-12 text-left bg-gradient-to-br from-indigo-600 to-indigo-800 overflow-hidden shadow-2xl transition-all hover:scale-[1.01] active:scale-[0.99]">
-                            <div className="relative z-10 flex flex-col h-full justify-between">
-                                <div className="p-6 bg-white/20 rounded-[32px] w-fit backdrop-blur-xl group-hover:scale-110 transition-transform duration-500"><School size={56} className="text-white" /></div>
-                                <div><h3 className="text-4xl md:text-5xl font-black text-white mb-4 tracking-tighter leading-none">{t('school', userSettings.language)}</h3><p className="text-white/80 text-xl font-medium max-w-xs">{t('desc_student', userSettings.language)}</p></div>
-                            </div>
-                            <div className="absolute top-0 right-0 p-12 opacity-10 group-hover:scale-125 transition-transform duration-1000"><GraduationCap size={240} /></div>
-                            <div className="absolute bottom-12 right-12 bg-white/20 p-4 rounded-full text-white backdrop-blur-md opacity-0 group-hover:opacity-100 translate-y-4 group-hover:translate-y-0 transition-all"><ArrowRight size={32}/></div>
-                        </button>
-                        <button onClick={() => setShowAuthModal(true)} className="group relative h-[400px] rounded-[56px] p-12 text-left bg-zinc-800 border border-white/5 overflow-hidden shadow-2xl transition-all hover:scale-[1.01] active:scale-[0.99] hover:bg-zinc-700/50">
-                            <div className="relative z-10 flex flex-col h-full justify-between">
-                                <div className="p-6 bg-emerald-500/10 text-emerald-500 rounded-[32px] w-fit border border-emerald-500/20 group-hover:scale-110 transition-transform duration-500"><Landmark size={56} /></div>
-                                <div><h3 className="text-4xl md:text-5xl font-black text-white mb-4 tracking-tighter leading-none">{t('university', userSettings.language)}</h3><p className="text-zinc-400 text-xl font-medium max-w-xs">{t('desc_uni_student', userSettings.language)}</p></div>
-                            </div>
-                            <div className="absolute top-0 right-0 p-12 opacity-5 text-white group-hover:scale-125 transition-transform duration-1000"><Briefcase size={240} /></div>
-                            <div className="absolute bottom-12 right-12 bg-emerald-500/20 p-4 rounded-full text-emerald-500 backdrop-blur-md opacity-0 group-hover:opacity-100 translate-y-4 group-hover:translate-y-0 transition-all border border-emerald-500/20"><ArrowRight size={32}/></div>
-                        </button>
-                    </div>
-                </div>
-            </section>
-
             <footer className="w-full py-16 bg-zinc-950 px-8 md:px-12 border-t border-white/5">
                 <div className="w-full flex flex-col md:flex-row justify-between items-center gap-12">
                     <div className="flex flex-col items-center md:items-start gap-4">
