@@ -45,6 +45,7 @@ import { TermsOfService, PrivacyPolicy, CookiePolicy, About, Contact } from './c
 import { Snowfall } from './components/ui/Snowfall';
 import { ReportModal } from './components/support/ReportModal';
 import { AdSenseContainer } from './components/ads/AdSenseContainer';
+import { IosInstallPrompt } from './components/ui/IosInstallPrompt';
 
 interface GeneratedKey {
   code: string;
@@ -701,6 +702,8 @@ export const App = () => {
           </div>
         ))}
       </div>
+
+      <IosInstallPrompt />
     </div>
   );
 };
