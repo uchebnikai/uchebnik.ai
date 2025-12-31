@@ -136,57 +136,103 @@ export const WelcomeScreen = ({
 
     // --- LOGGED IN DASHBOARD VIEW ---
     if (session && homeView === 'landing') {
-        const greeting = () => {
-            const hour = new Date().getHours();
-            if (hour < 12) return 'Добро утро';
-            if (hour < 18) return 'Добър ден';
-            return 'Добър вечер';
-        };
+        const greetingName = userSettings.userName ? userSettings.userName.split(' ')[0] : 'Uchebnik';
 
         return (
-            <div className="w-full h-full overflow-y-auto custom-scrollbar flex flex-col items-center p-4 lg:p-8">
-                {/* Dashboard Header */}
-                <div className="w-full max-w-5xl flex justify-between items-center mb-8 lg:mb-12 mt-4 lg:mt-8">
-                    <div className="flex flex-col">
-                        <h1 className="text-3xl lg:text-4xl font-black text-zinc-900 dark:text-white tracking-tight flex items-center gap-3 font-display">
-                            {greeting()}, {userSettings.userName ? userSettings.userName.split(' ')[0] : 'Ученико'}!
-                            <span className="animate-wave inline-block origin-[70%_70%]">👋</span>
+            <div className="w-full h-full overflow-y-auto custom-scrollbar flex flex-col relative">
+                
+                <div className="flex-1 flex flex-col items-center justify-center p-4 lg:p-8 w-full max-w-7xl mx-auto">
+                    
+                    {/* Greeting */}
+                    <div className="text-center mb-8 lg:mb-12 animate-in slide-in-from-bottom-4 duration-700">
+                        <h1 className="text-5xl lg:text-7xl font-black text-zinc-900 dark:text-white tracking-tight mb-4 font-display">
+                            {t('hello', userSettings.language)}, <span className="text-transparent bg-clip-text bg-gradient-to-r from-gray-400 to-white">{greetingName}</span>.
                         </h1>
-                        <p className="text-zinc-500 font-medium mt-1">Готов ли си да научиш нещо ново днес?</p>
+                        <p className="text-xl text-zinc-500 dark:text-zinc-400 font-medium">
+                            {t('subtitle', userSettings.language)}
+                        </p>
                     </div>
-                    <button 
-                        onClick={() => setShowSettings && setShowSettings(true)}
-                        className="hidden lg:flex items-center gap-2 p-1 pl-3 pr-1 bg-white/50 dark:bg-zinc-800/50 backdrop-blur-md rounded-full border border-white/20 hover:bg-white dark:hover:bg-zinc-800 transition-all shadow-sm group"
-                    >
-                        <span className="text-xs font-bold text-zinc-600 dark:text-zinc-300">Настройки</span>
-                        <div className="w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-700 overflow-hidden relative">
-                             {userMeta.avatar ? (
-                                 <img src={userMeta.avatar} className="w-full h-full object-cover" />
-                             ) : (
-                                 <div className="w-full h-full flex items-center justify-center text-xs font-bold text-zinc-500">
-                                     <Settings size={14}/>
-                                 </div>
-                             )}
-                        </div>
-                    </button>
-                </div>
 
-                {/* Quick Action Bar */}
-                <div className="w-full max-w-3xl mb-12">
-                    <div className={`bg-white/60 dark:bg-black/40 backdrop-blur-xl p-4 rounded-[32px] border border-white/30 dark:border-white/10 shadow-2xl ${SLIDE_UP}`}>
-                        <div className="relative bg-white dark:bg-zinc-900 rounded-3xl p-2 flex items-center gap-2 shadow-inner border border-zinc-100 dark:border-white/5 transition-all focus-within:ring-2 focus-within:ring-indigo-500/20">
-                            <div className="flex items-center gap-1 pl-2">
-                                <button onClick={() => fileInputRef.current?.click()} className="p-3 text-zinc-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-white/10 rounded-2xl transition-colors">
-                                    <ImageIcon size={22} />
+                    {/* Navigation Cards */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-5xl mb-12">
+                        {/* General Chat Card */}
+                        <div className="group relative bg-[#09090b]/40 hover:bg-[#09090b]/60 border border-white/5 hover:border-white/10 rounded-3xl p-8 transition-all duration-300 hover:-translate-y-1 overflow-hidden shadow-2xl backdrop-blur-sm">
+                            <div className="relative z-10 flex flex-col h-full items-start text-left">
+                                <div className="w-12 h-12 bg-white/5 text-white rounded-2xl flex items-center justify-center mb-6 border border-white/5">
+                                    <MessageSquare size={24} />
+                                </div>
+                                <h3 className="text-2xl font-bold text-white mb-2">{t('chat_general', userSettings.language)}</h3>
+                                <p className="text-zinc-400 text-sm mb-8 flex-1">Попитай ме каквото и да е...</p>
+                                <button 
+                                    onClick={() => handleSubjectChange(SUBJECTS[0])}
+                                    className="px-6 py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-full font-bold text-sm flex items-center gap-2 transition-all group-hover:pl-8 border border-white/5"
+                                >
+                                    {t('start', userSettings.language)} <ArrowRight size={16} />
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* School Card */}
+                        <div className="group relative bg-[#09090b]/40 hover:bg-[#09090b]/60 border border-white/5 hover:border-white/10 rounded-3xl p-8 transition-all duration-300 hover:-translate-y-1 overflow-hidden shadow-2xl backdrop-blur-sm">
+                            <div className="relative z-10 flex flex-col h-full items-start text-left">
+                                <div className="w-12 h-12 bg-indigo-500/10 text-indigo-400 rounded-2xl flex items-center justify-center mb-6 border border-indigo-500/10">
+                                    <School size={24} />
+                                </div>
+                                <h3 className="text-2xl font-bold text-white mb-2">{t('school', userSettings.language)}</h3>
+                                <p className="text-zinc-400 text-sm mb-8 flex-1">{t('students', userSettings.language)} & {t('teachers', userSettings.language)}</p>
+                                <button 
+                                    onClick={() => setHomeView('school_select')}
+                                    className="px-6 py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-full font-bold text-sm flex items-center gap-2 transition-all group-hover:pl-8 border border-white/5"
+                                >
+                                    {t('enter', userSettings.language)} <ArrowRight size={16} />
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* University Card */}
+                        <div className="group relative bg-[#09090b]/40 hover:bg-[#09090b]/60 border border-white/5 hover:border-white/10 rounded-3xl p-8 transition-all duration-300 hover:-translate-y-1 overflow-hidden shadow-2xl backdrop-blur-sm">
+                            <div className="relative z-10 flex flex-col h-full items-start text-left">
+                                <div className="w-12 h-12 bg-emerald-500/10 text-emerald-400 rounded-2xl flex items-center justify-center mb-6 border border-emerald-500/10">
+                                    <Landmark size={24} />
+                                </div>
+                                <h3 className="text-2xl font-bold text-white mb-2">{t('university', userSettings.language)}</h3>
+                                <p className="text-zinc-400 text-sm mb-8 flex-1">{t('uni_students', userSettings.language)} & {t('uni_professors', userSettings.language)}</p>
+                                <button 
+                                    onClick={() => setHomeView('university_select')}
+                                    className="px-6 py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-full font-bold text-sm flex items-center gap-2 transition-all group-hover:pl-8 border border-white/5"
+                                >
+                                    {t('enter', userSettings.language)} <ArrowRight size={16} />
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Quick Input Bar */}
+                    <div className="w-full max-w-2xl relative z-20">
+                        {selectedImages.length > 0 && (
+                            <div className="flex gap-2 mb-3 overflow-x-auto pb-1 px-2 justify-center">
+                                {selectedImages.map((img, i) => ( 
+                                    <div key={i} className={`relative group shrink-0 ${ZOOM_IN}`}>
+                                        <img src={img} className="h-16 w-16 rounded-xl object-cover border-2 border-white/10 shadow-lg"/>
+                                        <button onClick={() => handleRemoveImage(i)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-md hover:scale-110 transition-transform"><X size={10}/></button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        <div className="relative bg-[#09090b] border border-white/10 rounded-full p-2 pl-4 flex items-center gap-2 shadow-2xl transition-all focus-within:ring-2 focus-within:ring-white/10 focus-within:border-white/20">
+                            <div className="flex items-center gap-1">
+                                <button onClick={() => fileInputRef.current?.click()} className="p-2 text-zinc-500 hover:text-white hover:bg-white/5 rounded-full transition-colors">
+                                    <ImageIcon size={20} />
                                 </button>
                                 <input type="file" ref={fileInputRef} onChange={handleImageUpload} className="hidden" accept="image/*" multiple />
                                 
-                                <button onClick={toggleListening} className={`p-3 rounded-2xl transition-all ${isListening ? 'bg-red-500 text-white animate-pulse' : 'text-zinc-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-white/10'}`}>
-                                    {isListening ? <MicOff size={22}/> : <Mic size={22}/>}
+                                <button onClick={toggleListening} className={`p-2 rounded-full transition-all ${isListening ? 'bg-red-500 text-white animate-pulse' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}>
+                                    {isListening ? <MicOff size={20}/> : <Mic size={20}/>}
                                 </button>
                             </div>
 
-                            <div className="w-px h-8 bg-zinc-200 dark:bg-white/10 mx-2"></div>
+                            <div className="w-px h-6 bg-white/10 mx-2"></div>
 
                             <input 
                                 type="text"
@@ -194,59 +240,30 @@ export const WelcomeScreen = ({
                                 onChange={(e) => setInputValue(e.target.value)}
                                 onKeyDown={handleKeyDown}
                                 placeholder={t('ask_anything', userSettings.language)}
-                                className="flex-1 bg-transparent border-none outline-none px-2 py-4 text-lg text-zinc-900 dark:text-white placeholder-zinc-400"
+                                className="flex-1 bg-transparent border-none outline-none py-3 text-base text-zinc-300 placeholder-zinc-600 font-medium"
                             />
                             
                             <button 
                                 onClick={() => (inputValue.trim() || selectedImages.length > 0) && onQuickStart(inputValue, selectedImages)}
                                 disabled={!inputValue.trim() && selectedImages.length === 0}
-                                className="w-14 h-14 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white flex items-center justify-center shadow-xl shadow-indigo-600/30 disabled:opacity-50 transition-all active:scale-95 group"
+                                className="w-10 h-10 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white flex items-center justify-center shadow-lg shadow-indigo-600/20 disabled:opacity-30 disabled:bg-white/5 disabled:text-zinc-500 transition-all active:scale-95"
                             >
-                                <ArrowUpRight size={28} className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+                                <ArrowUpRight size={20} />
                             </button>
                         </div>
-                        {selectedImages.length > 0 && (
-                            <div className="flex gap-2 mt-4 overflow-x-auto pb-1 px-2">
-                                {selectedImages.map((img, i) => ( 
-                                    <div key={i} className={`relative group shrink-0 ${ZOOM_IN}`}>
-                                        <img src={img} className="h-16 w-16 rounded-xl object-cover border-2 border-white dark:border-zinc-800 shadow-md"/>
-                                        <button onClick={() => handleRemoveImage(i)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-md hover:scale-110 transition-transform"><X size={10}/></button>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
+                        <p className="text-center text-[10px] text-zinc-600 mt-3 font-medium">
+                            {t('ai_warning', userSettings.language)}
+                        </p>
                     </div>
+
                 </div>
 
-                {/* Quick Subject Access */}
-                <div className="w-full max-w-5xl">
-                    <h3 className="text-sm font-bold text-zinc-500 uppercase tracking-widest mb-6 px-2">Бърз достъп</h3>
-                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                        <button onClick={() => handleSubjectChange(SUBJECTS[0])} className="group p-6 bg-indigo-600 text-white rounded-3xl shadow-lg shadow-indigo-500/20 hover:scale-105 transition-all flex flex-col items-center justify-center text-center gap-3">
-                            <MessageSquare size={32} className="opacity-90"/>
-                            <span className="font-bold">{t('chat_general', userSettings.language)}</span>
-                        </button>
-                        
-                        {SUBJECTS.slice(1, 5).map(s => (
-                            <button 
-                                key={s.id} 
-                                onClick={() => handleSubjectChange(s)}
-                                className="group p-6 bg-white dark:bg-white/5 border border-white/20 hover:border-indigo-500/30 rounded-3xl shadow-sm hover:shadow-xl hover:scale-105 transition-all flex flex-col items-center justify-center text-center gap-3"
-                            >
-                                <div className={`w-10 h-10 rounded-xl ${s.color} flex items-center justify-center text-white shadow-md`}>
-                                    <DynamicIcon name={s.icon} className="w-5 h-5"/>
-                                </div>
-                                <span className="font-bold text-zinc-800 dark:text-zinc-200 text-sm">{t(`subject_${s.id}`, userSettings.language)}</span>
-                            </button>
-                        ))}
-                        
-                        <button onClick={() => setHomeView('school_select')} className="group p-6 bg-gray-100 dark:bg-white/5 border border-dashed border-gray-300 dark:border-white/10 hover:border-indigo-500/50 rounded-3xl hover:bg-white dark:hover:bg-white/10 transition-all flex flex-col items-center justify-center text-center gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-gray-200 dark:bg-white/10 flex items-center justify-center text-zinc-500 dark:text-zinc-400">
-                                <LayoutDashboard size={20}/>
-                            </div>
-                            <span className="font-bold text-zinc-500 dark:text-zinc-400 text-sm">Всички предмети</span>
-                        </button>
-                    </div>
+                {/* Footer Links */}
+                <div className="w-full py-6 flex justify-center gap-6 text-xs font-bold text-zinc-600">
+                    <button onClick={() => setHomeView('about')} className="hover:text-zinc-300 transition-colors">{t('about_us', userSettings.language)}</button>
+                    <button onClick={() => setHomeView('contact')} className="hover:text-zinc-300 transition-colors">{t('contact', userSettings.language)}</button>
+                    <button onClick={() => setHomeView('terms')} className="hover:text-zinc-300 transition-colors">{t('terms', userSettings.language)}</button>
+                    <button onClick={() => setHomeView('privacy')} className="hover:text-zinc-300 transition-colors">{t('privacy', userSettings.language)}</button>
                 </div>
             </div>
         );
