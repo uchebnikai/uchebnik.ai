@@ -55,13 +55,13 @@ interface GeneratedKey {
 
 const LIVE_MODEL = 'gemini-2.5-flash-native-audio-preview-12-2025';
 
-const DEMO_RESPONSE = `Анализирах вашия въпрос и подготвих детайлно решение. За да разберете материята в дълбочина, трябва да разгледаме логическата структура на проблема. Ето първите стъпки от нашия анализ:
+const DEMO_RESPONSE = `Анализирах въпроса ти и подготвих детайлно решение. За да разбереш материята в дълбочина, разгледах логическата структура на проблема. Ето първите стъпки от моя анализ:
 
-1. **Дефиниране на основните параметри**: Първата стъпка е да изолираме ключовите данни и да разберем контекста на запитването.
-2. **Избор на методология**: Въз основа на темата, най-подходящият подход е прилагането на доказани научни принципи и логически изводи.
+1. **Дефиниране на основните параметри**: Първата стъпка е да изолираме ключовите данни и да разберем контекста на твоето запитване.
+2. **Избор на методология**: Въз основа на темата, най-подходящият подход е прилагането на логически изводи и доказани научни принципи.
 3. **Детайлно разписване**: Тук започваме със самото решаване, като преминаваме през всеки междинен етап за максимална яснота...
 
-Uchebnik AI винаги предоставя пълно обяснение на логиката зад решението, за да можеш не просто да получиш отговора, но и да научиш материала. Влез в профила си, за да отключиш останалата част от това решение и да получиш достъп до всички функции!`;
+Uchebnik AI винаги предоставя пълно обяснение на логиката зад решението, за да можеш не просто да получиш отговора, но и да научиш материала. Влез в профила си, за да отключиш останалата част от това решение и да получиш достъп до всички функции абсолютно безплатно!`;
 
 export const App = () => {
   // --- Auth State ---
@@ -265,6 +265,32 @@ export const App = () => {
       }
   }, [userSettings.dailyQuests]);
 
+  const loadLocalStorageData = async () => {
+      const sessionsKey = 'uchebnik_sessions';
+      const settingsKey = 'uchebnik_settings';
+      try {
+          const loadedSessions = await getSessionsFromStorage(sessionsKey);
+          if (loadedSessions && loadedSessions.length > 0) setSessions(loadedSessions);
+          else setSessions([]);
+          
+          const loadedSettings = await getSettingsFromStorage(settingsKey);
+          if (loadedSettings) setUserSettings(loadedSettings);
+      } catch (err) { console.error("Init Error", err); }
+
+      setUserPlan('free');
+      localStorage.setItem('uchebnik_user_plan', 'free');
+      
+      const today = new Date().toDateString();
+      const lastUsageDate = localStorage.getItem('uchebnik_image_date');
+      if (lastUsageDate !== today) {
+          setDailyImageCount(0);
+          localStorage.setItem('uchebnik_image_date', today);
+          localStorage.setItem('uchebnik_image_count', '0');
+      } else {
+          setDailyImageCount(parseInt(localStorage.getItem('uchebnik_image_count') || '0'));
+      }
+  };
+
   useEffect(() => {
     const handleAuthRedirects = () => {
         const hash = window.location.hash;
@@ -297,30 +323,6 @@ export const App = () => {
         }
     };
     handleAuthRedirects();
-
-    const loadLocalStorageData = async () => {
-        const sessionsKey = 'uchebnik_sessions';
-        const settingsKey = 'uchebnik_settings';
-        try {
-            const loadedSessions = await getSessionsFromStorage(sessionsKey);
-            if (loadedSessions && loadedSessions.length > 0) setSessions(loadedSessions);
-            const loadedSettings = await getSettingsFromStorage(settingsKey);
-            if (loadedSettings) setUserSettings(loadedSettings);
-        } catch (err) { console.error("Init Error", err); }
-
-        const savedPlan = localStorage.getItem('uchebnik_user_plan');
-        if (savedPlan) setUserPlan(savedPlan as UserPlan);
-        
-        const today = new Date().toDateString();
-        const lastUsageDate = localStorage.getItem('uchebnik_image_date');
-        if (lastUsageDate !== today) {
-            setDailyImageCount(0);
-            localStorage.setItem('uchebnik_image_date', today);
-            localStorage.setItem('uchebnik_image_count', '0');
-        } else {
-            setDailyImageCount(parseInt(localStorage.getItem('uchebnik_image_count') || '0'));
-        }
-    };
 
     const loadRemoteUserData = async (userId: string) => {
         setIsRemoteDataLoaded(false);
@@ -362,25 +364,18 @@ export const App = () => {
         }
     };
 
-    const initializeApp = async (session: SupabaseSession | null) => {
-        setSession(session);
-        if (session) {
+    const initializeApp = async (supabaseSession: SupabaseSession | null) => {
+        setSession(supabaseSession);
+        if (supabaseSession) {
             setShowAuthModal(false);
-            const storedRef = localStorage.getItem('uchebnik_invite_code');
-            if (storedRef && !session.user.user_metadata.referral_code) {
-                await supabase.auth.updateUser({ data: { referral_code: storedRef } });
-                localStorage.removeItem('uchebnik_invite_code');
-            }
-            if (session.user.user_metadata) {
-                const meta = session.user.user_metadata;
-                setUserMeta({ firstName: meta.first_name || '', lastName: meta.last_name || '', avatar: meta.avatar_url || '' });
-                setEditProfile({ firstName: meta.first_name || '', lastName: meta.last_name || '', avatar: meta.avatar_url || '', email: session.user.email || '', password: '', currentPassword: '' });
-                setUserSettings(prev => {
-                    const fullName = meta.full_name || `${meta.first_name || ''} ${meta.last_name || ''}`.trim();
-                    return prev.userName ? prev : { ...prev, userName: fullName };
-                });
-            }
-            await loadRemoteUserData(session.user.id);
+            const meta = supabaseSession.user.user_metadata;
+            setUserMeta({ firstName: meta.first_name || '', lastName: meta.last_name || '', avatar: meta.avatar_url || '' });
+            setEditProfile({ firstName: meta.first_name || '', lastName: meta.last_name || '', avatar: meta.avatar_url || '', email: supabaseSession.user.email || '', password: '', currentPassword: '' });
+            setUserSettings(prev => {
+                const fullName = meta.full_name || `${meta.first_name || ''} ${meta.last_name || ''}`.trim();
+                return prev.userName ? prev : { ...prev, userName: fullName };
+            });
+            await loadRemoteUserData(supabaseSession.user.id);
         } else {
             setSessions([]);
             setSyncStatus('synced');
@@ -393,8 +388,7 @@ export const App = () => {
     supabase.auth.getSession().then(({ data: { session } }) => initializeApp(session));
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!authLoading) {
-          setSession(session);
-          if (session) loadRemoteUserData(session.user.id);
+          initializeApp(session);
       }
     });
     return () => subscription.unsubscribe();
@@ -638,6 +632,20 @@ export const App = () => {
     }
   };
 
+  const handleLogout = async () => {
+    // Reset state first for immediate UI response
+    setSessions([]);
+    setActiveSessionId(null);
+    setActiveSubject(null);
+    setHomeView('landing');
+    setUserRole(null);
+    setUserPlan('free');
+    setUserMeta({ firstName: '', lastName: '', avatar: '' });
+    // Execute Firebase logout
+    await supabase.auth.signOut();
+    addToast('Излязохте успешно.', 'info');
+  };
+
   if (authLoading) return <div className="h-screen w-full flex items-center justify-center bg-background"><Loader2 className="animate-spin text-indigo-500" size={40} /></div>;
 
   return (
@@ -649,7 +657,7 @@ export const App = () => {
       {showAuthModal && <Auth isModal={false} onSuccess={closeAuthModal} initialMode={initialAuthMode} onNavigate={setHomeView} />}
 
       {!focusMode && session && (
-          <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} userSettings={userSettings} setUserSettings={setUserSettings} userPlan={userPlan} activeSubject={activeSubject} setActiveSubject={setActiveSubject} setHomeView={setHomeView} setUserRole={setUserRole} handleSubjectChange={handleSubjectChange} activeSessionId={activeSessionId} setActiveSessionId={setActiveSessionId} sessions={sessions} deleteSession={deleteSession} createNewSession={createNewSession} unreadSubjects={unreadSubjects} activeMode={activeMode} userMeta={userMeta} session={session} setShowUnlockModal={setShowUnlockModal} setShowReferralModal={setShowReferralModal} setShowSettings={setShowSettings} handleLogout={() => supabase.auth.signOut()} setShowAuthModal={setShowAuthModal} addToast={addToast} setShowSubjectDashboard={setShowSubjectDashboard} userRole={userRole} streak={0} syncStatus={syncStatus} homeView={homeView} dailyImageCount={dailyImageCount} setShowLeaderboard={setShowLeaderboard} setShowQuests={setShowQuests} setShowReportModal={setShowReportModal} />
+          <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} userSettings={userSettings} setUserSettings={setUserSettings} userPlan={userPlan} activeSubject={activeSubject} setActiveSubject={setActiveSubject} setHomeView={setHomeView} setUserRole={setUserRole} handleSubjectChange={handleSubjectChange} activeSessionId={activeSessionId} setActiveSessionId={setActiveSessionId} sessions={sessions} deleteSession={deleteSession} createNewSession={createNewSession} unreadSubjects={unreadSubjects} activeMode={activeMode} userMeta={userMeta} session={session} setShowUnlockModal={setShowUnlockModal} setShowReferralModal={setShowReferralModal} setShowSettings={setShowSettings} handleLogout={handleLogout} setShowAuthModal={setShowAuthModal} addToast={addToast} setShowSubjectDashboard={setShowSubjectDashboard} userRole={userRole} streak={0} syncStatus={syncStatus} homeView={homeView} dailyImageCount={dailyImageCount} setShowLeaderboard={setShowLeaderboard} setShowQuests={setShowQuests} setShowReportModal={setShowReportModal} />
       )}
       
       <main className="flex-1 flex flex-col relative w-full h-full overflow-hidden z-10">

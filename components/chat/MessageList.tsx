@@ -118,8 +118,8 @@ export const MessageList = ({
                      )}
 
                      {hasText && (
-                         <div className={`markdown-content w-full relative transition-all duration-700 ${isBlurred ? 'max-h-[180px] overflow-hidden' : ''}`}>
-                             <div className={`${isBlurred ? 'select-none pointer-events-none' : ''}`}>
+                         <div className={`markdown-content w-full relative transition-all duration-700 ${isBlurred ? 'max-h-[160px] overflow-hidden' : ''}`}>
+                             <div className={`${isBlurred ? 'select-none pointer-events-none opacity-50 grayscale-[0.5]' : ''}`}>
                                 <ReactMarkdown remarkPlugins={[remarkMath, remarkGfm]} rehypePlugins={[rehypeKatex]} components={{code: CodeBlock}}>
                                     {msg.text}
                                 </ReactMarkdown>
@@ -127,20 +127,20 @@ export const MessageList = ({
                              </div>
                              
                              {isBlurred && (
-                                 <div className="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-white via-white/90 to-transparent dark:from-[#18181b] dark:via-[#18181b]/90 dark:to-transparent z-10 flex flex-col items-center justify-end pb-8">
-                                     <div className="w-full h-full absolute inset-0 backdrop-blur-[6px] [mask-image:linear-gradient(to_top,black_60%,transparent_100%)] pointer-events-none" />
+                                 <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-white via-white/80 to-transparent dark:from-[#09090b] dark:via-[#09090b]/80 dark:to-transparent z-10 flex flex-col items-center justify-end pb-4">
+                                     <div className="w-full h-full absolute inset-0 backdrop-blur-[4px] [mask-image:linear-gradient(to_top,black_40%,transparent_100%)] pointer-events-none" />
                                  </div>
                              )}
                          </div>
                      )}
 
                      {isBlurred && (
-                         <div className={`mt-6 p-8 bg-white/40 dark:bg-black/60 border border-indigo-500/30 rounded-3xl backdrop-blur-2xl shadow-[0_20px_50px_rgba(0,0,0,0.3)] relative z-20 flex flex-col items-center text-center gap-6 animate-in zoom-in-95 slide-in-from-bottom-6 duration-700 ring-1 ring-white/10`}>
+                         <div className={`mt-4 p-8 bg-white/40 dark:bg-black/60 border border-indigo-500/30 rounded-[32px] backdrop-blur-2xl shadow-[0_20px_50px_rgba(0,0,0,0.3)] relative z-20 flex flex-col items-center text-center gap-6 animate-in zoom-in-95 slide-in-from-bottom-4 duration-500 ring-1 ring-white/10`}>
                              <div className="flex -space-x-3">
-                                <div className="w-12 h-12 rounded-2xl bg-indigo-600 flex items-center justify-center text-white ring-4 ring-white dark:ring-zinc-900 shadow-xl transform -rotate-6">
+                                <div className="w-12 h-12 rounded-2xl bg-indigo-600 flex items-center justify-center text-white ring-4 ring-white dark:ring-zinc-900 shadow-xl transform -rotate-3 group-hover:rotate-0 transition-transform">
                                     <Sparkles size={24} fill="currentColor" />
                                 </div>
-                                <div className="w-12 h-12 rounded-2xl bg-emerald-500 flex items-center justify-center text-white ring-4 ring-white dark:ring-zinc-900 shadow-xl transform rotate-6">
+                                <div className="w-12 h-12 rounded-2xl bg-emerald-500 flex items-center justify-center text-white ring-4 ring-white dark:ring-zinc-900 shadow-xl transform rotate-3 group-hover:rotate-0 transition-transform">
                                     <Lock size={24} />
                                 </div>
                              </div>
