@@ -313,7 +313,7 @@ export const WelcomeScreen = ({
                     
                     <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
                         <button 
-                            onClick={() => setShowAuthModal(true)} 
+                            onClick={() => handleSubjectChange(SUBJECTS[0])} 
                             className="px-8 py-4 bg-indigo-600 text-white rounded-2xl font-bold text-lg shadow-2xl shadow-indigo-500/30 hover:bg-indigo-500 hover:-translate-y-1 active:translate-y-0 transition-all flex items-center justify-center gap-3 group"
                         >
                             {t('landing_cta_main', userSettings.language)}
@@ -359,7 +359,7 @@ export const WelcomeScreen = ({
             <section className="w-full max-w-4xl px-6 py-12 relative z-20">
                 <div className={`bg-white/40 dark:bg-black/40 backdrop-blur-3xl p-4 md:p-6 rounded-[32px] md:rounded-[48px] border border-white/30 dark:border-white/10 shadow-2xl ${SLIDE_UP}`}>
                     <h3 className="text-center text-sm font-bold text-zinc-400 uppercase tracking-widest mb-6">Изпробвай демо</h3>
-                    <div className="relative bg-white dark:bg-black/60 rounded-3xl p-2 flex items-center gap-2 shadow-inner border border-zinc-100 dark:border-white/5 transition-all opacity-80 cursor-pointer" onClick={() => setShowAuthModal(true)}>
+                    <div className="relative bg-white dark:bg-black/60 rounded-3xl p-2 flex items-center gap-2 shadow-inner border border-zinc-100 dark:border-white/5 transition-all opacity-80 cursor-pointer" onClick={() => handleSubjectChange(SUBJECTS[0])}>
                         <div className="flex items-center gap-1 pl-2 pointer-events-none">
                             <div className="p-3 text-zinc-400 rounded-2xl"><ImageIcon size={22} /></div>
                             <div className="p-3 text-zinc-400 rounded-2xl"><Mic size={22}/></div>

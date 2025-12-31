@@ -1452,7 +1452,7 @@ export const App = () => {
                   onclose: () => {
                       endVoiceCall();
                   },
-                  onerror: (e) => {
+                  onerror: (e: ErrorEvent) => {
                       console.error("Live Session Error", e);
                       addToast("Грешка при връзката с Live AI.", "error");
                       endVoiceCall();
@@ -1780,6 +1780,7 @@ export const App = () => {
                         setHistoryDrawerOpen={setHistoryDrawerOpen}
                         userSettings={userSettings}
                         setFocusMode={setFocusMode}
+                        isGuest={!session}
                     />
                 )}
                 
