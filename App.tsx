@@ -291,6 +291,23 @@ export const App = () => {
       }
   };
 
+  const resetAppState = async () => {
+      // Scrub all session-related states
+      setSessions([]);
+      setActiveSessionId(null);
+      setActiveSubject(null);
+      setHomeView('landing');
+      setUserRole(null);
+      setUserPlan('free');
+      setUserMeta({ firstName: '', lastName: '', avatar: '' });
+      setIsRemoteDataLoaded(false);
+      isRemoteDataLoadedRef.current = false;
+      setSyncStatus('synced');
+      
+      // Load fallback local data
+      await loadLocalStorageData();
+  };
+
   useEffect(() => {
     const handleAuthRedirects = () => {
         const hash = window.location.hash;
@@ -377,10 +394,7 @@ export const App = () => {
             });
             await loadRemoteUserData(supabaseSession.user.id);
         } else {
-            setSessions([]);
-            setSyncStatus('synced');
-            setIsRemoteDataLoaded(false);
-            await loadLocalStorageData();
+            await resetAppState();
         }
         setAuthLoading(false);
     };
@@ -633,15 +647,7 @@ export const App = () => {
   };
 
   const handleLogout = async () => {
-    // Reset state first for immediate UI response
-    setSessions([]);
-    setActiveSessionId(null);
-    setActiveSubject(null);
-    setHomeView('landing');
-    setUserRole(null);
-    setUserPlan('free');
-    setUserMeta({ firstName: '', lastName: '', avatar: '' });
-    // Execute Firebase logout
+    // Just trigger the auth change, initializeApp(null) will handle state resetting
     await supabase.auth.signOut();
     addToast('Излязохте успешно.', 'info');
   };
