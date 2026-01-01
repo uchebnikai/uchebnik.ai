@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { GoogleGenAI, LiveServerMessage, Modality } from "@google/genai";
 import { SubjectConfig, SubjectId, AppMode, Message, Slide, UserSettings, Session, UserPlan, UserRole, HomeViewType } from './types';
@@ -58,7 +59,7 @@ const DEMO_RESPONSE = `Анализирах въпроса ти и подгот�
 
 1. **Дефиниране на основните параметри**: Първата стъпка е да изолираме ключовите данни и да разберем контекста на твоето запитване.
 2. **Избор на методология**: Въз основа на темата, най-подходящият подход е прилагането на логически изводи и доказани научни принципи.
-3. **Детайлно разписване**: Тук започваме със самото решаване, като преминаваме през всеки междинен етап за максимална яснота...
+3. **Дефинирано разписване**: Тук започваме със самото решаване, като преминаваме през всеки междинен етап за максимална яснота...
 
 Uchebnik AI винаги предоставя пълно обяснение на логиката зад решението, за да можеш не просто да получиш отговора, но и да научиш материала. Влез в профила си, за да отключиш останалата част от това решение и да получиш достъп до всички функции абсолютно безплатно!`;
 
@@ -690,7 +691,7 @@ export const App = () => {
         ) : showSubjectDashboard ? (
             <SubjectDashboard activeSubject={activeSubject} setActiveSubject={setActiveSubject} setHomeView={setHomeView} userRole={userRole} userSettings={userSettings} handleStartMode={handleStartMode} />
         ) : (
-            <div className={`flex-1 flex flex-col relative h-full bg-transparent`}>
+            <div className={`flex-1 flex flex-col relative h-full bg-transparent overflow-hidden w-full`}>
                 {!focusMode && <ChatHeader setSidebarOpen={setSidebarOpen} activeSubject={activeSubject} setActiveSubject={setActiveSubject} setUserSettings={setUserSettings} userRole={userRole} activeMode={activeMode} startVoiceCall={() => {}} createNewSession={createNewSession} setHistoryDrawerOpen={setHistoryDrawerOpen} userSettings={userSettings} setFocusMode={setFocusMode} isGuest={!session} />}
                 <AdSenseContainer userPlan={userPlan} />
                 <MessageList currentMessages={currentMessages} userSettings={userSettings} setZoomedImage={setZoomedImage} handleRate={() => {}} handleReply={setReplyingTo} handleCopy={(t,id) => {navigator.clipboard.writeText(t); setCopiedId(id); setTimeout(()=>setCopiedId(null), 2000)}} copiedId={copiedId} handleShare={() => {}} loadingSubject={!!loadingSubjects[activeSubject.id]} activeSubject={activeSubject} messagesEndRef={messagesEndRef} setShowAuthModal={setShowAuthModal} isGuest={!session} />

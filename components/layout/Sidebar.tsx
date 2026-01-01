@@ -116,15 +116,15 @@ export const Sidebar = ({
 
     return (
       <>
-        {isMobile && sidebarOpen && <div className="fixed inset-0 bg-black/60 z-40 backdrop-blur-sm animate-in fade-in" onClick={() => setSidebarOpen(false)} />}
+        {isMobile && sidebarOpen && <div className="fixed inset-0 bg-black/60 z-[45] backdrop-blur-sm animate-in fade-in" onClick={() => setSidebarOpen(false)} />}
         <aside className={`fixed lg:relative inset-y-0 left-0 z-50 
-          bg-white/60 dark:bg-black/60 backdrop-blur-2xl border-r border-white/20 dark:border-white/10
+          bg-white/95 dark:bg-black/95 lg:bg-white/60 lg:dark:bg-black/60 backdrop-blur-2xl border-r border-white/20 dark:border-white/10
           transition-all duration-300 cubic-bezier(0.19, 1, 0.22, 1) flex flex-col 
           ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'} 
           ${collapsed ? 'lg:w-[88px]' : 'lg:w-[320px]'} w-[280px]
-          shadow-2xl lg:shadow-none`}>
+          shadow-2xl lg:shadow-none h-full`}>
           
-          <div className={`p-4 pb-2 flex items-center ${collapsed ? 'justify-center flex-col gap-4' : 'justify-between'}`}>
+          <div className={`p-4 pb-2 flex items-center shrink-0 ${collapsed ? 'justify-center flex-col gap-4' : 'justify-between'}`}>
             <button onClick={() => { setActiveSubject(null); setHomeView('landing'); setUserRole(null); if(isMobile) setSidebarOpen(false); }} className={`flex items-center gap-3 group ${collapsed ? 'justify-center' : ''}`}>
                <img 
                   src="https://i.ibb.co/LDgTCm9N/6151f23e-b922-4c62-930f-853884bf4c89.png" 
@@ -150,7 +150,7 @@ export const Sidebar = ({
             </div>
           </div>
 
-          <div className="space-y-1 px-4 mt-2">
+          <div className="space-y-1 px-4 mt-2 shrink-0">
               <button 
                 onClick={() => { handleSubjectChange(SUBJECTS[0]); setHomeView('landing'); }} 
                 className={`w-full flex items-center ${collapsed ? 'justify-center px-0 py-3' : 'gap-3 px-4 py-3.5'} rounded-2xl transition-all relative overflow-hidden group border ${activeSubject?.id === SubjectId.GENERAL ? 'bg-indigo-600 border-indigo-500 text-white shadow-lg shadow-indigo-500/25' : 'glass-button border-indigo-500/10 text-zinc-700 dark:text-zinc-300 hover:border-indigo-500/30'}`}
@@ -171,7 +171,7 @@ export const Sidebar = ({
                             >
                                 {s.title}
                             </button>
-                            <button onClick={() => deleteSession(s.id)} className="p-1.5 text-gray-400 hover:text-red-500 opacity-0 group-hover/session:opacity-100 transition-opacity"><Trash2 size={12}/></button>
+                            <button onClick={() => deleteSession(s.id)} className="p-1 text-gray-400 hover:text-red-500 opacity-0 group-hover/session:opacity-100 transition-opacity"><Trash2 size={12}/></button>
                          </div>
                      ))}
                      <button onClick={() => { createNewSession(SubjectId.GENERAL); if(isMobile) setSidebarOpen(false); }} className="w-full text-left px-3 py-2 text-xs font-bold text-indigo-500 hover:text-indigo-600 flex items-center gap-1">
@@ -223,7 +223,6 @@ export const Sidebar = ({
                         className={`p-3 rounded-xl transition-all ${homeView === 'university_select' || homeView === 'uni_student_subjects' || homeView === 'uni_teacher_subjects' ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-500/30' : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10 hover:text-emerald-500'}`}
                         title={t('university', userSettings.language)}
                      >
-                        <School size={20} className="hidden" /> {/* Spacer/Icon placeholder */}
                         <Briefcase size={20} />
                      </button>
                  </div>
@@ -419,7 +418,7 @@ export const Sidebar = ({
                                                 <div key={`uni-teacher-${s.id}`}>
                                                     <button 
                                                         onClick={() => { handleSubjectChange(s, 'uni_teacher'); if(isMobile) setSidebarOpen(false); }}
-                                                        className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm transition-colors ${activeSubject?.id === s.id && userRole === 'uni_teacher' ? 'bg-emerald-50 dark:bg-white/10 text-emerald-600 dark:text-emerald-300 font-bold' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5'}`}
+                                                        className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm transition-colors ${activeSubject?.id === s.id && userRole === 'uni_teacher' ? 'bg-emerald-50 dark:bg-white/10 text-emerald-600 dark:text-indigo-300 font-bold' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5'}`}
                                                     >
                                                         <div className={`w-1.5 h-1.5 rounded-full ${s.color}`}></div>
                                                         <span className="truncate">{t(`subject_${s.id}`, userSettings.language)}</span>
@@ -454,11 +453,11 @@ export const Sidebar = ({
              )}
           </div>
 
-          <div className={`p-4 border-t border-white/10 bg-white/20 dark:bg-black/20 space-y-3 backdrop-blur-md flex flex-col justify-center`}>
+          <div className={`p-4 border-t border-white/10 bg-white/20 dark:bg-black/20 space-y-3 backdrop-blur-md flex flex-col justify-center shrink-0`}>
              {/* Christmas Toggle */}
              <button 
                 onClick={() => setUserSettings((prev: UserSettings) => ({...prev, christmasMode: !prev.christmasMode}))}
-                className={`w-full flex items-center ${collapsed ? 'justify-center' : 'justify-between px-4'} py-3.5 rounded-2xl transition-all relative overflow-hidden group shadow-md hover:shadow-lg active:scale-95 mb-1
+                className={`w-full flex items-center ${collapsed ? 'justify-center' : 'justify-between px-4'} py-3 lg:py-3.5 rounded-2xl transition-all relative overflow-hidden group shadow-md hover:shadow-lg active:scale-95 mb-1
                 ${userSettings.christmasMode 
                     ? 'bg-gradient-to-r from-red-600 via-red-500 to-green-600 text-white shadow-red-500/20' 
                     : 'bg-white/50 dark:bg-black/40 border border-red-200 dark:border-red-900/30 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10'}`}
@@ -542,30 +541,30 @@ export const Sidebar = ({
                         </>
                     )}
                     
-                    <button onClick={() => setProfileMenuOpen(!profileMenuOpen)} className={`flex items-center gap-3 w-full p-2.5 rounded-2xl hover:bg-white/50 dark:hover:bg-white/5 transition-all duration-200 border border-transparent hover:border-indigo-500/10 group ${collapsed ? 'justify-center' : ''}`}>
-                         <div className="relative">
+                    <button onClick={() => setProfileMenuOpen(!profileMenuOpen)} className={`flex items-center gap-3 w-full p-2.5 lg:p-2.5 rounded-2xl hover:bg-white/50 dark:hover:bg-white/5 transition-all duration-200 border border-transparent hover:border-indigo-500/10 group ${collapsed ? 'justify-center' : ''}`}>
+                         <div className="relative shrink-0">
                              <img 
                                src={userMeta.avatar || "https://cdn-icons-png.freepik.com/256/3276/3276580.png"} 
                                alt="Profile" 
-                               className={`w-10 h-10 rounded-full object-cover border-2 ${currentRank.color === '#cd7f32' ? 'border-orange-700' : 'border-current'}`}
+                               className={`w-9 h-9 lg:w-10 lg:h-10 rounded-full object-cover border-2 ${currentRank.color === '#cd7f32' ? 'border-orange-700' : 'border-current'}`}
                                style={{ borderColor: currentRank.color }}
                              />
                              <div className="absolute -bottom-1 -right-1 bg-black rounded-full p-0.5 border border-white/20">
-                                 <div className={`w-4 h-4 rounded-full flex items-center justify-center bg-gradient-to-br ${currentRank.gradient}`}>
-                                     <RankIcon size={8} className="text-white"/>
+                                 <div className={`w-3 h-3 lg:w-4 lg:h-4 rounded-full flex items-center justify-center bg-gradient-to-br ${currentRank.gradient}`}>
+                                     <RankIcon size={isMobile ? 6 : 8} className="text-white"/>
                                  </div>
                              </div>
                          </div>
                          {!collapsed && (
                              <>
                                 <div className="flex-1 min-w-0 text-left">
-                                    <div className="font-bold text-sm truncate text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+                                    <div className="font-bold text-[13px] lg:text-sm truncate text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
                                         {userMeta.firstName && userMeta.lastName 
                                             ? `${userMeta.firstName} ${userMeta.lastName}`
                                             : (userSettings.userName || 'Потребител')}
                                     </div>
                                     <div className="flex items-center gap-2 mt-0.5">
-                                        <span className={`text-[10px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded text-black bg-gradient-to-r ${currentRank.gradient}`}>
+                                        <span className={`text-[9px] lg:text-[10px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded text-black bg-gradient-to-r ${currentRank.gradient}`}>
                                             Lvl {userSettings.level}
                                         </span>
                                     </div>
@@ -583,7 +582,7 @@ export const Sidebar = ({
                                         </div>
                                     </div>
                                 </div>
-                                <ChevronUp size={16} className={`text-gray-400 transition-transform duration-300 ${profileMenuOpen ? 'rotate-180' : ''}`} />
+                                <ChevronUp size={16} className={`text-gray-400 transition-transform duration-300 shrink-0 ${profileMenuOpen ? 'rotate-180' : ''}`} />
                              </>
                          )}
                     </button>
