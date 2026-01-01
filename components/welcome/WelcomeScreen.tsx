@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Shield, MessageSquare, ArrowRight, School, GraduationCap, Briefcase, ArrowLeft, ArrowUpRight, Search, ImageIcon, Mic, MicOff, X, Menu, Landmark, Sparkles, BookOpen, Brain, Zap, CheckCircle2, Users, LayoutDashboard, Settings, MapPin, Mail, Globe, MoreVertical, Paperclip, Send, Lock, Star, Trophy, Target, AlertTriangle } from 'lucide-react';
 import { SubjectConfig, UserRole, UserSettings, HomeViewType, SubjectId } from '../../types';
@@ -335,11 +336,9 @@ export const WelcomeScreen = ({
                     <button onClick={() => setShowAdminAuth(true)} className="p-2 text-zinc-400 hover:text-indigo-500 transition-colors">
                         <Shield size={18} />
                     </button>
-                    {!session && (
-                        <button onClick={() => setShowAuthModal(true)} className="flex items-center gap-2 px-5 py-2.5 bg-zinc-900 dark:bg-white text-white dark:text-black rounded-full font-bold text-sm shadow-xl hover:scale-105 active:scale-95 transition-all">
-                            {t('enter', userSettings.language)}
-                        </button>
-                    )}
+                    <button onClick={() => setShowAuthModal(true)} className="flex items-center gap-2 px-5 py-2.5 bg-zinc-900 dark:bg-white text-white dark:text-black rounded-full font-bold text-sm shadow-xl hover:scale-105 active:scale-95 transition-all">
+                        {t('enter', userSettings.language)}
+                    </button>
                 </div>
             </nav>
 
