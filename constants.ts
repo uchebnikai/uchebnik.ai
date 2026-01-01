@@ -1,3 +1,4 @@
+
 import { SubjectId, AppMode, SubjectConfig, TeachingStyle } from './types';
 import { Language } from './utils/translations';
 
@@ -135,6 +136,8 @@ export const SUBJECTS: SubjectConfig[] = [
     description: 'Попитай ме каквото и да е.',
     categories: ['school', 'university']
   },
+  
+  // CORE SUBJECTS
   {
     id: SubjectId.BULGARIAN,
     name: 'Български език и Литература',
@@ -154,21 +157,30 @@ export const SUBJECTS: SubjectConfig[] = [
     categories: ['school']
   },
   {
-    id: SubjectId.ENGLISH,
-    name: 'Английски език',
+    id: SubjectId.FOREIGN_LANG,
+    name: 'Чужди езици',
     icon: 'Languages',
-    color: 'bg-blue-400',
+    color: 'bg-sky-500',
     modes: [AppMode.SOLVE, AppMode.LEARN, AppMode.CHAT],
-    description: 'Чужд език - нива A1 до C2.',
+    description: 'Английски, Немски, Френски и др.',
     categories: ['school']
   },
   {
-    id: SubjectId.PHYSICS,
-    name: 'Физика и Астрономия',
-    icon: 'Atom',
-    color: 'bg-violet-500',
+    id: SubjectId.IT_CS,
+    name: 'ИТ и Информатика',
+    icon: 'Cpu',
+    color: 'bg-slate-700',
     modes: [AppMode.SOLVE, AppMode.LEARN],
-    description: 'Природни закони и Космос.',
+    description: 'Компютърни науки и технологии.',
+    categories: ['school']
+  },
+  {
+    id: SubjectId.BIOLOGY,
+    name: 'Биология и ЗО',
+    icon: 'Dna',
+    color: 'bg-emerald-600',
+    modes: [AppMode.LEARN],
+    description: 'Жива природа и здраве на човека.',
     categories: ['school']
   },
   {
@@ -177,25 +189,16 @@ export const SUBJECTS: SubjectConfig[] = [
     icon: 'FlaskConical',
     color: 'bg-green-500',
     modes: [AppMode.SOLVE, AppMode.LEARN],
-    description: 'Химични елементи и опазване на средата.',
+    description: 'Химични елементи и екология.',
     categories: ['school']
   },
   {
-    id: SubjectId.IT,
-    name: 'ИТ и Информатика',
-    icon: 'Cpu',
-    color: 'bg-slate-600',
+    id: SubjectId.PHYSICS,
+    name: 'Физика и Астрономия',
+    icon: 'Atom',
+    color: 'bg-violet-600',
     modes: [AppMode.SOLVE, AppMode.LEARN],
-    description: 'Информационни технологии и основи.',
-    categories: ['school']
-  },
-  {
-    id: SubjectId.BIOLOGY,
-    name: 'Биология и Здравно Образование',
-    icon: 'Dna',
-    color: 'bg-emerald-500',
-    modes: [AppMode.LEARN],
-    description: 'Жива природа, човек и здраве.',
+    description: 'Физични закони и космос.',
     categories: ['school']
   },
   {
@@ -204,25 +207,137 @@ export const SUBJECTS: SubjectConfig[] = [
     icon: 'Landmark',
     color: 'bg-amber-600',
     modes: [AppMode.LEARN],
-    description: 'Българска и световна история.',
+    description: 'Исторически събития и анализи.',
     categories: ['school']
   },
   {
     id: SubjectId.GEOGRAPHY,
     name: 'География и Икономика',
     icon: 'Globe',
-    color: 'bg-cyan-500',
+    color: 'bg-cyan-600',
     modes: [AppMode.LEARN],
-    description: 'Региони, държави и икономика.',
+    description: 'Природна и стопанска география.',
+    categories: ['school']
+  },
+  {
+    id: SubjectId.CIVIC_ED,
+    name: 'Гражданско образование',
+    icon: 'Users',
+    color: 'bg-rose-500',
+    modes: [AppMode.LEARN],
+    description: 'Права, задължения и общество.',
+    categories: ['school']
+  },
+  {
+    id: SubjectId.VISUAL_ARTS,
+    name: 'Изобразително изкуство',
+    icon: 'Palette',
+    color: 'bg-pink-500',
+    modes: [AppMode.LEARN],
+    description: 'Живопис, графика и дизайн.',
+    categories: ['school']
+  },
+  {
+    id: SubjectId.MUSIC,
+    name: 'Музика',
+    icon: 'Music',
+    color: 'bg-purple-500',
+    modes: [AppMode.LEARN],
+    description: 'Теория и история на музиката.',
+    categories: ['school']
+  },
+  {
+    id: SubjectId.PE,
+    name: 'Физическо възпитание',
+    icon: 'Dumbbell',
+    color: 'bg-orange-500',
+    modes: [AppMode.LEARN],
+    description: 'Спорт и здравословен живот.',
     categories: ['school']
   },
   {
     id: SubjectId.PHILOSOPHY,
     name: 'Философия',
     icon: 'Brain',
-    color: 'bg-purple-400',
+    color: 'bg-indigo-400',
     modes: [AppMode.LEARN],
-    description: 'Етика, логика и критично мислене.',
+    description: 'Етика, логика и мислене.',
     categories: ['school']
+  },
+  {
+    id: SubjectId.ENTREPRENEURSHIP,
+    name: 'Предприемачество',
+    icon: 'TrendingUp',
+    color: 'bg-teal-600',
+    modes: [AppMode.SOLVE, AppMode.LEARN],
+    description: 'Бизнес идеи и икономика.',
+    categories: ['school']
+  },
+
+  // OPTIONAL / SPECIALIZED
+  {
+    id: SubjectId.PROG_MODELING,
+    name: 'Програмиране',
+    icon: 'Code',
+    color: 'bg-zinc-800',
+    modes: [AppMode.SOLVE, AppMode.LEARN],
+    description: 'Компютърно моделиране и код.',
+    categories: ['school']
+  },
+  {
+    id: SubjectId.ECOLOGY,
+    name: 'Екология',
+    icon: 'Leaf',
+    color: 'bg-green-700',
+    modes: [AppMode.LEARN],
+    description: 'Опазване на околната среда.',
+    categories: ['school']
+  },
+  {
+    id: SubjectId.PERSONAL_FINANCE,
+    name: 'Лични финанси',
+    icon: 'Wallet',
+    color: 'bg-emerald-700',
+    modes: [AppMode.SOLVE, AppMode.LEARN],
+    description: 'Управление на пари и бюджет.',
+    categories: ['school']
+  },
+  {
+    id: SubjectId.RELIGION,
+    name: 'Религия',
+    icon: 'Church',
+    color: 'bg-stone-500',
+    modes: [AppMode.LEARN],
+    description: 'Световни религии и етика.',
+    categories: ['school']
+  },
+
+  // PROFILES
+  {
+    id: SubjectId.PROFILE_STEM,
+    name: 'Профил STEM',
+    icon: 'Microscope',
+    color: 'bg-blue-700',
+    modes: [AppMode.SOLVE, AppMode.LEARN],
+    description: 'Математика, Физика, Информатика.',
+    categories: ['school', 'profile']
+  },
+  {
+    id: SubjectId.PROFILE_HUMANITIES,
+    name: 'Профил Хуманитарен',
+    icon: 'Scroll',
+    color: 'bg-red-700',
+    modes: [AppMode.LEARN],
+    description: 'Български, История, Езици.',
+    categories: ['school', 'profile']
+  },
+  {
+    id: SubjectId.PROFILE_SOCIAL_ECON,
+    name: 'Профил Общ. науки',
+    icon: 'Briefcase',
+    color: 'bg-amber-700',
+    modes: [AppMode.LEARN],
+    description: 'География, Предприемачество.',
+    categories: ['school', 'profile']
   }
 ];

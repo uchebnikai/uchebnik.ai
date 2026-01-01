@@ -119,9 +119,11 @@ export const getRank = (level: number): RankInfo => {
 
 // --- DAILY QUESTS LOGIC ---
 
+// Fixed errors: Property 'ENGLISH', 'GERMAN', 'FRENCH', 'SPANISH', 'RUSSIAN', 'JAPANESE' do not exist on type 'typeof SubjectId'.
+// Mapped missing language identifiers to valid ones from types.ts (FOREIGN_LANG and SECOND_LANG).
 const LANGUAGE_SUBJECTS = [
-    SubjectId.ENGLISH, SubjectId.GERMAN, SubjectId.FRENCH, 
-    SubjectId.SPANISH, SubjectId.RUSSIAN, SubjectId.JAPANESE,
+    SubjectId.FOREIGN_LANG, 
+    SubjectId.SECOND_LANG,
     SubjectId.BULGARIAN
 ];
 
@@ -133,11 +135,11 @@ export const getQuestIcon = (type: string) => {
         case 'voice': return Mic;
         case 'language': return Globe;
         case SubjectId.MATH: return Calculator;
-        case SubjectId.ENGLISH: 
-        case SubjectId.GERMAN:
-        case SubjectId.FRENCH:
-        case SubjectId.SPANISH: return Globe;
-        case SubjectId.IT: return Code;
+        // Fixed errors: Property 'ENGLISH', 'GERMAN', 'FRENCH', 'SPANISH' do not exist on type 'typeof SubjectId'.
+        case SubjectId.FOREIGN_LANG:
+        case SubjectId.SECOND_LANG: return Globe;
+        // Fixed error: Property 'IT' does not exist on type 'typeof SubjectId'. Mapped to IT_CS.
+        case SubjectId.IT_CS: return Code;
         case SubjectId.HISTORY: return BookOpen;
         default: return Star;
     }
@@ -150,7 +152,8 @@ const QUEST_TEMPLATES = [
     // Generic Language Quest (matches any language subject)
     { desc: 'Упражнявай език ({n} съобщ.)', type: 'language', min: 3, max: 6, xpPerUnit: 20 },
     { desc: 'Научи нещо по История ({n} въпр.)', type: SubjectId.HISTORY, min: 2, max: 4, xpPerUnit: 25 },
-    { desc: 'Програмирай с AI ({n} заявки)', type: SubjectId.IT, min: 2, max: 4, xpPerUnit: 30 },
+    // Fixed error: Property 'IT' does not exist on type 'typeof SubjectId'. Mapped to IT_CS.
+    { desc: 'Програмирай с AI ({n} заявки)', type: SubjectId.IT_CS, min: 2, max: 4, xpPerUnit: 30 },
     { desc: 'Гласов разговор ({n} реплики)', type: 'voice', min: 3, max: 10, xpPerUnit: 15 },
 ];
 

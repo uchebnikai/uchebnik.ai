@@ -3,31 +3,41 @@ import { Language } from './utils/translations';
 
 export enum SubjectId {
   GENERAL = 'general',
-  ENGLISH = 'english',
+  
+  // CORE / STANDARD SUBJECTS
   BULGARIAN = 'bulgarian',
-  FRENCH = 'french',
-  SPANISH = 'spanish',
-  GERMAN = 'german', 
-  RUSSIAN = 'russian', 
-  ITALIAN = 'italian',
-  JAPANESE = 'japanese',
+  MATH = 'math',
+  FOREIGN_LANG = 'foreign_lang',
+  IT_CS = 'it_cs',
+  BIOLOGY = 'biology',
   CHEMISTRY = 'chemistry',
   PHYSICS = 'physics',
-  BIOLOGY = 'biology',
-  GEOGRAPHY = 'geography',
   HISTORY = 'history',
-  MATH = 'math',
-  PHILOSOPHY = 'philosophy',
-  IT = 'it',
+  GEOGRAPHY = 'geography',
+  CIVIC_ED = 'civic_ed',
+  VISUAL_ARTS = 'visual_arts',
+  MUSIC = 'music',
   PE = 'pe',
-  ART = 'art',
-  MUSIC = 'music', 
-  TECHNOLOGIES = 'technologies', 
-  CITIZENSHIP = 'citizenship', 
-  RELIGION = 'religion', 
+  PHILOSOPHY = 'philosophy',
   ENTREPRENEURSHIP = 'entrepreneurship',
+
+  // OPTIONAL / SPECIALIZED
+  SECOND_LANG = 'second_lang',
+  MOTHER_TONGUE = 'mother_tongue',
+  RELIGION = 'religion',
   CHOREOGRAPHY = 'choreography',
-  PROGRAMMING = 'programming',
+  PROG_MODELING = 'prog_modeling',
+  ECOLOGY = 'ecology',
+  PERSONAL_FINANCE = 'personal_finance',
+  HEALTH_ED = 'health_ed',
+
+  // UPPER SECONDARY PROFILES (Grades 11-12)
+  PROFILE_HUMANITIES = 'profile_humanities',
+  PROFILE_SOCIAL_ECON = 'profile_social_econ',
+  PROFILE_STEM = 'profile_stem',
+  PROFILE_NATURAL_SCI = 'profile_natural_sci',
+  PROFILE_ARTS_MUSIC = 'profile_arts_music',
+  PROFILE_PE_SPORTS = 'profile_pe_sports',
   
   // UNIVERSITY - Humanities & Social Sciences
   UNI_PHILOSOPHY = 'uni_philosophy',
@@ -128,7 +138,7 @@ export type HomeViewType = 'landing' | 'school_select' | 'university_select' | '
 
 export type UserRole = 'student' | 'teacher' | 'uni_student' | 'uni_teacher';
 
-export type SubjectCategory = 'school' | 'university';
+export type SubjectCategory = 'school' | 'university' | 'profile';
 
 export interface SubjectConfig {
   id: SubjectId;
