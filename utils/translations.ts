@@ -119,7 +119,7 @@ const translations: Record<string, Record<string, string>> = {
   'landing_hero_desc': { bg: 'Uchebnik AI е твоят универсален помощник за училище и университет. Решавай задачи, учи нови езици и се подготвяй за изпити по-бързо от всякога.', en: 'Uchebnik AI is your all-in-one assistant for school and university. Solve problems, learn new languages, and prepare for exams faster than ever.' },
   'landing_cta_main': { bg: 'Започни безплатно', en: 'Start for free' },
 
-  // Subjects
+  // Subjects - School
   'subject_math': { bg: 'Математика', en: 'Mathematics' },
   'subject_bulgarian': { bg: 'Български език и Литература', en: 'Bulgarian Language & Literature' },
   'subject_english': { bg: 'Английски език', en: 'English Language' },
@@ -155,6 +155,8 @@ const translations: Record<string, Record<string, string>> = {
   'subject_adv_biology': { bg: 'Профилирана Биология', en: 'Advanced Biology' },
 
   // UNIVERSITY - Humanities
+  'subject_uni_philosophy': { bg: 'Философия (Унив.)', en: 'Philosophy (Uni)' },
+  'subject_uni_history': { bg: 'История (Унив.)', en: 'History (Uni)' },
   'subject_uni_sociology': { bg: 'Социология', en: 'Sociology' },
   'subject_uni_psychology': { bg: 'Психология', en: 'Psychology' },
   'subject_uni_political_science': { bg: 'Политология', en: 'Political Science' },
@@ -185,6 +187,10 @@ const translations: Record<string, Record<string, string>> = {
 
   // UNIVERSITY - STEM
   'subject_stem_math': { bg: 'Висша Математика', en: 'Higher Mathematics' },
+  'subject_stem_physics': { bg: 'Физика (Унив.)', en: 'Physics (Uni)' },
+  'subject_stem_chemistry': { bg: 'Химия (Унив.)', en: 'Chemistry (Uni)' },
+  'subject_stem_biology': { bg: 'Биология (Унив.)', en: 'Biology (Uni)' },
+  'subject_stem_cs_prog': { bg: 'Компютърни науки / Програмиране', en: 'Computer Science / Programming' },
   'subject_stem_info_systems': { bg: 'Информационни системи', en: 'Information Systems' },
   'subject_stem_sw_engineering': { bg: 'Софтуерно инженерство', en: 'Software Engineering' },
   'subject_stem_dsa': { bg: 'Алгоритми и структури от данни', en: 'Data Structures & Algorithms' },
@@ -226,6 +232,7 @@ const translations: Record<string, Record<string, string>> = {
   // UNIVERSITY - Other
   'subject_other_tourism': { bg: 'Туризъм и хотелиерство', en: 'Tourism & Hospitality Management' },
   'subject_other_env_studies': { bg: 'Екологични изследвания', en: 'Environmental Studies' },
+  'subject_other_geography': { bg: 'География и регионално развитие', en: 'Geography & Regional Development' },
   'subject_other_geology': { bg: 'Геология', en: 'Geology' },
   'subject_other_theology': { bg: 'Теология', en: 'Theology' },
   'subject_other_journalism': { bg: 'Журналистика и масови комуникации', en: 'Journalism & Mass Communication' },
