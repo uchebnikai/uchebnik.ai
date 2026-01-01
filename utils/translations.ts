@@ -126,7 +126,7 @@ const translations: Record<string, Record<string, string>> = {
   'landing_cta_main': { bg: 'Започни безплатно', en: 'Start for free' },
   'landing_path_title': { bg: 'Избери своя път', en: 'Choose your path' },
 
-  // Subjects - School Core
+  // --- SCHOOL SUBJECTS ---
   'subject_bulgarian': { bg: 'Български език и Литература', en: 'Bulgarian Lang. & Lit.' },
   'subject_math': { bg: 'Математика', en: 'Mathematics' },
   'subject_foreign_lang': { bg: 'Чужди езици', en: 'Foreign Languages' },
@@ -143,25 +143,7 @@ const translations: Record<string, Record<string, string>> = {
   'subject_philosophy': { bg: 'Философия', en: 'Philosophy' },
   'subject_entrepreneurship': { bg: 'Предприемачество', en: 'Entrepreneurship' },
 
-  // Optional / Specialized
-  'subject_second_lang': { bg: 'Втори чужд език', en: 'Second Foreign Lang.' },
-  'subject_mother_tongue': { bg: 'Майчин език', en: 'Mother Tongue' },
-  'subject_religion': { bg: 'Религия', en: 'Religion' },
-  'subject_choreography': { bg: 'Хореография', en: 'Choreography' },
-  'subject_prog_modeling': { bg: 'Прогр. и модел.', en: 'Prog. & Modeling' },
-  'subject_ecology': { bg: 'Екология', en: 'Ecology' },
-  'subject_personal_finance': { bg: 'Лични финанси', en: 'Personal Finance' },
-  'subject_health_ed': { bg: 'Здравно образование', en: 'Health Education' },
-
-  // Profiles
-  'subject_profile_humanities': { bg: 'Профил Хуманитарен', en: 'Humanities Profile' },
-  'subject_profile_social_econ': { bg: 'Профил Общ. и Ик.', en: 'Social Sci. & Econ.' },
-  'subject_profile_stem': { bg: 'Профил ПМ и ИТ', en: 'STEM Profile' },
-  'subject_profile_natural_sci': { bg: 'Профил Природни науки', en: 'Natural Sciences' },
-  'subject_profile_arts_music': { bg: 'Профил Изкуства', en: 'Arts & Music Profile' },
-  'subject_profile_pe_sports': { bg: 'Профил Спорт', en: 'Sports Profile' },
-
-  // UNIVERSITY - Humanities
+  // --- UNIVERSITY SUBJECTS (Localized Labels) ---
   'subject_uni_philosophy': { bg: 'Философия', en: 'Philosophy' },
   'subject_uni_history': { bg: 'История', en: 'History' },
   'subject_uni_sociology': { bg: 'Социология', en: 'Sociology' },
@@ -171,78 +153,72 @@ const translations: Record<string, Record<string, string>> = {
   'subject_uni_cultural_studies': { bg: 'Културология', en: 'Cultural Studies' },
   'subject_uni_linguistics': { bg: 'Лингвистика', en: 'Linguistics' },
   'subject_uni_literature': { bg: 'Литература', en: 'Literature' },
-
-  // UNIVERSITY - Law
-  'subject_law_constitutional': { bg: 'Конституционно право', en: 'Constitutional Law' },
-  'subject_law_civil': { bg: 'Гражданско право', en: 'Civil Law' },
-  'subject_law_criminal': { bg: 'Наказателно право', en: 'Criminal Law' },
-  'subject_law_administrative': { bg: 'Административно право', en: 'Administrative Law' },
-  'subject_law_international': { bg: 'Международно право', en: 'International Law' },
-  'subject_law_eu': { bg: 'Право на ЕС', en: 'EU Law' },
-
-  // UNIVERSITY - Economics
-  'subject_econ_micro': { bg: 'Микроикономика', en: 'Microeconomics' },
-  'subject_econ_macro': { bg: 'Макроикономика', en: 'Macroeconomics' },
-  'subject_econ_accounting': { bg: 'Счетоводство', en: 'Accounting' },
-  'subject_econ_finance': { bg: 'Финанси', en: 'Finance' },
-  'subject_econ_biz_admin': { bg: 'Бизнес администрация', en: 'Business Administration' },
-  'subject_econ_management': { bg: 'Мениджмънт', en: 'Management' },
-  'subject_econ_marketing': { bg: 'Маркетинг', en: 'Marketing' },
-  'subject_econ_int_business': { bg: 'Международен бизнес', en: 'International Business' },
-  'subject_econ_entrepreneurship': { bg: 'Предприемачество', en: 'Entrepreneurship' },
-  'subject_econ_strategic_mgmt': { bg: 'Стратегически мениджмънт', en: 'Strategic Management' },
-
-  // UNIVERSITY - STEM
-  'subject_stem_math': { bg: 'Математика (Висша)', en: 'Higher Math' },
-  'subject_stem_physics': { bg: 'Физика', en: 'Physics' },
-  'subject_stem_chemistry': { bg: 'Химия', en: 'Chemistry' },
-  'subject_stem_biology': { bg: 'Биология', en: 'Biology' },
-  'subject_stem_cs_prog': { bg: 'Компютърни науки / Прогр.', en: 'Computer Science' },
-  'subject_stem_info_systems': { bg: 'Информационни системи', en: 'Information Systems' },
-  'subject_stem_sw_engineering': { bg: 'Софтуерно инженерство', en: 'Software Engineering' },
-  'subject_stem_dsa': { bg: 'Алгоритми и структури', en: 'DSA' },
-  'subject_stem_databases': { bg: 'Бази данни', en: 'Databases' },
-  'subject_stem_cybersecurity': { bg: 'Киберсигурност', en: 'Cybersecurity' },
-  'subject_stem_electrical_eng': { bg: 'Електроинженерство', en: 'Electrical Engineering' },
-  'subject_stem_mechanical_eng': { bg: 'Машинно инженерство', en: 'Mechanical Engineering' },
-  'subject_stem_civil_eng': { bg: 'Строително инженерство', en: 'Civil Engineering' },
-  'subject_stem_env_engineering': { bg: 'Еко инженерство', en: 'Environmental Engineering' },
-
-  // UNIVERSITY - Medical
-  'subject_med_anatomy': { bg: 'Анатомия', en: 'Anatomy' },
-  'subject_med_physiology': { bg: 'Физиология', en: 'Physiology' },
-  'subject_med_biochemistry': { bg: 'Биохимия', en: 'Biochemistry' },
-  'subject_med_pathology': { bg: 'Патология', en: 'Pathology' },
-  'subject_med_surgery': { bg: 'Хирургия', en: 'Surgery' },
-  'subject_med_internal': { bg: 'Вътрешни болести', en: 'Internal Medicine' },
-  'subject_med_pediatrics': { bg: 'Педиатрия', en: 'Pediatrics' },
-  'subject_med_public_health': { bg: 'Обществено здраве', en: 'Public Health' },
-  'subject_med_nursing': { bg: 'Сестринство', en: 'Nursing' },
-  'subject_med_pharmacy': { bg: 'Фармация', en: 'Pharmacy' },
-  'subject_med_dental': { bg: 'Дентална медицина', en: 'Dental Medicine' },
-  'subject_med_health_mgmt': { bg: 'Здравен мениджмънт', en: 'Health Management' },
-
-  // UNIVERSITY - Arts
-  'subject_arts_visual': { bg: 'Визуални изкуства', en: 'Visual Arts' },
-  'subject_arts_graphic_design': { bg: 'Графичен дизайн', en: 'Graphic Design' },
-  'subject_arts_music': { bg: 'Музика (Висша)', en: 'Music' },
-  'subject_arts_performing': { bg: 'Сценични изкуства', en: 'Performing Arts' },
-  'subject_arts_theatre': { bg: 'Театрознание', en: 'Theatre Studies' },
-  'subject_arts_film_media': { bg: 'Филмови и медийни изкуства', en: 'Film & Media' },
-
-  // UNIVERSITY - Education
-  'subject_edu_pedagogy': { bg: 'Педагогика', en: 'Pedagogy' },
-  'subject_edu_curriculum': { bg: 'Учебни програми', en: 'Curriculum & Methods' },
-  'subject_edu_psychology': { bg: 'Пед. психология', en: 'Educational Psychology' },
-  'subject_edu_special': { bg: 'Специална педагогика', en: 'Special Education' },
-
-  // UNIVERSITY - Other
-  'subject_other_tourism': { bg: 'Туризъм и хотелиерство', en: 'Tourism' },
-  'subject_other_env_studies': { bg: 'Екология', en: 'Environmental Studies' },
-  'subject_other_geography': { bg: 'География', en: 'Geography' },
-  'subject_other_geology': { bg: 'Геология', en: 'Geology' },
-  'subject_other_theology': { bg: 'Теология', en: 'Theology' },
-  'subject_other_journalism': { bg: 'Журналистика', en: 'Journalism' },
+  'subject_uni_lang_courses': { bg: 'Езикови курсове (C1/C2)', en: 'Advanced Language Courses' },
+  
+  'subject_uni_law_constitutional': { bg: 'Конституционно право', en: 'Constitutional Law' },
+  'subject_uni_law_civil': { bg: 'Гражданско право', en: 'Civil Law' },
+  'subject_uni_law_criminal': { bg: 'Наказателно право', en: 'Criminal Law' },
+  'subject_uni_law_administrative': { bg: 'Административно право', en: 'Administrative Law' },
+  'subject_uni_law_international': { bg: 'Международно право', en: 'International Law' },
+  'subject_uni_law_eu': { bg: 'Право на ЕС', en: 'EU Law' },
+  
+  'subject_uni_econ_micro': { bg: 'Микроикономика', en: 'Microeconomics' },
+  'subject_uni_econ_macro': { bg: 'Макроикономика', en: 'Macroeconomics' },
+  'subject_uni_econ_accounting': { bg: 'Счетоводство', en: 'Accounting' },
+  'subject_uni_econ_finance': { bg: 'Финанси', en: 'Finance' },
+  'subject_uni_econ_biz_admin': { bg: 'Бизнес администрация', en: 'Business Administration' },
+  'subject_uni_econ_management': { bg: 'Мениджмънт', en: 'Management' },
+  'subject_uni_econ_marketing': { bg: 'Маркетинг', en: 'Marketing' },
+  'subject_uni_econ_int_business': { bg: 'Международен бизнес', en: 'International Business' },
+  'subject_uni_econ_entrepreneurship': { bg: 'Предприемачество', en: 'Entrepreneurship' },
+  'subject_uni_econ_strategic_mgmt': { bg: 'Стратегически мениджмънт', en: 'Strategic Management' },
+  
+  'subject_uni_stem_math': { bg: 'Висша Математика', en: 'Higher Mathematics' },
+  'subject_uni_stem_physics': { bg: 'Физика (Висша)', en: 'Higher Physics' },
+  'subject_uni_stem_chemistry': { bg: 'Химия (Висша)', en: 'Higher Chemistry' },
+  'subject_uni_stem_biology': { bg: 'Биология (Висша)', en: 'Higher Biology' },
+  'subject_uni_stem_cs_prog': { bg: 'Компютърни науки / Прогр.', en: 'Comp. Science / Prog.' },
+  'subject_uni_stem_info_systems': { bg: 'Информационни системи', en: 'Information Systems' },
+  'subject_uni_stem_sw_engineering': { bg: 'Софтуерно инженерство', en: 'Software Engineering' },
+  'subject_uni_stem_dsa': { bg: 'Алгоритми и структури', en: 'DSA' },
+  'subject_uni_stem_databases': { bg: 'Бази данни', en: 'Databases' },
+  'subject_uni_stem_cybersecurity': { bg: 'Киберсигурност', en: 'Cybersecurity' },
+  'subject_uni_stem_electrical_eng': { bg: 'Електроинженерство', en: 'Electrical Engineering' },
+  'subject_uni_stem_mechanical_eng': { bg: 'Машинно инженерство', en: 'Mechanical Engineering' },
+  'subject_uni_stem_civil_eng': { bg: 'Строително инженерство', en: 'Civil Engineering' },
+  'subject_uni_stem_env_engineering': { bg: 'Еко инженерство', en: 'Environmental Engineering' },
+  
+  'subject_uni_med_anatomy': { bg: 'Анатомия', en: 'Anatomy' },
+  'subject_uni_med_physiology': { bg: 'Физиология', en: 'Physiology' },
+  'subject_uni_med_biochemistry': { bg: 'Биохимия', en: 'Biochemistry' },
+  'subject_uni_med_pathology': { bg: 'Патология', en: 'Pathology' },
+  'subject_uni_med_surgery': { bg: 'Хирургия', en: 'Surgery' },
+  'subject_uni_med_internal': { bg: 'Вътрешни болести', en: 'Internal Medicine' },
+  'subject_uni_med_pediatrics': { bg: 'Педиатрия', en: 'Pediatrics' },
+  'subject_uni_med_public_health': { bg: 'Обществено здраве', en: 'Public Health' },
+  'subject_uni_med_nursing': { bg: 'Сестринство', en: 'Nursing' },
+  'subject_uni_med_pharmacy': { bg: 'Фармация', en: 'Pharmacy' },
+  'subject_uni_med_dental': { bg: 'Дентална медицина', en: 'Dental Medicine' },
+  'subject_uni_med_health_mgmt': { bg: 'Здравен мениджмънт', en: 'Health Management' },
+  
+  'subject_uni_arts_visual': { bg: 'Визуални изкуства', en: 'Visual Arts' },
+  'subject_uni_arts_graphic_design': { bg: 'Графичен дизайн', en: 'Graphic Design' },
+  'subject_uni_arts_music': { bg: 'Музика (Висша)', en: 'Higher Music' },
+  'subject_uni_arts_performing': { bg: 'Сценични изкуства', en: 'Performing Arts' },
+  'subject_uni_arts_theatre': { bg: 'Театрознание', en: 'Theatre Studies' },
+  'subject_uni_arts_film_media': { bg: 'Филмови и медийни изкуства', en: 'Film & Media Arts' },
+  
+  'subject_uni_edu_pedagogy': { bg: 'Педагогика', en: 'Pedagogy' },
+  'subject_uni_edu_curriculum': { bg: 'Учебни програми', en: 'Curriculum & Teaching' },
+  'subject_uni_edu_psychology': { bg: 'Пед. психология', en: 'Educational Psychology' },
+  'subject_uni_edu_special': { bg: 'Специална педагогика', en: 'Special Education' },
+  
+  'subject_uni_other_tourism': { bg: 'Туризъм и хотелиерство', en: 'Tourism & Hospitality' },
+  'subject_uni_other_env_studies': { bg: 'Екология (Висша)', en: 'Environmental Studies' },
+  'subject_uni_other_geography': { bg: 'География (Висша)', en: 'Higher Geography' },
+  'subject_uni_other_geology': { bg: 'Геология', en: 'Geology' },
+  'subject_uni_other_theology': { bg: 'Теология', en: 'Theology' },
+  'subject_uni_other_journalism': { bg: 'Журналистика', en: 'Journalism' },
 };
 
 export const t = (key: string, lang: string = 'bg'): string => {

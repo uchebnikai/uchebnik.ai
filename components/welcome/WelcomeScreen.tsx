@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Shield, MessageSquare, ArrowRight, School, GraduationCap, Briefcase, ArrowLeft, ArrowUpRight, Search, ImageIcon, Mic, MicOff, X, Menu, Landmark, Sparkles, BookOpen, Brain, Zap, CheckCircle2, Users, LayoutDashboard, Settings, MapPin, Mail, Globe, MoreVertical, Paperclip, Send, Lock, Star, Trophy, Target, AlertTriangle } from 'lucide-react';
 import { SubjectConfig, UserRole, UserSettings, HomeViewType, SubjectId } from '../../types';
@@ -315,6 +316,10 @@ export const WelcomeScreen = ({
         );
     }
 
+    // Special delay factor for larger university lists to keep animation duration consistent
+    const isUniView = homeView.includes('uni');
+    const delayStep = isUniView ? 25 : 50;
+
     return (
     <div className={`flex flex-col h-full w-full items-center bg-transparent relative selection:bg-indigo-500/30 overflow-hidden`}>
       {homeView === 'landing' && (
@@ -546,8 +551,8 @@ export const WelcomeScreen = ({
            </h2>
            <p className="text-gray-500 px-2 mb-8 md:mb-10 font-medium">{t('choose_subject', userSettings.language)}</p>
            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-6 pb-20">
-              {SUBJECTS.filter(s => s.id !== SubjectId.GENERAL && s.categories.includes(homeView.includes('uni') ? 'university' : 'school')).map((s, i) => (
-                <button key={s.id} onClick={() => handleSubjectChange(s)} style={getStaggeredDelay(i)} className={`group flex flex-col items-center text-center p-4 md:p-8 bg-white/40 dark:bg-white/5 backdrop-blur-xl rounded-[24px] md:rounded-[32px] border border-white/30 dark:border-white/10 hover:border-indigo-500/50 shadow-sm hover:shadow-2xl hover:shadow-indigo-500/10 transition-all duration-300 hover:-translate-y-2 ${FADE_IN} fill-mode-backwards`}>
+              {SUBJECTS.filter(s => s.id !== SubjectId.GENERAL && s.categories.includes(isUniView ? 'university' : 'school')).map((s, i) => (
+                <button key={s.id} onClick={() => handleSubjectChange(s)} style={getStaggeredDelay(i, delayStep)} className={`group flex flex-col items-center text-center p-4 md:p-8 bg-white/40 dark:bg-white/5 backdrop-blur-xl rounded-[24px] md:rounded-[32px] border border-white/30 dark:border-white/10 hover:border-indigo-500/50 shadow-sm hover:shadow-2xl hover:shadow-indigo-500/10 transition-all duration-300 hover:-translate-y-2 ${FADE_IN} fill-mode-backwards`}>
                    <div className={`w-12 h-12 md:w-20 md:h-20 rounded-2xl md:rounded-3xl ${s.color} text-white flex items-center justify-center mb-3 md:mb-6 shadow-xl shadow-indigo-500/20 group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300`}><DynamicIcon name={s.icon} className="w-6 h-6 md:w-10 md:h-10" /></div>
                    <h3 className="font-bold text-zinc-900 dark:text-white text-sm md:text-xl mb-1 md:mb-2">{t(`subject_${s.id}`, userSettings.language)}</h3>
                 </button>
