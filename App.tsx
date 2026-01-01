@@ -685,6 +685,16 @@ export const App = () => {
       <main className="flex-1 flex flex-col relative w-full h-full overflow-hidden z-10">
         {homeView === 'auth_success' ? (
             <AuthSuccess type={authSuccessType || 'generic'} onContinue={() => { setHomeView('landing'); setAuthSuccessType(null); }} userSettings={userSettings} />
+        ) : homeView === 'terms' ? (
+            <TermsOfService onBack={() => setHomeView('landing')} userSettings={userSettings} />
+        ) : homeView === 'privacy' ? (
+            <PrivacyPolicy onBack={() => setHomeView('landing')} userSettings={userSettings} />
+        ) : homeView === 'cookies' ? (
+            <CookiePolicy onBack={() => setHomeView('landing')} userSettings={userSettings} />
+        ) : homeView === 'about' ? (
+            <About onBack={() => setHomeView('landing')} userSettings={userSettings} />
+        ) : homeView === 'contact' ? (
+            <Contact onBack={() => setHomeView('landing')} userSettings={userSettings} />
         ) : !activeSubject ? (
             <WelcomeScreen homeView={homeView} userMeta={userMeta} userSettings={userSettings} handleSubjectChange={handleSubjectChange} setHomeView={setHomeView} setUserRole={setUserRole} setShowAdminAuth={setShowAdminAuth} onQuickStart={(txt, imgs) => { setPendingHomeInput({text: txt, images: imgs||[]}); handleSubjectChange(SUBJECTS[0]); }} setSidebarOpen={setSidebarOpen} setShowAuthModal={setShowAuthModal} session={session} setShowSettings={setShowSettings} />
         ) : showSubjectDashboard ? (
