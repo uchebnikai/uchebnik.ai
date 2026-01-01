@@ -182,134 +182,147 @@ export const WelcomeScreen = ({
     };
 
     if (session && homeView === 'landing') {
-        const greetingName = userSettings.userName ? userSettings.userName.split(' ')[0] : 'Uchebnik';
+        const greetingName = userMeta?.firstName || userSettings.userName ? (userMeta?.firstName || userSettings.userName.split(' ')[0]) : 'Uchebnik';
 
         return (
-            <div className="w-full h-full overflow-y-auto overflow-x-hidden custom-scrollbar flex flex-col relative">
+            <div className="w-full h-full overflow-y-auto overflow-x-hidden custom-scrollbar flex flex-col relative bg-transparent">
                 
-                {/* Admin Access for Logged In Users */}
-                <div className="absolute top-6 left-6 z-30">
-                    <button onClick={() => setShowAdminAuth(true)} className="p-2.5 bg-white/10 dark:bg-black/20 hover:bg-white/20 backdrop-blur-md rounded-xl text-zinc-500 hover:text-indigo-500 transition-all border border-white/5 shadow-sm">
-                        <Shield size={20} />
-                    </button>
-                </div>
-
-                <div className="flex-1 flex flex-col items-center justify-center p-4 lg:p-8 w-full max-w-7xl mx-auto min-h-[calc(100vh-140px)]">
+                <div className="flex-1 flex flex-col items-center justify-center p-4 lg:p-12 w-full max-w-7xl mx-auto min-h-[calc(100vh-140px)]">
                     
-                    {/* Greeting */}
-                    <div className="text-center mb-10 lg:mb-14 animate-in slide-in-from-bottom-4 duration-700">
-                        <h1 className="text-5xl lg:text-7xl font-black text-zinc-900 dark:text-white tracking-tight mb-4 font-display drop-shadow-xl">
-                            {t('hello', userSettings.language)}, <span className="text-transparent bg-clip-text bg-gradient-to-r from-zinc-400 to-white">{greetingName}</span>.
+                    {/* Compact Greeting Dashboard Header */}
+                    <div className="text-center mb-10 lg:mb-16 animate-in slide-in-from-bottom-4 duration-1000">
+                        <div className="inline-flex items-center gap-3 px-4 py-2 bg-indigo-500/10 border border-indigo-500/20 rounded-full mb-6 backdrop-blur-md">
+                            <Sparkles size={16} className="text-indigo-400 animate-pulse" fill="currentColor"/>
+                            <span className="text-xs font-black text-indigo-300 uppercase tracking-widest">Твоят AI асистент е готов</span>
+                        </div>
+                        <h1 className="text-4xl md:text-6xl lg:text-7xl font-black text-zinc-900 dark:text-white tracking-tight mb-4 font-display">
+                            Здравей, <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 via-purple-400 to-indigo-500 bg-[length:200%_auto] animate-text-shimmer">{greetingName}</span>
                         </h1>
-                        <p className="text-xl text-zinc-500 dark:text-zinc-400 font-medium tracking-wide">
-                            {t('subtitle', userSettings.language)}
+                        <p className="text-lg text-zinc-500 dark:text-zinc-400 font-medium max-w-xl mx-auto">
+                            Как можем да направим ученето по-лесно днес? Избери сфера или започни нов чат.
                         </p>
                     </div>
 
-                    {/* Navigation Cards */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-5xl mb-14">
+                    {/* Launchpad Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-5xl mb-16">
                         <button 
                             onClick={() => handleSubjectChange(SUBJECTS[0])}
-                            className="group relative bg-[#121214]/60 hover:bg-[#18181b]/80 border border-white/5 hover:border-indigo-500/30 rounded-[32px] p-8 transition-all duration-300 hover:-translate-y-2 overflow-hidden shadow-2xl backdrop-blur-md text-left flex flex-col items-start h-full"
+                            className="group relative bg-white/40 dark:bg-zinc-900/40 border border-indigo-500/20 hover:border-indigo-500/50 rounded-[40px] p-8 transition-all duration-500 hover:-translate-y-2 overflow-hidden shadow-2xl backdrop-blur-xl text-left flex flex-col items-start h-full"
                         >
-                            <div className="absolute inset-0 bg-gradient-to-b from-indigo-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"/>
-                            <div className="w-14 h-14 bg-white/5 text-indigo-300 rounded-2xl flex items-center justify-center mb-6 border border-white/5 shadow-inner group-hover:scale-110 transition-transform duration-300">
-                                <MessageSquare size={28} />
+                            <div className="absolute inset-0 bg-gradient-to-br from-indigo-600/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700"/>
+                            <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-indigo-700 text-white rounded-[24px] flex items-center justify-center mb-8 shadow-xl shadow-indigo-500/20 group-hover:scale-110 transition-transform duration-500">
+                                <MessageSquare size={32} fill="currentColor"/>
                             </div>
-                            <h3 className="text-2xl font-bold text-white mb-2">{t('chat_general', userSettings.language)}</h3>
-                            <p className="text-zinc-500 text-sm font-medium mb-8 flex-1">Попитай ме каквото и да е за училище или университет.</p>
-                            <div className="px-6 py-2.5 bg-white/5 hover:bg-indigo-500 text-zinc-300 hover:text-white rounded-full font-bold text-xs flex items-center gap-2 transition-all group-hover:pl-8 border border-white/5 self-start">
-                                {t('start', userSettings.language)} <ArrowRight size={14} />
+                            <h3 className="text-2xl font-black text-zinc-900 dark:text-white mb-2">Продължи чата</h3>
+                            <p className="text-zinc-500 text-sm font-medium mb-10 flex-1 leading-relaxed">Попитай ме каквото и да е за твоето образование или задачи.</p>
+                            <div className="w-full flex items-center justify-between">
+                                <span className="text-[10px] font-black text-indigo-500 uppercase tracking-[0.2em]">Общ чат</span>
+                                <div className="w-10 h-10 bg-indigo-500 text-white rounded-full flex items-center justify-center group-hover:translate-x-1 transition-transform border border-white/20">
+                                    <ArrowRight size={20} />
+                                </div>
                             </div>
                         </button>
 
                         <button 
                             onClick={() => setHomeView('school_select')}
-                            className="group relative bg-[#121214]/60 hover:bg-[#18181b]/80 border border-white/5 hover:border-blue-500/30 rounded-[32px] p-8 transition-all duration-300 hover:-translate-y-2 overflow-hidden shadow-2xl backdrop-blur-md text-left flex flex-col items-start h-full"
+                            className="group relative bg-white/40 dark:bg-zinc-900/40 border border-blue-500/20 hover:border-blue-500/50 rounded-[40px] p-8 transition-all duration-500 hover:-translate-y-2 overflow-hidden shadow-2xl backdrop-blur-xl text-left flex flex-col items-start h-full"
                         >
-                            <div className="absolute inset-0 bg-gradient-to-b from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"/>
-                            <div className="w-14 h-14 bg-white/5 text-blue-300 rounded-2xl flex items-center justify-center mb-6 border border-white/5 shadow-inner group-hover:scale-110 transition-transform duration-300">
-                                <School size={28} />
+                            <div className="absolute inset-0 bg-gradient-to-br from-blue-600/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700"/>
+                            <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-700 text-white rounded-[24px] flex items-center justify-center mb-8 shadow-xl shadow-blue-500/20 group-hover:scale-110 transition-transform duration-500">
+                                <School size={32} />
                             </div>
-                            <h3 className="text-2xl font-bold text-white mb-2">{t('school', userSettings.language)}</h3>
-                            <p className="text-zinc-500 text-sm font-medium mb-8 flex-1">{t('students', userSettings.language)} & {t('teachers', userSettings.language)}</p>
-                            <div className="px-6 py-2.5 bg-white/5 hover:bg-blue-600 text-zinc-300 hover:text-white rounded-full font-bold text-xs flex items-center gap-2 transition-all group-hover:pl-8 border border-white/5 self-start">
-                                {t('enter', userSettings.language)} <ArrowRight size={14} />
+                            <h3 className="text-2xl font-black text-zinc-900 dark:text-white mb-2">Училище</h3>
+                            <p className="text-zinc-500 text-sm font-medium mb-10 flex-1 leading-relaxed">Реши домашното, подготви се за матура или създай тест.</p>
+                            <div className="w-full flex items-center justify-between">
+                                <span className="text-[10px] font-black text-blue-500 uppercase tracking-[0.2em]">1-12 клас</span>
+                                <div className="w-10 h-10 bg-blue-500 text-white rounded-full flex items-center justify-center group-hover:translate-x-1 transition-transform border border-white/20">
+                                    <ArrowRight size={20} />
+                                </div>
                             </div>
                         </button>
 
                         <button 
                             onClick={() => setHomeView('university_select')}
-                            className="group relative bg-[#121214]/60 hover:bg-[#18181b]/80 border border-white/5 hover:border-emerald-500/30 rounded-[32px] p-8 transition-all duration-300 hover:-translate-y-2 overflow-hidden shadow-2xl backdrop-blur-md text-left flex flex-col items-start h-full"
+                            className="group relative bg-white/40 dark:bg-zinc-900/40 border border-emerald-500/20 hover:border-emerald-500/50 rounded-[40px] p-8 transition-all duration-500 hover:-translate-y-2 overflow-hidden shadow-2xl backdrop-blur-xl text-left flex flex-col items-start h-full"
                         >
-                            <div className="absolute inset-0 bg-gradient-to-b from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"/>
-                            <div className="w-14 h-14 bg-white/5 text-emerald-300 rounded-2xl flex items-center justify-center mb-6 border border-white/5 shadow-inner group-hover:scale-110 transition-transform duration-300">
-                                <Landmark size={28} />
+                            <div className="absolute inset-0 bg-gradient-to-br from-emerald-600/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700"/>
+                            <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-emerald-700 text-white rounded-[24px] flex items-center justify-center mb-8 shadow-xl shadow-emerald-500/20 group-hover:scale-110 transition-transform duration-500">
+                                <Landmark size={32} />
                             </div>
-                            <h3 className="text-2xl font-bold text-white mb-2">{t('university', userSettings.language)}</h3>
-                            <p className="text-zinc-500 text-sm font-medium mb-8 flex-1">{t('uni_students', userSettings.language)} & {t('uni_professors', userSettings.language)}</p>
-                            <div className="px-6 py-2.5 bg-white/5 hover:bg-emerald-600 text-zinc-300 hover:text-white rounded-full font-bold text-xs flex items-center gap-2 transition-all group-hover:pl-8 border border-white/5 self-start">
-                                {t('enter', userSettings.language)} <ArrowRight size={14} />
+                            <h3 className="text-2xl font-black text-zinc-900 dark:text-white mb-2">Университет</h3>
+                            <p className="text-zinc-500 text-sm font-medium mb-10 flex-1 leading-relaxed">Подготовка за изпити, лекции и академични материали.</p>
+                            <div className="w-full flex items-center justify-between">
+                                <span className="text-[10px] font-black text-emerald-500 uppercase tracking-[0.2em]">Студенти</span>
+                                <div className="w-10 h-10 bg-emerald-500 text-white rounded-full flex items-center justify-center group-hover:translate-x-1 transition-transform border border-white/20">
+                                    <ArrowRight size={20} />
+                                </div>
                             </div>
                         </button>
                     </div>
 
-                    {/* Quick Input Bar */}
-                    <div className="w-full max-w-2xl relative z-20">
+                    {/* Quick Input Launcher */}
+                    <div className="w-full max-w-2xl relative z-20 group">
                         {selectedImages.length > 0 && (
-                            <div className="flex gap-2 mb-3 overflow-x-auto pb-1 px-2 justify-center">
+                            <div className="flex gap-3 mb-4 overflow-x-auto pb-2 px-4 justify-center">
                                 {selectedImages.map((img, i) => ( 
-                                    <div key={i} className={`relative group shrink-0 ${ZOOM_IN}`}>
-                                        <img src={img} className="h-16 w-16 rounded-xl object-cover border-2 border-white/10 shadow-lg"/>
-                                        <button onClick={() => handleRemoveImage(i)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-md hover:scale-110 transition-transform"><X size={10}/></button>
+                                    <div key={i} className={`relative shrink-0 ${ZOOM_IN}`}>
+                                        <img src={img} className="h-20 w-20 rounded-2xl object-cover border-2 border-white dark:border-zinc-700 shadow-xl"/>
+                                        <button onClick={() => handleRemoveImage(i)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1.5 shadow-lg hover:scale-110 active:scale-95 transition-transform"><X size={12} strokeWidth={3}/></button>
                                     </div>
                                 ))}
                             </div>
                         )}
 
-                        <div className="relative bg-[#09090b]/80 border border-white/10 rounded-full p-2 pl-5 flex items-center gap-3 shadow-2xl transition-all focus-within:ring-2 focus-within:ring-indigo-500/50 focus-within:border-indigo-500/50 backdrop-blur-xl">
-                            <div className="flex items-center gap-1">
-                                <button onClick={() => fileInputRef.current?.click()} className="p-2 text-zinc-500 hover:text-white hover:bg-white/10 rounded-full transition-colors">
-                                    <ImageIcon size={20} />
+                        <div className="relative bg-white/60 dark:bg-[#09090b]/80 border border-white/20 dark:border-white/10 rounded-[32px] p-2 pl-6 flex items-center gap-4 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.3)] transition-all duration-500 group-focus-within:ring-2 group-focus-within:ring-indigo-500/50 group-focus-within:border-indigo-500/30 backdrop-blur-2xl">
+                            <div className="flex items-center gap-2">
+                                <button onClick={() => fileInputRef.current?.click()} className="p-3 text-zinc-400 hover:text-indigo-500 hover:bg-indigo-500/10 rounded-2xl transition-all duration-300">
+                                    <ImageIcon size={22} />
                                 </button>
                                 <input type="file" ref={fileInputRef} onChange={handleImageUpload} className="hidden" accept="image/*" multiple />
-                                <button onClick={toggleListening} className={`p-2 rounded-full transition-all ${isListening ? 'bg-red-500 text-white animate-pulse' : 'text-zinc-500 hover:text-white hover:bg-white/10'}`}>
-                                    {isListening ? <MicOff size={20}/> : <Mic size={20} strokeWidth={2}/>}
+                                <button onClick={toggleListening} className={`p-3 rounded-2xl transition-all duration-300 ${isListening ? 'bg-red-500 text-white animate-pulse' : 'text-zinc-400 hover:text-indigo-500 hover:bg-indigo-500/10'}`}>
+                                    {isListening ? <MicOff size={22}/> : <Mic size={22} strokeWidth={2}/>}
                                 </button>
                             </div>
-                            <div className="w-px h-6 bg-white/10"></div>
+                            <div className="w-px h-8 bg-zinc-200 dark:bg-white/10 hidden sm:block"></div>
                             <input 
                                 type="text"
                                 value={inputValue}
                                 onChange={(e) => setInputValue(e.target.value)}
                                 onKeyDown={handleKeyDown}
-                                placeholder={t('ask_anything', userSettings.language)}
-                                className="flex-1 bg-transparent border-none outline-none py-3 text-base text-zinc-200 placeholder-zinc-600 font-medium"
+                                placeholder="Задай бърз въпрос тук..."
+                                className="flex-1 bg-transparent border-none outline-none py-4 text-lg text-zinc-800 dark:text-zinc-100 placeholder-zinc-500 font-medium"
                             />
                             <button 
                                 onClick={() => (inputValue.trim() || selectedImages.length > 0) && onQuickStart(inputValue, selectedImages)}
                                 disabled={!inputValue.trim() && selectedImages.length === 0}
-                                className="w-10 h-10 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white flex items-center justify-center shadow-lg shadow-indigo-600/20 disabled:opacity-30 disabled:bg-white/5 disabled:text-zinc-500 transition-all active:scale-95 shrink-0"
+                                className="w-14 h-14 rounded-[22px] bg-indigo-600 hover:bg-indigo-500 text-white flex items-center justify-center shadow-lg shadow-indigo-600/20 disabled:opacity-20 disabled:bg-zinc-800 disabled:text-zinc-500 transition-all duration-300 active:scale-95 shrink-0"
                             >
-                                <ArrowUpRight size={20} />
+                                <ArrowUpRight size={28} strokeWidth={2.5}/>
                             </button>
                         </div>
-                        <p className="text-center text-[10px] text-zinc-600 mt-3 font-medium tracking-wide">
-                            {t('ai_warning', userSettings.language)}
-                        </p>
+                        <div className="flex justify-center gap-6 mt-6">
+                            <div className="flex items-center gap-2 text-[10px] font-black text-zinc-500 uppercase tracking-widest">
+                                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]"/>
+                                100% Поверителност
+                            </div>
+                            <div className="flex items-center gap-2 text-[10px] font-black text-zinc-500 uppercase tracking-widest">
+                                <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(79,70,229,0.5)]"/>
+                                Instant AI Анализ
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                <div className="w-full py-8 flex flex-col items-center gap-6 border-t border-white/5 bg-black/20 backdrop-blur-sm mt-auto">
-                    <div className="flex flex-wrap justify-center gap-8 text-xs font-bold text-zinc-500">
-                        <button onClick={() => setHomeView('about')} className="hover:text-zinc-300 transition-colors">{t('about_us', userSettings.language)}</button>
-                        <button onClick={() => setHomeView('contact')} className="hover:text-zinc-300 transition-colors">{t('contact', userSettings.language)}</button>
-                        <button onClick={() => setHomeView('terms')} className="hover:text-zinc-300 transition-colors">{t('terms', userSettings.language)}</button>
-                        <button onClick={() => setHomeView('privacy')} className="hover:text-zinc-300 transition-colors">{t('privacy', userSettings.language)}</button>
+                {/* Simplified Footer */}
+                <div className="w-full py-10 flex flex-col items-center gap-6 border-t border-white/5 bg-zinc-950/20 backdrop-blur-sm mt-auto shrink-0">
+                    <div className="flex flex-wrap justify-center gap-x-10 gap-y-4 text-xs font-black uppercase tracking-widest text-zinc-500">
+                        <button onClick={() => setHomeView('about')} className="hover:text-white transition-colors duration-300">{t('about_us', userSettings.language)}</button>
+                        <button onClick={() => setHomeView('contact')} className="hover:text-white transition-colors duration-300">{t('contact', userSettings.language)}</button>
+                        <button onClick={() => setHomeView('terms')} className="hover:text-white transition-colors duration-300">{t('terms', userSettings.language)}</button>
+                        <button onClick={() => setHomeView('privacy')} className="hover:text-white transition-colors duration-300">{t('privacy', userSettings.language)}</button>
                     </div>
-                    <div className="flex flex-col items-center gap-1 text-[10px] font-medium text-zinc-600">
+                    <div className="flex flex-col items-center gap-1 text-[10px] font-bold text-zinc-600 uppercase tracking-[0.2em]">
                         <p>&copy; 2025 Uchebnik AI. Всички права запазени.</p>
-                        <p>Designed with ❤️ by Vanyo, Светльо & Белла.</p>
                     </div>
                 </div>
             </div>
