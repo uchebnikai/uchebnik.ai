@@ -26,13 +26,17 @@ export const ReportModal = ({ isOpen, onClose, userSettings, addToast, userId }:
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files.length > 0) {
-      // Convert FileList to Array and filter for image types only
+      // Convert FileList to Array
       const allFiles = Array.from(files);
-      const imageFiles = allFiles.filter(file => file.type.startsWith('image/'));
+      
+      // Strict filtering: must be an image AND NOT an SVG
+      const imageFiles = allFiles.filter(file => 
+        file.type.startsWith('image/') && file.type !== 'image/svg+xml'
+      );
 
-      // If any files were filtered out, show an error
+      // If any files were filtered out (including SVGs), show an error
       if (imageFiles.length !== allFiles.length) {
-        addToast("Моля, прикачвайте само изображения (.jpg, .png, .webp).", "error");
+        addToast("Моля, прикачвайте само стандартни изображения (.jpg, .png, .webp). SVG файлове не се поддържат.", "error");
       }
 
       // Check if we still have any valid images to process
@@ -180,7 +184,7 @@ export const ReportModal = ({ isOpen, onClose, userSettings, addToast, userId }:
                             ref={fileInputRef} 
                             onChange={handleImageUpload} 
                             className="hidden" 
-                            accept="image/*" 
+                            accept="image/jpeg,image/png,image/webp" 
                             multiple 
                         />
                     </div>
