@@ -9,7 +9,7 @@ import { supabase } from './supabaseClient';
 import { Auth } from './components/auth/Auth';
 import { AuthSuccess } from './components/auth/AuthSuccess';
 import { 
-  Loader2, X, AlertCircle, CheckCircle, Info, Minimize, Database, Radio, Gift
+  Loader2, X, AlertCircle, CheckCircle, Info, Minimize, Database, Radio, Gift, Minimize2
 } from 'lucide-react';
 
 import { Session as SupabaseSession } from '@supabase/supabase-js';
@@ -57,11 +57,52 @@ const LIVE_MODEL = 'gemini-2.5-flash-native-audio-preview-12-2025';
 
 const DEMO_RESPONSE = `Анализирах въпроса ти и подготвих детайлно решение. За да разбереш материята в дълбочина, разгледах логическата структура на проблема. Ето първите стъпки от моя анализ:
 
-1. **Дефиниране на основните параметри**: Първата стъпка е да изолираме ключовите данни и да разберем контекста на твоето запитване.
+1. **Дефиниране на основните параметри**: Първата стъпка е да изолираме ключових данни и да разберем контекста на твоето запитване.
 2. **Избор на методология**: Въз основа на темата, най-подходящият подход е прилагането на логически изводи и доказани научни принципи.
 3. **Дефинирано разписване**: Тук започваме със самото решаване, като преминаваме през всеки междинен етап за максимална яснота...
 
 Uchebnik AI винаги предоставя пълно обяснение на логиката зад решението, за да можеш не просто да получиш отговора, но и да научиш материала. Влез в профила си, за да отключиш останалата част от това решение и да получиш достъп до всички функции абсолютно безплатно!`;
+
+const CHRISTMAS_BG = "https://wallpapercat.com/w/full/d/0/2/189851-3840x2160-desktop-4k-christmas-wallpaper.jpg";
+
+// Helper Audio Utils for Live API
+function decode(base64: string) {
+  const binaryString = atob(base64);
+  const len = binaryString.length;
+  const bytes = new Uint8Array(len);
+  for (let i = 0; i < len; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  return bytes;
+}
+
+async function decodeAudioData(
+  data: Uint8Array,
+  ctx: AudioContext,
+  sampleRate: number,
+  numChannels: number,
+): Promise<AudioBuffer> {
+  const dataInt16 = new Int16Array(data.buffer);
+  const frameCount = dataInt16.length / numChannels;
+  const buffer = ctx.createBuffer(numChannels, frameCount, sampleRate);
+
+  for (let channel = 0; channel < numChannels; channel++) {
+    const channelData = buffer.getChannelData(channel);
+    for (let i = 0; i < frameCount; i++) {
+      channelData[i] = dataInt16[i * numChannels + channel] / 32768.0;
+    }
+  }
+  return buffer;
+}
+
+function encode(bytes: Uint8Array) {
+  let binary = '';
+  const len = bytes.byteLength;
+  for (let i = 0; i < len; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
+}
 
 export const App = () => {
   // --- Auth State ---
@@ -197,6 +238,8 @@ export const App = () => {
   const audioContextRef = useRef<AudioContext | null>(null);
   const liveSessionRef = useRef<any>(null);
   const startingTextRef = useRef<string>('');
+  const nextStartTimeRef = useRef(0);
+  const sourcesRef = useRef<Set<AudioBufferSourceNode>>(new Set());
   
   const activeSubjectRef = useRef(activeSubject);
   const sessionsRef = useRef(sessions);
@@ -245,8 +288,164 @@ export const App = () => {
     setGeneratedKeys(prev => [{ code, isUsed: false, plan }, ...prev]);
   };
 
-  // --- Effects ---
+  // --- Implementation: Save & Delete logic ---
+  const handleUpdateAccount = async () => {
+    // Local update
+    setUserMeta({ firstName: editProfile.firstName, lastName: editProfile.lastName, avatar: editProfile.avatar });
+    const fullName = `${editProfile.firstName} ${editProfile.lastName}`.trim();
+    setUserSettings(prev => ({ ...prev, userName: fullName }));
 
+    // Supabase update
+    if (session?.user?.id) {
+        try {
+            const { error } = await supabase.from('profiles').update({
+                settings: { ...userSettings, userName: fullName },
+                avatar_url: editProfile.avatar,
+                updated_at: new Date().toISOString()
+            }).eq('id', session.user.id);
+            
+            if (error) throw error;
+
+            // Update user metadata if possible
+            await supabase.auth.updateUser({
+                data: { 
+                    first_name: editProfile.firstName, 
+                    last_name: editProfile.lastName, 
+                    full_name: fullName,
+                    avatar_url: editProfile.avatar
+                }
+            });
+
+            addToast('Промените са запазени успешно!', 'success');
+            setShowSettings(false);
+        } catch (e) {
+            console.error(e);
+            addToast('Грешка при запис в облака.', 'error');
+        }
+    } else {
+        addToast('Промените са запазени локално.', 'success');
+        setShowSettings(false);
+    }
+  };
+
+  const handleDeleteAllChats = () => {
+    setConfirmModal({
+        isOpen: true,
+        title: 'Изтриване на всичко',
+        message: 'Сигурни ли сте? Всички ваши разговори ще бъдат изтрити завинаги.',
+        onConfirm: async () => {
+            setSessions([]);
+            setActiveSessionId(null);
+            if (session?.user?.id) {
+                try {
+                    await supabase.from('user_data').update({ data: [], updated_at: new Date().toISOString() }).eq('user_id', session.user.id);
+                } catch(e) { console.error(e); }
+            }
+            addToast('Цялата история е изтрита.', 'success');
+            setConfirmModal(null);
+            setShowSettings(false);
+        }
+    });
+  };
+
+  // --- Voice Call Implementation (Live API) ---
+  const startVoiceCall = async () => {
+    if (isVoiceCallActive) return;
+    
+    setIsVoiceCallActive(true);
+    setVoiceCallStatus('idle');
+    
+    const apiKey = process.env.API_KEY || "";
+    if (!apiKey) {
+      addToast("Липсва API ключ за гласов режим.", "error");
+      setIsVoiceCallActive(false);
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const ai = new GoogleGenAI({ apiKey });
+      
+      const inputCtx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
+      const outputCtx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
+      audioContextRef.current = outputCtx;
+
+      const sessionPromise = ai.live.connect({
+        model: LIVE_MODEL,
+        callbacks: {
+          onopen: () => {
+            setVoiceCallStatus('listening');
+            const source = inputCtx.createMediaStreamSource(stream);
+            const scriptProcessor = inputCtx.createScriptProcessor(4096, 1, 1);
+            scriptProcessor.onaudioprocess = (event) => {
+              if (voiceMutedRef.current) return;
+              const inputData = event.inputBuffer.getChannelData(0);
+              const pcmBlob = createAudioBlob(inputData);
+              sessionPromise.then(s => s.sendRealtimeInput({ media: pcmBlob }));
+            };
+            source.connect(scriptProcessor);
+            scriptProcessor.connect(inputCtx.destination);
+          },
+          onmessage: async (message: LiveServerMessage) => {
+            const base64Audio = message.serverContent?.modelTurn?.parts[0]?.inlineData.data;
+            if (base64Audio) {
+              setVoiceCallStatus('speaking');
+              nextStartTimeRef.current = Math.max(nextStartTimeRef.current, outputCtx.currentTime);
+              const audioBuffer = await decodeAudioData(decode(base64Audio), outputCtx, 24000, 1);
+              const source = outputCtx.createBufferSource();
+              source.buffer = audioBuffer;
+              source.connect(outputCtx.destination);
+              source.addEventListener('ended', () => {
+                sourcesRef.current.delete(source);
+                if (sourcesRef.current.size === 0) setVoiceCallStatus('listening');
+              });
+              source.start(nextStartTimeRef.current);
+              nextStartTimeRef.current += audioBuffer.duration;
+              sourcesRef.current.add(source);
+            }
+            if (message.serverContent?.interrupted) {
+              sourcesRef.current.forEach(s => s.stop());
+              sourcesRef.current.clear();
+              nextStartTimeRef.current = 0;
+            }
+          },
+          onerror: (e) => {
+            console.error("Live API Error", e);
+            endVoiceCall();
+            addToast("Грешка при гласова връзка.", "error");
+          },
+          onclose: () => endVoiceCall()
+        },
+        config: {
+          responseModalities: [Modality.AUDIO],
+          speechConfig: {
+            voiceConfig: { prebuiltVoiceConfig: { voiceName: userSettings.preferredVoice || DEFAULT_VOICE } }
+          },
+          systemInstruction: `You are in a live voice conversation. Current subject: ${activeSubject?.name}. Keep responses natural and conversational.`
+        }
+      });
+
+      liveSessionRef.current = await sessionPromise;
+      grantXP(XP_PER_VOICE);
+    } catch (err) {
+      console.error(err);
+      setIsVoiceCallActive(false);
+      addToast("Неуспешен достъп до микрофон.", "error");
+    }
+  };
+
+  const endVoiceCall = () => {
+    if (liveSessionRef.current) {
+      try { liveSessionRef.current.close(); } catch(e){}
+      liveSessionRef.current = null;
+    }
+    sourcesRef.current.forEach(s => { try{s.stop()}catch(e){} });
+    sourcesRef.current.clear();
+    setIsVoiceCallActive(false);
+    setVoiceCallStatus('idle');
+  };
+
+  // --- Effects ---
   useEffect(() => {
     activeSubjectRef.current = activeSubject;
     sessionsRef.current = sessions;
@@ -671,11 +870,13 @@ export const App = () => {
 
   if (authLoading) return <div className="h-screen w-full flex items-center justify-center bg-background"><Loader2 className="animate-spin text-indigo-500" size={40} /></div>;
 
+  const effectiveBg = userSettings.christmasMode && !userSettings.customBackground ? CHRISTMAS_BG : userSettings.customBackground;
+
   return (
     <div className="flex h-full w-full relative overflow-hidden text-foreground">
       <Snowfall active={!!userSettings.christmasMode} />
-      {!userSettings.customBackground && <div className={`fixed inset-0 z-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-indigo-200/20 via-background to-background dark:from-indigo-900/20 dark:via-background dark:to-background pointer-events-none transition-all duration-1000 ${focusMode ? 'brightness-[0.4]' : ''}`} />}
-      {userSettings.customBackground && <div className={`fixed inset-0 z-0 bg-cover bg-center pointer-events-none transition-all duration-1000 ${focusMode ? 'brightness-[0.2] grayscale' : ''}`} style={getBackgroundImageStyle(userSettings.customBackground)} />}
+      {!effectiveBg && <div className={`fixed inset-0 z-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-indigo-200/20 via-background to-background dark:from-indigo-900/20 dark:via-background dark:to-background pointer-events-none transition-all duration-1000 ${focusMode ? 'brightness-[0.4]' : ''}`} />}
+      {effectiveBg && <div className={`fixed inset-0 z-0 bg-cover bg-center pointer-events-none transition-all duration-1000 ${focusMode ? 'brightness-[0.2] grayscale' : ''}`} style={getBackgroundImageStyle(effectiveBg)} />}
       
       {showAuthModal && <Auth isModal={false} onSuccess={closeAuthModal} initialMode={initialAuthMode} onNavigate={setHomeView} />}
 
@@ -702,16 +903,26 @@ export const App = () => {
             <SubjectDashboard activeSubject={activeSubject} setActiveSubject={setActiveSubject} setHomeView={setHomeView} userRole={userRole} userSettings={userSettings} handleStartMode={handleStartMode} />
         ) : (
             <div className={`flex-1 flex flex-col relative h-full bg-transparent overflow-hidden w-full`}>
-                {!focusMode && <ChatHeader setSidebarOpen={setSidebarOpen} activeSubject={activeSubject} setActiveSubject={setActiveSubject} setUserSettings={setUserSettings} userRole={userRole} activeMode={activeMode} startVoiceCall={() => {}} createNewSession={createNewSession} setHistoryDrawerOpen={setHistoryDrawerOpen} userSettings={userSettings} setFocusMode={setFocusMode} isGuest={!session} />}
+                {!focusMode && <ChatHeader setSidebarOpen={setSidebarOpen} activeSubject={activeSubject} setActiveSubject={setActiveSubject} setUserSettings={setUserSettings} userRole={userRole} activeMode={activeMode} startVoiceCall={startVoiceCall} createNewSession={createNewSession} setHistoryDrawerOpen={setHistoryDrawerOpen} userSettings={userSettings} setFocusMode={setFocusMode} isGuest={!session} />}
                 <AdSenseContainer userPlan={userPlan} />
                 <MessageList currentMessages={currentMessages} userSettings={userSettings} setZoomedImage={setZoomedImage} handleRate={() => {}} handleReply={setReplyingTo} handleCopy={(t,id) => {navigator.clipboard.writeText(t); setCopiedId(id); setTimeout(()=>setCopiedId(null), 2000)}} copiedId={copiedId} handleShare={() => {}} loadingSubject={!!loadingSubjects[activeSubject.id]} activeSubject={activeSubject} messagesEndRef={messagesEndRef} setShowAuthModal={setShowAuthModal} isGuest={!session} />
                 <ChatInputArea replyingTo={replyingTo} setReplyingTo={setReplyingTo} userSettings={userSettings} setUserSettings={setUserSettings} activeMode={activeMode} fileInputRef={fileInputRef} loadingSubject={!!loadingSubjects[activeSubject.id]} handleImageUpload={handleImageUpload} toggleListening={() => {}} isListening={isListening} inputValue={inputValue} setInputValue={setInputValue} handleSend={() => handleSend()} selectedImages={selectedImages} handleRemoveImage={(idx) => setSelectedImages(prev => prev.filter((_,i)=>i!==idx))} onStopGeneration={handleStopGeneration} onImagesAdd={(imgs) => setSelectedImages(prev => [...prev, ...imgs])} />
+                
+                {focusMode && (
+                    <button 
+                        onClick={() => setFocusMode(false)}
+                        className="fixed top-6 right-6 z-50 p-3 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-full text-white/50 hover:text-white transition-all border border-white/5 shadow-xl animate-in fade-in zoom-in"
+                        title="Exit Focus Mode"
+                    >
+                        <Minimize2 size={24} />
+                    </button>
+                )}
             </div>
         )}
       </main>
 
       <UpgradeModal showUnlockModal={showUnlockModal} setShowUnlockModal={setShowUnlockModal} targetPlan={targetPlan} setTargetPlan={setTargetPlan} unlockKeyInput={unlockKeyInput} setUnlockKeyInput={setUnlockKeyInput} handleUnlockSubmit={() => {}} userPlan={userPlan} userSettings={userSettings} addToast={addToast} />
-      <SettingsModal showSettings={showSettings} setShowSettings={setShowSettings} userMeta={userMeta} editProfile={editProfile} setEditProfile={setEditProfile} handleUpdateAccount={() => {}} handleAvatarUpload={() => {}} userSettings={userSettings} setUserSettings={setUserSettings} isPremium={userPlan!=='free'} isDarkMode={isDarkMode} setIsDarkMode={setIsDarkMode} handleBackgroundUpload={() => {}} handleDeleteAllChats={() => {}} addToast={addToast} userPlan={userPlan} />
+      <SettingsModal showSettings={showSettings} setShowSettings={setShowSettings} userMeta={userMeta} editProfile={editProfile} setEditProfile={setEditProfile} handleUpdateAccount={handleUpdateAccount} handleAvatarUpload={handleImageUpload} userSettings={userSettings} setUserSettings={setUserSettings} isPremium={userPlan!=='free'} isDarkMode={isDarkMode} setIsDarkMode={setIsDarkMode} handleBackgroundUpload={handleImageUpload} handleDeleteAllChats={handleDeleteAllChats} addToast={addToast} userPlan={userPlan} />
       <ReferralModal isOpen={showReferralModal} onClose={() => setShowReferralModal(false)} userSettings={userSettings} addToast={addToast} />
       <LeaderboardModal isOpen={showLeaderboard} onClose={() => setShowLeaderboard(false)} currentUserId={session?.user?.id} />
       <DailyQuestsModal isOpen={showQuests} onClose={() => setShowQuests(false)} quests={userSettings.dailyQuests?.quests || []} />
@@ -719,6 +930,17 @@ export const App = () => {
       <AdminPanel showAdminAuth={showAdminAuth} setShowAdminAuth={setShowAdminAuth} showAdminPanel={showAdminPanel} setShowAdminPanel={setShowAdminPanel} adminPasswordInput={adminPasswordInput} setAdminPasswordInput={setAdminPasswordInput} handleAdminLogin={handleAdminLogin} generateKey={handleGenerateKey} generatedKeys={generatedKeys as any} addToast={addToast} />
       <Lightbox image={zoomedImage} onClose={() => setZoomedImage(null)} />
       <ConfirmModal isOpen={!!confirmModal} title={confirmModal?.title || ''} message={confirmModal?.message || ''} onConfirm={confirmModal?.onConfirm || (()=>{})} onCancel={() => setConfirmModal(null)} />
+      
+      <VoiceCallOverlay 
+        isVoiceCallActive={isVoiceCallActive} 
+        voiceCallStatus={voiceCallStatus} 
+        voiceMuted={voiceMuted} 
+        setVoiceMuted={setVoiceMuted} 
+        endVoiceCall={endVoiceCall} 
+        activeSubject={activeSubject} 
+        userSettings={userSettings} 
+        onChangeVoice={(v) => setUserSettings(prev => ({...prev, preferredVoice: v}))} 
+      />
 
       <HistoryDrawer 
         historyDrawerOpen={historyDrawerOpen} 

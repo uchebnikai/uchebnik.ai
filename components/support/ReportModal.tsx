@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from 'react';
 import { X, AlertTriangle, Image as ImageIcon, Send, Loader2, Trash2 } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
@@ -27,7 +26,8 @@ export const ReportModal = ({ isOpen, onClose, userSettings, addToast, userId }:
     const files = e.target.files;
     if (files && files.length > 0) {
       // Convert FileList to Array
-      const allFiles = Array.from(files);
+      // Fix: Cast to File[] to ensure 'file' in filter/map is correctly typed as File instead of 'unknown'
+      const allFiles = Array.from(files) as File[];
       
       // Strict filtering: must be an image AND NOT an SVG
       const imageFiles = allFiles.filter(file => 
@@ -53,7 +53,8 @@ export const ReportModal = ({ isOpen, onClose, userSettings, addToast, userId }:
 
       try {
         const processedImages = await Promise.all(
-          imageFiles.map(file => resizeImage(file as File, 800, 0.6))
+          // Fix: Removed redundant 'as File' cast since imageFiles is now inferred as File[]
+          imageFiles.map(file => resizeImage(file, 800, 0.6))
         );
         setImages(prev => [...prev, ...processedImages]);
       } catch (err) {
