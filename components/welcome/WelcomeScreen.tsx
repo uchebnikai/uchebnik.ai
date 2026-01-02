@@ -309,7 +309,7 @@ export const WelcomeScreen = ({
                     </div>
                     <div className="flex flex-col items-center gap-1 text-[10px] font-medium text-zinc-600 text-center px-4">
                         <p>&copy; 2025 Uchebnik AI. Всички права запазени.</p>
-                        <p>Designed with ❤️ by <a href="https://github.com/vanyo86" target="_blank" rel="noreferrer" className="hover:text-indigo-400 transition-colors">Vanyo</a>, <a href="https://github.com/SvetozarYovchev" target="_blank" rel="noreferrer" className="hover:text-indigo-400 transition-colors">Svetlyo</a> & <a href="https://github.com/BellaYovcheva" target="_blank" rel="noreferrer" className="hover:text-indigo-400 transition-colors">Bella</a>.</p>
+                        <p>Designed with ❤️ by <a href="https://instagram.com/vanyoy" target="_blank" rel="noreferrer" className="hover:text-indigo-400 transition-colors">Vanyo</a>, <a href="https://instagram.com/s_ivanov6" target="_blank" rel="noreferrer" className="hover:text-indigo-400 transition-colors">Svetlyo</a> & <a href="https://tiktok.com/@bella_kzx" target="_blank" rel="noreferrer" className="hover:text-indigo-400 transition-colors">Bella</a>.</p>
                     </div>
                 </div>
             </div>
@@ -490,7 +490,7 @@ export const WelcomeScreen = ({
                 </div>
                 <div className="w-full mt-16 pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-4 text-xs font-bold text-zinc-600">
                     <p>&copy; {new Date().getFullYear()} Uchebnik AI. Всички права запазени.</p>
-                    <p>Designed with ❤️ by <a href="https://github.com/vanyo86" target="_blank" rel="noreferrer" className="hover:text-indigo-400 transition-colors">Vanyo</a>, <a href="https://github.com/SvetozarYovchev" target="_blank" rel="noreferrer" className="hover:text-indigo-400 transition-colors">Svetlyo</a> & <a href="https://github.com/BellaYovcheva" target="_blank" rel="noreferrer" className="hover:text-indigo-400 transition-colors">Bella</a>.</p>
+                    <p>Designed with ❤️ by <a href="https://instagram.com/vanyoy" target="_blank" rel="noreferrer" className="hover:text-indigo-400 transition-colors">Vanyo</a>, <a href="https://instagram.com/s_ivanov6" target="_blank" rel="noreferrer" className="hover:text-indigo-400 transition-colors">Svetlyo</a> & <a href="https://tiktok.com/@bella_kzx" target="_blank" rel="noreferrer" className="hover:text-indigo-400 transition-colors">Bella</a>.</p>
                 </div>
             </footer>
         </div>
