@@ -26,13 +26,30 @@ export const ReportModal = ({ isOpen, onClose, userSettings, addToast, userId }:
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files.length > 0) {
-      if (files.length + images.length > 3) {
-        addToast("Максимум 3 снимки.", "error");
+      // Convert FileList to Array and filter for image types only
+      const allFiles = Array.from(files);
+      const imageFiles = allFiles.filter(file => file.type.startsWith('image/'));
+
+      // If any files were filtered out, show an error
+      if (imageFiles.length !== allFiles.length) {
+        addToast("Моля, прикачвайте само изображения (.jpg, .png, .webp).", "error");
+      }
+
+      // Check if we still have any valid images to process
+      if (imageFiles.length === 0) {
+        e.target.value = '';
         return;
       }
+
+      if (imageFiles.length + images.length > 3) {
+        addToast("Максимум 3 снимки.", "error");
+        e.target.value = '';
+        return;
+      }
+
       try {
         const processedImages = await Promise.all(
-          Array.from(files).map(file => resizeImage(file as File, 800, 0.6))
+          imageFiles.map(file => resizeImage(file as File, 800, 0.6))
         );
         setImages(prev => [...prev, ...processedImages]);
       } catch (err) {
