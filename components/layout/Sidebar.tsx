@@ -42,6 +42,7 @@ interface SidebarProps {
   setShowLeaderboard?: (val: boolean) => void;
   setShowQuests?: (val: boolean) => void;
   setShowReportModal?: (val: boolean) => void;
+  globalConfig: any;
 }
 
 export const Sidebar = ({
@@ -77,7 +78,8 @@ export const Sidebar = ({
   dailyImageCount = 0,
   setShowLeaderboard,
   setShowQuests,
-  setShowReportModal
+  setShowReportModal,
+  globalConfig
 }: SidebarProps) => {
     
     // Internal State for Folders
@@ -454,36 +456,38 @@ export const Sidebar = ({
           </div>
 
           <div className={`p-4 border-t border-white/10 bg-white/20 dark:bg-black/20 space-y-3 backdrop-blur-md flex flex-col justify-center shrink-0`}>
-             {/* Christmas Toggle */}
-             <button 
-                onClick={() => setUserSettings((prev: UserSettings) => ({...prev, christmasMode: !prev.christmasMode}))}
-                className={`w-full flex items-center ${collapsed ? 'justify-center' : 'justify-between px-4'} py-3 lg:py-3.5 rounded-2xl transition-all relative overflow-hidden group shadow-md hover:shadow-lg active:scale-95 mb-1
-                ${userSettings.christmasMode 
-                    ? 'bg-gradient-to-r from-red-600 via-red-500 to-green-600 text-white shadow-red-500/20' 
-                    : 'bg-white/50 dark:bg-black/40 border border-red-200 dark:border-red-900/30 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10'}`}
-             >
-                 {userSettings.christmasMode && <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20" />}
-                 
-                 <div className="flex items-center gap-3 relative z-10">
-                     <div className={`p-1.5 rounded-lg ${userSettings.christmasMode ? 'bg-white/20' : 'bg-red-100 dark:bg-red-500/20'}`}>
-                        <Snowflake size={20} className={userSettings.christmasMode ? "animate-[spin_3s_linear_infinite]" : ""} fill={userSettings.christmasMode ? "currentColor" : "none"}/>
-                     </div>
-                     {!collapsed && (
-                         <div className="flex flex-col text-left">
-                             <span className="font-bold text-sm">Коледен Режим</span>
-                             <span className={`text-[10px] ${userSettings.christmasMode ? 'text-white/80' : 'text-red-400'}`}>
-                                 {userSettings.christmasMode ? 'Включен 🎄' : 'Изключен'}
-                             </span>
+             {/* Christmas Toggle - Only show if globalConfig.showChristmasButton is true */}
+             {globalConfig?.showChristmasButton && (
+                 <button 
+                    onClick={() => setUserSettings((prev: UserSettings) => ({...prev, christmasMode: !prev.christmasMode}))}
+                    className={`w-full flex items-center ${collapsed ? 'justify-center' : 'justify-between px-4'} py-3 lg:py-3.5 rounded-2xl transition-all relative overflow-hidden group shadow-md hover:shadow-lg active:scale-95 mb-1
+                    ${userSettings.christmasMode 
+                        ? 'bg-gradient-to-r from-red-600 via-red-500 to-green-600 text-white shadow-red-500/20' 
+                        : 'bg-white/50 dark:bg-black/40 border border-red-200 dark:border-red-900/30 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10'}`}
+                 >
+                     {userSettings.christmasMode && <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20" />}
+                     
+                     <div className="flex items-center gap-3 relative z-10">
+                         <div className={`p-1.5 rounded-lg ${userSettings.christmasMode ? 'bg-white/20' : 'bg-red-100 dark:bg-red-500/20'}`}>
+                            <Snowflake size={20} className={userSettings.christmasMode ? "animate-[spin_3s_linear_infinite]" : ""} fill={userSettings.christmasMode ? "currentColor" : "none"}/>
                          </div>
-                     )}
-                 </div>
+                         {!collapsed && (
+                             <div className="flex flex-col text-left">
+                                 <span className="font-bold text-sm">Коледен Режим</span>
+                                 <span className={`text-[10px] ${userSettings.christmasMode ? 'text-white/80' : 'text-red-400'}`}>
+                                     {userSettings.christmasMode ? 'Включен 🎄' : 'Изключен'}
+                                 </span>
+                             </div>
+                         )}
+                     </div>
 
-                 {!collapsed && (
-                    <div className={`relative z-10 w-10 h-5 rounded-full transition-colors flex items-center px-0.5 ${userSettings.christmasMode ? 'bg-black/20' : 'bg-gray-200 dark:bg-white/10'}`}>
-                        <div className={`w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-300 ${userSettings.christmasMode ? 'translate-x-5' : 'translate-x-0'}`} />
-                    </div>
-                 )}
-             </button>
+                     {!collapsed && (
+                        <div className={`relative z-10 w-10 h-5 rounded-full transition-colors flex items-center px-0.5 ${userSettings.christmasMode ? 'bg-black/20' : 'bg-gray-200 dark:bg-white/10'}`}>
+                            <div className={`w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-300 ${userSettings.christmasMode ? 'translate-x-5' : 'translate-x-0'}`} />
+                        </div>
+                     )}
+                 </button>
+             )}
 
              {/* Referral Button - Highly Visible - Only show if shouldShowReferral is true AND logged in */}
              {session && !collapsed && shouldShowReferral && (

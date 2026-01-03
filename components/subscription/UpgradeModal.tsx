@@ -17,6 +17,7 @@ interface UpgradeModalProps {
   userPlan: UserPlan;
   userSettings: UserSettings;
   addToast: (msg: string, type: 'success' | 'error' | 'info') => void;
+  unlockLoading?: boolean;
 }
 
 export const UpgradeModal = ({
@@ -29,59 +30,10 @@ export const UpgradeModal = ({
   handleUnlockSubmit,
   userPlan,
   userSettings,
-  addToast
+  addToast,
+  unlockLoading = false
 }: UpgradeModalProps) => {
     
-    const [loading, setLoading] = useState(false);
-
-    // Payments temporarily disabled
-    /*
-    const handleCheckout = async (plan: 'plus' | 'pro') => {
-        setLoading(true);
-        try {
-            const priceId = plan === 'plus' ? STRIPE_PRICES.PLUS : STRIPE_PRICES.PRO;
-            
-            const { data, error } = await supabase.functions.invoke('create-checkout-session', {
-                body: { 
-                    priceId,
-                    returnUrl: window.location.origin 
-                }
-            });
-
-            if (error) throw error;
-            if (data?.url) {
-                window.location.href = data.url;
-            } else {
-                throw new Error("No checkout URL returned");
-            }
-        } catch (error: any) {
-            console.error("Checkout error:", error);
-            addToast("Възникна грешка при стартиране на плащането.", "error");
-            setLoading(false);
-        }
-    };
-
-    const handleManageSubscription = async () => {
-        setLoading(true);
-        try {
-            const { data, error } = await supabase.functions.invoke('create-portal-session', {
-                body: { returnUrl: window.location.origin }
-            });
-
-            if (error) throw error;
-            if (data?.url) {
-                window.location.href = data.url;
-            } else {
-                throw new Error("No portal URL returned");
-            }
-        } catch (error: any) {
-            console.error("Portal error:", error);
-            addToast("Възникна грешка при отваряне на портала.", "error");
-            setLoading(false);
-        }
-    };
-    */
-
     if (!showUnlockModal) return null;
 
     // View for manual code entry (Admin/Promotional)
@@ -107,9 +59,14 @@ export const UpgradeModal = ({
                         placeholder="Въведете код"
                         className="w-full bg-gray-50/50 dark:bg-black/40 p-4 rounded-xl outline-none border border-gray-200 dark:border-white/10 focus:border-indigo-500 text-center font-bold text-lg tracking-wider text-zinc-900 dark:text-white"
                         autoFocus
+                        disabled={unlockLoading}
                     />
-                    <Button onClick={handleUnlockSubmit} className={`w-full py-4 text-base shadow-lg border-none ${targetPlan === 'plus' ? 'bg-indigo-600 hover:bg-indigo-500 shadow-indigo-500/30' : 'bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 shadow-orange-500/25'}`}>
-                        Активирай
+                    <Button 
+                        onClick={handleUnlockSubmit} 
+                        disabled={unlockLoading || !unlockKeyInput.trim()}
+                        className={`w-full py-4 text-base shadow-lg border-none ${targetPlan === 'plus' ? 'bg-indigo-600 hover:bg-indigo-500 shadow-indigo-500/30' : 'bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 shadow-orange-500/25'}`}
+                    >
+                        {unlockLoading ? <Loader2 size={20} className="animate-spin" /> : 'Активирай'}
                     </Button>
                 </div>
             </div>
@@ -183,7 +140,6 @@ export const UpgradeModal = ({
                  </div>
                  <button 
                     disabled={true} 
-                    // onClick={() => { if(userPlan !== 'free') handleManageSubscription(); }}
                     className={`w-full py-3 md:py-4 rounded-xl md:rounded-2xl font-bold transition-all ${userPlan === 'free' ? 'bg-gray-100 dark:bg-white/5 text-gray-400 cursor-default' : 'bg-white/50 dark:bg-white/10 text-zinc-900 dark:text-white border border-gray-200 dark:border-white/5 opacity-70 cursor-not-allowed'}`}
                  >
                     {userPlan === 'free' ? 'Текущ план' : 'Безплатно'}
@@ -245,11 +201,9 @@ export const UpgradeModal = ({
                     </div>
                  </div>
                  <button 
-                    // onClick={() => userPlan === 'plus' ? handleManageSubscription() : handleCheckout('plus')} 
                     disabled={true}
-                    className={`w-full py-3 md:py-4 rounded-xl md:rounded-2xl font-bold transition-all shadow-xl flex items-center justify-center gap-2 ${userPlan === 'plus' ? 'bg-indigo-100 dark:bg-indigo-500/20 text-indigo-500' : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-500/30'} opacity-70 cursor-not-allowed`}
+                    className={`w-full py-3 md:py-4 rounded-xl md:rounded-2xl font-bold transition-all shadow-xl flex items-center justify-center gap-2 ${userPlan === 'plus' ? 'bg-indigo-100 dark:bg-indigo-500/20 text-indigo-500' : 'bg-indigo-600 hover:bg-indigo-50 text-white shadow-indigo-500/30'} opacity-70 cursor-not-allowed`}
                  >
-                    {/* {loading ? <Loader2 className="animate-spin" size={20}/> : (userPlan === 'plus' ? 'Управление' : 'Избери Plus')} */}
                     Очаквайте скоро
                  </button>
               </div>
@@ -265,7 +219,7 @@ export const UpgradeModal = ({
                         <div className="w-6 h-6 rounded-full bg-amber-100 dark:bg-amber-500/20 flex items-center justify-center"><Crown size={12} fill="currentColor"/></div>
                         За Отличници
                     </div>
-                    <div className="text-4xl md:text-5xl font-black text-zinc-900 dark:text-white">11.99 €<span className="text-sm md:text-lg font-medium text-gray-500"> / месец</span></div>
+                    <div className="text-4xl md:text-5xl font-black text-zinc-900 dark:text-white tracking-tight">11.99 €<span className="text-sm md:text-lg font-medium text-gray-500"> / месец</span></div>
                  </div>
                  
                  <div className="space-y-3 md:space-y-4 flex-1 mb-6 md:mb-8 relative">
@@ -302,12 +256,10 @@ export const UpgradeModal = ({
                     </div>
                  </div>
                  <button 
-                    // onClick={() => userPlan === 'pro' ? handleManageSubscription() : handleCheckout('pro')}
                     disabled={true}
                     className={`w-full py-3 md:py-4 rounded-xl md:rounded-2xl font-bold transition-all shadow-lg flex items-center justify-center gap-2 relative overflow-hidden group ${userPlan === 'pro' ? 'bg-amber-100 dark:bg-amber-500/20 text-amber-500' : 'bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white shadow-orange-500/25'} opacity-70 cursor-not-allowed`}
                  >
                     <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 pointer-events-none"/>
-                    {/* {loading ? <Loader2 className="animate-spin" size={20}/> : (userPlan === 'pro' ? 'Управление' : 'Избери Pro')} */}
                     Очаквайте скоро
                  </button>
               </div>

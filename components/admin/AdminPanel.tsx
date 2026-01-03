@@ -10,7 +10,9 @@ import {
   Cloud, Cpu, AlertCircle, RotateCcw, 
   BarChart2, Wifi, HardDrive, Brain, LayoutDashboard,
   PieChart as PieChartIcon, MessageSquare, Flag, CheckSquare,
-  Eye, EyeOff, Lock, Radio, LogOut
+  Eye, EyeOff, Lock, Radio, LogOut, Snowflake,
+  // Fix: Added missing Settings icon import on line 20
+  Settings
 } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { supabase } from '../../supabaseClient';
@@ -101,6 +103,8 @@ interface AdminPanelProps {
   generateKey: (plan: 'plus' | 'pro') => void;
   generatedKeys: GeneratedKey[];
   addToast: (msg: string, type: 'success' | 'error' | 'info') => void;
+  globalConfig: any;
+  setGlobalConfig: (val: any) => void;
 }
 
 export const AdminPanel = ({
@@ -113,7 +117,9 @@ export const AdminPanel = ({
   handleAdminLogin,
   generateKey,
   generatedKeys,
-  addToast
+  addToast,
+  globalConfig,
+  setGlobalConfig
 }: AdminPanelProps) => {
     
     const [activeTab, setActiveTab] = useState<'dashboard' | 'status' | 'finance' | 'users' | 'keys' | 'broadcast' | 'reports'>('dashboard');
@@ -264,6 +270,20 @@ export const AdminPanel = ({
             }
         } finally {
             setIsBroadcasting(false);
+        }
+    };
+
+    const handleToggleChristmas = async (val: boolean) => {
+        const newConfig = { ...globalConfig, showChristmasButton: val };
+        setGlobalConfig(newConfig);
+        try {
+            const { error } = await supabase
+                .from('global_settings')
+                .upsert({ key: 'site_config', value: newConfig });
+            if (error) throw error;
+            addToast('Настройките са запазени.', 'success');
+        } catch (e) {
+            addToast('Грешка при запазване.', 'error');
         }
     };
 
@@ -869,6 +889,34 @@ export const AdminPanel = ({
                              {/* DASHBOARD TAB */}
                              {activeTab === 'dashboard' && (
                                  <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
+                                     
+                                     {/* Global Configuration Section */}
+                                     <div className="bg-white/5 border border-indigo-500/20 rounded-3xl p-6 relative overflow-hidden group">
+                                         <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/5 to-transparent pointer-events-none"/>
+                                         <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-3">
+                                             <Settings size={20} className="text-indigo-400"/> Глобални настройки на сайта
+                                         </h3>
+                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                             <div className="flex items-center justify-between p-4 bg-black/40 rounded-2xl border border-white/5 transition-all hover:border-indigo-500/30">
+                                                 <div className="flex items-center gap-3">
+                                                     <div className="p-2.5 bg-red-500/10 rounded-xl text-red-400">
+                                                         <Snowflake size={20}/>
+                                                     </div>
+                                                     <div>
+                                                         <div className="text-sm font-bold text-white">Коледен бутон</div>
+                                                         <div className="text-[10px] text-zinc-500 uppercase tracking-widest">Видим за всички</div>
+                                                     </div>
+                                                 </div>
+                                                 <button 
+                                                    onClick={() => handleToggleChristmas(!globalConfig.showChristmasButton)}
+                                                    className={`w-12 h-6 rounded-full transition-all flex items-center px-1 ${globalConfig.showChristmasButton ? 'bg-indigo-600' : 'bg-zinc-700'}`}
+                                                 >
+                                                     <div className={`w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-300 ${globalConfig.showChristmasButton ? 'translate-x-6' : 'translate-x-0'}`} />
+                                                 </button>
+                                             </div>
+                                         </div>
+                                     </div>
+
                                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 md:gap-6">
                                          <div className="p-6 bg-blue-500/10 border border-blue-500/20 rounded-3xl relative overflow-hidden group">
                                              <div className="relative z-10">
@@ -1083,7 +1131,7 @@ export const AdminPanel = ({
                                                  <Button 
                                                      onClick={handleSendBroadcast} 
                                                      disabled={isBroadcasting || !broadcastMsg.trim()}
-                                                     className={`w-full py-4 text-base shadow-xl ${broadcastType === 'modal' ? 'bg-red-600 hover:bg-red-500 shadow-red-500/20' : 'bg-indigo-600 hover:bg-indigo-500 shadow-indigo-500/20'}`}
+                                                     className={`w-full py-4 text-base shadow-xl ${broadcastType === 'modal' ? 'bg-red-600 hover:bg-red-500 shadow-red-500/20' : 'bg-indigo-600 hover:bg-indigo-50 shadow-indigo-500/20'}`}
                                                  >
                                                      {isBroadcasting ? 'Изпращане...' : 'Изпрати Съобщение'}
                                                  </Button>

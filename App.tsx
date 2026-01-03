@@ -40,7 +40,8 @@ import { SubjectDashboard } from './components/dashboard/SubjectDashboard';
 import { WelcomeScreen } from './components/welcome/WelcomeScreen';
 import { ChatHeader } from './components/chat/ChatHeader';
 import { MessageList } from './components/chat/MessageList';
-import { ChatInputArea } from './components/chat/ChatInputArea';
+// Fix: Removed duplicate and incorrect import of ChatInputArea from MessageList on line 43
+import { ChatInputArea as ActualChatInputArea } from './components/chat/ChatInputArea';
 import { TermsOfService, PrivacyPolicy, CookiePolicy, About, Contact } from './components/pages/StaticPages';
 import { Snowfall } from './components/ui/Snowfall';
 import { ReportModal } from './components/support/ReportModal';
@@ -59,7 +60,7 @@ const DEMO_RESPONSE = `Анализирах въпроса ти и подгот�
 
 1. **Дефиниране на основните параметри**: Първата стъпка е да изолираме ключових данни и да разберем контекста на твоето запитване.
 2. **Избор на методология**: Въз основа на темата, най-подходящият подход е прилагането на логически изводи и доказани научни принципи.
-3. **Дефинирано разписване**: Тук започваме със самото решаване, като преминаваме през всеки междинен етап за максимална яснота...
+3. **Дефинирано разписване**: Тут започваме със самото решаване, като преминаваме през всеки междинен етап за максимална яснота...
 
 Uchebnik AI винаги предоставя пълно обяснение на логиката зад решението, за да можеш не просто да получиш отговора, но и да научиш материала. Влез в профила си, за да отключиш останалата част от това решение и да получиш достъп до всички функции абсолютно безплатно!`;
 
@@ -171,6 +172,9 @@ export const App = () => {
   const [unlockLoading, setUnlockLoading] = useState(false);
 
   const [broadcastModal, setBroadcastModal] = useState<{isOpen: boolean, message: string} | null>(null);
+
+  // Global Config
+  const [globalConfig, setGlobalConfig] = useState({ showChristmasButton: true });
 
   // Voice State
   const [isVoiceCallActive, setIsVoiceCallActive] = useState(false);
@@ -288,7 +292,59 @@ export const App = () => {
     setGeneratedKeys(prev => [{ code, isUsed: false, plan }, ...prev]);
   };
 
-  // --- Implementation: Save & Delete logic ---
+  // --- Implementation: Plan Activation ---
+  const handleUnlockSubmit = async () => {
+    if (!unlockKeyInput.trim()) {
+        addToast('Моля, въведете код.', 'error');
+        return;
+    }
+    
+    if (!session?.user?.id) {
+        addToast('Трябва да сте влезли в профила си.', 'error');
+        return;
+    }
+
+    setUnlockLoading(true);
+    try {
+        const result = await redeemKey(unlockKeyInput, session.user.id);
+        
+        if (result.valid && result.plan) {
+            const expiresAt = new Date();
+            expiresAt.setMonth(expiresAt.getMonth() + 1); 
+            const proExpiresAt = expiresAt.toISOString();
+
+            const { error } = await supabase
+                .from('profiles')
+                .update({ 
+                    settings: { ...userSettings, plan: result.plan },
+                    pro_expires_at: proExpiresAt 
+                })
+                .eq('id', session.user.id);
+
+            if (error) throw error;
+
+            setUserPlan(result.plan);
+            setUserSettings(prev => ({ 
+                ...prev, 
+                proExpiresAt: proExpiresAt 
+            }));
+            
+            addToast(`Успешно активиран ${result.plan.toUpperCase()}! 🎉`, 'success');
+            
+            setShowUnlockModal(false);
+            setTargetPlan(null);
+            setUnlockKeyInput('');
+        } else {
+            addToast(result.error || 'Невалиден код.', 'error');
+        }
+    } catch (e) {
+        console.error("Activation error:", e);
+        addToast('Грешка при активиране на кода.', 'error');
+    } finally {
+        setUnlockLoading(false);
+    }
+  };
+
   const handleUpdateAccount = async () => {
     // Local update
     setUserMeta({ firstName: editProfile.firstName, lastName: editProfile.lastName, avatar: editProfile.avatar });
@@ -446,6 +502,22 @@ export const App = () => {
   };
 
   // --- Effects ---
+  useEffect(() => {
+    const fetchGlobalConfig = async () => {
+        try {
+            const { data, error } = await supabase
+                .from('global_settings')
+                .select('value')
+                .eq('key', 'site_config')
+                .single();
+            if (!error && data) {
+                setGlobalConfig(data.value);
+            }
+        } catch(e) {}
+    };
+    fetchGlobalConfig();
+  }, []);
+
   useEffect(() => {
     activeSubjectRef.current = activeSubject;
     sessionsRef.current = sessions;
@@ -881,7 +953,7 @@ export const App = () => {
       {showAuthModal && <Auth isModal={false} onSuccess={closeAuthModal} initialMode={initialAuthMode} onNavigate={setHomeView} />}
 
       {!focusMode && session && (
-          <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} userSettings={userSettings} setUserSettings={setUserSettings} userPlan={userPlan} activeSubject={activeSubject} setActiveSubject={setActiveSubject} setHomeView={setHomeView} setUserRole={setUserRole} handleSubjectChange={handleSubjectChange} activeSessionId={activeSessionId} setActiveSessionId={setActiveSessionId} sessions={sessions} deleteSession={deleteSession} createNewSession={createNewSession} unreadSubjects={unreadSubjects} activeMode={activeMode} userMeta={userMeta} session={session} setShowUnlockModal={setShowUnlockModal} setShowReferralModal={setShowReferralModal} setShowSettings={setShowSettings} handleLogout={handleLogout} setShowAuthModal={setShowAuthModal} addToast={addToast} setShowSubjectDashboard={setShowSubjectDashboard} userRole={userRole} streak={0} syncStatus={syncStatus} homeView={homeView} dailyImageCount={dailyImageCount} setShowLeaderboard={setShowLeaderboard} setShowQuests={setShowQuests} setShowReportModal={setShowReportModal} />
+          <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} userSettings={userSettings} setUserSettings={setUserSettings} userPlan={userPlan} activeSubject={activeSubject} setActiveSubject={setActiveSubject} setHomeView={setHomeView} setUserRole={setUserRole} handleSubjectChange={handleSubjectChange} activeSessionId={activeSessionId} setActiveSessionId={setActiveSessionId} sessions={sessions} deleteSession={deleteSession} createNewSession={createNewSession} unreadSubjects={unreadSubjects} activeMode={activeMode} userMeta={userMeta} session={session} setShowUnlockModal={setShowUnlockModal} setShowReferralModal={setShowReferralModal} setShowSettings={setShowSettings} handleLogout={handleLogout} setShowAuthModal={setShowAuthModal} addToast={addToast} setShowSubjectDashboard={setShowSubjectDashboard} userRole={userRole} streak={0} syncStatus={syncStatus} homeView={homeView} dailyImageCount={dailyImageCount} setShowLeaderboard={setShowLeaderboard} setShowQuests={setShowQuests} setShowReportModal={setShowReportModal} globalConfig={globalConfig} />
       )}
       
       <main className="flex-1 flex flex-col relative w-full h-full overflow-hidden z-10">
@@ -906,7 +978,7 @@ export const App = () => {
                 {!focusMode && <ChatHeader setSidebarOpen={setSidebarOpen} activeSubject={activeSubject} setActiveSubject={setActiveSubject} setUserSettings={setUserSettings} userRole={userRole} activeMode={activeMode} startVoiceCall={startVoiceCall} createNewSession={createNewSession} setHistoryDrawerOpen={setHistoryDrawerOpen} userSettings={userSettings} setFocusMode={setFocusMode} isGuest={!session} />}
                 <AdSenseContainer userPlan={userPlan} />
                 <MessageList currentMessages={currentMessages} userSettings={userSettings} setZoomedImage={setZoomedImage} handleRate={() => {}} handleReply={setReplyingTo} handleCopy={(t,id) => {navigator.clipboard.writeText(t); setCopiedId(id); setTimeout(()=>setCopiedId(null), 2000)}} copiedId={copiedId} handleShare={() => {}} loadingSubject={!!loadingSubjects[activeSubject.id]} activeSubject={activeSubject} messagesEndRef={messagesEndRef} setShowAuthModal={setShowAuthModal} isGuest={!session} />
-                <ChatInputArea replyingTo={replyingTo} setReplyingTo={setReplyingTo} userSettings={userSettings} setUserSettings={setUserSettings} activeMode={activeMode} fileInputRef={fileInputRef} loadingSubject={!!loadingSubjects[activeSubject.id]} handleImageUpload={handleImageUpload} toggleListening={() => {}} isListening={isListening} inputValue={inputValue} setInputValue={setInputValue} handleSend={() => handleSend()} selectedImages={selectedImages} handleRemoveImage={(idx) => setSelectedImages(prev => prev.filter((_,i)=>i!==idx))} onStopGeneration={handleStopGeneration} onImagesAdd={(imgs) => setSelectedImages(prev => [...prev, ...imgs])} />
+                <ActualChatInputArea replyingTo={replyingTo} setReplyingTo={setReplyingTo} userSettings={userSettings} setUserSettings={setUserSettings} activeMode={activeMode} fileInputRef={fileInputRef} loadingSubject={!!loadingSubjects[activeSubject.id]} handleImageUpload={handleImageUpload} toggleListening={() => {}} isListening={isListening} inputValue={inputValue} setInputValue={setInputValue} handleSend={() => handleSend()} selectedImages={selectedImages} handleRemoveImage={(idx) => setSelectedImages(prev => prev.filter((_,i)=>i!==idx))} onStopGeneration={handleStopGeneration} onImagesAdd={(imgs) => setSelectedImages(prev => [...prev, ...imgs])} />
                 
                 {focusMode && (
                     <button 
@@ -921,13 +993,13 @@ export const App = () => {
         )}
       </main>
 
-      <UpgradeModal showUnlockModal={showUnlockModal} setShowUnlockModal={setShowUnlockModal} targetPlan={targetPlan} setTargetPlan={setTargetPlan} unlockKeyInput={unlockKeyInput} setUnlockKeyInput={setUnlockKeyInput} handleUnlockSubmit={() => {}} userPlan={userPlan} userSettings={userSettings} addToast={addToast} />
+      <UpgradeModal showUnlockModal={showUnlockModal} setShowUnlockModal={setShowUnlockModal} targetPlan={targetPlan} setTargetPlan={setTargetPlan} unlockKeyInput={unlockKeyInput} setUnlockKeyInput={setUnlockKeyInput} handleUnlockSubmit={handleUnlockSubmit} userPlan={userPlan} userSettings={userSettings} addToast={addToast} unlockLoading={unlockLoading} />
       <SettingsModal showSettings={showSettings} setShowSettings={setShowSettings} userMeta={userMeta} editProfile={editProfile} setEditProfile={setEditProfile} handleUpdateAccount={handleUpdateAccount} handleAvatarUpload={handleImageUpload} userSettings={userSettings} setUserSettings={setUserSettings} isPremium={userPlan!=='free'} isDarkMode={isDarkMode} setIsDarkMode={setIsDarkMode} handleBackgroundUpload={handleImageUpload} handleDeleteAllChats={handleDeleteAllChats} addToast={addToast} userPlan={userPlan} />
       <ReferralModal isOpen={showReferralModal} onClose={() => setShowReferralModal(false)} userSettings={userSettings} addToast={addToast} />
       <LeaderboardModal isOpen={showLeaderboard} onClose={() => setShowLeaderboard(false)} currentUserId={session?.user?.id} />
       <DailyQuestsModal isOpen={showQuests} onClose={() => setShowQuests(false)} quests={userSettings.dailyQuests?.quests || []} />
       <ReportModal isOpen={showReportModal} onClose={() => setShowReportModal(false)} userSettings={userSettings} addToast={addToast} userId={session?.user?.id} />
-      <AdminPanel showAdminAuth={showAdminAuth} setShowAdminAuth={setShowAdminAuth} showAdminPanel={showAdminPanel} setShowAdminPanel={setShowAdminPanel} adminPasswordInput={adminPasswordInput} setAdminPasswordInput={setAdminPasswordInput} handleAdminLogin={handleAdminLogin} generateKey={handleGenerateKey} generatedKeys={generatedKeys as any} addToast={addToast} />
+      <AdminPanel showAdminAuth={showAdminAuth} setShowAdminAuth={setShowAdminAuth} showAdminPanel={showAdminPanel} setShowAdminPanel={setShowAdminPanel} adminPasswordInput={adminPasswordInput} setAdminPasswordInput={setAdminPasswordInput} handleAdminLogin={handleAdminLogin} generateKey={handleGenerateKey} generatedKeys={generatedKeys as any} addToast={addToast} globalConfig={globalConfig} setGlobalConfig={setGlobalConfig} />
       <Lightbox image={zoomedImage} onClose={() => setZoomedImage(null)} />
       <ConfirmModal isOpen={!!confirmModal} title={confirmModal?.title || ''} message={confirmModal?.message || ''} onConfirm={confirmModal?.onConfirm || (()=>{})} onCancel={() => setConfirmModal(null)} />
       
