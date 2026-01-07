@@ -45,6 +45,7 @@ import { ChatInputArea as ActualChatInputArea } from './components/chat/ChatInpu
 import { TermsOfService, PrivacyPolicy, CookiePolicy, About, Contact } from './components/pages/StaticPages';
 import { Snowfall } from './components/ui/Snowfall';
 import { ReportModal } from './components/support/ReportModal';
+import { DonationModal } from './components/support/DonationModal';
 import { AdSenseContainer } from './components/ads/AdSenseContainer';
 import { IosInstallPrompt } from './components/ui/IosInstallPrompt';
 
@@ -142,6 +143,7 @@ export const App = () => {
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [showQuests, setShowQuests] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
+  const [showDonationModal, setShowDonationModal] = useState(false);
   
   const [homeView, setHomeView] = useState<HomeViewType>('landing');
 
@@ -953,7 +955,7 @@ export const App = () => {
       {showAuthModal && <Auth isModal={false} onSuccess={closeAuthModal} initialMode={initialAuthMode} onNavigate={setHomeView} />}
 
       {!focusMode && session && (
-          <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} userSettings={userSettings} setUserSettings={setUserSettings} userPlan={userPlan} activeSubject={activeSubject} setActiveSubject={setActiveSubject} setHomeView={setHomeView} setUserRole={setUserRole} handleSubjectChange={handleSubjectChange} activeSessionId={activeSessionId} setActiveSessionId={setActiveSessionId} sessions={sessions} deleteSession={deleteSession} createNewSession={createNewSession} unreadSubjects={unreadSubjects} activeMode={activeMode} userMeta={userMeta} session={session} setShowUnlockModal={setShowUnlockModal} setShowReferralModal={setShowReferralModal} setShowSettings={setShowSettings} handleLogout={handleLogout} setShowAuthModal={setShowAuthModal} addToast={addToast} setShowSubjectDashboard={setShowSubjectDashboard} userRole={userRole} streak={0} syncStatus={syncStatus} homeView={homeView} dailyImageCount={dailyImageCount} setShowLeaderboard={setShowLeaderboard} setShowQuests={setShowQuests} setShowReportModal={setShowReportModal} globalConfig={globalConfig} />
+          <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} userSettings={userSettings} setUserSettings={setUserSettings} userPlan={userPlan} activeSubject={activeSubject} setActiveSubject={setActiveSubject} setHomeView={setHomeView} setUserRole={setUserRole} handleSubjectChange={handleSubjectChange} activeSessionId={activeSessionId} setActiveSessionId={setActiveSessionId} sessions={sessions} deleteSession={deleteSession} createNewSession={createNewSession} unreadSubjects={unreadSubjects} activeMode={activeMode} userMeta={userMeta} session={session} setShowUnlockModal={setShowUnlockModal} setShowReferralModal={setShowReferralModal} setShowSettings={setShowSettings} handleLogout={handleLogout} setShowAuthModal={setShowAuthModal} addToast={addToast} setShowSubjectDashboard={setShowSubjectDashboard} userRole={userRole} streak={0} syncStatus={syncStatus} homeView={homeView} dailyImageCount={dailyImageCount} setShowLeaderboard={setShowLeaderboard} setShowQuests={setShowQuests} setShowReportModal={setShowReportModal} globalConfig={globalConfig} setShowDonationModal={setShowDonationModal} />
       )}
       
       <main className="flex-1 flex flex-col relative w-full h-full overflow-hidden z-10">
@@ -999,6 +1001,7 @@ export const App = () => {
       <LeaderboardModal isOpen={showLeaderboard} onClose={() => setShowLeaderboard(false)} currentUserId={session?.user?.id} />
       <DailyQuestsModal isOpen={showQuests} onClose={() => setShowQuests(false)} quests={userSettings.dailyQuests?.quests || []} />
       <ReportModal isOpen={showReportModal} onClose={() => setShowReportModal(false)} userSettings={userSettings} addToast={addToast} userId={session?.user?.id} />
+      <DonationModal isOpen={showDonationModal} onClose={() => setShowDonationModal(false)} userSettings={userSettings} />
       <AdminPanel showAdminAuth={showAdminAuth} setShowAdminAuth={setShowAdminAuth} showAdminPanel={showAdminPanel} setShowAdminPanel={setShowAdminPanel} adminPasswordInput={adminPasswordInput} setAdminPasswordInput={setAdminPasswordInput} handleAdminLogin={handleAdminLogin} generateKey={handleGenerateKey} generatedKeys={generatedKeys as any} addToast={addToast} globalConfig={globalConfig} setGlobalConfig={setGlobalConfig} />
       <Lightbox image={zoomedImage} onClose={() => setZoomedImage(null)} />
       <ConfirmModal isOpen={!!confirmModal} title={confirmModal?.title || ''} message={confirmModal?.message || ''} onConfirm={confirmModal?.onConfirm || (()=>{})} onCancel={() => setConfirmModal(null)} />

@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { MessageSquare, Trash2, Plus, School, GraduationCap, Briefcase, ChevronDown, User, Settings, CreditCard, HelpCircle, LogOut, ArrowRight, ChevronUp, FileText, CloudOff, RefreshCw, Cloud, PanelLeftClose, PanelLeftOpen, LogIn, Snowflake, Gift, Trophy, Target, AlertTriangle } from 'lucide-react';
+import { MessageSquare, Trash2, Plus, School, GraduationCap, Briefcase, ChevronDown, User, Settings, CreditCard, HelpCircle, LogOut, ArrowRight, ChevronUp, FileText, CloudOff, RefreshCw, Cloud, PanelLeftClose, PanelLeftOpen, LogIn, Snowflake, Gift, Trophy, Target, AlertTriangle, Heart } from 'lucide-react';
 import { DynamicIcon } from '../ui/DynamicIcon';
 import { SUBJECTS } from '../../constants';
 import { SubjectId, AppMode, Session, UserRole, UserSettings, UserPlan, SubjectConfig, HomeViewType } from '../../types';
@@ -42,6 +42,7 @@ interface SidebarProps {
   setShowLeaderboard?: (val: boolean) => void;
   setShowQuests?: (val: boolean) => void;
   setShowReportModal?: (val: boolean) => void;
+  setShowDonationModal?: (val: boolean) => void;
   globalConfig: any;
 }
 
@@ -79,6 +80,7 @@ export const Sidebar = ({
   setShowLeaderboard,
   setShowQuests,
   setShowReportModal,
+  setShowDonationModal,
   globalConfig
 }: SidebarProps) => {
     
@@ -527,6 +529,12 @@ export const Sidebar = ({
                                  </button>
                                  <button onClick={() => {setShowUnlockModal(true); setProfileMenuOpen(false)}} className="w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-white/5 text-sm font-medium flex items-center gap-3 transition-colors">
                                     <CreditCard size={16} className="text-gray-500"/> {t('manage_plan', userSettings.language)}
+                                 </button>
+                                 <button 
+                                    onClick={() => { setShowDonationModal && setShowDonationModal(true); setProfileMenuOpen(false); }}
+                                    className="w-full text-left px-4 py-3 hover:bg-rose-50 dark:hover:bg-rose-900/10 text-sm font-medium flex items-center gap-3 transition-colors text-rose-500"
+                                 >
+                                    <Heart size={16} className="text-rose-500"/> {t('donate', userSettings.language)}
                                  </button>
                                  <button onClick={() => {setShowReportModal && setShowReportModal(true); setProfileMenuOpen(false)}} className="w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-white/5 text-sm font-medium flex items-center gap-3 transition-colors text-amber-500 hover:text-amber-600">
                                     <AlertTriangle size={16} /> Докладвай проблем

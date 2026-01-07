@@ -113,6 +113,7 @@ const translations: Record<string, Record<string, string>> = {
   'upgrade_plan': { bg: 'Upgrade Plan', en: 'Upgrade Plan' },
   'manage_plan': { bg: 'Управление на плана', en: 'Manage Plan' },
   'unlock_potential': { bg: 'Отключи пълния потенциал', en: 'Unlock full potential' },
+  'donate': { bg: 'Подкрепи ни', en: 'Support us' },
 
   // Redesign Landing Strings
   'landing_hero_title': { bg: 'Учи по-лесно с изкуствен интелект', en: 'Learn Easier with Artificial Intelligence' },
