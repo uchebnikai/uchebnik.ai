@@ -210,13 +210,16 @@ export const Sidebar = ({
 
                      <button 
                         onClick={() => setShowDonationModal && setShowDonationModal(true)}
-                        className={`flex items-center justify-center ${collapsed ? 'py-3 w-full' : 'py-2 px-1'} rounded-xl transition-all group glass-button border border-rose-500/20 hover:border-rose-500/40 hover:bg-rose-500/10 flex-col gap-1`}
+                        className={`flex items-center justify-center ${collapsed ? 'py-3 w-full' : 'py-2 px-1'} rounded-xl transition-all group relative overflow-hidden flex-col gap-1 shadow-lg shadow-rose-500/10 hover:shadow-rose-500/20 border-rose-500/20 hover:border-rose-500/40 bg-gradient-to-br from-rose-500/10 to-pink-500/5 active:scale-95`}
                         title="Подкрепи ни"
                      >
-                         <div className="w-6 h-6 rounded-md bg-rose-500/10 flex items-center justify-center text-rose-500 group-hover:text-rose-400 group-hover:bg-rose-500/20 transition-colors">
+                         {/* Subtle Glow for Support Button */}
+                         <div className="absolute inset-0 bg-rose-500/5 animate-pulse-slow pointer-events-none" />
+                         
+                         <div className="w-6 h-6 rounded-md bg-rose-500/20 flex items-center justify-center text-rose-500 group-hover:text-rose-400 group-hover:scale-110 transition-all">
                              <Heart size={14} fill="currentColor"/>
                          </div>
-                         {!collapsed && <span className="text-[9px] font-bold text-rose-600 dark:text-rose-400 uppercase tracking-tight">Подкрепа</span>}
+                         {!collapsed && <span className="text-[9px] font-black text-rose-600 dark:text-rose-400 uppercase tracking-tight">Подкрепа</span>}
                      </button>
                  </div>
              )}
