@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { MessageSquare, Trash2, Plus, School, GraduationCap, Briefcase, ChevronDown, User, Settings, CreditCard, HelpCircle, LogOut, ArrowRight, ChevronUp, FileText, CloudOff, RefreshCw, Cloud, PanelLeftClose, PanelLeftOpen, LogIn, Snowflake, Gift, Trophy, Target, AlertTriangle, Heart } from 'lucide-react';
+import { MessageSquare, Trash2, Plus, School, GraduationCap, Briefcase, ChevronDown, User, Settings, CreditCard, HelpCircle, LogOut, ArrowRight, ChevronUp, FileText, CloudOff, RefreshCw, Cloud, PanelLeftClose, PanelLeftOpen, LogIn, Snowflake, Gift, Trophy, Target, AlertTriangle, Heart, Coffee } from 'lucide-react';
 import { DynamicIcon } from '../ui/DynamicIcon';
 import { SUBJECTS } from '../../constants';
 import { SubjectId, AppMode, Session, UserRole, UserSettings, UserPlan, SubjectConfig, HomeViewType } from '../../types';
@@ -115,9 +115,6 @@ export const Sidebar = ({
     const stats = getLevelStats(userSettings.xp, userSettings.level);
     const RankIcon = currentRank.icon;
 
-    // Check for completed quests to show a dot (optional enhancement, simple check here)
-    const hasCompletedQuests = userSettings.dailyQuests?.quests.some(q => q.isCompleted);
-
     return (
       <>
         {isMobile && sidebarOpen && <div className="fixed inset-0 bg-black/60 z-[45] backdrop-blur-sm animate-in fade-in" onClick={() => setSidebarOpen(false)} />}
@@ -186,29 +183,40 @@ export const Sidebar = ({
           </div>
 
           <div className="flex-1 overflow-y-auto px-4 pb-4 custom-scrollbar">
-             {/* Gamification Buttons - Compact Grid */}
+             {/* Gamification & Support Buttons - Action Grid */}
              {session && (
-                 <div className={`mt-2 mb-2 ${collapsed ? 'space-y-2' : 'grid grid-cols-2 gap-2'}`}>
+                 <div className={`mt-2 mb-2 ${collapsed ? 'space-y-2' : 'grid grid-cols-3 gap-1.5'}`}>
                      <button 
                         onClick={() => setShowLeaderboard && setShowLeaderboard(true)}
-                        className={`flex items-center justify-center ${collapsed ? 'py-3 w-full' : 'py-2.5 px-2'} rounded-xl transition-all group glass-button border border-amber-500/20 hover:border-amber-500/40 hover:bg-amber-500/10 flex-col gap-1`}
+                        className={`flex items-center justify-center ${collapsed ? 'py-3 w-full' : 'py-2 px-1'} rounded-xl transition-all group glass-button border border-amber-500/20 hover:border-amber-500/40 hover:bg-amber-500/10 flex-col gap-1`}
                         title="Класация"
                      >
                          <div className="w-6 h-6 rounded-md bg-amber-500/10 flex items-center justify-center text-amber-500 group-hover:text-amber-400 group-hover:bg-amber-500/20 transition-colors">
                              <Trophy size={14} />
                          </div>
-                         {!collapsed && <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wide">Класация</span>}
+                         {!collapsed && <span className="text-[9px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-tight">Класация</span>}
                      </button>
 
                      <button 
                         onClick={() => setShowQuests && setShowQuests(true)}
-                        className={`flex items-center justify-center ${collapsed ? 'py-3 w-full' : 'py-2.5 px-2'} rounded-xl transition-all group glass-button border border-pink-500/20 hover:border-pink-500/40 hover:bg-pink-500/10 flex-col gap-1`}
+                        className={`flex items-center justify-center ${collapsed ? 'py-3 w-full' : 'py-2 px-1'} rounded-xl transition-all group glass-button border border-pink-500/20 hover:border-pink-500/40 hover:bg-pink-500/10 flex-col gap-1`}
                         title="Дневни Мисии"
                      >
                          <div className="w-6 h-6 rounded-md bg-pink-500/10 flex items-center justify-center text-pink-500 group-hover:text-pink-400 group-hover:bg-pink-500/20 transition-colors">
                              <Target size={14} />
                          </div>
-                         {!collapsed && <span className="text-[10px] font-bold text-pink-600 dark:text-pink-400 uppercase tracking-wide">Мисии</span>}
+                         {!collapsed && <span className="text-[9px] font-bold text-pink-600 dark:text-pink-400 uppercase tracking-tight">Мисии</span>}
+                     </button>
+
+                     <button 
+                        onClick={() => setShowDonationModal && setShowDonationModal(true)}
+                        className={`flex items-center justify-center ${collapsed ? 'py-3 w-full' : 'py-2 px-1'} rounded-xl transition-all group glass-button border border-rose-500/20 hover:border-rose-500/40 hover:bg-rose-500/10 flex-col gap-1`}
+                        title="Подкрепи ни"
+                     >
+                         <div className="w-6 h-6 rounded-md bg-rose-500/10 flex items-center justify-center text-rose-500 group-hover:text-rose-400 group-hover:bg-rose-500/20 transition-colors">
+                             <Heart size={14} fill="currentColor"/>
+                         </div>
+                         {!collapsed && <span className="text-[9px] font-bold text-rose-600 dark:text-rose-400 uppercase tracking-tight">Подкрепа</span>}
                      </button>
                  </div>
              )}
@@ -269,24 +277,6 @@ export const Sidebar = ({
                                                         <div className={`w-2 h-2 rounded-full ${s.color} shrink-0`}></div>
                                                         <span className="truncate">{t(`subject_${s.id}`, userSettings.language)}</span>
                                                     </button>
-                                                    {activeSubject?.id === s.id && userRole === 'student' && (
-                                                        <div className="ml-4 pl-2 border-l border-indigo-500/20 space-y-0.5 my-1">
-                                                            {sessions.filter(sess => sess.subjectId === s.id && sess.role === 'student').map(sess => (
-                                                                <div key={sess.id} className="flex items-center group/session">
-                                                                    <button 
-                                                                        onClick={() => { setActiveSessionId(sess.id); if(isMobile) setSidebarOpen(false); setShowSubjectDashboard(false); }}
-                                                                        className={`flex-1 text-left px-2 py-1.5 rounded-lg text-xs font-medium truncate transition-colors ${activeSessionId === sess.id ? 'text-indigo-600 dark:text-white bg-indigo-50 dark:bg-white/5' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
-                                                                    >
-                                                                        {sess.title}
-                                                                    </button>
-                                                                    <button onClick={() => deleteSession(sess.id)} className="p-1 text-gray-400 hover:text-red-500 opacity-0 group-hover/session:opacity-100 transition-opacity"><Trash2 size={10}/></button>
-                                                                </div>
-                                                            ))}
-                                                            <button onClick={() => { createNewSession(s.id, 'student', activeMode); if(isMobile) setSidebarOpen(false); setShowSubjectDashboard(false); }} className="w-full text-left px-2 py-1.5 text-[10px] font-bold text-indigo-500 hover:text-indigo-600 flex items-center gap-1">
-                                                                <Plus size={10}/> {t('new_chat', userSettings.language)}
-                                                            </button>
-                                                        </div>
-                                                    )}
                                                 </div>
                                             ))}
                                         </div>
@@ -317,24 +307,6 @@ export const Sidebar = ({
                                                         <div className={`w-1.5 h-1.5 rounded-full ${s.color}`}></div>
                                                         <span className="truncate">{t(`subject_${s.id}`, userSettings.language)}</span>
                                                     </button>
-                                                    {activeSubject?.id === s.id && userRole === 'teacher' && (
-                                                        <div className="ml-4 pl-2 border-l border-indigo-500/20 space-y-0.5 my-1">
-                                                            {sessions.filter(sess => sess.subjectId === s.id && sess.role === 'teacher').map(sess => (
-                                                                <div key={sess.id} className="flex items-center group/session">
-                                                                    <button 
-                                                                        onClick={() => { setActiveSessionId(sess.id); if(isMobile) setSidebarOpen(false); setShowSubjectDashboard(false); }}
-                                                                        className={`flex-1 text-left px-2 py-1.5 rounded-lg text-xs font-medium truncate transition-colors ${activeSessionId === sess.id ? 'text-indigo-600 dark:text-white bg-indigo-50 dark:bg-white/5' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
-                                                                    >
-                                                                        {sess.title}
-                                                                    </button>
-                                                                    <button onClick={() => deleteSession(sess.id)} className="p-1 text-gray-400 hover:text-red-500 opacity-0 group-hover/session:opacity-100 transition-opacity"><Trash2 size={10}/></button>
-                                                                </div>
-                                                            ))}
-                                                            <button onClick={() => { createNewSession(s.id, 'teacher', activeMode); if(isMobile) setSidebarOpen(false); setShowSubjectDashboard(false); }} className="w-full text-left px-2 py-1.5 text-[10px] font-bold text-indigo-500 hover:text-indigo-600 flex items-center gap-1">
-                                                                <Plus size={10}/> {t('new_chat', userSettings.language)}
-                                                            </button>
-                                                        </div>
-                                                    )}
                                                 </div>
                                             ))}
                                         </div>
@@ -379,72 +351,6 @@ export const Sidebar = ({
                                                         <div className={`w-2 h-2 rounded-full ${s.color} shrink-0`}></div>
                                                         <span className="truncate">{t(`subject_${s.id}`, userSettings.language)}</span>
                                                     </button>
-                                                    {activeSubject?.id === s.id && userRole === 'uni_student' && (
-                                                        <div className="ml-4 pl-2 border-l border-emerald-500/20 space-y-0.5 my-1">
-                                                            {sessions.filter(sess => sess.subjectId === s.id && sess.role === 'uni_student').map(sess => (
-                                                                <div key={sess.id} className="flex items-center group/session">
-                                                                    <button 
-                                                                        onClick={() => { setActiveSessionId(sess.id); if(isMobile) setSidebarOpen(false); setShowSubjectDashboard(false); }}
-                                                                        className={`flex-1 text-left px-2 py-1.5 rounded-lg text-xs font-medium truncate transition-colors ${activeSessionId === sess.id ? 'text-emerald-600 dark:text-white bg-emerald-50 dark:bg-white/5' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
-                                                                    >
-                                                                        {sess.title}
-                                                                    </button>
-                                                                    <button onClick={() => deleteSession(sess.id)} className="p-1 text-gray-400 hover:text-red-500 opacity-0 group-hover/session:opacity-100 transition-opacity"><Trash2 size={10}/></button>
-                                                                </div>
-                                                            ))}
-                                                            <button onClick={() => { createNewSession(s.id, 'uni_student', activeMode); if(isMobile) setSidebarOpen(false); setShowSubjectDashboard(false); }} className="w-full text-left px-2 py-1.5 text-[10px] font-bold text-emerald-500 hover:text-emerald-600 flex items-center gap-1">
-                                                                <Plus size={10}/> {t('new_chat', userSettings.language)}
-                                                            </button>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                                {/* Uni Teachers Subfolder */}
-                                <div className="border-l border-emerald-500/10 pl-2 mt-2">
-                                    <div className="flex items-center justify-between w-full px-2 py-2 group">
-                                        <button 
-                                            onClick={() => { setActiveSubject(null); setHomeView('uni_teacher_subjects'); setUserRole('uni_teacher'); if(isMobile) setSidebarOpen(false); }}
-                                            className="flex items-center gap-2 text-gray-500 dark:text-zinc-400 hover:text-emerald-500 transition-colors flex-1 text-left"
-                                        >
-                                            <Briefcase size={14} />
-                                            <span className="text-[11px] font-bold uppercase tracking-wider">{t('uni_professors', userSettings.language)}</span>
-                                        </button>
-                                        <button onClick={() => setUniTeachersFolderOpen(!uniTeachersFolderOpen)} className="p-1 text-gray-400 hover:text-emerald-500 rounded-full hover:bg-gray-100 dark:hover:bg-white/5 transition-colors">
-                                            <ChevronDown size={12} className={`transition-transform duration-300 ${uniTeachersFolderOpen ? 'rotate-180' : ''}`}/>
-                                        </button>
-                                    </div>
-                                    {uniTeachersFolderOpen && (
-                                        <div className="space-y-0.5 mt-1 animate-in slide-in-from-top-1">
-                                            {SUBJECTS.filter(s => s.id !== SubjectId.GENERAL && s.categories.includes('university')).map(s => (
-                                                <div key={`uni-teacher-${s.id}`}>
-                                                    <button 
-                                                        onClick={() => { handleSubjectChange(s, 'uni_teacher'); if(isMobile) setSidebarOpen(false); }}
-                                                        className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm transition-colors ${activeSubject?.id === s.id && userRole === 'uni_teacher' ? 'bg-emerald-50 dark:bg-white/10 text-emerald-600 dark:text-indigo-300 font-bold' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5'}`}
-                                                    >
-                                                        <div className={`w-1.5 h-1.5 rounded-full ${s.color}`}></div>
-                                                        <span className="truncate">{t(`subject_${s.id}`, userSettings.language)}</span>
-                                                    </button>
-                                                    {activeSubject?.id === s.id && userRole === 'uni_teacher' && (
-                                                        <div className="ml-4 pl-2 border-l border-emerald-500/20 space-y-0.5 my-1">
-                                                            {sessions.filter(sess => sess.subjectId === s.id && sess.role === 'uni_teacher').map(sess => (
-                                                                <div key={sess.id} className="flex items-center group/session">
-                                                                    <button 
-                                                                        onClick={() => { setActiveSessionId(sess.id); if(isMobile) setSidebarOpen(false); setShowSubjectDashboard(false); }}
-                                                                        className={`flex-1 text-left px-2 py-1.5 rounded-lg text-xs font-medium truncate transition-colors ${activeSessionId === sess.id ? 'text-emerald-600 dark:text-white bg-emerald-50 dark:bg-white/5' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
-                                                                    >
-                                                                        {sess.title}
-                                                                    </button>
-                                                                    <button onClick={() => deleteSession(sess.id)} className="p-1 text-gray-400 hover:text-red-500 opacity-0 group-hover/session:opacity-100 transition-opacity"><Trash2 size={10}/></button>
-                                                                </div>
-                                                            ))}
-                                                            <button onClick={() => { createNewSession(s.id, 'uni_teacher', activeMode); if(isMobile) setSidebarOpen(false); setShowSubjectDashboard(false); }} className="w-full text-left px-2 py-1.5 text-[10px] font-bold text-emerald-500 hover:text-emerald-600 flex items-center gap-1">
-                                                                <Plus size={10}/> {t('new_chat', userSettings.language)}
-                                                            </button>
-                                                        </div>
-                                                    )}
                                                 </div>
                                             ))}
                                         </div>
@@ -530,20 +436,11 @@ export const Sidebar = ({
                                  <button onClick={() => {setShowUnlockModal(true); setProfileMenuOpen(false)}} className="w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-white/5 text-sm font-medium flex items-center gap-3 transition-colors">
                                     <CreditCard size={16} className="text-gray-500"/> {t('manage_plan', userSettings.language)}
                                  </button>
-                                 <button 
-                                    onClick={() => { setShowDonationModal && setShowDonationModal(true); setProfileMenuOpen(false); }}
-                                    className="w-full text-left px-4 py-3 hover:bg-rose-50 dark:hover:bg-rose-900/10 text-sm font-medium flex items-center gap-3 transition-colors text-rose-500"
-                                 >
-                                    <Heart size={16} className="text-rose-500"/> {t('donate', userSettings.language)}
-                                 </button>
                                  <button onClick={() => {setShowReportModal && setShowReportModal(true); setProfileMenuOpen(false)}} className="w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-white/5 text-sm font-medium flex items-center gap-3 transition-colors text-amber-500 hover:text-amber-600">
                                     <AlertTriangle size={16} /> Докладвай проблем
                                  </button>
                                  <button onClick={() => {setActiveSubject(null); setHomeView('terms'); setProfileMenuOpen(false); if(isMobile) setSidebarOpen(false);}} className="w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-white/5 text-sm font-medium flex items-center gap-3 transition-colors">
                                     <FileText size={16} className="text-gray-500"/> {t('terms', userSettings.language)}
-                                 </button>
-                                  <button onClick={() => {addToast('Моля, използвайте формата за контакт.', 'info'); setProfileMenuOpen(false)}} className="w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-white/5 text-sm font-medium flex items-center gap-3 transition-colors">
-                                    <HelpCircle size={16} className="text-gray-500"/> {t('help', userSettings.language)}
                                  </button>
                                  <div className="h-px bg-gray-100 dark:bg-white/5 mx-2" />
                                  <button onClick={handleLogout} className="w-full text-left px-4 py-3 hover:bg-red-50 dark:hover:bg-red-900/10 text-red-500 text-sm font-medium flex items-center gap-3 transition-colors">
@@ -580,17 +477,13 @@ export const Sidebar = ({
                                             Lvl {userSettings.level}
                                         </span>
                                     </div>
-                                    {/* Detailed XP Progress */}
+                                    {/* XP Progress */}
                                     <div className="mt-1.5">
                                         <div className="w-full h-1 bg-black/10 dark:bg-white/10 rounded-full overflow-hidden">
                                             <div 
                                                 className={`h-full bg-gradient-to-r ${currentRank.gradient}`} 
                                                 style={{ width: `${stats.percentage}%` }}
                                             />
-                                        </div>
-                                        <div className="flex justify-between text-[8px] font-mono text-zinc-500 mt-0.5">
-                                            <span>{Math.floor(stats.currentLevelProgress)} XP</span>
-                                            <span>{Math.floor(stats.xpNeededForNext)} XP</span>
                                         </div>
                                     </div>
                                 </div>

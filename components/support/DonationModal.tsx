@@ -1,7 +1,7 @@
 
 import React from 'react';
-import { X, Heart, Coffee, CreditCard, ExternalLink, Globe, Sparkles, Server, Zap } from 'lucide-react';
-import { MODAL_ENTER } from '../../animations/transitions';
+import { X, Heart, Coffee, ExternalLink, Globe, Sparkles, Server, Zap, Info, ArrowUpRight } from 'lucide-react';
+import { MODAL_ENTER, FADE_IN } from '../../animations/transitions';
 import { t } from '../../utils/translations';
 import { UserSettings } from '../../types';
 
@@ -15,98 +15,82 @@ export const DonationModal = ({ isOpen, onClose, userSettings }: DonationModalPr
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[250] bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-300" onClick={onClose}>
+    <div className="fixed inset-0 z-[250] bg-black/80 backdrop-blur-xl flex items-center justify-center p-4 animate-in fade-in duration-300" onClick={onClose}>
       <div 
-        className={`w-full max-w-lg bg-[#09090b] border border-white/10 rounded-[32px] shadow-2xl relative overflow-hidden flex flex-col ${MODAL_ENTER}`} 
+        className={`w-full max-w-md bg-[#09090b] border border-white/10 rounded-[32px] shadow-2xl relative overflow-hidden flex flex-col ${MODAL_ENTER}`} 
         onClick={e => e.stopPropagation()}
       >
         {/* Background Decorative */}
-        <div className="absolute top-0 inset-x-0 h-32 bg-gradient-to-b from-rose-500/20 to-transparent pointer-events-none" />
-        <div className="absolute -top-10 -right-10 w-40 h-40 bg-rose-500/20 blur-[80px] rounded-full pointer-events-none" />
+        <div className="absolute top-0 inset-x-0 h-40 bg-gradient-to-b from-rose-500/20 via-pink-500/5 to-transparent pointer-events-none" />
+        <div className="absolute -top-10 -right-10 w-48 h-48 bg-rose-500/30 blur-[100px] rounded-full pointer-events-none" />
+        <div className="absolute top-20 -left-10 w-32 h-32 bg-amber-500/10 blur-[80px] rounded-full pointer-events-none" />
 
-        <button onClick={onClose} className="absolute top-4 right-4 p-2 bg-black/20 hover:bg-white/10 rounded-full text-zinc-400 hover:text-white transition-colors z-20">
-            <X size={20}/>
-        </button>
-
-        <div className="p-8 relative z-10 flex flex-col items-center text-center">
-            <div className="w-16 h-16 bg-gradient-to-br from-rose-400 to-pink-600 rounded-2xl flex items-center justify-center shadow-lg shadow-rose-500/30 mb-6 group transition-all duration-300 hover:scale-110">
-                <Heart size={32} className="text-white group-hover:animate-pulse" fill="currentColor" />
+        {/* Header */}
+        <div className="p-6 pb-2 flex items-center justify-between shrink-0 relative z-10">
+            <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-rose-500/20 text-rose-500 flex items-center justify-center border border-rose-500/30 shadow-lg shadow-rose-500/20">
+                    <Heart size={20} fill="currentColor" />
+                </div>
+                <h2 className="text-2xl font-black text-white tracking-tight">Подкрепи ни</h2>
             </div>
+            <button onClick={onClose} className="p-2 bg-white/5 hover:bg-white/10 rounded-full text-zinc-400 hover:text-white transition-colors border border-white/5">
+                <X size={20}/>
+            </button>
+        </div>
 
-            <h2 className="text-3xl font-black text-white mb-2 tracking-tight">Подкрепи Uchebnik AI</h2>
-            <p className="text-zinc-400 mb-8 max-w-sm leading-relaxed">
-                Вашата подкрепа ни помага да поддържаме сървърите и да разработваме нови функции за българското образование.
-            </p>
+        <div className="p-6 pt-4 relative z-10 flex flex-col items-center">
+            {/* Main Engagement Box */}
+            <div className="w-full bg-white/5 border border-white/10 rounded-3xl p-6 mb-6 text-center group">
+                <div className="relative mb-6">
+                    <div className="w-20 h-20 mx-auto bg-gradient-to-br from-amber-400 to-orange-600 rounded-2xl flex items-center justify-center shadow-xl shadow-orange-500/30 transform group-hover:scale-110 group-hover:rotate-6 transition-all duration-500">
+                        <Coffee size={40} className="text-white" strokeWidth={2.5}/>
+                    </div>
+                    {/* Floating Sparkles */}
+                    <div className="absolute top-0 right-1/4 animate-pulse"><Sparkles size={14} className="text-amber-300"/></div>
+                    <div className="absolute bottom-2 left-1/4 animate-pulse delay-500"><Sparkles size={18} className="text-white/50"/></div>
+                </div>
 
-            <div className="grid grid-cols-1 gap-4 w-full mb-8">
-                {/* Buy Me a Coffee Option */}
+                <h3 className="text-xl font-bold text-white mb-2">Твоето кафе зарежда проекта</h3>
+                <p className="text-zinc-400 text-sm leading-relaxed mb-6">
+                    Uchebnik AI се поддържа от малък екип и твоята подкрепа ни помага да поддържаме сървърите и да добавяме нови функции.
+                </p>
+
+                {/* Primary Button */}
                 <a 
-                    href="#" 
-                    onClick={(e) => { e.preventDefault(); alert("Coming soon! Buy Me a Coffee link will be here."); }}
-                    className="flex items-center justify-between p-5 bg-white/5 border border-white/10 rounded-2xl hover:bg-white/10 hover:border-amber-500/50 transition-all group"
+                    href="https://buymeacoffee.com/uchebnikai" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="w-full flex items-center justify-center gap-3 py-4 px-6 bg-[#FFDD00] hover:bg-[#FFD700] text-black rounded-2xl font-black text-base shadow-xl shadow-amber-500/20 transition-all active:scale-95 group/btn"
                 >
-                    <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-amber-500/10 text-amber-500 rounded-xl flex items-center justify-center">
-                            <Coffee size={24} />
-                        </div>
-                        <div className="text-left">
-                            <div className="font-bold text-white group-hover:text-amber-400 transition-colors">Купи ни кафе</div>
-                            <div className="text-xs text-zinc-500">Buy Me a Coffee</div>
-                        </div>
-                    </div>
-                    <ExternalLink size={18} className="text-zinc-600 group-hover:text-white transition-colors" />
+                    <img src="https://cdn.buymeacoffee.com/widget/assets/images/BMC-btn-logo.svg" alt="BMC" className="w-5 h-5" />
+                    <span>Купи ни кафе</span>
+                    <ArrowUpRight size={18} className="group-hover/btn:translate-x-0.5 group-hover/btn:-translate-y-0.5 transition-transform" />
                 </a>
-
-                {/* Stripe / Card Option */}
-                <button 
-                    onClick={() => alert("Coming soon! Stripe donation portal will be here.")}
-                    className="flex items-center justify-between p-5 bg-white/5 border border-white/10 rounded-2xl hover:bg-white/10 hover:border-indigo-500/50 transition-all group text-left"
-                >
-                    <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-indigo-500/10 text-indigo-400 rounded-xl flex items-center justify-center">
-                            <CreditCard size={24} />
-                        </div>
-                        <div>
-                            <div className="font-bold text-white group-hover:text-indigo-400 transition-colors">Дарение с карта</div>
-                            <div className="text-xs text-zinc-500">Сигурно плащане със Stripe</div>
-                        </div>
-                    </div>
-                    <div className="px-2 py-1 bg-indigo-500/20 text-indigo-400 text-[10px] font-black uppercase rounded-md">Скоро</div>
-                </button>
-
-                {/* Revolut / PayPal Placeholder */}
-                <button 
-                    onClick={() => alert("Coming soon! Revolut/PayPal info will be here.")}
-                    className="flex items-center justify-between p-5 bg-white/5 border border-white/10 rounded-2xl hover:bg-white/10 hover:border-emerald-500/50 transition-all group text-left"
-                >
-                    <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-emerald-500/10 text-emerald-400 rounded-xl flex items-center justify-center">
-                            <Globe size={24} />
-                        </div>
-                        <div>
-                            <div className="font-bold text-white group-hover:text-emerald-400 transition-colors">PayPal / Revolut</div>
-                            <div className="text-xs text-zinc-500">Международни преводи</div>
-                        </div>
-                    </div>
-                    <div className="px-2 py-1 bg-emerald-500/20 text-emerald-400 text-[10px] font-black uppercase rounded-md">Скоро</div>
-                </button>
             </div>
 
-            {/* Why Support Section */}
-            <div className="w-full grid grid-cols-2 gap-4">
-                <div className="flex flex-col items-center gap-2 p-4 bg-white/5 rounded-2xl">
+            {/* Feature Grid / Why Help */}
+            <div className="w-full grid grid-cols-2 gap-3 mb-6">
+                <div className="p-4 bg-black/40 border border-white/5 rounded-2xl flex flex-col items-center gap-2">
                     <Server size={20} className="text-blue-400" />
-                    <span className="text-[10px] font-bold text-zinc-300 uppercase tracking-widest">Сървъри</span>
+                    <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest text-center">Cloud Сървъри</span>
                 </div>
-                <div className="flex flex-col items-center gap-2 p-4 bg-white/5 rounded-2xl">
+                <div className="p-4 bg-black/40 border border-white/5 rounded-2xl flex flex-col items-center gap-2">
                     <Zap size={20} className="text-amber-400" />
-                    <span className="text-[10px] font-bold text-zinc-300 uppercase tracking-widest">Разработка</span>
+                    <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest text-center">Бърза Разработка</span>
                 </div>
             </div>
 
-            <p className="mt-8 text-[10px] text-zinc-500 font-bold uppercase tracking-[0.2em]">
+            <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-[0.2em] mb-2">
                 Благодарим за доверието! ❤️
             </p>
+        </div>
+
+        {/* Footer Info */}
+        <div className="p-4 bg-black/20 border-t border-white/5 backdrop-blur-md">
+            <div className="flex items-center gap-3 text-[10px] text-zinc-500 font-medium px-2">
+                <Info size={14} className="shrink-0 text-indigo-400"/>
+                <p>Uchebnik AI винаги ще има безплатна версия. Твоето дарение помага тя да остане такава.</p>
+            </div>
         </div>
       </div>
     </div>
