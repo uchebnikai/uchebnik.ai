@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { GoogleGenAI, LiveServerMessage, Modality } from "@google/genai";
 import { SubjectConfig, SubjectId, AppMode, Message, Slide, UserSettings, Session, UserPlan, UserRole, HomeViewType } from './types';
@@ -179,11 +180,6 @@ export const App = () => {
   const [isVoiceCallActive, setIsVoiceCallActive] = useState(false);
   const [voiceCallStatus, setVoiceCallStatus] = useState<'idle' | 'listening' | 'processing' | 'speaking'>('idle');
   const [voiceMuted, setVoiceMuted] = useState(false);
-
-  // 67 Easter Egg State
-  const [isShaking, setIsShaking] = useState(false);
-  const [showSixtySevenOverlay, setShowSixtySevenOverlay] = useState(false);
-  const lastShakeTimeRef = useRef<number>(0);
   
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [userSettings, setUserSettings] = useState<UserSettings>({
@@ -842,18 +838,29 @@ export const App = () => {
     const textToSend = overrideText || inputValue;
     const currentImgs = overrideImages || [...selectedImages];
 
-    // 67 intensive easter egg logic
-    if (textToSend === '67') {
-      const now = Date.now();
-      if (now - lastShakeTimeRef.current > 15000) { // Reduced cooldown to 15s for more fun
-          setIsShaking(true);
-          setShowSixtySevenOverlay(true);
-          lastShakeTimeRef.current = now;
-          // Trigger intensive shake
-          setTimeout(() => setIsShaking(false), 800);
-          // Hide text effect
-          setTimeout(() => setShowSixtySevenOverlay(false), 1500);
-      }
+    if (!currentSubject || !currentSessionId) return;
+
+    // 67 easter egg - COMBINED INTO ONE MESSAGE
+    if (textToSend === "67" && currentImgs.length === 0) {
+        const newUserMsg: Message = { id: Date.now().toString(), role: 'user', text: textToSend, timestamp: Date.now() };
+        const combinedModelMsg: Message = { 
+            id: (Date.now() + 1).toString(), 
+            role: 'model', 
+            text: "nuh uh", 
+            timestamp: Date.now() + 1, 
+            type: 'video', 
+            videoUrl: "https://d3o8hbmq1ueggw.cloudfront.net/6wi1m%2Ffile%2Fb59147eb78369895be2e537a5c9d1a32_e3f57f90735ecbd0b463a700d621de4c.mp4?response-content-disposition=inline%3Bfilename%3D%22b59147eb78369895be2e537a5c9d1a32_e3f57f90735ecbd0b463a700d621de4c.mp4%22%3B&response-content-type=video%2Fmp4&Expires=1768006059&Signature=DVEaJVHqVJmNevr9hLwVwaxjqiJMExXJ8J1bhuvWKWDV0Wk-96o2km6nZ97VGr3ktoj2--c95pztarLsCSBT5F9yg7RmWD5BqHsBmE-R~9BBXAFvvY1QTBvcx9Utb8~PHEFVomNT9bcvoC5GbjE91v5aGoA~Ibjg1BcLDRx5rMWMahEsRLW5KC16CI2gw6fJPUpHUWZc-irJoTY0lTsJf~ffw0o8Igpa9ToYfkZvyKs-CKLyAjDgRzypmyCqZoXptIgGlViTJ1xY0BTvf5FWXegvnKNrhxsHQ~zKc7YmWH4XzsVMGebCflN1D7u76imhAC85RYnHIHtbki6OPYJepQ__&Key-Pair-Id=APKAJT5WQLLEOADKLHBQ" 
+        };
+
+        setSessions(prev => prev.map(s => s.id === currentSessionId ? { 
+            ...s, 
+            messages: [...s.messages, newUserMsg, combinedModelMsg], 
+            lastModified: Date.now(), 
+            preview: "nuh uh" 
+        } : s));
+        setInputValue('');
+        setSelectedImages([]);
+        return;
     }
 
     if (!session) { 
@@ -982,17 +989,11 @@ export const App = () => {
       
       {showAuthModal && <Auth isModal={false} onSuccess={closeAuthModal} initialMode={initialAuthMode} onNavigate={setHomeView} />}
 
-      {showSixtySevenOverlay && (
-          <div className="fixed inset-0 z-[200] flex items-center justify-center pointer-events-none overflow-hidden">
-              <div className="sixtyseven-text">67777777777</div>
-          </div>
-      )}
-
       {!focusMode && session && (
           <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} userSettings={userSettings} setUserSettings={setUserSettings} userPlan={userPlan} activeSubject={activeSubject} setActiveSubject={setActiveSubject} setHomeView={setHomeView} setUserRole={setUserRole} handleSubjectChange={handleSubjectChange} activeSessionId={activeSessionId} setActiveSessionId={setActiveSessionId} sessions={sessions} deleteSession={deleteSession} createNewSession={createNewSession} unreadSubjects={unreadSubjects} activeMode={activeMode} userMeta={userMeta} session={session} setShowUnlockModal={setShowUnlockModal} setShowReferralModal={setShowReferralModal} setShowSettings={setShowSettings} handleLogout={handleLogout} setShowAuthModal={setShowAuthModal} addToast={addToast} setShowSubjectDashboard={setShowSubjectDashboard} userRole={userRole} streak={0} syncStatus={syncStatus} homeView={homeView} dailyImageCount={dailyImageCount} setShowLeaderboard={setShowLeaderboard} setShowQuests={setShowQuests} setShowReportModal={setShowReportModal} globalConfig={globalConfig} />
       )}
       
-      <main className={`flex-1 flex flex-col relative w-full h-full overflow-hidden z-10 ${isShaking ? 'shake-67-active' : ''}`}>
+      <main className="flex-1 flex flex-col relative w-full h-full overflow-hidden z-10">
         {homeView === 'auth_success' ? (
             <AuthSuccess type={authSuccessType || 'generic'} onContinue={() => { setHomeView('landing'); setAuthSuccessType(null); }} userSettings={userSettings} />
         ) : homeView === 'terms' ? (

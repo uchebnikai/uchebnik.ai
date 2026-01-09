@@ -201,7 +201,8 @@ export interface Message {
   imageAnalysis?: string; 
   isError?: boolean;
   isDemo?: boolean;
-  type?: 'text' | 'image_generated' | 'slides' | 'test_generated';
+  type?: 'text' | 'image_generated' | 'slides' | 'test_generated' | 'video'; 
+  videoUrl?: string;
   slidesData?: Slide[]; 
   testData?: TestData; 
   chartData?: ChartData; 

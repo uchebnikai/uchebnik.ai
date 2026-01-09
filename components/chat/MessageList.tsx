@@ -110,13 +110,7 @@ export const MessageList = ({
 
                      {msg.type === 'test_generated' && msg.testData && <TestRenderer data={msg.testData} />}
 
-                     {isStreaming && !hasText && (
-                        <div className="flex items-center gap-3 text-sm text-gray-500 italic py-2 animate-pulse">
-                           <Loader2 className="animate-spin text-indigo-500" size={18}/>
-                           <span>{getLoadingMessage(msg.id)}</span>
-                        </div>
-                     )}
-
+                     {/* MOVE: hasText rendered before video player for natural combined reading order */}
                      {hasText && (
                          <div className={`markdown-content w-full relative transition-all duration-700 ${isBlurred ? 'max-h-[160px] overflow-hidden' : ''}`}>
                              <div className={`${isBlurred ? 'select-none pointer-events-none opacity-50 grayscale-[0.5]' : ''}`}>
@@ -132,6 +126,25 @@ export const MessageList = ({
                                  </div>
                              )}
                          </div>
+                     )}
+
+                     {msg.type === 'video' && msg.videoUrl && (
+                        <div className="w-full max-w-sm rounded-2xl overflow-hidden shadow-xl border border-white/10 bg-black mt-2">
+                           <video 
+                              src={msg.videoUrl} 
+                              autoPlay 
+                              playsInline 
+                              controls 
+                              className="w-full h-auto"
+                           />
+                        </div>
+                     )}
+
+                     {isStreaming && !hasText && (
+                        <div className="flex items-center gap-3 text-sm text-gray-500 italic py-2 animate-pulse">
+                           <Loader2 className="animate-spin text-indigo-500" size={18}/>
+                           <span>{getLoadingMessage(msg.id)}</span>
+                        </div>
                      )}
 
                      {isBlurred && (
