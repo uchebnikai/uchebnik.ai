@@ -1,9 +1,8 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { GoogleGenAI, LiveServerMessage, Modality } from "@google/genai";
 import { SubjectConfig, SubjectId, AppMode, Message, Slide, UserSettings, Session, UserPlan, UserRole, HomeViewType } from './types';
 import { SUBJECTS, VOICES, DEFAULT_VOICE } from './constants';
-import { generateResponse } from './services/aiService';
+import { generateResponse, generateChatTitle } from './services/aiService';
 import { createBlob as createAudioBlob } from './services/audioService'; 
 import { supabase } from './supabaseClient';
 import { Auth } from './components/auth/Auth';
@@ -760,7 +759,7 @@ export const App = () => {
 
   const createNewSession = (subjectId: SubjectId, role?: UserRole, initialMode?: AppMode) => {
     const sub = SUBJECTS.find(s => s.id === subjectId);
-    const sTitle = `${sub ? t(`subject_${sub.id}`, userSettings.language) : 'Subject'} #${sessions.length + 1}`;
+    const sTitle = `...`; // Placeholder, will be updated after first message
     const newSession: Session = {
       id: crypto.randomUUID(), subjectId, title: sTitle, createdAt: Date.now(), lastModified: Date.now(), preview: '...', messages: [], role: role || userRole || undefined, mode: initialMode
     };
@@ -890,6 +889,10 @@ export const App = () => {
     const tempAiMsgId = (Date.now() + 1).toString();
     const tempAiMsg: Message = { id: tempAiMsgId, role: 'model', text: "", timestamp: Date.now(), reasoning: "", isStreaming: true };
     
+    // Update title dynamically on the first user message
+    const currentSess = sessionsRef.current.find(s => s.id === currentSessionId);
+    const isFirstUserMsg = currentSess && currentSess.messages.filter(m => m.role === 'user').length === 0;
+
     setSessions(prev => prev.map(s => s.id === currentSessionId ? { ...s, messages: [...s.messages, newUserMsg, tempAiMsg], lastModified: Date.now(), preview: textToSend.substring(0, 50) } : s));
     setInputValue(''); setSelectedImages([]);
     
@@ -903,6 +906,14 @@ export const App = () => {
     updateQuestProgress(userSettings.dailyQuests?.quests || [], 'message', currentSubject.id);
 
     try {
+      if (isFirstUserMsg && textToSend.trim()) {
+         generateChatTitle(textToSend).then(title => {
+             if (title) {
+                 setSessions(prev => prev.map(s => s.id === currentSessionId ? { ...s, title } : s));
+             }
+         });
+      }
+
       const historyForAI = sessionsRef.current.find(s => s.id === currentSessionId)?.messages || [];
       const response = await generateResponse(currentSubject.id, currentMode, textToSend, currentImgs, historyForAI, userSettings.preferredModel, (txt) => {
           setSessions(prev => prev.map(s => s.id === currentSessionId ? { ...s, messages: s.messages.map(m => m.id === tempAiMsgId ? { ...m, text: txt } : m) } : s));

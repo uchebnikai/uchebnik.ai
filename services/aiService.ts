@@ -1,4 +1,3 @@
-
 import { GoogleGenAI, GenerateContentResponse, Tool } from "@google/genai";
 import { AppMode, SubjectId, Slide, ChartData, GeometryData, Message, TestData, TeachingStyle, SearchSource, TokenUsage } from "../types";
 import { getSystemPrompt, SUBJECTS } from "../constants";
@@ -39,6 +38,32 @@ const ALLOWED_MODELS = [
     'gemini-2.5-flash',
     'gemini-3-flash-preview',
 ];
+
+/**
+ * Generates a concise title (2-6 words) based on user's first message.
+ */
+export const generateChatTitle = async (userInput: string): Promise<string | null> => {
+  const apiKey = process.env.API_KEY || "";
+  if (!apiKey || !userInput.trim()) return null;
+
+  try {
+    const ai = new GoogleGenAI({ apiKey });
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: `Generate a concise, meaningful title (2-6 words) for a chat that starts with this message: "${userInput}". 
+      Rules:
+      1. Extract the main topic or goal.
+      2. No generic words like "Chat", "Question", "Help".
+      3. Reply ONLY with the title.
+      4. If the message is in Bulgarian, provide the title in Bulgarian.`,
+    });
+
+    return response.text?.trim().replace(/["']/g, "") || null;
+  } catch (e) {
+    console.error("Title generation failed", e);
+    return null;
+  }
+};
 
 export const generateResponse = async (
   subjectId: SubjectId,
