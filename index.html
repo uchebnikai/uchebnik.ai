@@ -137,22 +137,49 @@
       #bmc-wbtn {
         transition: transform 0.2s ease-out, opacity 0.2s ease-out !important;
         cursor: grab !important;
-        z-index: 999999 !important; /* Ensure it stays above everything but modas */
+        /* Highest z-index to stay OVER the iframe */
+        z-index: 2000000 !important;
         touch-action: none;
         user-select: none;
+        transform: scale(1) !important;
+        transform-origin: bottom left !important;
       }
       #bmc-wbtn:active {
         cursor: grabbing !important;
       }
-      /* Ensure the popup frame stays on top */
-      #bmc-wframe {
-        z-index: 1000000 !important;
+      /* POPUP IFRAME STYLES */
+      #bmc-iframe {
+        /* Slightly lower z-index than the button */
+        z-index: 1999999 !important;
+        width: 420px !important;
+        max-width: 95vw !important;
+        height: 380px !important;
+        max-height: 60vh !important;
+        border-radius: 18px !important;
+        transform-origin: bottom right !important;
+        transform: scale(0) !important; 
       }
-      /* Initial mobile scaling */
+      /* If active, apply standard scale */
+      #bmc-iframe[style*="opacity: 1"] {
+        transform: scale(0.85) !important;
+      }
+      /* MOBILE ONLY: FILL THE SCREEN */
       @media (max-width: 640px) {
-        #bmc-wbtn {
-          transform: scale(0.75) !important;
-          transform-origin: bottom left !important;
+        #bmc-iframe {
+          width: 100vw !important;
+          max-width: 100vw !important;
+          height: 100dvh !important;
+          max-height: 100dvh !important;
+          left: 0 !important;
+          bottom: 0 !important;
+          top: 0 !important;
+          right: 0 !important;
+          border-radius: 0 !important;
+          margin: 0 !important;
+          transform: none !important;
+        }
+        #bmc-iframe[style*="opacity: 1"] {
+          transform: none !important;
         }
       }
     </style>
@@ -190,7 +217,7 @@
     <script data-name="BMC-Widget" data-cfasync="false" src="https://cdnjs.buymeacoffee.com/1.0.0/widget.prod.min.js" data-id="uchebnikai" data-description="Support me on Buy me a coffee!" data-message="Подкрепи развитието на Uchebnik AI☕" data-color="#BD5FFF" data-position="Left" data-x_margin="18" data-y_margin="110"></script>
 
     <script>
-      // Enhanced Draggable logic for BMC Widget with click prevention
+      // Enhanced Draggable logic for BMC Widget with click prevention and frame syncing
       const initDraggableWidget = () => {
         const checkInterval = setInterval(() => {
           const widget = document.getElementById('bmc-wbtn');
@@ -219,6 +246,10 @@
           
           el.setPointerCapture(e.pointerId);
           el.style.transition = 'none';
+          
+          // Disable transitions for the frame too while dragging
+          const frame = document.getElementById('bmc-iframe') || document.getElementById('bmc-wframe');
+          if (frame) frame.style.transition = 'none';
         };
 
         const onPointerMove = (e) => {
@@ -226,7 +257,8 @@
           
           const dx = e.clientX - startX;
           const dy = e.clientY - startY;
-          totalMoved += Math.abs(dx) + Math.abs(dy);
+          const distance = Math.abs(dx) + Math.abs(dy);
+          totalMoved += distance;
 
           if (totalMoved > 10) {
             const newLeft = initialLeft + dx;
@@ -238,6 +270,23 @@
             el.style.left = boundedLeft + 'px';
             el.style.bottom = boundedBottom + 'px';
             el.style.right = 'auto';
+
+            // SYNC IFRAME POSITION ON THE LEFT SIDE OF BUTTON:
+            const frame = document.getElementById('bmc-iframe') || document.getElementById('bmc-wframe');
+            if (frame) {
+                const iframeWidth = 420;
+                const buttonWidth = 64;
+                
+                // Align iframe's RIGHT edge with the button's RIGHT edge to put it "on the left side"
+                let iframeLeft = boundedLeft + buttonWidth - iframeWidth;
+                
+                // Viewport safety check
+                if (iframeLeft < 10) iframeLeft = 10;
+
+                frame.style.left = iframeLeft + 'px';
+                frame.style.bottom = (boundedBottom + 72) + 'px';
+                frame.style.right = 'auto';
+            }
           }
         };
 
@@ -246,9 +295,12 @@
           isDragging = false;
           el.releasePointerCapture(e.pointerId);
           el.style.transition = 'transform 0.2s ease-out';
+          
+          // Re-enable transitions for the frame
+          const frame = document.getElementById('bmc-iframe') || document.getElementById('bmc-wframe');
+          if (frame) frame.style.transition = 'all .25s ease, transform .25s ease';
         };
 
-        // Capture phase click listener to prevent the widget from opening after a drag
         const onClickCapture = (e) => {
             if (totalMoved > 15) {
                 e.preventDefault();
@@ -260,7 +312,7 @@
         el.addEventListener('pointerdown', onPointerDown);
         el.addEventListener('pointermove', onPointerMove);
         el.addEventListener('pointerup', onPointerUp);
-        el.addEventListener('click', onClickCapture, true); // True for capture phase
+        el.addEventListener('click', onClickCapture, true);
         
         el.addEventListener('dragstart', (e) => e.preventDefault());
       };
