@@ -179,6 +179,11 @@ export const App = () => {
   const [isVoiceCallActive, setIsVoiceCallActive] = useState(false);
   const [voiceCallStatus, setVoiceCallStatus] = useState<'idle' | 'listening' | 'processing' | 'speaking'>('idle');
   const [voiceMuted, setVoiceMuted] = useState(false);
+
+  // 67 Easter Egg State
+  const [isShaking, setIsShaking] = useState(false);
+  const [showSixtySevenOverlay, setShowSixtySevenOverlay] = useState(false);
+  const lastShakeTimeRef = useRef<number>(0);
   
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [userSettings, setUserSettings] = useState<UserSettings>({
@@ -837,6 +842,20 @@ export const App = () => {
     const textToSend = overrideText || inputValue;
     const currentImgs = overrideImages || [...selectedImages];
 
+    // 67 intensive easter egg logic
+    if (textToSend === '67') {
+      const now = Date.now();
+      if (now - lastShakeTimeRef.current > 15000) { // Reduced cooldown to 15s for more fun
+          setIsShaking(true);
+          setShowSixtySevenOverlay(true);
+          lastShakeTimeRef.current = now;
+          // Trigger intensive shake
+          setTimeout(() => setIsShaking(false), 800);
+          // Hide text effect
+          setTimeout(() => setShowSixtySevenOverlay(false), 1500);
+      }
+    }
+
     if (!session) { 
         if ((!textToSend.trim() && currentImgs.length === 0) || !currentSubject || !currentSessionId) return;
 
@@ -963,11 +982,17 @@ export const App = () => {
       
       {showAuthModal && <Auth isModal={false} onSuccess={closeAuthModal} initialMode={initialAuthMode} onNavigate={setHomeView} />}
 
+      {showSixtySevenOverlay && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center pointer-events-none overflow-hidden">
+              <div className="sixtyseven-text">67777777777</div>
+          </div>
+      )}
+
       {!focusMode && session && (
           <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} userSettings={userSettings} setUserSettings={setUserSettings} userPlan={userPlan} activeSubject={activeSubject} setActiveSubject={setActiveSubject} setHomeView={setHomeView} setUserRole={setUserRole} handleSubjectChange={handleSubjectChange} activeSessionId={activeSessionId} setActiveSessionId={setActiveSessionId} sessions={sessions} deleteSession={deleteSession} createNewSession={createNewSession} unreadSubjects={unreadSubjects} activeMode={activeMode} userMeta={userMeta} session={session} setShowUnlockModal={setShowUnlockModal} setShowReferralModal={setShowReferralModal} setShowSettings={setShowSettings} handleLogout={handleLogout} setShowAuthModal={setShowAuthModal} addToast={addToast} setShowSubjectDashboard={setShowSubjectDashboard} userRole={userRole} streak={0} syncStatus={syncStatus} homeView={homeView} dailyImageCount={dailyImageCount} setShowLeaderboard={setShowLeaderboard} setShowQuests={setShowQuests} setShowReportModal={setShowReportModal} globalConfig={globalConfig} />
       )}
       
-      <main className="flex-1 flex flex-col relative w-full h-full overflow-hidden z-10">
+      <main className={`flex-1 flex flex-col relative w-full h-full overflow-hidden z-10 ${isShaking ? 'shake-67-active' : ''}`}>
         {homeView === 'auth_success' ? (
             <AuthSuccess type={authSuccessType || 'generic'} onContinue={() => { setHomeView('landing'); setAuthSuccessType(null); }} userSettings={userSettings} />
         ) : homeView === 'terms' ? (
