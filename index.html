@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="bg" class="dark">
   <head>
@@ -158,10 +157,14 @@
         border-radius: 18px !important;
         transform-origin: bottom right !important;
         transform: scale(0) !important; 
+        /* CRITICAL: Prevent blocking when invisible */
+        pointer-events: none !important;
+        transition: all .25s ease, transform .25s ease !important;
       }
-      /* If active, apply standard scale */
+      /* If active, apply standard scale and enable interactions */
       #bmc-iframe[style*="opacity: 1"] {
         transform: scale(0.85) !important;
+        pointer-events: auto !important;
       }
       /* MOBILE ONLY: FILL THE SCREEN */
       @media (max-width: 640px) {
@@ -176,10 +179,12 @@
           right: 0 !important;
           border-radius: 0 !important;
           margin: 0 !important;
-          transform: none !important;
+          /* Still scale(0) when hidden even on mobile */
+          transform: scale(0) !important;
         }
         #bmc-iframe[style*="opacity: 1"] {
           transform: none !important;
+          pointer-events: auto !important;
         }
       }
     </style>
