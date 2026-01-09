@@ -137,7 +137,7 @@ export const WelcomeScreen = ({
             return;
         }
         
-        const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+        const SR = (window as any).SpeechRecognition || (window as any).webkitRecognition;
         if (!SR) {
             alert('Гласовата услуга не се поддържа от този браузър.');
             return;
@@ -308,7 +308,7 @@ export const WelcomeScreen = ({
                         <button onClick={() => setHomeView('privacy')} className="hover:text-zinc-300 transition-colors">{t('privacy', userSettings.language)}</button>
                     </div>
                     <div className="flex flex-col items-center gap-1 text-[10px] font-medium text-zinc-600 text-center px-4">
-                        <p>&copy; 2025 Uchebnik AI. Всички права запазени.</p>
+                        <p>&copy; 2026 Uchebnik AI. Всички права запазени.</p>
                         <p>Designed with ❤️ by <a href="https://instagram.com/vanyoy" target="_blank" rel="noreferrer" className="hover:text-indigo-400 transition-colors">Vanyo</a>, <a href="https://instagram.com/s_ivanov6" target="_blank" rel="noreferrer" className="hover:text-indigo-400 transition-colors">Svetlyo</a> & <a href="https://tiktok.com/@bella_kzx" target="_blank" rel="noreferrer" className="hover:text-indigo-400 transition-colors">Bella</a>.</p>
                     </div>
                 </div>
