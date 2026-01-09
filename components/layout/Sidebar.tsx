@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { MessageSquare, Trash2, Plus, School, GraduationCap, Briefcase, ChevronDown, User, Settings, CreditCard, HelpCircle, LogOut, ArrowRight, ChevronUp, FileText, CloudOff, RefreshCw, Cloud, PanelLeftClose, PanelLeftOpen, LogIn, Snowflake, Gift, Trophy, Target, AlertTriangle, Heart, Coffee } from 'lucide-react';
+import { MessageSquare, Trash2, Plus, School, GraduationCap, Briefcase, ChevronDown, User, Settings, CreditCard, HelpCircle, LogOut, ArrowRight, ChevronUp, FileText, CloudOff, RefreshCw, Cloud, PanelLeftClose, PanelLeftOpen, LogIn, Snowflake, Gift, Trophy, Target, AlertTriangle, Heart, Coffee, Sparkles } from 'lucide-react';
 import { DynamicIcon } from '../ui/DynamicIcon';
 import { SUBJECTS } from '../../constants';
 import { SubjectId, AppMode, Session, UserRole, UserSettings, UserPlan, SubjectConfig, HomeViewType } from '../../types';
@@ -183,45 +183,65 @@ export const Sidebar = ({
           </div>
 
           <div className="flex-1 overflow-y-auto px-4 pb-4 custom-scrollbar">
-             {/* Gamification & Support Buttons - Action Grid */}
+             {/* Gamification Grid */}
              {session && (
-                 <div className={`mt-2 mb-2 ${collapsed ? 'space-y-2' : 'grid grid-cols-3 gap-1.5'}`}>
+                 <div className={`mt-2 mb-2 ${collapsed ? 'space-y-2' : 'grid grid-cols-2 gap-2'}`}>
                      <button 
                         onClick={() => setShowLeaderboard && setShowLeaderboard(true)}
-                        className={`flex items-center justify-center ${collapsed ? 'py-3 w-full' : 'py-2 px-1'} rounded-xl transition-all group glass-button border border-amber-500/20 hover:border-amber-500/40 hover:bg-amber-500/10 flex-col gap-1`}
+                        className={`flex items-center justify-center ${collapsed ? 'py-3 w-full' : 'py-3 px-1'} rounded-2xl transition-all group glass-button border border-amber-500/20 hover:border-amber-500/40 hover:bg-amber-500/10 flex-col gap-1 shadow-sm`}
                         title="Класация"
                      >
                          <div className="w-6 h-6 rounded-md bg-amber-500/10 flex items-center justify-center text-amber-500 group-hover:text-amber-400 group-hover:bg-amber-500/20 transition-colors">
                              <Trophy size={14} />
                          </div>
-                         {!collapsed && <span className="text-[9px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-tight">Класация</span>}
+                         {!collapsed && <span className="text-[10px] font-black text-amber-600 dark:text-amber-400 uppercase tracking-widest">Класация</span>}
                      </button>
 
                      <button 
                         onClick={() => setShowQuests && setShowQuests(true)}
-                        className={`flex items-center justify-center ${collapsed ? 'py-3 w-full' : 'py-2 px-1'} rounded-xl transition-all group glass-button border border-pink-500/20 hover:border-pink-500/40 hover:bg-pink-500/10 flex-col gap-1`}
+                        className={`flex items-center justify-center ${collapsed ? 'py-3 w-full' : 'py-3 px-1'} rounded-2xl transition-all group glass-button border border-pink-500/20 hover:border-pink-500/40 hover:bg-pink-500/10 flex-col gap-1 shadow-sm`}
                         title="Дневни Мисии"
                      >
                          <div className="w-6 h-6 rounded-md bg-pink-500/10 flex items-center justify-center text-pink-500 group-hover:text-pink-400 group-hover:bg-pink-500/20 transition-colors">
                              <Target size={14} />
                          </div>
-                         {!collapsed && <span className="text-[9px] font-bold text-pink-600 dark:text-pink-400 uppercase tracking-tight">Мисии</span>}
-                     </button>
-
-                     <button 
-                        onClick={() => setShowDonationModal && setShowDonationModal(true)}
-                        className={`flex items-center justify-center ${collapsed ? 'py-3 w-full' : 'py-2 px-1'} rounded-xl transition-all group relative overflow-hidden flex-col gap-1 shadow-lg shadow-rose-500/10 hover:shadow-rose-500/20 border-rose-500/20 hover:border-rose-500/40 bg-gradient-to-br from-rose-500/10 to-pink-500/5 active:scale-95`}
-                        title="Подкрепи ни"
-                     >
-                         {/* Warm Glow Effect */}
-                         <div className="absolute inset-0 bg-rose-500/5 animate-pulse-slow pointer-events-none" />
-                         
-                         <div className="w-6 h-6 rounded-md bg-rose-500/20 flex items-center justify-center text-rose-500 group-hover:text-rose-400 group-hover:scale-110 transition-all">
-                             <Heart size={14} fill="currentColor" className="drop-shadow-[0_0_5px_rgba(244,63,94,0.5)]"/>
-                         </div>
-                         {!collapsed && <span className="text-[9px] font-black text-rose-600 dark:text-rose-400 uppercase tracking-tight">Подкрепа</span>}
+                         {!collapsed && <span className="text-[10px] font-black text-pink-600 dark:text-pink-400 uppercase tracking-widest">Мисии</span>}
                      </button>
                  </div>
+             )}
+
+             {/* Dedicated Support Card - Very Visible */}
+             {session && !collapsed && (
+                 <button 
+                    onClick={() => setShowDonationModal && setShowDonationModal(true)}
+                    className="w-full mt-2 mb-4 group relative overflow-hidden rounded-[28px] p-4 text-left shadow-lg transition-all hover:scale-[1.02] active:scale-[0.98] bg-gradient-to-br from-rose-500 to-pink-600 border border-white/20"
+                 >
+                     <div className="absolute top-0 right-0 p-2 opacity-20 transform translate-x-2 -translate-y-2 group-hover:scale-125 transition-transform duration-500">
+                        <Heart size={80} fill="currentColor" className="text-white"/>
+                     </div>
+                     <div className="relative z-10">
+                        <div className="flex items-center gap-2 mb-2">
+                            <div className="w-8 h-8 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center text-white border border-white/30">
+                                <Heart size={16} fill="currentColor" className="animate-pulse" />
+                            </div>
+                            <span className="text-[10px] font-black text-white/80 uppercase tracking-[0.2em]">Подкрепа</span>
+                        </div>
+                        <h3 className="font-bold text-sm text-white leading-tight">Харесва ли ти <br/>Uchebnik AI?</h3>
+                        <div className="mt-3 flex items-center gap-2 text-[11px] font-bold text-white/90 bg-black/10 w-fit px-3 py-1.5 rounded-full backdrop-blur-sm group-hover:bg-white group-hover:text-rose-600 transition-colors">
+                            <span>Подкрепи ни</span>
+                            <ArrowRight size={12} />
+                        </div>
+                     </div>
+                 </button>
+             )}
+
+             {/* Small Support Icon - Collapsed */}
+             {session && collapsed && (
+                 <button onClick={() => setShowDonationModal && setShowDonationModal(true)} className="w-full flex justify-center mt-2 mb-2 group relative">
+                     <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-rose-500 to-pink-600 flex items-center justify-center text-white shadow-xl hover:scale-110 transition-transform ring-2 ring-rose-500/20">
+                         <Heart size={22} fill="currentColor" className="animate-pulse" />
+                     </div>
+                 </button>
              )}
 
              {collapsed ? (

@@ -45,34 +45,22 @@ export const DonationModal = ({ isOpen, onClose, userSettings }: DonationModalPr
             </h2>
             
             <p className="text-zinc-400 text-base leading-relaxed mb-8 px-4">
-                Uchebnik AI е създаден с много любов от малък екип, който вярва в бъдещето на образованието. Твоята подкрепа ни помага да запазим платформата <strong>безплатна</strong> и достъпна за всеки ученик.
+                Uchebnik AI е твоят приятел в ученето. Създадохме го с много любов от малък екип, за да може всяко дете в България да има равен шанс за успех. Твоята подкрепа, колкото и малка да е, ни дава сили да продължим.
             </p>
 
             {/* Support Card Area */}
-            <div className="w-full bg-white/5 border border-white/10 rounded-[32px] p-6 mb-8 relative overflow-hidden group">
+            <div className="w-full bg-white/5 border border-white/10 rounded-[32px] p-8 mb-8 relative overflow-hidden group">
                 <div className="absolute inset-0 bg-gradient-to-br from-rose-500/5 to-transparent pointer-events-none" />
                 
                 <div className="flex flex-col gap-6 relative z-10">
-                    <div className="space-y-4">
-                        <div className="flex items-center gap-4 text-left p-3 rounded-2xl bg-black/20 border border-white/5">
-                            <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-500 flex items-center justify-center shrink-0">
-                                <Coffee size={20} fill="currentColor"/>
-                            </div>
-                            <div className="flex-1">
-                                <h4 className="text-sm font-bold text-white">Черпи ни едно кафе</h4>
-                                <p className="text-[11px] text-zinc-500">Малък жест с голям смисъл за нас.</p>
-                            </div>
+                    <div className="space-y-2">
+                        <div className="w-16 h-16 mx-auto bg-amber-500/20 text-amber-500 rounded-2xl flex items-center justify-center mb-2">
+                            <Coffee size={32} fill="currentColor"/>
                         </div>
-                        
-                        <div className="flex items-center gap-4 text-left p-3 rounded-2xl bg-black/20 border border-white/5">
-                            <div className="w-10 h-10 rounded-xl bg-indigo-500/20 text-indigo-500 flex items-center justify-center shrink-0">
-                                <Zap size={20} fill="currentColor"/>
-                            </div>
-                            <div className="flex-1">
-                                <h4 className="text-sm font-bold text-white">100% за каузата</h4>
-                                <p className="text-[11px] text-zinc-500">Даренията отиват за нови функции.</p>
-                            </div>
-                        </div>
+                        <h4 className="text-lg font-bold text-white tracking-tight">Черпи ни едно кафе</h4>
+                        <p className="text-xs text-zinc-500 leading-relaxed">
+                            Малък жест с огромен смисъл за нас. Всички средства отиват директно за подобряване на твоя AI помощник.
+                        </p>
                     </div>
 
                     <a 
@@ -82,14 +70,14 @@ export const DonationModal = ({ isOpen, onClose, userSettings }: DonationModalPr
                         className="w-full py-5 bg-[#FFDD00] hover:bg-[#FFD700] text-black rounded-2xl font-black text-lg shadow-[0_15px_30px_rgba(255,221,0,0.25)] transition-all hover:-translate-y-1 active:scale-95 flex items-center justify-center gap-3 group/btn"
                     >
                         <img src="https://cdn.buymeacoffee.com/widget/assets/images/BMC-btn-logo.svg" alt="BMC" className="w-6 h-6" />
-                        <span>Дари чрез кафе</span>
+                        <span>Черпи ни кафе</span>
                         <ArrowUpRight size={22} className="group-hover/btn:translate-x-1 group-hover/btn:-translate-y-1 transition-transform" />
                     </a>
                 </div>
             </div>
 
-            <p className="text-[11px] text-rose-500 font-black uppercase tracking-[0.3em] mb-4">
-                Благодарим, че си част от промяната! ❤️
+            <p className="text-[11px] text-rose-500 font-black uppercase tracking-[0.3em] mb-4 animate-pulse">
+                Благодарим за добрината! ❤️
             </p>
         </div>
 
@@ -97,7 +85,7 @@ export const DonationModal = ({ isOpen, onClose, userSettings }: DonationModalPr
         <div className="p-5 bg-black/40 border-t border-white/5 backdrop-blur-md">
             <div className="flex items-start gap-3 text-[10px] text-zinc-500 font-medium px-4 leading-relaxed">
                 <Info size={14} className="shrink-0 text-rose-500 mt-0.5"/>
-                <p>Uchebnik AI винаги ще предоставя безплатни инструменти за учене. Твоето дарение помага на проекта да расте устойчиво.</p>
+                <p>Твоето дарение помага на проекта да расте устойчиво и да остане достъпен за всички, които имат нужда от помощ.</p>
             </div>
         </div>
       </div>
