@@ -133,19 +133,26 @@
       }
     </script>
     <style>
-      /* BMC Widget Mobile Scaling & Safety */
+      /* BMC Widget Global Stability */
       #bmc-wbtn {
-        transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+        transition: transform 0.2s ease-out, opacity 0.2s ease-out !important;
         cursor: grab !important;
+        z-index: 999999 !important; /* Ensure it stays above everything but modas */
+        touch-action: none;
+        user-select: none;
       }
       #bmc-wbtn:active {
         cursor: grabbing !important;
       }
+      /* Ensure the popup frame stays on top */
+      #bmc-wframe {
+        z-index: 1000000 !important;
+      }
+      /* Initial mobile scaling */
       @media (max-width: 640px) {
         #bmc-wbtn {
-          transform: scale(0.7) !important;
+          transform: scale(0.75) !important;
           transform-origin: bottom left !important;
-          margin-bottom: 90px !important; /* Move above the keyboard/input bar area */
         }
       }
     </style>
@@ -179,72 +186,83 @@
     <div id="root" class="h-[100dvh] w-full overflow-hidden flex flex-col relative z-10"></div>
     <script type="module" src="/index.tsx"></script>
     
-    <!-- Buy Me A Coffee Widget - Set to Left with safety margin -->
-    <script data-name="BMC-Widget" data-cfasync="false" src="https://cdnjs.buymeacoffee.com/1.0.0/widget.prod.min.js" data-id="uchebnikai" data-description="Support me on Buy me a coffee!" data-message="Подкрепи развитието на Uchebnik AI☕" data-color="#BD5FFF" data-position="Left" data-x_margin="18" data-y_margin="18"></script>
+    <!-- Buy Me A Coffee Widget -->
+    <script data-name="BMC-Widget" data-cfasync="false" src="https://cdnjs.buymeacoffee.com/1.0.0/widget.prod.min.js" data-id="uchebnikai" data-description="Support me on Buy me a coffee!" data-message="Подкрепи развитието на Uchebnik AI☕" data-color="#BD5FFF" data-position="Left" data-x_margin="18" data-y_margin="110"></script>
 
     <script>
-      // Draggable Widget Logic
+      // Enhanced Draggable logic for BMC Widget with click prevention
       const initDraggableWidget = () => {
-        const interval = setInterval(() => {
+        const checkInterval = setInterval(() => {
           const widget = document.getElementById('bmc-wbtn');
           if (widget) {
-            clearInterval(interval);
-            
-            let isDragging = false;
-            let currentX;
-            let currentY;
-            let initialX;
-            let initialY;
-            let xOffset = 0;
-            let yOffset = 0;
-
-            const dragStart = (e) => {
-              if (e.type === "touchstart") {
-                initialX = e.touches[0].clientX - xOffset;
-                initialY = e.touches[0].clientY - yOffset;
-              } else {
-                initialX = e.clientX - xOffset;
-                initialY = e.clientY - yOffset;
-              }
-              if (e.target === widget || widget.contains(e.target)) {
-                isDragging = true;
-              }
-            };
-
-            const dragEnd = () => {
-              initialX = currentX;
-              initialY = currentY;
-              isDragging = false;
-            };
-
-            const drag = (e) => {
-              if (isDragging) {
-                e.preventDefault();
-                if (e.type === "touchmove") {
-                  currentX = e.touches[0].clientX - initialX;
-                  currentY = e.touches[0].clientY - initialY;
-                } else {
-                  currentX = e.clientX - initialX;
-                  currentY = e.clientY - initialY;
-                }
-                xOffset = currentX;
-                yOffset = currentY;
-                setTranslate(currentX, currentY, widget);
-              }
-            };
-
-            const setTranslate = (xPos, yPos, el) => {
-              el.style.transform = `translate3d(${xPos}px, ${yPos}px, 0) scale(${window.innerWidth < 640 ? 0.7 : 1})`;
-            };
-
-            document.addEventListener("touchstart", dragStart, false);
-            document.addEventListener("touchend", dragEnd, false);
-            document.addEventListener("touchmove", drag, false);
-            document.addEventListener("mousedown", dragStart, false);
-            document.addEventListener("mouseup", dragEnd, false);
-            document.addEventListener("mousemove", drag, false);
+            clearInterval(checkInterval);
+            setupDragging(widget);
           }
-        }, 1000);
+        }, 500);
+      };
+
+      const setupDragging = (el) => {
+        let isDragging = false;
+        let startX, startY, initialLeft, initialBottom;
+        let totalMoved = 0;
+
+        const onPointerDown = (e) => {
+          isDragging = true;
+          totalMoved = 0;
+          
+          startX = e.clientX;
+          startY = e.clientY;
+          
+          const style = window.getComputedStyle(el);
+          initialLeft = parseInt(style.left) || 0;
+          initialBottom = parseInt(style.bottom) || 0;
+          
+          el.setPointerCapture(e.pointerId);
+          el.style.transition = 'none';
+        };
+
+        const onPointerMove = (e) => {
+          if (!isDragging) return;
+          
+          const dx = e.clientX - startX;
+          const dy = e.clientY - startY;
+          totalMoved += Math.abs(dx) + Math.abs(dy);
+
+          if (totalMoved > 10) {
+            const newLeft = initialLeft + dx;
+            const newBottom = initialBottom - dy;
+            
+            const boundedLeft = Math.max(0, Math.min(newLeft, window.innerWidth - el.offsetWidth));
+            const boundedBottom = Math.max(0, Math.min(newBottom, window.innerHeight - el.offsetHeight));
+            
+            el.style.left = boundedLeft + 'px';
+            el.style.bottom = boundedBottom + 'px';
+            el.style.right = 'auto';
+          }
+        };
+
+        const onPointerUp = (e) => {
+          if (!isDragging) return;
+          isDragging = false;
+          el.releasePointerCapture(e.pointerId);
+          el.style.transition = 'transform 0.2s ease-out';
+        };
+
+        // Capture phase click listener to prevent the widget from opening after a drag
+        const onClickCapture = (e) => {
+            if (totalMoved > 15) {
+                e.preventDefault();
+                e.stopPropagation();
+                e.stopImmediatePropagation();
+            }
+        };
+
+        el.addEventListener('pointerdown', onPointerDown);
+        el.addEventListener('pointermove', onPointerMove);
+        el.addEventListener('pointerup', onPointerUp);
+        el.addEventListener('click', onClickCapture, true); // True for capture phase
+        
+        el.addEventListener('dragstart', (e) => e.preventDefault());
       };
       
       initDraggableWidget();
