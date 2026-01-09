@@ -1,6 +1,5 @@
-
 import React, { useState } from 'react';
-import { MessageSquare, Trash2, Plus, School, GraduationCap, Briefcase, ChevronDown, User, Settings, CreditCard, HelpCircle, LogOut, ArrowRight, ChevronUp, FileText, CloudOff, RefreshCw, Cloud, PanelLeftClose, PanelLeftOpen, LogIn, Snowflake, Gift, Trophy, Target, AlertTriangle, Heart, Coffee, Sparkles } from 'lucide-react';
+import { MessageSquare, Trash2, Plus, School, GraduationCap, Briefcase, ChevronDown, User, Settings, CreditCard, HelpCircle, LogOut, ArrowRight, ChevronUp, FileText, CloudOff, RefreshCw, Cloud, PanelLeftClose, PanelLeftOpen, LogIn, Snowflake, Gift, Trophy, Target, AlertTriangle, Sparkles } from 'lucide-react';
 import { DynamicIcon } from '../ui/DynamicIcon';
 import { SUBJECTS } from '../../constants';
 import { SubjectId, AppMode, Session, UserRole, UserSettings, UserPlan, SubjectConfig, HomeViewType } from '../../types';
@@ -42,7 +41,6 @@ interface SidebarProps {
   setShowLeaderboard?: (val: boolean) => void;
   setShowQuests?: (val: boolean) => void;
   setShowReportModal?: (val: boolean) => void;
-  setShowDonationModal?: (val: boolean) => void;
   globalConfig: any;
 }
 
@@ -80,7 +78,6 @@ export const Sidebar = ({
   setShowLeaderboard,
   setShowQuests,
   setShowReportModal,
-  setShowDonationModal,
   globalConfig
 }: SidebarProps) => {
     
@@ -208,40 +205,6 @@ export const Sidebar = ({
                          {!collapsed && <span className="text-[10px] font-black text-pink-600 dark:text-pink-400 uppercase tracking-widest">Мисии</span>}
                      </button>
                  </div>
-             )}
-
-             {/* Dedicated Support Card - Very Visible */}
-             {session && !collapsed && (
-                 <button 
-                    onClick={() => setShowDonationModal && setShowDonationModal(true)}
-                    className="w-full mt-2 mb-4 group relative overflow-hidden rounded-[28px] p-4 text-left shadow-lg transition-all hover:scale-[1.02] active:scale-[0.98] bg-gradient-to-br from-rose-500 to-pink-600 border border-white/20"
-                 >
-                     <div className="absolute top-0 right-0 p-2 opacity-20 transform translate-x-2 -translate-y-2 group-hover:scale-125 transition-transform duration-500">
-                        <Heart size={80} fill="currentColor" className="text-white"/>
-                     </div>
-                     <div className="relative z-10">
-                        <div className="flex items-center gap-2 mb-2">
-                            <div className="w-8 h-8 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center text-white border border-white/30">
-                                <Heart size={16} fill="currentColor" className="animate-pulse" />
-                            </div>
-                            <span className="text-[10px] font-black text-white/80 uppercase tracking-[0.2em]">Подкрепа</span>
-                        </div>
-                        <h3 className="font-bold text-sm text-white leading-tight">Харесва ли ти <br/>Uchebnik AI?</h3>
-                        <div className="mt-3 flex items-center gap-2 text-[11px] font-bold text-white/90 bg-black/10 w-fit px-3 py-1.5 rounded-full backdrop-blur-sm group-hover:bg-white group-hover:text-rose-600 transition-colors">
-                            <span>Подкрепи ни</span>
-                            <ArrowRight size={12} />
-                        </div>
-                     </div>
-                 </button>
-             )}
-
-             {/* Small Support Icon - Collapsed */}
-             {session && collapsed && (
-                 <button onClick={() => setShowDonationModal && setShowDonationModal(true)} className="w-full flex justify-center mt-2 mb-2 group relative">
-                     <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-rose-500 to-pink-600 flex items-center justify-center text-white shadow-xl hover:scale-110 transition-transform ring-2 ring-rose-500/20">
-                         <Heart size={22} fill="currentColor" className="animate-pulse" />
-                     </div>
-                 </button>
              )}
 
              {collapsed ? (
