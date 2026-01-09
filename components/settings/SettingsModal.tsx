@@ -1,12 +1,12 @@
 
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { 
   X, User, Upload, Lock, Check, Palette, Plus, Moon, Sun, 
   ImageIcon, Edit2, Cpu, ChevronDown, Database, Trash2, 
   ArrowRight, Settings, CreditCard, Loader2, Globe, 
   Layout, Smartphone, Monitor, Sparkles, LogOut, Volume2, 
   Keyboard, Type, Download, Zap, Brain, MessageCircle, Gift, Copy,
-  Eye, EyeOff
+  Eye, EyeOff, Coffee
 } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { UserSettings, UserPlan } from '../../types';
@@ -77,37 +77,52 @@ export const SettingsModal = ({
     
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const backgroundInputRef = useRef<HTMLInputElement>(null);
+  const profilePicRef = useRef<HTMLDivElement>(null);
+  
   const [activeTab, setActiveTab] = useState<SettingsTab>('account');
   const [loadingPortal, setLoadingPortal] = useState(false);
   const [isLangOpen, setIsLangOpen] = useState(false);
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
+  
+  // Easter Egg State
+  const [isDrinking, setIsDrinking] = useState(false);
+
+  useEffect(() => {
+    if (!showSettings || activeTab !== 'account') return;
+
+    let checkInterval: any;
+    
+    const checkForCollision = () => {
+        const coffeeBtn = document.getElementById('bmc-wbtn');
+        const profilePic = profilePicRef.current;
+        
+        if (coffeeBtn && profilePic) {
+            const bRect = coffeeBtn.getBoundingClientRect();
+            const pRect = profilePic.getBoundingClientRect();
+            
+            // Overlap check
+            const overlap = !(
+                bRect.right < pRect.left || 
+                bRect.left > pRect.right || 
+                bRect.bottom < pRect.top || 
+                bRect.top > pRect.bottom
+            );
+
+            if (overlap && !isDrinking) {
+                setIsDrinking(true);
+                // Animation lasts 2 seconds
+                setTimeout(() => setIsDrinking(false), 2000);
+            }
+        }
+    };
+
+    checkInterval = setInterval(checkForCollision, 100);
+    return () => clearInterval(checkInterval);
+  }, [showSettings, activeTab, isDrinking]);
 
   const isCustomColor = !PRESET_COLORS.includes(userSettings.themeColor);
   const isCustomBackground = userSettings.customBackground && !PRESET_BACKGROUNDS.includes(userSettings.customBackground);
-
-  // Temporarily Disabled
-  /*
-  const handleManageSubscription = async () => {
-      setLoadingPortal(true);
-      try {
-          const { data, error } = await supabase.functions.invoke('create-portal-session', {
-              body: { returnUrl: window.location.origin }
-          });
-
-          if (error) throw error;
-          if (data?.url) {
-              window.location.href = data.url;
-          } else {
-              throw new Error("No portal URL returned");
-          }
-      } catch (error: any) {
-          console.error("Portal error:", error);
-          addToast("Възникна грешка при отваряне на портала за управление.", "error");
-          setLoadingPortal(false);
-      }
-  };
-  */
 
   const handleExportData = () => {
       const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(localStorage));
@@ -188,17 +203,30 @@ export const SettingsModal = ({
                           <p className="text-gray-500">Управлявайте вашата лична информация и абонамент.</p>
                       </div>
 
-                      {/* ... existing profile inputs ... */}
                       <div className="flex flex-col items-center md:items-start gap-6">
-                          <div className="relative group cursor-pointer" onClick={() => avatarInputRef.current?.click()}>
-                              <div className="w-28 h-28 rounded-[2rem] p-1 border-2 border-dashed border-gray-300 dark:border-white/20 hover:border-indigo-500 transition-colors">
-                                  <img src={editProfile.avatar || "https://cdn-icons-png.freepik.com/256/3276/3276580.png"} className="w-full h-full rounded-[1.8rem] object-cover bg-gray-50 dark:bg-zinc-800"/>
+                          <div 
+                            ref={profilePicRef}
+                            className={`relative group cursor-pointer transition-all duration-500 ${isDrinking ? 'scale-110 rotate-[-5deg]' : ''}`} 
+                            onClick={() => avatarInputRef.current?.click()}
+                          >
+                              <div className={`w-28 h-28 rounded-[2rem] p-1 border-2 border-dashed border-gray-300 dark:border-white/20 hover:border-indigo-500 transition-colors overflow-hidden ${isDrinking ? 'ring-4 ring-indigo-500/50' : ''}`}>
+                                  <img 
+                                    src={editProfile.avatar || "https://cdn-icons-png.freepik.com/256/3276/3276580.png"} 
+                                    className={`w-full h-full rounded-[1.8rem] object-cover bg-gray-50 dark:bg-zinc-800 transition-transform duration-500 ${isDrinking ? 'scale-125' : ''}`}
+                                  />
+                                  {isDrinking && (
+                                      <div className="absolute inset-0 flex flex-col items-center justify-center bg-indigo-600/20 backdrop-blur-[2px] animate-in fade-in">
+                                          <Coffee size={32} className="text-white animate-bounce mb-1" />
+                                          <span className="text-[10px] font-black text-white uppercase tracking-widest drop-shadow-md">YUMMY!</span>
+                                      </div>
+                                  )}
                               </div>
                               <div className="absolute inset-0 bg-black/40 rounded-[2rem] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                                   <Edit2 size={24} className="text-white"/>
                               </div>
                               <input type="file" ref={avatarInputRef} onChange={handleAvatarUpload} className="hidden" accept="image/*" />
                           </div>
+                          {isDrinking && <p className="text-xs font-black text-indigo-500 uppercase tracking-widest animate-pulse">Разкрихте Великденско Яйце! ☕</p>}
                       </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -215,7 +243,6 @@ export const SettingsModal = ({
                               <input value={editProfile.email} onChange={e => setEditProfile({...editProfile, email: e.target.value})} className="w-full bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 outline-none focus:border-indigo-500 transition-all font-medium"/>
                           </div>
                           
-                          {/* Password Change Section */}
                           <div className="col-span-1 md:col-span-2 pt-2 border-t border-gray-100 dark:border-white/5 mt-2">
                               <h4 className="text-sm font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2"><Lock size={16} className="text-indigo-500"/> Смяна на парола</h4>
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -274,11 +301,9 @@ export const SettingsModal = ({
                                      )}
                                  </div>
                                  <Button 
-                                    // onClick={handleManageSubscription} 
-                                    disabled={true} // Temporarily disabled
+                                    disabled={true} 
                                     className="bg-white text-indigo-600 hover:bg-indigo-50 border-none shadow-none opacity-80"
                                 >
-                                    {/* {loadingPortal ? <Loader2 size={18} className="animate-spin"/> : 'Управление'} */}
                                     Очаквайте скоро
                                  </Button>
                              </div>
@@ -300,7 +325,6 @@ export const SettingsModal = ({
                           <p className="text-gray-500">Направете приложението свое.</p>
                       </div>
 
-                      {/* Language */}
                       <section className="space-y-4">
                           <label className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
                               <Globe size={18} className="text-indigo-500"/> {t('language', userSettings.language)}
@@ -353,8 +377,6 @@ export const SettingsModal = ({
                           </div>
                       </section>
 
-                      {/* Theme Colors - NO CHANGES HERE */}
-                      {/* ... Existing Theme Color Section ... */}
                       <section className={`space-y-4 p-6 bg-gray-50/50 dark:bg-white/5 rounded-2xl border border-gray-200 dark:border-white/10 ${!isPremium ? 'opacity-70' : ''}`}>
                           <div className="flex justify-between items-center mb-2">
                               <label className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
@@ -374,7 +396,6 @@ export const SettingsModal = ({
                                   </button>
                               ))}
 
-                              {/* Custom Color Picker */}
                               <div className="relative group">
                                   <input
                                       type="color"
@@ -401,7 +422,6 @@ export const SettingsModal = ({
                           </div>
                       </section>
 
-                      {/* Fonts */}
                       <section className={`space-y-4 p-6 bg-gray-50/50 dark:bg-white/5 rounded-2xl border border-gray-200 dark:border-white/10 ${!isPremium ? 'opacity-70' : ''}`}>
                           <div className="flex justify-between items-center mb-2">
                               <label className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
@@ -422,7 +442,6 @@ export const SettingsModal = ({
                           </div>
                       </section>
 
-                      {/* Mode Toggle */}
                       <section className="flex items-center justify-between p-5 bg-white dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-2xl">
                           <div className="flex items-center gap-3">
                               <div className={`p-2.5 rounded-xl ${isDarkMode ? 'bg-indigo-500/10 text-indigo-400' : 'bg-amber-500/10 text-amber-500'}`}>
@@ -441,8 +460,6 @@ export const SettingsModal = ({
                           </button>
                       </section>
 
-                      {/* Chat Backgrounds */}
-                      {/* ... existing Chat BG section ... */}
                       <section className={`space-y-4 ${!isPremium ? 'opacity-70' : ''}`}>
                            <div className="flex justify-between items-center">
                               <label className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
@@ -523,14 +540,11 @@ export const SettingsModal = ({
                           <p className="text-gray-500">Настройте поведението на вашия асистент.</p>
                       </div>
 
-                      {/* AI Model Selection */}
-                      {/* ... existing model selection ... */}
                       <section className="space-y-4">
                           <label className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
                               <Cpu size={18} className="text-blue-500"/> AI Модел
                           </label>
                           <div className="grid grid-cols-1 gap-3">
-                              {/* Auto Option */}
                               <button
                                   onClick={() => setUserSettings({...userSettings, preferredModel: 'auto'})}
                                   className={`p-4 rounded-xl text-left border transition-all flex items-center gap-4 ${userSettings.preferredModel === 'auto'
@@ -546,7 +560,6 @@ export const SettingsModal = ({
                                   </div>
                               </button>
 
-                              {/* Gemini 2.5 Flash -> Standard AI */}
                               <button
                                   onClick={() => setUserSettings({...userSettings, preferredModel: 'gemini-2.5-flash'})}
                                   className={`p-4 rounded-xl text-left border transition-all flex items-center gap-4 ${userSettings.preferredModel === 'gemini-2.5-flash'
@@ -562,7 +575,6 @@ export const SettingsModal = ({
                                   </div>
                               </button>
 
-                              {/* Gemini 3 Flash Preview -> Advanced AI */}
                               <button
                                   onClick={() => isPremium ? setUserSettings({...userSettings, preferredModel: 'gemini-3-flash-preview'}) : addToast('Този модел изисква Plus или Pro план.', 'info')}
                                   className={`p-4 rounded-xl text-left border transition-all flex items-center gap-4 relative overflow-hidden ${userSettings.preferredModel === 'gemini-3-flash-preview'
@@ -583,7 +595,6 @@ export const SettingsModal = ({
                           </div>
                       </section>
 
-                      {/* Voice Selection - NEW */}
                       <section className={`space-y-4 p-6 bg-gray-50/50 dark:bg-white/5 rounded-2xl border border-gray-200 dark:border-white/10 ${!isPremium ? 'opacity-80' : ''}`}>
                           <div className="flex justify-between items-center mb-2">
                               <label className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
@@ -609,7 +620,6 @@ export const SettingsModal = ({
                           </div>
                       </section>
 
-                      {/* Teaching Style */}
                       <section className="space-y-4">
                           <label className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
                               <Brain size={18} className="text-purple-500"/> Стил на преподаване
@@ -636,8 +646,6 @@ export const SettingsModal = ({
                           </div>
                       </section>
 
-                      {/* Custom Persona (Pro Feature) */}
-                      {/* ... existing custom persona section ... */}
                       <section className={`space-y-4 p-6 bg-gradient-to-br from-indigo-50/50 to-purple-50/50 dark:from-indigo-900/10 dark:to-purple-900/10 rounded-2xl border border-indigo-200 dark:border-indigo-500/20 ${!isPro ? 'opacity-70' : ''}`}>
                           <div className="flex justify-between items-center mb-2">
                               <label className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
@@ -672,7 +680,6 @@ export const SettingsModal = ({
                           </div>
                       </section>
 
-                      {/* ... existing sections ... */}
                       <div className="grid grid-cols-1 gap-6">
                           <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl p-6 space-y-4">
                               <label className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
