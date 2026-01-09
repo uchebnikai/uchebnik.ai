@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { X, Heart, Coffee, Sparkles, ArrowUpRight, Info, Zap } from 'lucide-react';
+import { X, Heart, Coffee, Sparkles, ArrowUpRight, Info } from 'lucide-react';
 import { MODAL_ENTER, FADE_IN } from '../../animations/transitions';
 import { UserSettings } from '../../types';
 
@@ -20,8 +20,8 @@ export const DonationModal = ({ isOpen, onClose, userSettings }: DonationModalPr
         onClick={e => e.stopPropagation()}
       >
         {/* Decorative Background Glows */}
-        <div className="absolute top-0 inset-x-0 h-48 bg-gradient-to-b from-rose-500/20 via-pink-500/10 to-transparent pointer-events-none" />
-        <div className="absolute -top-20 -right-20 w-64 h-64 bg-rose-600/30 blur-[120px] rounded-full pointer-events-none" />
+        <div className="absolute top-0 inset-x-0 h-48 bg-gradient-to-b from-rose-500/20 via-indigo-500/10 to-transparent pointer-events-none" />
+        <div className="absolute -top-20 -right-20 w-64 h-64 bg-indigo-600/30 blur-[120px] rounded-full pointer-events-none" />
         <div className="absolute bottom-20 -left-20 w-48 h-48 bg-purple-600/10 blur-[100px] rounded-full pointer-events-none" />
 
         {/* Close Button */}
@@ -32,7 +32,7 @@ export const DonationModal = ({ isOpen, onClose, userSettings }: DonationModalPr
         <div className="p-8 pt-10 relative z-10 flex flex-col items-center text-center">
             {/* Heart & Icon Header */}
             <div className="relative mb-8 group">
-                <div className="w-24 h-24 bg-gradient-to-br from-rose-500 to-pink-600 rounded-[2.5rem] flex items-center justify-center shadow-[0_20px_40px_rgba(244,63,94,0.3)] transform group-hover:scale-105 group-hover:rotate-3 transition-all duration-500 ring-4 ring-white/5">
+                <div className="w-24 h-24 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-[2.5rem] flex items-center justify-center shadow-[0_20px_40px_rgba(99,102,241,0.3)] transform group-hover:scale-105 group-hover:rotate-3 transition-all duration-500 ring-4 ring-white/5">
                     <Heart size={48} className="text-white" fill="currentColor" />
                 </div>
                 {/* Floating Elements */}
@@ -41,25 +41,25 @@ export const DonationModal = ({ isOpen, onClose, userSettings }: DonationModalPr
             </div>
 
             <h2 className="text-3xl font-black text-white mb-4 tracking-tight leading-tight">
-                Подкрепи мисията ни
+                Стани наш благодетел
             </h2>
             
             <p className="text-zinc-400 text-base leading-relaxed mb-8 px-4">
-                Uchebnik AI е твоят приятел в ученето. Създадохме го с много любов от малък екип, за да може всяко дете в България да има равен шанс за успех. Твоята подкрепа, колкото и малка да е, ни дава сили да продължим.
+                Uchebnik AI е кауза, създадена от малък екип с голямо сърце. Всяко дарение, колкото и малко да е, ни помага да запазим платформата <strong>напълно безплатна</strong> за хиляди ученици, които разчитат на нас всеки ден.
             </p>
 
             {/* Support Card Area */}
             <div className="w-full bg-white/5 border border-white/10 rounded-[32px] p-8 mb-8 relative overflow-hidden group">
-                <div className="absolute inset-0 bg-gradient-to-br from-rose-500/5 to-transparent pointer-events-none" />
+                <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-transparent pointer-events-none" />
                 
                 <div className="flex flex-col gap-6 relative z-10">
-                    <div className="space-y-2">
-                        <div className="w-16 h-16 mx-auto bg-amber-500/20 text-amber-500 rounded-2xl flex items-center justify-center mb-2">
-                            <Coffee size={32} fill="currentColor"/>
+                    <div className="space-y-3">
+                        <div className="w-20 h-20 mx-auto bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center mb-4 border border-white/10 group-hover:scale-110 transition-transform">
+                            <Coffee size={40} className="text-amber-400" fill="currentColor"/>
                         </div>
-                        <h4 className="text-lg font-bold text-white tracking-tight">Черпи ни едно кафе</h4>
-                        <p className="text-xs text-zinc-500 leading-relaxed">
-                            Малък жест с огромен смисъл за нас. Всички средства отиват директно за подобряване на твоя AI помощник.
+                        <h4 className="text-xl font-bold text-white tracking-tight">Черпи ни едно кафе</h4>
+                        <p className="text-sm text-zinc-500 leading-relaxed px-2">
+                            Това е малък жест, който ни дава енергия и средства да добавяме нови функции и да поддържаме сървърите живи.
                         </p>
                     </div>
 
@@ -67,25 +67,29 @@ export const DonationModal = ({ isOpen, onClose, userSettings }: DonationModalPr
                         href="https://buymeacoffee.com/uchebnikai" 
                         target="_blank" 
                         rel="noopener noreferrer"
-                        className="w-full py-5 bg-[#FFDD00] hover:bg-[#FFD700] text-black rounded-2xl font-black text-lg shadow-[0_15px_30px_rgba(255,221,0,0.25)] transition-all hover:-translate-y-1 active:scale-95 flex items-center justify-center gap-3 group/btn"
+                        className="w-full py-5 bg-[#BD5FFF] hover:bg-[#c67aff] text-white rounded-2xl font-black text-lg shadow-[0_15px_30px_rgba(189,95,255,0.3)] transition-all hover:-translate-y-1 active:scale-95 flex items-center justify-center gap-3 group/btn"
                     >
-                        <img src="https://cdn.buymeacoffee.com/widget/assets/images/BMC-btn-logo.svg" alt="BMC" className="w-6 h-6" />
-                        <span>Черпи ни кафе</span>
+                        <img 
+                            src="https://images.seeklogo.com/logo-png/47/2/buy-me-a-coffee-logo-png_seeklogo-477198.png" 
+                            alt="BMC" 
+                            className="w-7 h-7 object-contain"
+                        />
+                        <span>Подкрепи ни с кафе</span>
                         <ArrowUpRight size={22} className="group-hover/btn:translate-x-1 group-hover/btn:-translate-y-1 transition-transform" />
                     </a>
                 </div>
             </div>
 
-            <p className="text-[11px] text-rose-500 font-black uppercase tracking-[0.3em] mb-4 animate-pulse">
-                Благодарим за добрината! ❤️
+            <p className="text-[11px] text-indigo-400 font-black uppercase tracking-[0.3em] mb-4 animate-pulse">
+                Твоята доброта прави разликата! ❤️
             </p>
         </div>
 
         {/* Informational Footer */}
         <div className="p-5 bg-black/40 border-t border-white/5 backdrop-blur-md">
             <div className="flex items-start gap-3 text-[10px] text-zinc-500 font-medium px-4 leading-relaxed">
-                <Info size={14} className="shrink-0 text-rose-500 mt-0.5"/>
-                <p>Твоето дарение помага на проекта да расте устойчиво и да остане достъпен за всички, които имат нужда от помощ.</p>
+                <Info size={14} className="shrink-0 text-indigo-500 mt-0.5"/>
+                <p>Uchebnik AI е социален проект. Твоята помощ гарантира, че образованието ще остане достъпно за всички, независимо от възможностите им.</p>
             </div>
         </div>
       </div>
