@@ -45,7 +45,7 @@ export const DonationModal = ({ isOpen, onClose, userSettings }: DonationModalPr
             </h2>
             
             <p className="text-zinc-400 text-base leading-relaxed mb-8 px-4">
-                Uchebnik AI е кауза, създадена от малък екип с голямо сърце. Всяко дарение, колкото и малко да е, ни помага да запазим платформата <strong>напълно безплатна</strong> за хиляди ученици, които разчитат на нас всеки ден.
+                Uchebnik AI е кауза, създадена с много любов от малък екип с голямо сърце. Всяко дарение, колкото и малко да е, е искра, която помага да запазим платформата <strong>напълно безплатна</strong> за хиляди ученици, които разчитат на нас всеки ден.
             </p>
 
             {/* Support Card Area */}
@@ -54,12 +54,12 @@ export const DonationModal = ({ isOpen, onClose, userSettings }: DonationModalPr
                 
                 <div className="flex flex-col gap-6 relative z-10">
                     <div className="space-y-3">
-                        <div className="w-20 h-20 mx-auto bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center mb-4 border border-white/10 group-hover:scale-110 transition-transform">
+                        <div className="w-20 h-20 mx-auto bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center mb-4 border border-white/10 group-hover:scale-110 transition-transform shadow-xl">
                             <Coffee size={40} className="text-amber-400" fill="currentColor"/>
                         </div>
                         <h4 className="text-xl font-bold text-white tracking-tight">Черпи ни едно кафе</h4>
                         <p className="text-sm text-zinc-500 leading-relaxed px-2">
-                            Това е малък жест, който ни дава енергия и средства да добавяме нови функции и да поддържаме сървърите живи.
+                            Това е малък, но вълшебен жест, който ни дава енергия да добавяме нови функции и да поддържаме сървърите живи.
                         </p>
                     </div>
 
@@ -81,7 +81,7 @@ export const DonationModal = ({ isOpen, onClose, userSettings }: DonationModalPr
             </div>
 
             <p className="text-[11px] text-indigo-400 font-black uppercase tracking-[0.3em] mb-4 animate-pulse">
-                Твоята доброта прави разликата! ❤️
+                Твоята доброта прави истинска разлика! ❤️
             </p>
         </div>
 
@@ -89,7 +89,7 @@ export const DonationModal = ({ isOpen, onClose, userSettings }: DonationModalPr
         <div className="p-5 bg-black/40 border-t border-white/5 backdrop-blur-md">
             <div className="flex items-start gap-3 text-[10px] text-zinc-500 font-medium px-4 leading-relaxed">
                 <Info size={14} className="shrink-0 text-indigo-500 mt-0.5"/>
-                <p>Uchebnik AI е социален проект. Твоята помощ гарантира, че образованието ще остане достъпно за всички, независимо от възможностите им.</p>
+                <p>Uchebnik AI е социален проект. Твоята помощ гарантира, че образованието ще остане модерно и достъпно за всички деца в България.</p>
             </div>
         </div>
       </div>
