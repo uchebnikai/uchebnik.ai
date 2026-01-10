@@ -10,8 +10,9 @@ import { Auth } from './components/auth/Auth';
 import { AuthSuccess } from './components/auth/AuthSuccess';
 import { 
   Loader2, X, AlertCircle, CheckCircle, Info, Minimize, Database, Radio, Gift, Minimize2, 
-  ArrowLeft, Zap, Book, FileJson
+  ArrowLeft, Zap, Book, FileJson, ExternalLink
 } from 'lucide-react';
+import * as LucideIcons from 'lucide-react';
 
 import { Session as SupabaseSession } from '@supabase/supabase-js';
 
@@ -51,10 +52,23 @@ import { AdSenseContainer } from './components/ads/AdSenseContainer';
 import { IosInstallPrompt } from './components/ui/IosInstallPrompt';
 import { Button } from './components/ui/Button';
 
+interface BroadcastPayload {
+    isOpen: boolean;
+    message: string;
+    sender_name?: string;
+    icon?: string;
+    color?: string;
+    buttons?: { label: string; url: string }[];
+    type?: 'toast' | 'modal';
+}
+
+// Fix: Added missing GeneratedKey interface used for admin key generation state
 interface GeneratedKey {
+  id?: string;
   code: string;
   isUsed: boolean;
   plan?: 'plus' | 'pro';
+  createdAt?: string;
 }
 
 const LIVE_MODEL = 'gemini-2.5-flash-native-audio-preview-12-2025';
@@ -163,7 +177,7 @@ export const App = () => {
   const [targetPlan, setTargetPlan] = useState<UserPlan | null>(null);
   const [unlockLoading, setUnlockLoading] = useState(false);
 
-  const [broadcastModal, setBroadcastModal] = useState<{isOpen: boolean, message: string} | null>(null);
+  const [broadcastModal, setBroadcastModal] = useState<BroadcastPayload | null>(null);
 
   const [globalConfig, setGlobalConfig] = useState({ showChristmasButton: true, showNewYearButton: true });
 
@@ -810,17 +824,31 @@ export const App = () => {
       const channel = supabase.channel('global-broadcasts').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'broadcasts' }, (payload) => {
           const newB = payload.new as any;
           
+          // Plan Targeting Logic
+          const target = newB.target_plan || 'all';
+          if (target !== 'all' && target !== userPlan) return;
+
           // Sound effect for broadcasts
           try {
             const audio = new Audio(BROADCAST_SOUND);
             audio.play().catch(() => {});
           } catch(e) {}
 
-          if (newB.type === 'modal') setBroadcastModal({ isOpen: true, message: newB.message });
-          else addToast(newB.message, 'info');
+          if (newB.type === 'modal') {
+              setBroadcastModal({ 
+                  isOpen: true, 
+                  message: newB.message, 
+                  sender_name: newB.sender_name, 
+                  icon: newB.icon, 
+                  color: newB.color,
+                  buttons: newB.buttons || [] 
+              });
+          } else {
+              addToast(newB.message, 'info');
+          }
       }).subscribe();
       return () => { supabase.removeChannel(channel); };
-  }, []);
+  }, [userPlan]);
 
   // --- Real-time Session Sync ---
   useEffect(() => {
@@ -1162,6 +1190,8 @@ export const App = () => {
 
   const effectiveBg = userSettings.christmasMode && !userSettings.customBackground ? CHRISTMAS_BG : (userSettings.newYearMode && !userSettings.customBackground ? NEW_YEAR_BG : userSettings.customBackground);
 
+  const BroadcastIcon = broadcastModal?.icon ? (LucideIcons as any)[broadcastModal.icon] || Radio : Radio;
+
   return (
     <div className="flex h-full w-full relative overflow-hidden text-foreground">
       <Snowfall active={!!userSettings.christmasMode} />
@@ -1213,73 +1243,4 @@ export const App = () => {
       </main>
 
       <UpgradeModal showUnlockModal={showUnlockModal} setShowUnlockModal={setShowUnlockModal} targetPlan={targetPlan} setTargetPlan={setTargetPlan} unlockKeyInput={unlockKeyInput} setUnlockKeyInput={setUnlockKeyInput} handleUnlockSubmit={handleUnlockSubmit} userPlan={userPlan} userSettings={userSettings} addToast={addToast} unlockLoading={unlockLoading} />
-      <SettingsModal showSettings={showSettings} setShowSettings={setShowSettings} userMeta={userMeta} editProfile={editProfile} setEditProfile={setEditProfile} handleUpdateAccount={handleUpdateAccount} handleAvatarUpload={handleAvatarUploadSettings} userSettings={userSettings} setUserSettings={setUserSettings} isPremium={userPlan!=='free'} isDarkMode={isDarkMode} setIsDarkMode={setIsDarkMode} handleBackgroundUpload={handleBackgroundUpload} handleDeleteAllChats={handleDeleteAllChats} addToast={addToast} userPlan={userPlan} />
-      <ReferralModal isOpen={showReferralModal} onClose={() => setShowReferralModal(false)} userSettings={userSettings} addToast={addToast} />
-      <LeaderboardModal isOpen={showLeaderboard} onClose={() => setShowLeaderboard(false)} currentUserId={session?.user?.id} />
-      <DailyQuestsModal isOpen={showQuests} onClose={() => setShowQuests(false)} quests={userSettings.dailyQuests?.quests || []} />
-      <ReportModal isOpen={showReportModal} onClose={() => setShowReportModal(false)} userSettings={userSettings} addToast={addToast} userId={session?.user?.id} />
-      <AdminPanel showAdminAuth={showAdminAuth} setShowAdminAuth={setShowAdminAuth} showAdminPanel={showAdminPanel} setShowAdminPanel={setShowAdminPanel} adminPasswordInput={adminPasswordInput} setAdminPasswordInput={setAdminPasswordInput} handleAdminLogin={handleAdminLogin} generateKey={handleGenerateKey} generatedKeys={generatedKeys as any} addToast={addToast} globalConfig={globalConfig} setGlobalConfig={setGlobalConfig} />
-      <Lightbox image={zoomedImage} onClose={() => setZoomedImage(null)} />
-      <ConfirmModal isOpen={!!confirmModal} title={confirmModal?.title || ''} message={confirmModal?.message || ''} onConfirm={confirmModal?.onConfirm || (()=>{})} onCancel={() => setConfirmModal(null)} />
-      
-      {/* GLOBAL BROADCAST MODAL */}
-      {broadcastModal?.isOpen && (
-          <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-in fade-in">
-              <div className="bg-white/90 dark:bg-zinc-900/90 border border-indigo-500/30 w-full max-w-md p-8 rounded-[32px] shadow-2xl relative animate-in zoom-in-95 backdrop-blur-xl">
-                  <div className="flex flex-col items-center text-center gap-6">
-                      <div className="w-16 h-16 rounded-2xl bg-indigo-500 flex items-center justify-center text-white shadow-lg shadow-indigo-500/30">
-                          <Radio size={32} className="animate-pulse" />
-                      </div>
-                      <div className="space-y-2">
-                          <h3 className="text-2xl font-black text-zinc-900 dark:text-white tracking-tight">Важно известие</h3>
-                          <p className="text-zinc-600 dark:text-zinc-400 font-medium leading-relaxed">
-                              {broadcastModal.message}
-                          </p>
-                      </div>
-                      <Button onClick={() => setBroadcastModal(null)} className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-2xl shadow-lg shadow-indigo-500/20">
-                          Разбрах
-                      </Button>
-                  </div>
-              </div>
-          </div>
-      )}
-
-      <VoiceCallOverlay 
-        isVoiceCallActive={isVoiceCallActive} 
-        voiceCallStatus={voiceCallStatus} 
-        voiceMuted={voiceMuted} 
-        setVoiceMuted={setVoiceMuted} 
-        endVoiceCall={endVoiceCall} 
-        activeSubject={activeSubject} 
-        userSettings={userSettings} 
-        onChangeVoice={(v) => setUserSettings(prev => ({...prev, preferredVoice: v}))} 
-      />
-
-      <HistoryDrawer 
-        historyDrawerOpen={historyDrawerOpen} 
-        setHistoryDrawerOpen={setHistoryDrawerOpen} 
-        sessions={sessions} 
-        activeSessionId={activeSessionId} 
-        setActiveSessionId={setActiveSessionId} 
-        renameSessionId={renameSessionId} 
-        setRenameSessionId={setRenameSessionId} 
-        renameValue={renameValue} 
-        setRenameValue={setRenameValue} 
-        renameSession={renameSession} 
-        deleteSession={deleteSession} 
-        activeSubject={activeSubject} 
-        setActiveSubject={setActiveSubject} 
-      />
-
-      <div className="fixed top-4 right-4 z-[210] flex flex-col gap-2 pointer-events-none">
-        {toasts.map(t => (
-          <div key={t.id} className={`${TOAST_CONTAINER} ${t.type === 'error' ? TOAST_ERROR : t.type === 'success' ? TOAST_SUCCESS : TOAST_INFO}`}>
-             {t.type === 'error' ? <AlertCircle size={18}/> : t.type === 'success' ? <CheckCircle size={18}/> : <Info size={18}/>}
-             <span className="font-medium text-sm">{t.message}</span>
-          </div>
-        ))}
-      </div>
-      <IosInstallPrompt />
-    </div>
-  );
-};
+      <SettingsModal showSettings={showSettings} setShowSettings={setShowSettings} userMeta={userMeta} editProfile={editProfile} setEditProfile={setEditProfile} handleUpdateAccount={handleUpdateAccount} handleAvatarUpload={handleAvatarUploadSettings} userSettings={userSettings} setUserSettings={setUserSettings} isPremium={userPlan!=='free'} i...
