@@ -79,6 +79,19 @@ export const generateResponse = async (
   customPersona?: string
 ): Promise<Message> => {
   
+  // EASTER EGG RULE (HIGH PRIORITY)
+  if (promptText.trim() === "67") {
+    return {
+        id: Date.now().toString(),
+        role: 'model',
+        text: "nuh uh",
+        type: 'video',
+        videoUrl: 'https://cdn.jsdelivr.net/gh/uchebnikai/uchebnikai-easteregg1/meme15mb.mp4',
+        timestamp: Date.now(),
+        reasoning: ""
+    };
+  }
+
   const startTime = performance.now();
   const apiKey = process.env.API_KEY || "";
 
