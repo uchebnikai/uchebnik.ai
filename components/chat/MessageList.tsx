@@ -1,10 +1,9 @@
-
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import remarkGfm from 'remark-gfm';
-import { Projector, Download, Check, ThumbsUp, ThumbsDown, Reply, Volume2, Square, Copy, Share2, Loader2, Globe, ExternalLink, Lock, Sparkles, UserPlus } from 'lucide-react';
+import { Projector, Download, Check, ThumbsUp, ThumbsDown, Reply, Volume2, Square, Copy, Share2, Loader2, Globe, ExternalLink, Lock, Sparkles, UserPlus, Brain, ChevronDown, ChevronUp } from 'lucide-react';
 import { Message, UserSettings, SubjectConfig } from '../../types';
 import { handleDownloadPPTX } from '../../utils/exportUtils';
 import { CodeBlock } from '../ui/CodeBlock';
@@ -42,6 +41,30 @@ const getLoadingMessage = (id: string) => {
     let sum = 0;
     for (let i = 0; i < id.length; i++) { sum += id.charCodeAt(i); }
     return LOADING_MESSAGES[sum % LOADING_MESSAGES.length];
+};
+
+const ReasoningBlock = ({ reasoning }: { reasoning: string }) => {
+    const [isExpanded, setIsExpanded] = useState(true);
+    
+    return (
+        <div className="mb-4 overflow-hidden border border-zinc-200 dark:border-white/10 rounded-2xl bg-white/40 dark:bg-black/20 backdrop-blur-sm animate-in fade-in slide-in-from-top-2">
+            <button 
+                onClick={() => setIsExpanded(!isExpanded)}
+                className="w-full flex items-center justify-between px-4 py-3 text-[10px] font-black uppercase tracking-widest text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors"
+            >
+                <div className="flex items-center gap-2">
+                    <Brain size={12} className="text-indigo-500" />
+                    <span>Процес на мислене</span>
+                </div>
+                {isExpanded ? <ChevronUp size={14}/> : <ChevronDown size={14}/>}
+            </button>
+            {isExpanded && (
+                <div className="px-4 pb-4 text-xs italic text-zinc-500 dark:text-zinc-400 font-medium whitespace-pre-wrap border-t border-zinc-100 dark:border-white/5 pt-3 leading-relaxed">
+                    {reasoning}
+                </div>
+            )}
+        </div>
+    );
 };
 
 export const MessageList = ({
@@ -95,6 +118,11 @@ export const MessageList = ({
                         )
                      })()}
 
+                     {/* Reasoning block rendered before images and content for AI responses */}
+                     {msg.role === 'model' && msg.reasoning && !isBlurred && (
+                         <ReasoningBlock reasoning={msg.reasoning} />
+                     )}
+
                      {Array.isArray(msg.images) && msg.images.length > 0 && (
                         <div className="flex gap-3 mb-5 overflow-x-auto pb-2 snap-x">
                             {msg.images.map((img, i) => img && ( <img key={i} src={img} onClick={() => setZoomedImage(img)} className="h-40 lg:h-56 rounded-2xl object-cover border border-white/20 snap-center shadow-lg cursor-pointer hover:scale-[1.02] transition-transform"/> ))}
@@ -110,7 +138,6 @@ export const MessageList = ({
 
                      {msg.type === 'test_generated' && msg.testData && <TestRenderer data={msg.testData} />}
 
-                     {/* MOVE: hasText rendered before video player for natural combined reading order */}
                      {hasText && (
                          <div className={`markdown-content w-full relative transition-all duration-700 ${isBlurred ? 'max-h-[160px] overflow-hidden' : ''}`}>
                              <div className={`${isBlurred ? 'select-none pointer-events-none opacity-50 grayscale-[0.5]' : ''}`}>
@@ -140,7 +167,7 @@ export const MessageList = ({
                         </div>
                      )}
 
-                     {isStreaming && !hasText && (
+                     {isStreaming && !hasText && !msg.reasoning && (
                         <div className="flex items-center gap-3 text-sm text-gray-500 italic py-2 animate-pulse">
                            <Loader2 className="animate-spin text-indigo-500" size={18}/>
                            <span>{getLoadingMessage(msg.id)}</span>

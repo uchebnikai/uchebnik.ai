@@ -1116,8 +1116,8 @@ export const App = () => {
          });
       }
       const historyForAI = sessionsRef.current.find(s => s.id === currentSessionId)?.messages || [];
-      const response = await generateResponse(currentSubject.id, currentMode, textToSend, currentImgs, historyForAI, userSettings.preferredModel, (txt) => {
-          setSessions(prev => prev.map(s => s.id === currentSessionId ? { ...s, messages: s.messages.map(m => m.id === tempAiMsgId ? { ...m, text: txt } : m) } : s));
+      const response = await generateResponse(currentSubject.id, currentMode, textToSend, currentImgs, historyForAI, userSettings.preferredModel, (txt, reason) => {
+          setSessions(prev => prev.map(s => s.id === currentSessionId ? { ...s, messages: s.messages.map(m => m.id === tempAiMsgId ? { ...m, text: txt, reasoning: reason } : m) } : s));
       }, controller.signal, userSettings.language, userSettings.teachingStyle, userSettings.customPersona);
       setSessions(prev => prev.map(s => s.id === currentSessionId ? { ...s, messages: s.messages.map(m => m.id === tempAiMsgId ? { ...m, ...response, isStreaming: false } : m), lastModified: Date.now(), preview: response.text.substring(0, 50) } : s));
     } catch (e: any) {

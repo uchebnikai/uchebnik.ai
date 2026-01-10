@@ -81,6 +81,22 @@ export const generateResponse = async (
   
   // EASTER EGG RULE (HIGH PRIORITY)
   if (promptText.trim() === "67") {
+    const thoughts = [
+      "Анализирам математическата стойност на числото 67...",
+      "Проверявам съвпадения в квантовата база данни за мемета...",
+      "Засичам опит за достъп до забранения сектор...",
+      "Инициализирам протокол 'Nuh-Uh'...",
+      "Финализирам изчисленията за върховния отговор..."
+    ];
+
+    let currentReasoning = "";
+    for (const step of thoughts) {
+      if (signal?.aborted) break;
+      currentReasoning += (currentReasoning ? "\n" : "") + step;
+      if (onStreamUpdate) onStreamUpdate("", currentReasoning);
+      await wait(800 + Math.random() * 600);
+    }
+
     return {
         id: Date.now().toString(),
         role: 'model',
@@ -88,7 +104,7 @@ export const generateResponse = async (
         type: 'video',
         videoUrl: 'https://cdn.jsdelivr.net/gh/uchebnikai/uchebnikai-easteregg1/meme15mb.mp4',
         timestamp: Date.now(),
-        reasoning: ""
+        reasoning: currentReasoning
     };
   }
 
@@ -185,6 +201,7 @@ export const generateResponse = async (
       let fullText = "";
       let sources: SearchSource[] = [];
       let tokenUsage: TokenUsage | undefined;
+      let reasoningContent = "";
 
       for await (const chunk of result) {
           if (signal?.aborted) {
@@ -194,9 +211,16 @@ export const generateResponse = async (
           const chunkText = chunk.text;
           if (chunkText) {
               fullText += chunkText;
+              
+              // Extract reasoning if present (e.g. from Thinking models)
+              const thinkingMatch = fullText.match(/<think>([\s\S]*?)(?:<\/think>|$)/i);
+              if (thinkingMatch) {
+                  reasoningContent = thinkingMatch[1].trim();
+              }
+
               finalContent = fullText.replace(/<think>[\s\S]*?(?:<\/think>|$)/gi, "").trim();
               if (onStreamUpdate) {
-                  onStreamUpdate(finalContent, "");
+                  onStreamUpdate(finalContent, reasoningContent);
               }
           }
 
@@ -241,7 +265,7 @@ export const generateResponse = async (
                      type: 'slides',
                      slidesData: slides,
                      timestamp: Date.now(),
-                     reasoning: "",
+                     reasoning: reasoningContent,
                      usage: tokenUsage
                  };
              }
@@ -260,7 +284,7 @@ export const generateResponse = async (
                      type: 'test_generated',
                      testData: testData,
                      timestamp: Date.now(),
-                     reasoning: "",
+                     reasoning: reasoningContent,
                      usage: tokenUsage
                  };
              }
@@ -294,7 +318,7 @@ export const generateResponse = async (
           chartData: chartData,
           geometryData: geometryData,
           timestamp: Date.now(),
-          reasoning: "",
+          reasoning: reasoningContent,
           sources: sources.length > 0 ? sources : undefined,
           usage: tokenUsage
       };
