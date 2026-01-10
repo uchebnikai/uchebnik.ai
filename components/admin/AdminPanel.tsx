@@ -11,7 +11,7 @@ import {
   BarChart2, Wifi, HardDrive, Brain, LayoutDashboard,
   PieChart as PieChartIcon, MessageSquare, Flag, CheckSquare,
   Eye, EyeOff, Lock, Radio, LogOut, Snowflake,
-  Settings, PartyPopper
+  Settings, PartyPopper, Bell, Megaphone, Info, ExternalLink, Volume2, VolumeX, TriangleAlert
 } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { supabase } from '../../supabaseClient';
@@ -20,6 +20,7 @@ import { PieChart, Pie, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { SUBJECTS } from '../../constants';
 import { t } from '../../utils/translations';
 import { Lightbox } from '../ui/Lightbox';
+import { DynamicIcon } from '../ui/DynamicIcon';
 
 // Pricing Constants (Gemini 2.5 Flash)
 const PRICE_INPUT_1M = 0.075;
@@ -101,7 +102,7 @@ interface AdminPanelProps {
   handleAdminLogin: () => void;
   generateKey: (plan: 'plus' | 'pro') => void;
   generatedKeys: GeneratedKey[];
-  addToast: (msg: string, type: 'success' | 'error' | 'info') => void;
+  addToast: (msg: string, type: 'success' | 'error' | 'info' | 'warning') => void;
   globalConfig: any;
   setGlobalConfig: (val: any) => void;
 }
@@ -149,9 +150,17 @@ export const AdminPanel = ({
     const [heatmapRange, setHeatmapRange] = useState<number>(7);
     const [isHeatmapLoading, setIsHeatmapLoading] = useState(false);
 
-    // Broadcast State
-    const [broadcastMsg, setBroadcastMsg] = useState('');
-    const [broadcastType, setBroadcastType] = useState<'toast' | 'modal'>('toast');
+    // Broadcast State (Enhanced)
+    const [broadcastForm, setBroadcastForm] = useState({
+        message: '',
+        type: 'toast' as 'toast' | 'modal',
+        senderName: 'Uchebnik AI',
+        variant: 'info' as 'info' | 'success' | 'warning' | 'danger',
+        icon: 'Bell',
+        actionText: '',
+        actionUrl: '',
+        soundEnabled: true
+    });
     const [isBroadcasting, setIsBroadcasting] = useState(false);
 
     // User Details & Chat
@@ -248,17 +257,23 @@ export const AdminPanel = ({
     };
 
     const handleSendBroadcast = async () => {
-        if (!broadcastMsg.trim()) return;
+        if (!broadcastForm.message.trim()) return;
         setIsBroadcasting(true);
         try {
             const { error } = await supabase.from('broadcasts').insert({
-                message: broadcastMsg,
-                type: broadcastType
+                message: broadcastForm.message,
+                type: broadcastForm.type,
+                sender_name: broadcastForm.senderName,
+                variant: broadcastForm.variant,
+                icon: broadcastForm.icon,
+                action_text: broadcastForm.actionText,
+                action_url: broadcastForm.actionUrl,
+                sound_enabled: broadcastForm.soundEnabled
             });
 
             if (error) throw error;
             
-            setBroadcastMsg('');
+            setBroadcastForm(prev => ({...prev, message: '', actionText: '', actionUrl: ''}));
             addToast('Съобщението е изпратено успешно!', 'success');
         } catch (e: any) {
             console.error("Broadcast failed:", e);
@@ -717,7 +732,7 @@ export const AdminPanel = ({
                         <DollarSign size={18}/> <span className="hidden md:inline">Финанси</span>
                     </button>
                     <button onClick={() => {setActiveTab('broadcast'); setSelectedUser(null);}} className={`flex-shrink-0 md:w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTab === 'broadcast' ? 'bg-white/10 text-white border border-white/5' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}>
-                        <AlertCircle size={18}/> <span className="hidden md:inline">Известия</span>
+                        <Megaphone size={18}/> <span className="hidden md:inline">Известия</span>
                     </button>
                 </nav>
 
@@ -1121,57 +1136,161 @@ export const AdminPanel = ({
                                  </div>
                              )}
 
-                             {/* BROADCAST TAB */}
+                             {/* BROADCAST TAB (Enhanced) */}
                              {activeTab === 'broadcast' && (
-                                 <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
-                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-in fade-in slide-in-from-bottom-4">
+                                     {/* Creator Form */}
+                                     <div className="lg:col-span-7 space-y-6">
                                          <div className="bg-white/5 border border-white/5 rounded-3xl p-6 md:p-8 shadow-xl">
-                                             <div className="flex items-center gap-4 mb-6">
-                                                 <div className="p-3 bg-red-500/10 rounded-xl text-red-500 border border-red-500/20"><Radio size={24}/></div>
+                                             <div className="flex items-center gap-4 mb-8">
+                                                 <div className="p-3 bg-red-500/10 rounded-xl text-red-500 border border-red-500/20"><Megaphone size={24}/></div>
                                                  <div>
-                                                     <h3 className="text-2xl font-bold text-white">Глобално Съобщение</h3>
-                                                     <p className="text-zinc-500 text-sm">Изпратете съобщение в реално време до всички активни потребители.</p>
+                                                     <h3 className="text-2xl font-black text-white tracking-tight">Известия на живо</h3>
+                                                     <p className="text-zinc-500 text-sm">Персонализирани съобщения за цялата платформа.</p>
                                                  </div>
                                              </div>
 
                                              <div className="space-y-6">
-                                                 <div className="space-y-2">
-                                                     <label className="text-xs font-bold text-zinc-500 uppercase ml-1">Съобщение</label>
-                                                     <textarea 
-                                                         value={broadcastMsg}
-                                                         onChange={(e) => setBroadcastMsg(e.target.value)}
-                                                         placeholder="Внимание: Планирана поддръжка..."
-                                                         className="w-full bg-black/30 border border-white/10 rounded-2xl p-4 text-white outline-none focus:border-indigo-500 transition-all min-h-[120px] resize-none"
-                                                     />
+                                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                     <div className="space-y-2">
+                                                         <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">Име на подателя</label>
+                                                         <input 
+                                                             value={broadcastForm.senderName}
+                                                             onChange={(e) => setBroadcastForm({...broadcastForm, senderName: e.target.value})}
+                                                             className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-indigo-500 transition-all"
+                                                             placeholder="Админ"
+                                                         />
+                                                     </div>
+                                                     <div className="space-y-2">
+                                                         <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">Икона</label>
+                                                         <div className="flex gap-2 flex-wrap">
+                                                             {['Bell', 'Megaphone', 'Zap', 'Info', 'AlertTriangle', 'Gift', 'PartyPopper', 'Radio'].map(icon => (
+                                                                 <button 
+                                                                    key={icon}
+                                                                    onClick={() => setBroadcastForm({...broadcastForm, icon})}
+                                                                    className={`p-3 rounded-xl border transition-all ${broadcastForm.icon === icon ? 'bg-indigo-600 border-indigo-400 text-white' : 'bg-black/20 border-white/5 text-zinc-500 hover:text-white'}`}
+                                                                 >
+                                                                     <DynamicIcon name={icon} className="w-5 h-5" />
+                                                                 </button>
+                                                             ))}
+                                                         </div>
+                                                     </div>
                                                  </div>
 
                                                  <div className="space-y-2">
-                                                     <label className="text-xs font-bold text-zinc-500 uppercase ml-1">Тип</label>
-                                                     <div className="grid grid-cols-2 gap-3">
-                                                         <button 
-                                                             onClick={() => setBroadcastType('toast')}
-                                                             className={`p-4 rounded-xl border flex flex-col items-center gap-2 transition-all ${broadcastType === 'toast' ? 'bg-indigo-500/10 border-indigo-500 text-indigo-400' : 'bg-black/20 border-white/5 text-zinc-500 hover:bg-white/5'}`}
-                                                         >
-                                                             <AlertCircle size={24}/>
-                                                             <span className="font-bold text-sm">Toast (Известие)</span>
-                                                         </button>
-                                                         <button 
-                                                             onClick={() => setBroadcastType('modal')}
-                                                             className={`p-4 rounded-xl border flex flex-col items-center gap-2 transition-all ${broadcastType === 'modal' ? 'bg-red-500/10 border-red-500 text-red-400' : 'bg-black/20 border-white/5 text-zinc-500 hover:bg-white/5'}`}
-                                                         >
-                                                             <PieChartIcon size={24}/>
-                                                             <span className="font-bold text-sm">Modal (Прозорец)</span>
-                                                         </button>
+                                                     <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">Текст на съобщението</label>
+                                                     <textarea 
+                                                         value={broadcastForm.message}
+                                                         onChange={(e) => setBroadcastForm({...broadcastForm, message: e.target.value})}
+                                                         placeholder="Напр. Пуснахме нов предмет: Психология! ✨"
+                                                         className="w-full bg-black/30 border border-white/10 rounded-2xl p-4 text-white outline-none focus:border-indigo-500 transition-all min-h-[100px] resize-none"
+                                                     />
+                                                 </div>
+
+                                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                     <div className="space-y-2">
+                                                         <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">Тип показване</label>
+                                                         <div className="grid grid-cols-2 gap-2">
+                                                             <button onClick={() => setBroadcastForm({...broadcastForm, type: 'toast'})} className={`py-3 rounded-xl border font-bold text-xs transition-all ${broadcastForm.type === 'toast' ? 'bg-indigo-600 border-indigo-400 text-white' : 'bg-black/20 border-white/5 text-zinc-500'}`}>TOAST (Малко)</button>
+                                                             <button onClick={() => setBroadcastForm({...broadcastForm, type: 'modal'})} className={`py-3 rounded-xl border font-bold text-xs transition-all ${broadcastForm.type === 'modal' ? 'bg-indigo-600 border-indigo-400 text-white' : 'bg-black/20 border-white/5 text-zinc-500'}`}>MODAL (Голямо)</button>
+                                                         </div>
                                                      </div>
+                                                     <div className="space-y-2">
+                                                         <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">Цветова схема</label>
+                                                         <div className="grid grid-cols-4 gap-2">
+                                                             {(['info', 'success', 'warning', 'danger'] as const).map(v => (
+                                                                 <button key={v} onClick={() => setBroadcastForm({...broadcastForm, variant: v})} className={`h-10 rounded-xl border transition-all ${broadcastForm.variant === v ? 'ring-2 ring-white/50 border-transparent' : 'border-white/5 opacity-50'} ${v === 'info' ? 'bg-indigo-500' : v === 'success' ? 'bg-emerald-500' : v === 'warning' ? 'bg-amber-500' : 'bg-red-500'}`}></button>
+                                                             ))}
+                                                         </div>
+                                                     </div>
+                                                 </div>
+
+                                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                     <div className="space-y-2">
+                                                         <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">Бутон - Текст (Опц.)</label>
+                                                         <input value={broadcastForm.actionText} onChange={(e) => setBroadcastForm({...broadcastForm, actionText: e.target.value})} className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-indigo-500 transition-all" placeholder="Виж тук"/>
+                                                     </div>
+                                                     <div className="space-y-2">
+                                                         <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">Бутон - Линк (Опц.)</label>
+                                                         <input value={broadcastForm.actionUrl} onChange={(e) => setBroadcastForm({...broadcastForm, actionUrl: e.target.value})} className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-indigo-500 transition-all" placeholder="https://..."/>
+                                                     </div>
+                                                 </div>
+
+                                                 <div className="flex items-center justify-between p-4 bg-white/5 border border-white/5 rounded-2xl">
+                                                     <div className="flex items-center gap-3">
+                                                         <div className={`p-2 rounded-lg ${broadcastForm.soundEnabled ? 'bg-indigo-500/10 text-indigo-400' : 'bg-zinc-700/20 text-zinc-500'}`}>{broadcastForm.soundEnabled ? <Volume2 size={18}/> : <VolumeX size={18}/>}</div>
+                                                         <span className="text-sm font-bold text-white">Звуков сигнал</span>
+                                                     </div>
+                                                     <button 
+                                                        onClick={() => setBroadcastForm({...broadcastForm, soundEnabled: !broadcastForm.soundEnabled})}
+                                                        className={`w-12 h-6 rounded-full transition-all flex items-center px-1 ${broadcastForm.soundEnabled ? 'bg-indigo-600' : 'bg-zinc-700'}`}
+                                                     >
+                                                         <div className={`w-4 h-4 rounded-full bg-white transition-transform duration-300 ${broadcastForm.soundEnabled ? 'translate-x-6' : 'translate-x-0'}`} />
+                                                     </button>
                                                  </div>
 
                                                  <Button 
                                                      onClick={handleSendBroadcast} 
-                                                     disabled={isBroadcasting || !broadcastMsg.trim()}
-                                                     className={`w-full py-4 text-base shadow-xl ${broadcastType === 'modal' ? 'bg-red-600 hover:bg-red-500 shadow-red-500/20' : 'bg-indigo-600 hover:bg-indigo-50 shadow-indigo-500/20'}`}
+                                                     disabled={isBroadcasting || !broadcastForm.message.trim()}
+                                                     className={`w-full py-4 text-base font-black shadow-xl bg-indigo-600 hover:bg-indigo-500 shadow-indigo-500/20 active:scale-95`}
                                                  >
-                                                     {isBroadcasting ? 'Изпращане...' : 'Изпрати Съобщение'}
+                                                     {isBroadcasting ? 'Изпращане...' : 'Изпрати до всички ученици'}
                                                  </Button>
+                                             </div>
+                                         </div>
+                                     </div>
+
+                                     {/* Preview Section */}
+                                     <div className="lg:col-span-5 space-y-6">
+                                         <div className="bg-black/20 border border-white/5 rounded-3xl p-6 md:p-8 h-full flex flex-col items-center">
+                                             <h4 className="text-xs font-black text-zinc-500 uppercase tracking-widest mb-8">Преглед в реално време</h4>
+                                             
+                                             {broadcastForm.type === 'toast' ? (
+                                                 <div className={`w-full max-w-sm p-4 rounded-2xl border flex items-center gap-4 shadow-2xl backdrop-blur-xl animate-in fade-in zoom-in duration-300 ${
+                                                     broadcastForm.variant === 'info' ? 'bg-indigo-500/20 border-indigo-500/40 text-indigo-400' : 
+                                                     broadcastForm.variant === 'success' ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-400' : 
+                                                     broadcastForm.variant === 'warning' ? 'bg-amber-500/20 border-amber-500/40 text-amber-400' : 
+                                                     'bg-red-500/20 border-red-500/40 text-red-400'
+                                                 }`}>
+                                                     <div className="shrink-0"><DynamicIcon name={broadcastForm.icon} className="w-5 h-5"/></div>
+                                                     <div className="flex-1 text-sm font-medium">{broadcastForm.message || 'Вашето съобщение тук...'}</div>
+                                                 </div>
+                                             ) : (
+                                                 <div className="w-full bg-[#111] border border-white/10 rounded-[32px] p-6 shadow-2xl flex flex-col items-center text-center gap-6 scale-90 md:scale-100 transition-transform">
+                                                     <div className={`w-16 h-16 rounded-2xl flex items-center justify-center text-white shadow-lg ${
+                                                         broadcastForm.variant === 'info' ? 'bg-indigo-600' : 
+                                                         broadcastForm.variant === 'success' ? 'bg-emerald-600' : 
+                                                         broadcastForm.variant === 'warning' ? 'bg-amber-600' : 
+                                                         'bg-red-600'
+                                                     }`}>
+                                                         <DynamicIcon name={broadcastForm.icon} className="w-8 h-8"/>
+                                                     </div>
+                                                     <div className="space-y-2">
+                                                         <div className="flex flex-col items-center gap-1">
+                                                             <h3 className="text-xl font-black text-white">Известие</h3>
+                                                             <span className="text-[9px] font-black uppercase tracking-widest text-zinc-500">От: {broadcastForm.senderName}</span>
+                                                         </div>
+                                                         <p className="text-zinc-400 text-sm leading-relaxed">{broadcastForm.message || 'Вашето съобщение тук...'}</p>
+                                                     </div>
+                                                     <div className="flex flex-col gap-2 w-full">
+                                                         {broadcastForm.actionText && (
+                                                             <div className={`w-full py-3 rounded-xl font-bold text-white text-sm flex items-center justify-center gap-2 ${
+                                                                 broadcastForm.variant === 'info' ? 'bg-indigo-600' : 
+                                                                 broadcastForm.variant === 'success' ? 'bg-emerald-600' : 
+                                                                 broadcastForm.variant === 'warning' ? 'bg-amber-600' : 
+                                                                 'bg-red-600'
+                                                             }`}>
+                                                                 {broadcastForm.actionText} <ExternalLink size={14}/>
+                                                             </div>
+                                                         )}
+                                                         <div className="w-full py-3 rounded-xl font-bold text-zinc-500 text-sm">Затвори</div>
+                                                     </div>
+                                                 </div>
+                                             )}
+                                             
+                                             <div className="mt-auto pt-8 flex items-center gap-2 text-zinc-600">
+                                                 {broadcastForm.soundEnabled ? <Volume2 size={14}/> : <VolumeX size={14}/>}
+                                                 <span className="text-[10px] font-bold uppercase tracking-widest">Звук: {broadcastForm.soundEnabled ? 'Включен' : 'Заглушен'}</span>
                                              </div>
                                          </div>
                                      </div>
