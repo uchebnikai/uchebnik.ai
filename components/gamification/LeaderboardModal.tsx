@@ -26,12 +26,12 @@ export const LeaderboardModal = ({ isOpen, onClose, currentUserId }: Leaderboard
     const fetchLeaderboard = async () => {
         setLoading(true);
         try {
-            // Fetch top 50 users by XP
+            // Fetch top 10 users by XP
             const { data, error } = await supabase
                 .from('profiles')
                 .select('id, xp, level, settings, avatar_url')
                 .order('xp', { ascending: false })
-                .limit(50);
+                .limit(10);
 
             if (error) throw error;
 
