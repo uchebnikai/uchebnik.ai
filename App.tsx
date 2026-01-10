@@ -26,7 +26,6 @@ import { t } from './utils/translations';
 import { calculateLevel, XP_PER_MESSAGE, XP_PER_IMAGE, XP_PER_VOICE, calculateXPWithBoost, generateDailyQuests, updateQuestProgress } from './utils/gamification';
 
 // Components
-// Add missing DynamicIcon import to fix "Cannot find name 'DynamicIcon'"
 import { DynamicIcon } from './components/ui/DynamicIcon';
 import { Lightbox } from './components/ui/Lightbox';
 import { ConfirmModal } from './components/ui/ConfirmModal';
@@ -68,7 +67,6 @@ Uchebnik AI винаги предоставя пълно обяснение на
 
 const CHRISTMAS_BG = "https://i.ibb.co/1YqHm3rw/Gemini-Generated-Image-g5c7r7g5c7r7g5c7.png";
 
-// Helper Audio Utils for Live API
 function decode(base64: string) {
   const binaryString = atob(base64);
   const len = binaryString.length;
@@ -98,15 +96,6 @@ async function decodeAudioData(
   return buffer;
 }
 
-function encode(bytes: Uint8Array) {
-  let binary = '';
-  const len = bytes.byteLength;
-  for (let i = 0; i < len; i++) {
-    binary += String.fromCharCode(bytes[i]);
-  }
-  return btoa(binary);
-}
-
 export const App = () => {
   // --- Auth State ---
   const [session, setSession] = useState<SupabaseSession | null>(null);
@@ -116,8 +105,6 @@ export const App = () => {
   
   const [isRemoteDataLoaded, setIsRemoteDataLoaded] = useState(false);
   const [syncStatus, setSyncStatus] = useState<'synced' | 'syncing' | 'error' | 'offline'>('synced');
-  const [syncErrorDetails, setSyncErrorDetails] = useState<string | null>(null);
-  const [missingDbTables, setMissingDbTables] = useState(false);
   const [authSuccessType, setAuthSuccessType] = useState<'verification' | 'magiclink' | 'email_change' | 'generic' | null>(null);
 
   // --- State ---
@@ -158,7 +145,6 @@ export const App = () => {
   const [userPlan, setUserPlan] = useState<UserPlan>('free');
   const [dailyImageCount, setDailyImageCount] = useState(0);
   
-  // Token Stats
   const [totalInputTokens, setTotalInputTokens] = useState(0);
   const [totalOutputTokens, setTotalOutputTokens] = useState(0);
   const [costCorrection, setCostCorrection] = useState(0);
@@ -175,10 +161,8 @@ export const App = () => {
 
   const [broadcastModal, setBroadcastModal] = useState<{isOpen: boolean, message: string} | null>(null);
 
-  // Global Config
   const [globalConfig, setGlobalConfig] = useState({ showChristmasButton: true });
 
-  // Voice State
   const [isVoiceCallActive, setIsVoiceCallActive] = useState(false);
   const [voiceCallStatus, setVoiceCallStatus] = useState<'idle' | 'listening' | 'processing' | 'speaking'>('idle');
   const [voiceMuted, setVoiceMuted] = useState(false);
@@ -219,7 +203,6 @@ export const App = () => {
     : [];
 
   const [unreadSubjects, setUnreadSubjects] = useState<Set<string>>(new Set());
-  const [notification, setNotification] = useState<{ message: string, subjectId: string } | null>(null);
   const [isListening, setIsListening] = useState(false);
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
   
@@ -240,10 +223,8 @@ export const App = () => {
   };
 
   // --- Refs ---
-  const recognitionRef = useRef<any>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const liveSessionRef = useRef<any>(null);
-  const startingTextRef = useRef<string>('');
   const nextStartTimeRef = useRef(0);
   const sourcesRef = useRef<Set<AudioBufferSourceNode>>(new Set());
   
@@ -251,14 +232,9 @@ export const App = () => {
   const sessionsRef = useRef(sessions);
   const activeSessionIdRef = useRef(activeSessionId);
   const activeModeRef = useRef(activeMode);
-  const isVoiceCallActiveRef = useRef(isVoiceCallActive);
   const voiceMutedRef = useRef(voiceMuted);
-  const voiceCallStatusRef = useRef(voiceCallStatus);
-  const loadingSubjectsRef = useRef(loadingSubjects);
   
-  const isPlayingAudioRef = useRef(false);
   const abortControllerRef = useRef<AbortController | null>(null);
-  const responseWatchdogRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isStreamingRef = useRef(false); 
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -268,7 +244,6 @@ export const App = () => {
   const syncSettingsTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   const isIncomingUpdateRef = useRef(false);
-  const isRemoteDataLoadedRef = useRef(false);
 
   // --- Custom Hooks ---
   useTheme(userSettings);
@@ -294,7 +269,6 @@ export const App = () => {
     setGeneratedKeys(prev => [{ code, isUsed: false, plan }, ...prev]);
   };
 
-  // --- Implementation: Plan Activation ---
   const handleUnlockSubmit = async () => {
     if (!unlockKeyInput.trim()) {
         addToast('Моля, въведете код.', 'error');
@@ -309,7 +283,6 @@ export const App = () => {
     setUnlockLoading(true);
     try {
         const result = await redeemKey(unlockKeyInput, session.user.id);
-        
         if (result.valid && result.plan) {
             const expiresAt = new Date();
             expiresAt.setMonth(expiresAt.getMonth() + 1); 
@@ -332,7 +305,6 @@ export const App = () => {
             }));
             
             addToast(`Успешно активиран ${result.plan.toUpperCase()}! 🎉`, 'success');
-            
             setShowUnlockModal(false);
             setTargetPlan(null);
             setUnlockKeyInput('');
@@ -348,12 +320,10 @@ export const App = () => {
   };
 
   const handleUpdateAccount = async () => {
-    // Local update
     setUserMeta({ firstName: editProfile.firstName, lastName: editProfile.lastName, avatar: editProfile.avatar });
     const fullName = `${editProfile.firstName} ${editProfile.lastName}`.trim();
     setUserSettings(prev => ({ ...prev, userName: fullName }));
 
-    // Supabase update
     if (session?.user?.id) {
         try {
             const { error } = await supabase.from('profiles').update({
@@ -364,7 +334,6 @@ export const App = () => {
             
             if (error) throw error;
 
-            // Update user metadata if possible
             await supabase.auth.updateUser({
                 data: { 
                     first_name: editProfile.firstName, 
@@ -406,28 +375,22 @@ export const App = () => {
     });
   };
 
-  // --- Voice Call Implementation (Live API) ---
   const startVoiceCall = async () => {
     if (isVoiceCallActive) return;
-    
     setIsVoiceCallActive(true);
     setVoiceCallStatus('idle');
-    
     const apiKey = process.env.API_KEY || "";
     if (!apiKey) {
       addToast("Липсва API ключ за гласов режим.", "error");
       setIsVoiceCallActive(false);
       return;
     }
-
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const ai = new GoogleGenAI({ apiKey });
-      
       const inputCtx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
       const outputCtx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
       audioContextRef.current = outputCtx;
-
       const sessionPromise = ai.live.connect({
         model: LIVE_MODEL,
         callbacks: {
@@ -462,7 +425,7 @@ export const App = () => {
               sourcesRef.current.add(source);
             }
             if (message.serverContent?.interrupted) {
-              sourcesRef.current.forEach(s => s.stop());
+              sourcesRef.current.forEach(s => { try{s.stop()}catch(e){} });
               sourcesRef.current.clear();
               nextStartTimeRef.current = 0;
             }
@@ -482,7 +445,6 @@ export const App = () => {
           systemInstruction: `You are in a live voice conversation. Current subject: ${activeSubject?.name}. Keep responses natural and conversational.`
         }
       });
-
       liveSessionRef.current = await sessionPromise;
       grantXP(XP_PER_VOICE);
     } catch (err) {
@@ -503,7 +465,6 @@ export const App = () => {
     setVoiceCallStatus('idle');
   };
 
-  // --- Effects ---
   useEffect(() => {
     const fetchGlobalConfig = async () => {
         try {
@@ -518,6 +479,7 @@ export const App = () => {
         } catch(e) {}
     };
     fetchGlobalConfig();
+    loadLocalStorageData(); // Load local data immediately on mount
   }, []);
 
   useEffect(() => {
@@ -525,11 +487,8 @@ export const App = () => {
     sessionsRef.current = sessions;
     activeSessionIdRef.current = activeSessionId;
     activeModeRef.current = activeMode;
-    isVoiceCallActiveRef.current = isVoiceCallActive;
     voiceMutedRef.current = voiceMuted;
-    voiceCallStatusRef.current = voiceCallStatus;
-    loadingSubjectsRef.current = loadingSubjects;
-  }, [activeSubject, sessions, activeSessionId, activeMode, isVoiceCallActive, voiceMuted, voiceCallStatus, loadingSubjects]);
+  }, [activeSubject, sessions, activeSessionId, activeMode, voiceMuted]);
 
   useEffect(() => {
       document.body.classList.remove('font-dyslexic', 'font-mono');
@@ -565,12 +524,10 @@ export const App = () => {
       try {
           const loadedSessions = await getSessionsFromStorage(sessionsKey);
           if (loadedSessions && loadedSessions.length > 0) setSessions(loadedSessions);
-          else setSessions([]);
           
           const loadedSettings = await getSettingsFromStorage(settingsKey);
           if (loadedSettings) {
               setUserSettings(prev => ({ ...prev, ...loadedSettings }));
-              // Fix Error: Property 'plan' does not exist on type 'UserSettings'. Cast to any.
               if ((loadedSettings as any).plan) setUserPlan((loadedSettings as any).plan);
           }
       } catch (err) { console.error("Init Error", err); }
@@ -596,7 +553,6 @@ export const App = () => {
       setUserPlan('free');
       setUserMeta({ firstName: '', lastName: '', avatar: '' });
       setIsRemoteDataLoaded(false);
-      isRemoteDataLoadedRef.current = false;
       setSyncStatus('synced');
       await loadLocalStorageData();
   };
@@ -611,7 +567,6 @@ export const App = () => {
             window.history.replaceState(null, '', window.location.pathname);
             return;
         }
-
         if (hash && hash.includes('type=')) {
             const params = new URLSearchParams(hash.substring(1));
             const type = params.get('type');
@@ -621,7 +576,6 @@ export const App = () => {
                 setHomeView('auth_success');
             }
         }
-        
         const searchParams = new URLSearchParams(window.location.search);
         const refCode = searchParams.get('ref');
         if (refCode) {
@@ -636,35 +590,27 @@ export const App = () => {
 
     const loadRemoteUserData = async (userId: string, authMetadata?: any) => {
         setIsRemoteDataLoaded(false);
-        isRemoteDataLoadedRef.current = false;
         setSyncStatus('syncing');
         try {
             const { data: profileData, error: profileError } = await supabase.from('profiles').select('*').eq('id', userId).single();
-            
             if (profileError && profileError.code === 'PGRST116') {
-                console.warn("Account deleted from database. Forced logout.");
                 await handleLogout();
                 return;
             }
-
             if (profileData) {
                 const referralCode = profileData.referral_code;
                 const proExpiresAt = profileData.pro_expires_at;
-                const xp = profileData.xp || 0;
-                const level = profileData.level || 1;
+                const xp = profileData.xp ?? 0;
+                const level = profileData.level ?? 1;
                 
                 if (profileData.settings) {
-                    // Fix Error: Property 'plan' does not exist on type 'UserSettings'. Cast settings to any.
-                    const { plan, stats, ...restSettings } = (profileData.settings as any);
-                    
+                    const { plan, stats, xp: _jsonXP, level: _jsonLvl, ...restSettings } = (profileData.settings as any);
                     let currentName = restSettings.userName || '';
-                    const isNameGeneric = !currentName || currentName === 'Потребител' || currentName === 'Анонимен' || currentName === 'Anonymous' || currentName === 'Scholar';
+                    const isNameGeneric = !currentName || ['Потребител', 'Анонимен', 'Anonymous', 'Scholar'].includes(currentName);
                     
                     if (isNameGeneric && authMetadata) {
                         currentName = authMetadata.full_name || authMetadata.name || `${authMetadata.given_name || ''} ${authMetadata.family_name || ''}`.trim();
-                        
                         if (currentName && !isNameGeneric) {
-                            console.log("Synchronizing metadata from OAuth provider...");
                             await supabase.from('profiles').update({
                                 settings: { ...profileData.settings, userName: currentName }
                             }).eq('id', userId);
@@ -679,8 +625,8 @@ export const App = () => {
                         customBackground: profileData.custom_background || prev.customBackground, 
                         referralCode, 
                         proExpiresAt, 
-                        xp: xp || prev.xp, 
-                        level: level || prev.level 
+                        xp, // Explicitly prioritize DB columns
+                        level 
                     }));
 
                     if (plan) setUserPlan(plan);
@@ -701,11 +647,10 @@ export const App = () => {
                 });
             }
             setSyncStatus('synced');
+            setIsRemoteDataLoaded(true);
         } catch (err) {
             console.error("Remote load error", err);
-        } finally {
             setIsRemoteDataLoaded(true);
-            isRemoteDataLoadedRef.current = true;
         }
     };
 
@@ -714,7 +659,6 @@ export const App = () => {
         if (supabaseSession) {
             setShowAuthModal(false);
             const meta = supabaseSession.user.user_metadata;
-            
             const firstName = meta.given_name || meta.first_name || '';
             const lastName = meta.family_name || meta.last_name || '';
             const fullName = meta.full_name || meta.name || `${firstName} ${lastName}`.trim();
@@ -731,7 +675,7 @@ export const App = () => {
             });
 
             setUserSettings(prev => {
-                const isCurrentNameGeneric = !prev.userName || prev.userName === 'Потребител' || prev.userName === 'Анонимен' || prev.userName === 'Anonymous' || prev.userName === 'Scholar';
+                const isCurrentNameGeneric = !prev.userName || ['Потребител', 'Анонимен', 'Anonymous', 'Scholar'].includes(prev.userName);
                 return isCurrentNameGeneric && fullName ? { ...prev, userName: fullName } : prev;
             });
 
@@ -758,9 +702,9 @@ export const App = () => {
       return () => { supabase.removeChannel(channel); };
   }, []);
 
-  // Sync sessions effect
+  // Sync sessions
   useEffect(() => {
-      if (!session?.user?.id || missingDbTables || !isRemoteDataLoaded || isStreamingRef.current) return;
+      if (!session?.user?.id || !isRemoteDataLoaded || isStreamingRef.current) return;
       if (isIncomingUpdateRef.current) { isIncomingUpdateRef.current = false; return; }
       setSyncStatus('syncing');
       if (syncSessionsTimer.current) clearTimeout(syncSessionsTimer.current);
@@ -772,21 +716,17 @@ export const App = () => {
       return () => { if(syncSessionsTimer.current) clearTimeout(syncSessionsTimer.current); };
   }, [sessions, session?.user?.id, isRemoteDataLoaded]);
 
-  // SYNC SETTINGS EFFECT (Fixed: Handles Level/XP persistence)
+  // SYNC SETTINGS EFFECT (Fixed Persistence)
   useEffect(() => {
-      if (!isRemoteDataLoaded) return;
-      
-      // Always save to indexedDB locally
+      // Local save always
       saveSettingsToStorage('uchebnik_settings', userSettings);
       
-      if (!session?.user?.id) return;
+      if (!isRemoteDataLoaded || !session?.user?.id) return;
 
       if (syncSettingsTimer.current) clearTimeout(syncSettingsTimer.current);
       syncSettingsTimer.current = setTimeout(async () => {
-          // Fix: Destructure only valid properties from userSettings; 'plan' is a separate state variable.
           const { xp, level, themeColor, customBackground, ...sanitizedSettings } = userSettings;
-          // Fix Error in file App.tsx: Property 'plan' does not exist on type 'UserSettings'.
-          // Cast the settings object to any to allow the plan property in the DB JSON column.
+          // Explicitly update XP and Level columns in DB
           await supabase.from('profiles').update({ 
               settings: { ...sanitizedSettings, plan: userPlan } as any, 
               xp, 
@@ -839,10 +779,8 @@ export const App = () => {
   };
 
   const createNewSession = (subjectId: SubjectId, role?: UserRole, initialMode?: AppMode) => {
-    const sub = SUBJECTS.find(s => s.id === subjectId);
-    const sTitle = `...`; 
     const newSession: Session = {
-      id: crypto.randomUUID(), subjectId, title: sTitle, createdAt: Date.now(), lastModified: Date.now(), preview: '...', messages: [], role: role || userRole || undefined, mode: initialMode
+      id: crypto.randomUUID(), subjectId, title: '...', createdAt: Date.now(), lastModified: Date.now(), preview: '...', messages: [], role: role || userRole || undefined, mode: initialMode
     };
     const welcome = `${t('hello', userSettings.language)}${userSettings.userName ? ', ' + userSettings.userName : ''}! ${t('app_name', userSettings.language)}. ${t('ask_anything', userSettings.language)}`;
     newSession.messages.push({ id: 'welcome-' + Date.now(), role: 'model', timestamp: Date.now(), text: welcome });
@@ -922,47 +860,24 @@ export const App = () => {
 
     if (!currentSubject || !currentSessionId) return;
 
-    if (textToSend === "67" && currentImgs.length === 0) {
-        const newUserMsg: Message = { id: Date.now().toString(), role: 'user', text: textToSend, timestamp: Date.now() };
-        const combinedModelMsg: Message = { 
-            id: (Date.now() + 1).toString(), 
-            role: 'model', 
-            text: "nuh uh", 
-            timestamp: Date.now() + 1, 
-            type: 'video', 
-            videoUrl: "https://d3o8hbmq1ueggw.cloudfront.net/6wi1m%2Ffile%2Fb59147eb78369895be2e537a5c9d1a32_e3f57f90735ecbd0b463a700d621de4c.mp4?response-content-disposition=inline%3Bfilename%3D%22b59147eb78369895be2e537a5c9d1a32_e3f57f90735ecbd0b463a700d621de4c.mp4%22%3B&response-content-type=video%2Fmp4&Expires=1768006059&Signature=DVEaJVHqVJmNevr9hLwVwaxjqiJMExXJ8J1bhuvWKWDV0Wk-96o2km6nZ97VGr3ktoj2--c95pztarLsCSBT5F9yg7RmWD5BqHsBmE-R~9BBXAFvvY1QTBvcx9Utb8~PHEFVomNT9bcvoC5GbjE91v5aGoA~Ibjg1BcLDRx5rMWMahEsRLW5KC16CI2gw6fJPUpHUWZc-irJoTY0lTsJf~ffw0o8Igpa9ToYfkZvyKs-CKLyAjDgRzypmyCqZoXptIgGlViTJ1xY0BTvf5FWXegvnKNrhxsHQ~zKc7YmWH4XzsVMGebCflN1D7u76imhAC85RYnHIHtbki6OPYJepQ__&Key-Pair-Id=APKAJT5WQLLEOADKLHBQ" 
-        };
-
-        setSessions(prev => prev.map(s => s.id === currentSessionId ? { ...s, messages: [...s.messages, newUserMsg, combinedModelMsg], lastModified: Date.now(), preview: "nuh uh" } : s));
-        setInputValue('');
-        setSelectedImages([]);
-        return;
-    }
-
     if (!session) { 
         if ((!textToSend.trim() && currentImgs.length === 0) || !currentSubject || !currentSessionId) return;
-
         const currentSess = sessionsRef.current.find(s => s.id === currentSessionId);
         const userMsgCount = currentSess?.messages.filter(m => m.role === 'user').length || 0;
-        
         if (userMsgCount >= 1) {
             addToast("Моля, влезте в профила си, за да продължите чата.", "info");
             setShowAuthModal(true);
             return;
         }
-
         const newUserMsg: Message = { id: Date.now().toString(), role: 'user', text: textToSend, images: currentImgs, timestamp: Date.now() };
         const tempAiMsgId = (Date.now() + 1).toString();
         const tempAiMsg: Message = { id: tempAiMsgId, role: 'model', text: "", timestamp: Date.now(), isDemo: true, isStreaming: true };
-
         setSessions(prev => prev.map(s => s.id === currentSessionId ? { ...s, messages: [...s.messages, newUserMsg, tempAiMsg], lastModified: Date.now(), preview: textToSend.substring(0, 50) } : s));
         setInputValue(''); setSelectedImages([]);
         setLoadingSubjects(prev => ({ ...prev, [currentSubject.id]: true }));
-        
         let currentText = "";
         const chars = DEMO_RESPONSE.split("");
         let charIndex = 0;
-        
         const typeInterval = setInterval(() => {
             if (charIndex < chars.length) {
                 const batchSize = Math.floor(Math.random() * 6) + 4; 
@@ -981,20 +896,17 @@ export const App = () => {
     const currentMode = activeModeRef.current;
     if ((!textToSend.trim() && currentImgs.length === 0) || !currentSubject || !currentSessionId) return;
     if (loadingSubjects[currentSubject.id]) return;
-    
     if (currentImgs.length > 0 && !checkImageLimit(currentImgs.length)) return;
     
     const replyContext = replyingTo; setReplyingTo(null);
     const newUserMsg: Message = { id: Date.now().toString(), role: 'user', text: textToSend, images: currentImgs, timestamp: Date.now(), replyToId: replyContext?.id };
     const tempAiMsgId = (Date.now() + 1).toString();
     const tempAiMsg: Message = { id: tempAiMsgId, role: 'model', text: "", timestamp: Date.now(), reasoning: "", isStreaming: true };
-    
     const currentSess = sessionsRef.current.find(s => s.id === currentSessionId);
     const isFirstUserMsg = currentSess && currentSess.messages.filter(m => m.role === 'user').length === 0;
 
     setSessions(prev => prev.map(s => s.id === currentSessionId ? { ...s, messages: [...s.messages, newUserMsg, tempAiMsg], lastModified: Date.now(), preview: textToSend.substring(0, 50) } : s));
     setInputValue(''); setSelectedImages([]);
-    
     isStreamingRef.current = true;
     setLoadingSubjects(prev => ({ ...prev, [currentSubject.id]: true }));
     const controller = new AbortController();
@@ -1007,17 +919,13 @@ export const App = () => {
     try {
       if (isFirstUserMsg && textToSend.trim()) {
          generateChatTitle(textToSend).then(title => {
-             if (title) {
-                 setSessions(prev => prev.map(s => s.id === currentSessionId ? { ...s, title } : s));
-             }
+             if (title) setSessions(prev => prev.map(s => s.id === currentSessionId ? { ...s, title } : s));
          });
       }
-
       const historyForAI = sessionsRef.current.find(s => s.id === currentSessionId)?.messages || [];
       const response = await generateResponse(currentSubject.id, currentMode, textToSend, currentImgs, historyForAI, userSettings.preferredModel, (txt) => {
           setSessions(prev => prev.map(s => s.id === currentSessionId ? { ...s, messages: s.messages.map(m => m.id === tempAiMsgId ? { ...m, text: txt } : m) } : s));
       }, controller.signal, userSettings.language, userSettings.teachingStyle, userSettings.customPersona);
-
       setSessions(prev => prev.map(s => s.id === currentSessionId ? { ...s, messages: s.messages.map(m => m.id === tempAiMsgId ? { ...m, ...response, isStreaming: false } : m), lastModified: Date.now(), preview: response.text.substring(0, 50) } : s));
     } catch (e: any) {
        console.error("AI Error", e);
@@ -1031,22 +939,14 @@ export const App = () => {
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files.length > 0) {
-      if (!session) {
-          setIsImageProcessing(true);
-          const processed = await Promise.all(Array.from(files).map(file => resizeImage(file as File, 800, 0.6)));
-          setSelectedImages(prev => [...prev, ...processed]);
-          setIsImageProcessing(false);
-          return;
-      }
-      if (!checkImageLimit(files.length)) return;
+      if (session && !checkImageLimit(files.length)) return;
       setIsImageProcessing(true);
       const processed = await Promise.all(Array.from(files).map(file => resizeImage(file as File, 800, 0.6)));
-          setSelectedImages(prev => [...prev, ...processed]);
+      setSelectedImages(prev => [...prev, ...processed]);
       setIsImageProcessing(false);
     }
   };
 
-  // Fixed specialized handlers for settings upload
   const handleBackgroundUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files[0]) {
@@ -1114,63 +1014,7 @@ export const App = () => {
         ) : !activeSubject ? (
             <WelcomeScreen homeView={homeView} userMeta={userMeta} userSettings={userSettings} handleSubjectChange={handleSubjectChange} setHomeView={setHomeView} setUserRole={setUserRole} setShowAdminAuth={setShowAdminAuth} onQuickStart={(txt, imgs) => { setPendingHomeInput({text: txt, images: imgs||[]}); handleSubjectChange(SUBJECTS[0]); }} setSidebarOpen={setSidebarOpen} setShowAuthModal={setShowAuthModal} session={session} setShowSettings={setShowSettings} />
         ) : showSubjectDashboard ? (
-            <div className={`flex-1 overflow-y-auto custom-scrollbar p-4 md:p-8 flex flex-col items-center justify-center relative overflow-x-hidden bg-transparent`}>
-                <button onClick={() => { setActiveSubject(null); setHomeView(userRole?.includes('uni') ? 'university_select' : 'school_select'); }} className="absolute top-6 left-6 p-2 text-gray-500 hover:bg-white/20 dark:hover:bg-black/20 backdrop-blur-md rounded-full transition-colors z-20"><ArrowLeft size={24}/></button>
-
-                <div className="max-w-3xl w-full text-center space-y-6 animate-in fade-in zoom-in-95 duration-500">
-                    <div className={`w-24 h-24 mx-auto rounded-[32px] ${activeSubject.color} flex items-center justify-center text-white shadow-2xl shadow-indigo-500/30 rotate-3`}>
-                        {/* Fix "Cannot find name 'DynamicIcon'" by adding import and ensuring availability in this scope */}
-                        <DynamicIcon name={activeSubject.icon} className="w-12 h-12" />
-                    </div>
-                    <h1 className="text-4xl md:text-5xl font-black text-zinc-900 dark:text-white font-display tracking-tight">{t(`subject_${activeSubject.id}`, userSettings.language)}</h1>
-                    <p className="text-xl text-gray-500 dark:text-gray-400">{(userRole === 'student' || userRole === 'uni_student') ? t('what_to_do', userSettings.language) : t('teacher_tools', userSettings.language)}</p>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
-                        {(userRole === 'student' || userRole === 'uni_student') ? (
-                            <>
-                                <button onClick={() => handleStartMode(AppMode.SOLVE)} className="group p-6 bg-white/60 dark:bg-black/40 backdrop-blur-xl border border-white/20 dark:border-white/10 rounded-3xl text-left hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl hover:shadow-2xl hover:border-indigo-500/30">
-                                    <div className="p-3 bg-indigo-100/50 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 rounded-2xl w-fit mb-4 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
-                                        <Zap size={24}/>
-                                    </div>
-                                    <h3 className="text-2xl font-bold mb-2">{t('mode_solve', userSettings.language)}</h3>
-                                    <p className="text-gray-500 font-medium">{t('mode_solve_desc', userSettings.language)}</p>
-                                </button>
-                                <button onClick={() => handleStartMode(AppMode.LEARN)} className="group p-6 bg-white/60 dark:bg-black/40 backdrop-blur-xl border border-white/20 dark:border-white/10 rounded-3xl text-left hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl hover:shadow-2xl hover:border-emerald-500/30">
-                                    <div className="p-3 bg-emerald-100/50 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-2xl w-fit mb-4 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
-                                        <Book size={24}/>
-                                    </div>
-                                    <h3 className="text-2xl font-bold mb-2">{t('mode_learn', userSettings.language)}</h3>
-                                    <p className="text-gray-500 font-medium">{t('mode_learn_desc', userSettings.language)}</p>
-                                </button>
-                            </>
-                        ) : (
-                            <>
-                                <button onClick={() => handleStartMode(AppMode.TEACHER_TEST)} className="group p-6 bg-white/60 dark:bg-black/40 backdrop-blur-xl border border-white/20 dark:border-white/10 rounded-3xl text-left hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl hover:shadow-2xl hover:border-indigo-500/30">
-                                    <div className="p-3 bg-indigo-100/50 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 rounded-2xl w-fit mb-4 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
-                                        <CheckCircle size={24}/>
-                                    </div>
-                                    <h3 className="text-2xl font-bold mb-2">{t('mode_test', userSettings.language)}</h3>
-                                    <p className="text-gray-500 font-medium">{t('mode_test_desc', userSettings.language)}</p>
-                                </button>
-                                <button onClick={() => handleStartMode(AppMode.TEACHER_PLAN)} className="group p-6 bg-white/60 dark:bg-black/40 backdrop-blur-xl border border-white/20 dark:border-white/10 rounded-3xl text-left hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl hover:shadow-2xl hover:border-amber-500/30">
-                                    <div className="p-3 bg-amber-100/50 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 rounded-2xl w-fit mb-4 group-hover:bg-amber-600 group-hover:text-white transition-colors">
-                                        <FileJson size={24}/>
-                                    </div>
-                                    <h3 className="text-2xl font-bold mb-2">{t('mode_plan', userSettings.language)}</h3>
-                                    <p className="text-gray-500 font-medium">{t('mode_plan_desc', userSettings.language)}</p>
-                                </button>
-                                <button onClick={() => handleStartMode(AppMode.TEACHER_RESOURCES)} className="col-span-full group p-6 bg-white/60 dark:bg-black/40 backdrop-blur-xl border border-white/20 dark:border-white/10 rounded-3xl text-left hover:scale-[1.01] active:scale-[0.99] transition-all shadow-xl hover:shadow-2xl hover:border-pink-500/30">
-                                    <div className="p-3 bg-pink-100/50 dark:bg-pink-500/20 text-pink-600 dark:text-pink-400 rounded-2xl w-fit mb-4 group-hover:bg-pink-600 group-hover:text-white transition-colors">
-                                        <Zap size={24}/>
-                                    </div>
-                                    <h3 className="text-2xl font-bold mb-2">{t('mode_resources', userSettings.language)}</h3>
-                                    <p className="text-gray-500 font-medium">{t('mode_resources_desc', userSettings.language)}</p>
-                                </button>
-                            </>
-                        )}
-                    </div>
-                </div>
-            </div>
+            <SubjectDashboard activeSubject={activeSubject} setActiveSubject={setActiveSubject} setHomeView={setHomeView} userRole={userRole} userSettings={userSettings} handleStartMode={handleStartMode} />
         ) : (
             <div className={`flex-1 flex flex-col relative h-full bg-transparent overflow-hidden w-full`}>
                 {!focusMode && <ChatHeader setSidebarOpen={setSidebarOpen} activeSubject={activeSubject} setActiveSubject={setActiveSubject} setUserSettings={setUserSettings} userRole={userRole} activeMode={activeMode} startVoiceCall={startVoiceCall} createNewSession={createNewSession} setHistoryDrawerOpen={setHistoryDrawerOpen} userSettings={userSettings} setFocusMode={setFocusMode} isGuest={!session} />}
@@ -1236,12 +1080,7 @@ export const App = () => {
           </div>
         ))}
       </div>
-
       <IosInstallPrompt />
     </div>
   );
 };
-
-const ArrowRight = ({ size, className }: { size: number, className?: string }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
-);
