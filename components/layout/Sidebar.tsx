@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { MessageSquare, Trash2, Plus, School, GraduationCap, Briefcase, ChevronDown, User, Settings, CreditCard, HelpCircle, LogOut, ArrowRight, ChevronUp, FileText, CloudOff, RefreshCw, Cloud, PanelLeftClose, PanelLeftOpen, LogIn, Snowflake, Gift, Trophy, Target, AlertTriangle, Sparkles, PartyPopper } from 'lucide-react';
 import { DynamicIcon } from '../ui/DynamicIcon';
@@ -150,7 +149,7 @@ export const Sidebar = ({
           </div>
 
           <div className="flex-1 overflow-y-auto px-4 pb-4 custom-scrollbar">
-             {/* General Chat - Moved inside scrollable area */}
+             {/* General Chat */}
              <div className="space-y-1 mt-2 mb-4 shrink-0">
                   <button 
                     onClick={() => { handleSubjectChange(SUBJECTS[0]); setHomeView('landing'); }} 

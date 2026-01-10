@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { GoogleGenAI, LiveServerMessage, Modality } from "@google/genai";
 import { SubjectConfig, SubjectId, AppMode, Message, Slide, UserSettings, Session, UserPlan, UserRole, HomeViewType } from './types';
@@ -398,7 +397,7 @@ export const App = () => {
       voiceStreamRef.current = stream;
       const ai = new GoogleGenAI({ apiKey });
       const inputCtx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
-      const outputCtx = new (window.AudioContext || (window as any).webkitRecognition ? (window as any).AudioContext || (window as any).webkitAudioContext : window.AudioContext)({ sampleRate: 24000 });
+      const outputCtx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
       audioContextRef.current = outputCtx;
       const sessionPromise = ai.live.connect({
         model: LIVE_MODEL,
@@ -483,15 +482,26 @@ export const App = () => {
             const earnedXP = Math.min(XP_PER_VOICE, Math.floor(durationSeconds * 2));
             grantXP(earnedXP);
             
-            const questResult = updateQuestProgress(userSettings.dailyQuests?.quests || [], 'voice', activeSubject?.id || '');
-            if (questResult.xpGained > 0) {
-                grantXP(questResult.xpGained);
-                questResult.completedQuests.forEach(q => addToast(`Мисия завършена: ${q}! 🎉`, 'success'));
-            }
-            setUserSettings(prev => ({
-                ...prev,
-                dailyQuests: prev.dailyQuests ? { ...prev.dailyQuests, quests: questResult.updatedQuests } : prev.dailyQuests
-            }));
+            // Fix: Missions state update
+            setUserSettings(prev => {
+                const questResult = updateQuestProgress(prev.dailyQuests?.quests || [], 'voice', activeSubject?.id || '');
+                if (questResult.xpGained > 0) {
+                    questResult.completedQuests.forEach(q => addToast(`Мисия завършена: ${q}! 🎉`, 'success'));
+                    // Note: grantXP happens later or inside here
+                    const boostedXP = calculateXPWithBoost(questResult.xpGained, userPlan);
+                    const newTotalXP = prev.xp + boostedXP;
+                    return { 
+                        ...prev, 
+                        xp: newTotalXP,
+                        level: calculateLevel(newTotalXP),
+                        dailyQuests: prev.dailyQuests ? { ...prev.dailyQuests, quests: questResult.updatedQuests } : prev.dailyQuests 
+                    };
+                }
+                return {
+                    ...prev,
+                    dailyQuests: prev.dailyQuests ? { ...prev.dailyQuests, quests: questResult.updatedQuests } : prev.dailyQuests
+                };
+            });
         }
         voiceCallStartTimeRef.current = 0;
     }
@@ -512,12 +522,14 @@ export const App = () => {
       return;
     }
     
-    const SR = (window as any).SpeechRecognition || (window as any).webkitRecognition;
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SR) {
       addToast('Гласовата услуга не се поддържа от този браузър.', 'error');
       return;
     }
 
+    // Explicitly request mic on iPhone if needed, but normally SR handles it.
+    // However, some iPhone browsers need a trigger.
     if (recognitionRef.current) {
       recognitionRef.current.onend = null;
       try { recognitionRef.current.stop(); } catch(e){}
@@ -1006,28 +1018,41 @@ export const App = () => {
     grantXP(XP_PER_MESSAGE + (currentImgs.length * XP_PER_IMAGE));
     if (currentImgs.length > 0) incrementImageCount(currentImgs.length);
     
-    // Fix: Correctly update quest progress in userSettings state
-    const questUpdate = updateQuestProgress(userSettings.dailyQuests?.quests || [], 'message', currentSubject.id);
-    if (questUpdate.xpGained > 0) {
-        grantXP(questUpdate.xpGained);
-        questUpdate.completedQuests.forEach(q => addToast(`Мисия завършена: ${q}! 🎉`, 'success'));
-    }
-    if (currentImgs.length > 0) {
-        const imageQuestUpdate = updateQuestProgress(questUpdate.updatedQuests, 'image', currentSubject.id, currentImgs.length);
-        if (imageQuestUpdate.xpGained > 0) {
-            grantXP(imageQuestUpdate.xpGained);
-            imageQuestUpdate.completedQuests.forEach(q => addToast(`Мисия завършена: ${q}! 🎉`, 'success'));
+    // Fix: Unified quest progress update
+    setUserSettings(prev => {
+        let currentQuests = prev.dailyQuests?.quests || [];
+        let totalXPToGrant = 0;
+        
+        // Update for message
+        const msgQuestUpdate = updateQuestProgress(currentQuests, 'message', currentSubject.id);
+        totalXPToGrant += msgQuestUpdate.xpGained;
+        msgQuestUpdate.completedQuests.forEach(q => addToast(`Мисия завършена: ${q}! 🎉`, 'success'));
+        currentQuests = msgQuestUpdate.updatedQuests;
+
+        // Update for images
+        if (currentImgs.length > 0) {
+            const imgQuestUpdate = updateQuestProgress(currentQuests, 'image', currentSubject.id, currentImgs.length);
+            totalXPToGrant += imgQuestUpdate.xpGained;
+            imgQuestUpdate.completedQuests.forEach(q => addToast(`Мисия завършена: ${q}! 🎉`, 'success'));
+            currentQuests = imgQuestUpdate.updatedQuests;
         }
-        setUserSettings(prev => ({
+
+        if (totalXPToGrant > 0) {
+            const boostedXP = calculateXPWithBoost(totalXPToGrant, userPlan);
+            const newXP = prev.xp + boostedXP;
+            return {
+                ...prev,
+                xp: newXP,
+                level: calculateLevel(newXP),
+                dailyQuests: prev.dailyQuests ? { ...prev.dailyQuests, quests: currentQuests } : prev.dailyQuests
+            };
+        }
+
+        return {
             ...prev,
-            dailyQuests: prev.dailyQuests ? { ...prev.dailyQuests, quests: imageQuestUpdate.updatedQuests } : prev.dailyQuests
-        }));
-    } else {
-        setUserSettings(prev => ({
-            ...prev,
-            dailyQuests: prev.dailyQuests ? { ...prev.dailyQuests, quests: questUpdate.updatedQuests } : prev.dailyQuests
-        }));
-    }
+            dailyQuests: prev.dailyQuests ? { ...prev.dailyQuests, quests: currentQuests } : prev.dailyQuests
+        };
+    });
 
     try {
       if (isFirstUserMsg && textToSend.trim()) {
