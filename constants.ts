@@ -86,6 +86,21 @@ export const getSystemPrompt = (mode: string, lang: Language, teachingStyle: Tea
   \`\`\`
   `;
 
+  const videoDiscoveryInstructions = `
+  IF THE USER ASKS FOR VIDEOS (YouTube, TikTok, etc):
+  1. Use your search tool to find relevant, educational videos.
+  2. For each video found, provide a JSON block.
+  Format:
+  \`\`\`json:video
+  {
+    "url": "https://www.youtube.com/watch?v=...",
+    "title": "Clear video title",
+    "platform": "youtube"
+  }
+  \`\`\`
+  Always include the URL. Support platforms: youtube, tiktok, vimeo.
+  `;
+
   const codingInstructions = `
   IMPORTANT FOR WEB DEVELOPMENT/CODING:
   Return a SINGLE complete index.html code block with embedded CSS/JS for instant preview.
@@ -96,7 +111,8 @@ export const getSystemPrompt = (mode: string, lang: Language, teachingStyle: Tea
       return `${baseInstructions}
       You are a teacher. Your goal is to teach the user about a topic. Do not just give answers, explain concepts. Use examples and analogies. Structure information logically.
       ${latexInstructions}
-      ${codingInstructions}`;
+      ${codingInstructions}
+      ${videoDiscoveryInstructions}`;
     
     case 'SOLVE':
       return `${baseInstructions}
@@ -108,7 +124,8 @@ export const getSystemPrompt = (mode: string, lang: Language, teachingStyle: Tea
       4. Only then, provide the final answer clearly.
       ${latexInstructions}
       ${svInstructions}
-      ${codingInstructions}`;
+      ${codingInstructions}
+      ${videoDiscoveryInstructions}`;
 
     case 'PRESENTATION':
       return `${baseInstructions}
@@ -122,7 +139,7 @@ export const getSystemPrompt = (mode: string, lang: Language, teachingStyle: Tea
       `;
 
     default:
-      return `${baseInstructions} ${latexInstructions} ${codingInstructions}`;
+      return `${baseInstructions} ${latexInstructions} ${codingInstructions} ${videoDiscoveryInstructions}`;
   }
 };
 
@@ -133,7 +150,7 @@ export const SUBJECTS: SubjectConfig[] = [
     icon: 'MessageSquare',
     color: 'bg-indigo-500',
     modes: [AppMode.CHAT],
-    description: 'Попитай ме каквото и да е.',
+    description: 'Попитай me каквото и да е.',
     categories: ['school', 'university']
   },
   
