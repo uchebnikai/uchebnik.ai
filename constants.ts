@@ -86,21 +86,6 @@ export const getSystemPrompt = (mode: string, lang: Language, teachingStyle: Tea
   \`\`\`
   `;
 
-  const videoDiscoveryInstructions = `
-  IF THE USER ASKS FOR VIDEOS (YouTube, TikTok, Vimeo):
-  1. CRITICAL: You MUST use the 'googleSearch' tool to find ACTUAL, EXISTING videos.
-  2. NEVER hallucinate or invent a video URL. Only return URLs you verified through search.
-  3. Prefer YouTube for educational content as it allows in-app playback.
-  4. For each video, return this JSON block:
-  \`\`\`json:video
-  {
-    "url": "https://...",
-    "title": "Exact video title from search",
-    "platform": "youtube" | "tiktok" | "vimeo" | "other"
-  }
-  \`\`\`
-  `;
-
   const codingInstructions = `
   IMPORTANT FOR WEB DEVELOPMENT/CODING:
   Return a SINGLE complete index.html code block with embedded CSS/JS for instant preview.
@@ -111,8 +96,7 @@ export const getSystemPrompt = (mode: string, lang: Language, teachingStyle: Tea
       return `${baseInstructions}
       You are a teacher. Your goal is to teach the user about a topic. Do not just give answers, explain concepts. Use examples and analogies. Structure information logically.
       ${latexInstructions}
-      ${codingInstructions}
-      ${videoDiscoveryInstructions}`;
+      ${codingInstructions}`;
     
     case 'SOLVE':
       return `${baseInstructions}
@@ -124,8 +108,7 @@ export const getSystemPrompt = (mode: string, lang: Language, teachingStyle: Tea
       4. Only then, provide the final answer clearly.
       ${latexInstructions}
       ${svInstructions}
-      ${codingInstructions}
-      ${videoDiscoveryInstructions}`;
+      ${codingInstructions}`;
 
     case 'PRESENTATION':
       return `${baseInstructions}
@@ -139,7 +122,7 @@ export const getSystemPrompt = (mode: string, lang: Language, teachingStyle: Tea
       `;
 
     default:
-      return `${baseInstructions} ${latexInstructions} ${codingInstructions} ${videoDiscoveryInstructions}`;
+      return `${baseInstructions} ${latexInstructions} ${codingInstructions}`;
   }
 };
 
@@ -150,7 +133,7 @@ export const SUBJECTS: SubjectConfig[] = [
     icon: 'MessageSquare',
     color: 'bg-indigo-500',
     modes: [AppMode.CHAT],
-    description: 'Попитай me каквото и да е.',
+    description: 'Попитай ме каквото и да е.',
     categories: ['school', 'university']
   },
   

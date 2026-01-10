@@ -1,6 +1,5 @@
-
 import { GoogleGenAI, GenerateContentResponse, Tool } from "@google/genai";
-import { AppMode, SubjectId, Slide, ChartData, GeometryData, Message, TestData, TeachingStyle, SearchSource, TokenUsage, VideoData } from "../types";
+import { AppMode, SubjectId, Slide, ChartData, GeometryData, Message, TestData, TeachingStyle, SearchSource, TokenUsage } from "../types";
 import { getSystemPrompt, SUBJECTS } from "../constants";
 import { Language } from '../utils/translations';
 
@@ -152,8 +151,9 @@ export const generateResponse = async (
       currentParts.push({ text: finalUserPrompt });
 
       const tools: Tool[] = [];
-      // Enable Google Search for video discovery and general knowledge
-      if (modelName.includes('gemini-3')) {
+      // Google Search is permitted on Flash 2.0/3.0 models if available
+      if (modelName.includes('gemini-3') && 
+         (subjectId === SubjectId.GENERAL || subjectId === SubjectId.HISTORY || subjectId === SubjectId.GEOGRAPHY)) {
           tools.push({ googleSearch: {} });
       }
 
@@ -256,17 +256,6 @@ export const generateResponse = async (
 
       let chartData: ChartData | undefined;
       let geometryData: GeometryData | undefined;
-      let discoveredVideos: VideoData[] = [];
-
-      // Extract discovered videos
-      const videoMatches = processedText.matchAll(/```json:video\n([\s\S]*?)\n```/g);
-      for (const match of videoMatches) {
-          try {
-              const video = JSON.parse(match[1]);
-              discoveredVideos.push(video);
-              processedText = processedText.replace(match[0], "").trim();
-          } catch (e) {}
-      }
 
       const chartMatch = processedText.match(/```json:chart\n([\s\S]*?)\n```/);
       if (chartMatch) {
@@ -288,10 +277,9 @@ export const generateResponse = async (
           id: Date.now().toString(),
           role: 'model',
           text: processedText,
-          type: discoveredVideos.length > 0 ? 'video_discovery' : 'text',
+          type: 'text',
           chartData: chartData,
           geometryData: geometryData,
-          embeddedVideos: discoveredVideos.length > 0 ? discoveredVideos : undefined,
           timestamp: Date.now(),
           reasoning: "",
           sources: sources.length > 0 ? sources : undefined,

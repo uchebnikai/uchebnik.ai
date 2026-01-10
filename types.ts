@@ -1,5 +1,4 @@
 
-
 import { Language } from './utils/translations';
 
 export enum SubjectId {
@@ -165,12 +164,6 @@ export interface GeometryData {
   svg: string; 
 }
 
-export interface VideoData {
-  url: string;
-  title?: string;
-  platform: 'youtube' | 'tiktok' | 'vimeo' | 'other';
-}
-
 export interface TestQuestion {
   id: number;
   question: string;
@@ -208,10 +201,8 @@ export interface Message {
   imageAnalysis?: string; 
   isError?: boolean;
   isDemo?: boolean;
-  // Added 'video' to the union to resolve comparison errors in MessageList component
-  type?: 'text' | 'image_generated' | 'slides' | 'test_generated' | 'video_discovery' | 'video'; 
-  videoUrl?: string; // For raw generated video
-  embeddedVideos?: VideoData[]; // For discovered videos (YouTube, etc)
+  type?: 'text' | 'image_generated' | 'slides' | 'test_generated' | 'video'; 
+  videoUrl?: string;
   slidesData?: Slide[]; 
   testData?: TestData; 
   chartData?: ChartData; 

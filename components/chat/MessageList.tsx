@@ -4,14 +4,13 @@ import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import remarkGfm from 'remark-gfm';
-import { Projector, Download, Check, ThumbsUp, ThumbsDown, Reply, Volume2, Square, Copy, Share2, Loader2, Globe, ExternalLink, Lock, Sparkles, UserPlus, ArrowRight } from 'lucide-react';
+import { Projector, Download, Check, ThumbsUp, ThumbsDown, Reply, Volume2, Square, Copy, Share2, Loader2, Globe, ExternalLink, Lock, Sparkles, UserPlus } from 'lucide-react';
 import { Message, UserSettings, SubjectConfig } from '../../types';
 import { handleDownloadPPTX } from '../../utils/exportUtils';
 import { CodeBlock } from '../ui/CodeBlock';
 import { ChartRenderer } from './ChartRenderer';
 import { GeometryRenderer } from './GeometryRenderer';
 import { TestRenderer } from './TestRenderer';
-import { VideoRenderer } from './VideoRenderer';
 import { MSG_BUBBLE_USER, MSG_BUBBLE_MODEL, MSG_CONTAINER_BASE } from '../../styles/chat';
 import { SLIDE_UP, FADE_IN } from '../../animations/transitions';
 
@@ -111,6 +110,7 @@ export const MessageList = ({
 
                      {msg.type === 'test_generated' && msg.testData && <TestRenderer data={msg.testData} />}
 
+                     {/* MOVE: hasText rendered before video player for natural combined reading order */}
                      {hasText && (
                          <div className={`markdown-content w-full relative transition-all duration-700 ${isBlurred ? 'max-h-[160px] overflow-hidden' : ''}`}>
                              <div className={`${isBlurred ? 'select-none pointer-events-none opacity-50 grayscale-[0.5]' : ''}`}>
@@ -137,15 +137,6 @@ export const MessageList = ({
                               controls 
                               className="w-full h-auto"
                            />
-                        </div>
-                     )}
-
-                     {/* Discovery Video Renderer */}
-                     {msg.embeddedVideos && msg.embeddedVideos.length > 0 && !isBlurred && (
-                        <div className="space-y-2 mt-2">
-                           {msg.embeddedVideos.map((video, i) => (
-                              <VideoRenderer key={i} data={video} />
-                           ))}
                         </div>
                      )}
 
@@ -241,3 +232,7 @@ export const MessageList = ({
       </div>
   );
 };
+
+const ArrowRight = ({ size, className }: { size: number, className?: string }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+);
