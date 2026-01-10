@@ -273,17 +273,26 @@ export const AdminPanel = ({
     };
 
     const handleToggleGlobalOption = async (key: string, val: boolean) => {
+        // Construct the new configuration locally first
         const newConfig = { ...globalConfig, [key]: val };
+        
+        // Update local state immediately for snappy UI
         setGlobalConfig(newConfig);
+
         try {
+            // Force an upsert by key. If the record exists, it updates 'value'. If not, it inserts.
             const { error } = await supabase
                 .from('global_settings')
-                .upsert({ key: 'site_config', value: newConfig }, { onConflict: 'key' });
+                .upsert(
+                    { key: 'site_config', value: newConfig, updated_at: new Date().toISOString() },
+                    { onConflict: 'key' }
+                );
+            
             if (error) throw error;
-            addToast('Настройките са запазени в базата данни.', 'success');
+            addToast('Настройките са запазени в облака.', 'success');
         } catch (e) {
             console.error("Failed to save global config", e);
-            addToast('Грешка при запис в базата.', 'error');
+            addToast('Грешка при запис в базата. Моля, опитайте отново.', 'error');
         }
     };
 
@@ -439,7 +448,7 @@ export const AdminPanel = ({
             }
 
         } catch (e) {
-            console.error("Admin Fetch Error:", e);
+            console.error("Admin fetchData Error:", e);
         } finally {
             setLoadingData(false);
         }
