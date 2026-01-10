@@ -49,6 +49,7 @@ import { Fireworks } from './components/ui/Fireworks';
 import { ReportModal } from './components/support/ReportModal';
 import { AdSenseContainer } from './components/ads/AdSenseContainer';
 import { IosInstallPrompt } from './components/ui/IosInstallPrompt';
+import { Button } from './components/ui/Button';
 
 interface GeneratedKey {
   code: string;
@@ -68,6 +69,7 @@ Uchebnik AI винаги предоставя пълно обяснение на
 
 const CHRISTMAS_BG = "https://i.ibb.co/LGxCVX4/Gemini-Generated-Image-gt5habgt5habgt5h.png";
 const NEW_YEAR_BG = "https://iili.io/fkvjTrX.png";
+const BROADCAST_SOUND = "https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3";
 
 function decode(base64: string) {
   const binaryString = atob(base64);
@@ -807,6 +809,13 @@ export const App = () => {
   useEffect(() => {
       const channel = supabase.channel('global-broadcasts').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'broadcasts' }, (payload) => {
           const newB = payload.new as any;
+          
+          // Sound effect for broadcasts
+          try {
+            const audio = new Audio(BROADCAST_SOUND);
+            audio.play().catch(() => {});
+          } catch(e) {}
+
           if (newB.type === 'modal') setBroadcastModal({ isOpen: true, message: newB.message });
           else addToast(newB.message, 'info');
       }).subscribe();
@@ -1213,6 +1222,28 @@ export const App = () => {
       <Lightbox image={zoomedImage} onClose={() => setZoomedImage(null)} />
       <ConfirmModal isOpen={!!confirmModal} title={confirmModal?.title || ''} message={confirmModal?.message || ''} onConfirm={confirmModal?.onConfirm || (()=>{})} onCancel={() => setConfirmModal(null)} />
       
+      {/* GLOBAL BROADCAST MODAL */}
+      {broadcastModal?.isOpen && (
+          <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-in fade-in">
+              <div className="bg-white/90 dark:bg-zinc-900/90 border border-indigo-500/30 w-full max-w-md p-8 rounded-[32px] shadow-2xl relative animate-in zoom-in-95 backdrop-blur-xl">
+                  <div className="flex flex-col items-center text-center gap-6">
+                      <div className="w-16 h-16 rounded-2xl bg-indigo-500 flex items-center justify-center text-white shadow-lg shadow-indigo-500/30">
+                          <Radio size={32} className="animate-pulse" />
+                      </div>
+                      <div className="space-y-2">
+                          <h3 className="text-2xl font-black text-zinc-900 dark:text-white tracking-tight">Важно известие</h3>
+                          <p className="text-zinc-600 dark:text-zinc-400 font-medium leading-relaxed">
+                              {broadcastModal.message}
+                          </p>
+                      </div>
+                      <Button onClick={() => setBroadcastModal(null)} className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-2xl shadow-lg shadow-indigo-500/20">
+                          Разбрах
+                      </Button>
+                  </div>
+              </div>
+          </div>
+      )}
+
       <VoiceCallOverlay 
         isVoiceCallActive={isVoiceCallActive} 
         voiceCallStatus={voiceCallStatus} 
