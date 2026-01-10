@@ -182,151 +182,134 @@ export const WelcomeScreen = ({
     };
 
     if (session && homeView === 'landing') {
-        const greetingName = userSettings.userName ? userSettings.userName.split(' ')[0] : 'Scholar';
+        const greetingName = userSettings.userName ? userSettings.userName.split(' ')[0] : 'Uchebnik';
 
         return (
             <div className="w-full h-full overflow-y-auto overflow-x-hidden custom-scrollbar flex flex-col relative pb-safe">
                 
-                {/* Admin Access & Settings for Logged In Users */}
-                <div className="absolute top-6 left-6 z-30 flex gap-2">
+                {/* Admin Access for Logged In Users */}
+                <div className="absolute top-6 left-6 z-30">
                     <button onClick={() => setShowAdminAuth(true)} className="p-2.5 bg-white/10 dark:bg-black/20 hover:bg-white/20 backdrop-blur-md rounded-xl text-zinc-500 hover:text-indigo-500 transition-all border border-white/5 shadow-sm">
                         <Shield size={20} />
                     </button>
-                    <button onClick={() => setShowSettings?.(true)} className="md:hidden p-2.5 bg-white/10 dark:bg-black/20 hover:bg-white/20 backdrop-blur-md rounded-xl text-zinc-500 hover:text-indigo-500 transition-all border border-white/5 shadow-sm">
-                        <Settings size={20} />
-                    </button>
                 </div>
 
-                <div className="flex-1 flex flex-col items-center justify-center p-6 lg:p-12 w-full max-w-7xl mx-auto min-h-fit mt-12 mb-12">
+                <div className="flex-1 flex flex-col items-center justify-center p-4 lg:p-8 w-full max-w-7xl mx-auto min-h-fit mt-12 mb-12">
                     
-                    {/* Premium Dashboard Greeting */}
-                    <div className="text-center mb-12 lg:mb-16 animate-in slide-in-from-bottom-6 duration-1000 w-full px-4 relative">
-                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-indigo-500/10 blur-[140px] rounded-full pointer-events-none -z-10" />
-                        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/5 border border-white/10 backdrop-blur-md mb-6 shadow-sm">
-                            <Sparkles size={14} className="text-amber-400" fill="currentColor"/>
-                            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">Твоят личен асистент е готов</span>
-                        </div>
-                        <h1 className="text-5xl md:text-7xl lg:text-8xl font-black text-zinc-900 dark:text-white tracking-tighter mb-6 font-display leading-[1.05]">
-                            {t('hello', userSettings.language)}, <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-500 via-indigo-300 to-white drop-shadow-2xl">{greetingName}</span>.
+                    {/* Greeting */}
+                    <div className="text-center mb-10 lg:mb-14 animate-in slide-in-from-bottom-4 duration-700 w-full px-2">
+                        <h1 className="text-4xl md:text-5xl lg:text-7xl font-black text-zinc-900 dark:text-white tracking-tight mb-4 font-display drop-shadow-xl break-words">
+                            {t('hello', userSettings.language)}, <span className="text-transparent bg-clip-text bg-gradient-to-r from-zinc-400 to-white">{greetingName}</span>.
                         </h1>
-                        <p className="text-lg lg:text-2xl text-zinc-500 dark:text-zinc-400 font-medium tracking-tight max-w-2xl mx-auto leading-relaxed">
-                            {t('subtitle', userSettings.language)} С какво мога да помогна днес?
+                        <p className="text-lg lg:text-xl text-zinc-500 dark:text-zinc-400 font-medium tracking-wide">
+                            {t('subtitle', userSettings.language)}
                         </p>
                     </div>
 
-                    {/* Enhanced Navigation Cards Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 w-full max-w-6xl mb-16 px-4">
+                    {/* Navigation Cards */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-6 w-full max-w-5xl mb-14 px-2">
                         <button 
                             onClick={() => handleSubjectChange(SUBJECTS[0])}
-                            className="group relative h-full min-h-[280px] bg-gradient-to-b from-[#18181b] to-[#09090b] border border-white/5 hover:border-indigo-500/50 rounded-[48px] p-10 transition-all duration-500 hover:-translate-y-3 overflow-hidden shadow-[0_30px_60px_-15px_rgba(0,0,0,0.5)] backdrop-blur-xl text-left flex flex-col items-start"
+                            className="group relative bg-[#121214]/60 hover:bg-[#18181b]/80 border border-white/5 hover:border-indigo-500/30 rounded-[32px] p-6 lg:p-8 transition-all duration-300 hover:-translate-y-2 overflow-hidden shadow-2xl backdrop-blur-md text-left flex flex-col items-start h-full min-h-[220px]"
                         >
-                            <div className="absolute top-0 right-0 w-40 h-40 bg-indigo-600/10 blur-[60px] rounded-full -mr-20 -mt-20 group-hover:bg-indigo-600/20 transition-all duration-500"/>
-                            <div className="w-16 h-16 bg-indigo-500/10 text-indigo-400 rounded-3xl flex items-center justify-center mb-8 border border-indigo-500/20 shadow-lg group-hover:scale-110 group-hover:rotate-3 transition-all duration-500">
-                                <MessageSquare size={32} strokeWidth={2.5} />
+                            <div className="absolute inset-0 bg-gradient-to-b from-indigo-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"/>
+                            <div className="w-12 h-12 lg:w-14 lg:h-14 bg-white/5 text-indigo-300 rounded-2xl flex items-center justify-center mb-6 border border-white/5 shadow-inner group-hover:scale-110 transition-transform duration-300">
+                                <MessageSquare size={24} className="lg:w-7 lg:h-7" />
                             </div>
-                            <h3 className="text-2xl lg:text-3xl font-black text-white mb-3 tracking-tight">{t('chat_general', userSettings.language)}</h3>
-                            <p className="text-zinc-500 text-base font-medium mb-8 leading-relaxed flex-1">Интелигентни отговори за всичко, което те вълнува.</p>
-                            <div className="w-full flex items-center justify-between">
-                                <span className="text-[11px] font-black uppercase tracking-widest text-indigo-400 opacity-0 group-hover:opacity-100 transition-all transform translate-x-[-10px] group-hover:translate-x-0 duration-500">Бърз старт</span>
-                                <div className="w-12 h-12 bg-white/5 group-hover:bg-indigo-600 text-zinc-400 group-hover:text-white rounded-full flex items-center justify-center transition-all duration-500 border border-white/10 group-hover:border-indigo-500 shadow-xl">
-                                    <ArrowRight size={20} />
-                                </div>
+                            <h3 className="text-xl lg:text-2xl font-bold text-white mb-2">{t('chat_general', userSettings.language)}</h3>
+                            <p className="text-zinc-500 text-sm font-medium mb-6 flex-1">Попитай ме каквото и да е за училище или университет.</p>
+                            <div className="px-6 py-2.5 bg-white/5 hover:bg-indigo-500 text-zinc-300 hover:text-white rounded-full font-bold text-xs flex items-center gap-2 transition-all group-hover:pl-8 border border-white/5 self-start">
+                                {t('start', userSettings.language)} <ArrowRight size={14} />
                             </div>
                         </button>
 
                         <button 
                             onClick={() => setHomeView('school_select')}
-                            className="group relative h-full min-h-[280px] bg-gradient-to-b from-[#18181b] to-[#09090b] border border-white/5 hover:border-blue-500/50 rounded-[48px] p-10 transition-all duration-500 hover:-translate-y-3 overflow-hidden shadow-[0_30px_60px_-15px_rgba(0,0,0,0.5)] backdrop-blur-xl text-left flex flex-col items-start"
+                            className="group relative bg-[#121214]/60 hover:bg-[#18181b]/80 border border-white/5 hover:border-blue-500/30 rounded-[32px] p-6 lg:p-8 transition-all duration-300 hover:-translate-y-2 overflow-hidden shadow-2xl backdrop-blur-md text-left flex flex-col items-start h-full min-h-[220px]"
                         >
-                            <div className="absolute top-0 right-0 w-40 h-40 bg-blue-600/10 blur-[60px] rounded-full -mr-20 -mt-20 group-hover:bg-blue-600/20 transition-all duration-500"/>
-                            <div className="w-16 h-16 bg-blue-500/10 text-blue-400 rounded-3xl flex items-center justify-center mb-8 border border-blue-500/20 shadow-lg group-hover:scale-110 group-hover:rotate-3 transition-all duration-500">
-                                <School size={32} strokeWidth={2.5} />
+                            <div className="absolute inset-0 bg-gradient-to-b from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"/>
+                            <div className="w-12 h-12 lg:w-14 lg:h-14 bg-white/5 text-blue-300 rounded-2xl flex items-center justify-center mb-6 border border-white/5 shadow-inner group-hover:scale-110 transition-transform duration-300">
+                                <School size={24} className="lg:w-7 lg:h-7" />
                             </div>
-                            <h3 className="text-2xl lg:text-3xl font-black text-white mb-3 tracking-tight">{t('school', userSettings.language)}</h3>
-                            <p className="text-zinc-500 text-base font-medium mb-8 leading-relaxed flex-1">Решения, уроци и тестове за 1-12 клас по всички предмети.</p>
-                            <div className="w-full flex items-center justify-between">
-                                <span className="text-[11px] font-black uppercase tracking-widest text-blue-400 opacity-0 group-hover:opacity-100 transition-all transform translate-x-[-10px] group-hover:translate-x-0 duration-500">Избери предмет</span>
-                                <div className="w-12 h-12 bg-white/5 group-hover:bg-blue-600 text-zinc-400 group-hover:text-white rounded-full flex items-center justify-center transition-all duration-500 border border-white/10 group-hover:border-blue-500 shadow-xl">
-                                    <ArrowRight size={20} />
-                                </div>
+                            <h3 className="text-xl lg:text-2xl font-bold text-white mb-2">{t('school', userSettings.language)}</h3>
+                            <p className="text-zinc-500 text-sm font-medium mb-6 flex-1">{t('students', userSettings.language)} & {t('teachers', userSettings.language)}</p>
+                            <div className="px-6 py-2.5 bg-white/5 hover:bg-blue-600 text-zinc-300 hover:text-white rounded-full font-bold text-xs flex items-center gap-2 transition-all group-hover:pl-8 border border-white/5 self-start">
+                                {t('enter', userSettings.language)} <ArrowRight size={14} />
                             </div>
                         </button>
 
                         <button 
                             onClick={() => setHomeView('university_select')}
-                            className="group relative h-full min-h-[280px] bg-gradient-to-b from-[#18181b] to-[#09090b] border border-white/5 hover:border-emerald-500/50 rounded-[48px] p-10 transition-all duration-500 hover:-translate-y-3 overflow-hidden shadow-[0_30px_60px_-15px_rgba(0,0,0,0.5)] backdrop-blur-xl text-left flex flex-col items-start"
+                            className="group relative bg-[#121214]/60 hover:bg-[#18181b]/80 border border-white/5 hover:border-emerald-500/30 rounded-[32px] p-6 lg:p-8 transition-all duration-300 hover:-translate-y-2 overflow-hidden shadow-2xl backdrop-blur-md text-left flex flex-col items-start h-full min-h-[220px]"
                         >
-                            <div className="absolute top-0 right-0 w-40 h-40 bg-emerald-600/10 blur-[60px] rounded-full -mr-20 -mt-20 group-hover:bg-emerald-600/20 transition-all duration-500"/>
-                            <div className="w-16 h-16 bg-emerald-500/10 text-emerald-400 rounded-3xl flex items-center justify-center mb-8 border border-emerald-500/20 shadow-lg group-hover:scale-110 group-hover:rotate-3 transition-all duration-500">
-                                <Landmark size={32} strokeWidth={2.5} />
+                            <div className="absolute inset-0 bg-gradient-to-b from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"/>
+                            <div className="w-12 h-12 lg:w-14 lg:h-14 bg-white/5 text-emerald-300 rounded-2xl flex items-center justify-center mb-6 border border-white/5 shadow-inner group-hover:scale-110 transition-transform duration-300">
+                                <Landmark size={24} className="lg:w-7 lg:h-7" />
                             </div>
-                            <h3 className="text-2xl lg:text-3xl font-black text-white mb-3 tracking-tight">{t('university', userSettings.language)}</h3>
-                            <p className="text-zinc-500 text-base font-medium mb-8 leading-relaxed flex-1">Академични ресурси и професионална помощ за студенти.</p>
-                            <div className="w-full flex items-center justify-between">
-                                <span className="text-[11px] font-black uppercase tracking-widest text-emerald-400 opacity-0 group-hover:opacity-100 transition-all transform translate-x-[-10px] group-hover:translate-x-0 duration-500">Висше образование</span>
-                                <div className="w-12 h-12 bg-white/5 group-hover:bg-emerald-600 text-zinc-400 group-hover:text-white rounded-full flex items-center justify-center transition-all duration-500 border border-white/10 group-hover:border-emerald-500 shadow-xl">
-                                    <ArrowRight size={20} />
-                                </div>
+                            <h3 className="text-xl lg:text-2xl font-bold text-white mb-2">{t('university', userSettings.language)}</h3>
+                            <p className="text-zinc-500 text-sm font-medium mb-6 flex-1">{t('uni_students', userSettings.language)} & {t('uni_professors', userSettings.language)}</p>
+                            <div className="px-6 py-2.5 bg-white/5 hover:bg-emerald-600 text-zinc-300 hover:text-white rounded-full font-bold text-xs flex items-center gap-2 transition-all group-hover:pl-8 border border-white/5 self-start">
+                                {t('enter', userSettings.language)} <ArrowRight size={14} />
                             </div>
                         </button>
                     </div>
 
-                    {/* Centered Quick AI Input */}
-                    <div className="w-full max-w-2xl relative z-20 px-4 animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-300 mb-8">
+                    {/* Quick Input Bar */}
+                    <div className="w-full max-w-2xl relative z-20 px-2">
                         {selectedImages.length > 0 && (
-                            <div className="flex gap-2 mb-4 overflow-x-auto pb-1 px-2 justify-center no-scrollbar">
+                            <div className="flex gap-2 mb-3 overflow-x-auto pb-1 px-2 justify-center no-scrollbar">
                                 {selectedImages.map((img, i) => ( 
                                     <div key={i} className={`relative group shrink-0 ${ZOOM_IN}`}>
-                                        <div className="absolute inset-0 bg-indigo-500/20 rounded-2xl blur-lg group-hover:bg-indigo-500/40 transition-all" />
-                                        <img src={img} className="h-20 w-20 rounded-2xl object-cover border-2 border-white/10 shadow-2xl relative z-10"/>
-                                        <button onClick={() => handleRemoveImage(i)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1.5 shadow-xl hover:scale-110 transition-transform z-20 border border-white/20"><X size={12}/></button>
+                                        <img src={img} className="h-16 w-16 rounded-xl object-cover border-2 border-white/10 shadow-lg"/>
+                                        <button onClick={() => handleRemoveImage(i)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-md hover:scale-110 transition-transform"><X size={10}/></button>
                                     </div>
                                 ))}
                             </div>
                         )}
 
-                        <div className="relative group/input">
-                            <div className="absolute inset-0 bg-indigo-500/20 blur-[30px] rounded-full opacity-0 group-focus-within/input:opacity-100 transition-opacity duration-700 -z-10" />
-                            <div className="relative bg-[#0d0d0f]/80 border border-white/10 rounded-[32px] p-2.5 pl-6 flex items-center gap-3 shadow-[0_20px_50px_rgba(0,0,0,0.3)] transition-all group-focus-within/input:border-indigo-500/50 backdrop-blur-2xl ring-1 ring-white/5">
-                                <div className="flex items-center gap-1 shrink-0">
-                                    <button onClick={() => fileInputRef.current?.click()} className="p-2.5 text-zinc-500 hover:text-white hover:bg-white/5 rounded-full transition-all active:scale-90" title="Добави снимка">
-                                        <ImageIcon size={22} />
-                                    </button>
-                                    <input type="file" ref={fileInputRef} onChange={handleImageUpload} className="hidden" accept="image/*" multiple />
-                                    <button onClick={toggleListening} className={`p-2.5 rounded-full transition-all active:scale-90 ${isListening ? 'bg-red-500 text-white shadow-lg shadow-red-500/30 animate-pulse' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`} title="Гласово въвеждане">
-                                        {isListening ? <MicOff size={22}/> : <Mic size={22} strokeWidth={2.5}/>}
-                                    </button>
-                                </div>
-                                <div className="w-px h-8 bg-white/10 shrink-0"></div>
-                                <input 
-                                    type="text"
-                                    value={inputValue}
-                                    onChange={(e) => setInputValue(e.target.value)}
-                                    onKeyDown={handleKeyDown}
-                                    placeholder="Попитай нещо бързо..."
-                                    className="flex-1 bg-transparent border-none outline-none py-3 text-base lg:text-lg text-zinc-100 placeholder-zinc-700 font-bold min-w-0"
-                                />
-                                <button 
-                                    onClick={() => (inputValue.trim() || selectedImages.length > 0) && onQuickStart(inputValue, selectedImages)}
-                                    disabled={!inputValue.trim() && selectedImages.length === 0}
-                                    className="w-12 h-12 rounded-[20px] bg-indigo-600 hover:bg-indigo-500 text-white flex items-center justify-center shadow-xl shadow-indigo-600/20 disabled:opacity-20 disabled:grayscale transition-all active:scale-95 shrink-0 group-hover/input:scale-105"
-                                >
-                                    <ArrowUpRight size={24} strokeWidth={3} />
+                        <div className="relative bg-[#09090b]/80 border border-white/10 rounded-full p-1.5 lg:p-2 pl-4 lg:pl-5 flex items-center gap-2 lg:gap-3 shadow-2xl transition-all focus-within:ring-2 focus-within:ring-indigo-500/50 focus-within:border-indigo-500/50 backdrop-blur-xl">
+                            <div className="flex items-center gap-0.5 lg:gap-1 shrink-0">
+                                <button onClick={() => fileInputRef.current?.click()} className="p-2 text-zinc-500 hover:text-white hover:bg-white/10 rounded-full transition-colors">
+                                    <ImageIcon size={18} className="lg:w-5 lg:h-5" />
+                                </button>
+                                <input type="file" ref={fileInputRef} onChange={handleImageUpload} className="hidden" accept="image/*" multiple />
+                                <button onClick={toggleListening} className={`p-2 rounded-full transition-all ${isListening ? 'bg-red-500 text-white animate-pulse' : 'text-zinc-500 hover:text-white hover:bg-white/10'}`}>
+                                    {isListening ? <MicOff size={18} className="lg:w-5 lg:h-5"/> : <Mic size={18} className="lg:w-5 lg:h-5" strokeWidth={2}/>}
                                 </button>
                             </div>
+                            <div className="w-px h-6 bg-white/10 shrink-0"></div>
+                            <input 
+                                type="text"
+                                value={inputValue}
+                                onChange={(e) => setInputValue(e.target.value)}
+                                onKeyDown={handleKeyDown}
+                                placeholder={t('ask_anything', userSettings.language)}
+                                className="flex-1 bg-transparent border-none outline-none py-2 text-sm lg:text-base text-zinc-200 placeholder-zinc-600 font-medium min-w-0"
+                            />
+                            <button 
+                                onClick={() => (inputValue.trim() || selectedImages.length > 0) && onQuickStart(inputValue, selectedImages)}
+                                disabled={!inputValue.trim() && selectedImages.length === 0}
+                                className="w-9 h-9 lg:w-10 lg:h-10 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white flex items-center justify-center shadow-lg shadow-indigo-600/20 disabled:opacity-30 disabled:bg-white/5 disabled:text-zinc-500 transition-all active:scale-95 shrink-0"
+                            >
+                                <ArrowUpRight size={18} className="lg:w-5 lg:h-5" />
+                            </button>
                         </div>
+                        <p className="text-center text-[10px] text-zinc-600 mt-3 font-medium tracking-wide">
+                            {t('ai_warning', userSettings.language)}
+                        </p>
                     </div>
                 </div>
 
-                <div className="w-full py-12 flex flex-col items-center gap-8 border-t border-white/5 bg-zinc-950/40 backdrop-blur-xl mt-auto relative z-20">
-                    <div className="flex flex-wrap justify-center gap-x-10 gap-y-4 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-600 px-6">
-                        <button onClick={() => setHomeView('about')} className="hover:text-indigo-400 transition-colors">За нас</button>
-                        <button onClick={() => setHomeView('contact')} className="hover:text-indigo-400 transition-colors">Контакти</button>
-                        <button onClick={() => setHomeView('terms')} className="hover:text-indigo-400 transition-colors">Общи условия</button>
-                        <button onClick={() => setHomeView('privacy')} className="hover:text-indigo-400 transition-colors">Поверителност</button>
+                <div className="w-full py-12 flex flex-col items-center gap-6 border-t border-white/5 bg-black/20 backdrop-blur-sm mt-auto">
+                    <div className="flex flex-wrap justify-center gap-x-8 gap-y-4 text-xs font-bold text-zinc-500 px-4">
+                        <button onClick={() => setHomeView('about')} className="hover:text-zinc-300 transition-colors">{t('about_us', userSettings.language)}</button>
+                        <button onClick={() => setHomeView('contact')} className="hover:text-zinc-300 transition-colors">{t('contact', userSettings.language)}</button>
+                        <button onClick={() => setHomeView('terms')} className="hover:text-zinc-300 transition-colors">{t('terms', userSettings.language)}</button>
+                        <button onClick={() => setHomeView('privacy')} className="hover:text-zinc-300 transition-colors">{t('privacy', userSettings.language)}</button>
                     </div>
-                    <div className="flex flex-col items-center gap-2 text-[10px] font-bold text-zinc-700 text-center px-6">
-                        <p>© 2026 Uchebnik AI. Build v1.9.4 • Premium Access</p>
+                    <div className="flex flex-col items-center gap-1 text-[10px] font-medium text-zinc-600 text-center px-4">
+                        <p>&copy; 2026 Uchebnik AI. Всички права запазени.</p>
+                        <p>Designed with ❤️ by <a href="https://instagram.com/vanyoy" target="_blank" rel="noreferrer" className="hover:text-indigo-400 transition-colors">Vanyo</a>, <a href="https://instagram.com/s_ivanov6" target="_blank" rel="noreferrer" className="hover:text-indigo-400 transition-colors">Svetlyo</a> & <a href="https://tiktok.com/@bella_kzx" target="_blank" rel="noreferrer" className="hover:text-indigo-400 transition-colors">Bella</a>.</p>
                     </div>
                 </div>
             </div>
@@ -334,7 +317,7 @@ export const WelcomeScreen = ({
     }
 
     const isUniView = homeView.includes('uni');
-    const delayStep = isUniView ? 30 : 45;
+    const delayStep = isUniView ? 25 : 50;
 
     return (
     <div className={`flex flex-col h-full w-full items-center bg-transparent relative selection:bg-indigo-500/30 overflow-hidden`}>
@@ -514,69 +497,63 @@ export const WelcomeScreen = ({
       )}
 
       {homeView === 'school_select' && (
-        <div className={`max-w-5xl w-full flex-1 flex flex-col items-center justify-center relative z-10 animate-in slide-in-from-bottom-8 fade-in duration-700 overflow-y-auto custom-scrollbar p-6 lg:p-8 pb-safe`}>
-             <button onClick={() => setHomeView('landing')} className="absolute top-0 left-0 flex items-center gap-2 text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-all font-bold z-20 m-6 lg:m-8 bg-white/5 px-4 py-2 rounded-full border border-white/5 hover:bg-white/10 group">
-                <ArrowLeft size={20} className="group-hover:-translate-x-1 transition-transform"/> {t('back', userSettings.language)}
-             </button>
-             <h2 className="text-3xl lg:text-6xl font-black text-zinc-900 dark:text-white mb-10 lg:mb-16 tracking-tight mt-16 lg:mt-0 text-center px-4 break-words font-display">{t('select_role', userSettings.language)}</h2>
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8 w-full max-w-4xl px-4">
-                 <button onClick={() => { setHomeView('student_subjects'); setUserRole('student'); }} className="group relative h-56 lg:h-80 rounded-[48px] p-8 lg:p-10 text-left bg-[#0c0c0e] border border-white/10 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.5)] hover:scale-[1.02] active:scale-[0.98] transition-all overflow-hidden flex flex-col justify-between">
-                     <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"/>
-                     <div className="w-16 h-16 lg:w-20 lg:h-20 bg-indigo-500/10 text-indigo-400 rounded-[28px] flex items-center justify-center backdrop-blur-md group-hover:scale-110 group-hover:rotate-3 transition-all duration-500 border border-indigo-500/20"><GraduationCap size={40} className="lg:w-12 lg:h-12"/></div>
-                     <div><h3 className="text-3xl lg:text-4xl font-black mb-2 text-white font-display tracking-tight">{t('role_student', userSettings.language)}</h3><p className="text-zinc-400 font-medium text-base lg:text-lg leading-relaxed">{t('desc_student', userSettings.language)}</p></div>
+        <div className={`max-w-5xl w-full flex-1 flex flex-col items-center justify-center relative z-10 ${SLIDE_UP} duration-500 overflow-y-auto custom-scrollbar p-6 lg:p-8 pb-safe`}>
+             <button onClick={() => setHomeView('landing')} className="absolute top-0 left-0 flex items-center gap-2 text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors font-bold z-20 m-6 lg:m-8"><ArrowLeft size={20}/> {t('back', userSettings.language)}</button>
+             <h2 className="text-3xl lg:text-5xl font-black text-zinc-900 dark:text-white mb-8 lg:mb-12 tracking-tight mt-16 lg:mt-0 text-center px-4 break-words">{t('select_role', userSettings.language)}</h2>
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6 w-full max-w-4xl px-2">
+                 <button onClick={() => { setHomeView('student_subjects'); setUserRole('student'); }} className="group relative h-48 lg:h-72 rounded-[32px] lg:rounded-[40px] p-6 lg:p-8 text-left bg-indigo-600/90 backdrop-blur-xl text-white shadow-2xl hover:scale-[1.02] active:scale-[0.98] transition-all border border-white/10 overflow-hidden">
+                     <div className="relative z-10 flex flex-col h-full justify-between">
+                         <div className="p-3 lg:p-4 bg-white/20 rounded-2xl lg:rounded-3xl w-fit backdrop-blur-md group-hover:scale-110 transition-transform duration-300"><GraduationCap size={32} className="lg:w-10 lg:h-10"/></div>
+                         <div><h3 className="text-2xl lg:text-4xl font-black mb-1 lg:mb-2">{t('role_student', userSettings.language)}</h3><p className="opacity-80 font-medium text-sm lg:text-lg">{t('desc_student', userSettings.language)}</p></div>
+                     </div>
+                     <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 to-blue-600 opacity-50 rounded-[40px]"/>
                  </button>
-                 <button onClick={() => { setHomeView('teacher_subjects'); setUserRole('teacher'); }} className="group relative h-56 lg:h-80 rounded-[48px] p-8 lg:p-10 text-left bg-[#0c0c0e] border border-white/10 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.5)] hover:scale-[1.02] active:scale-[0.98] transition-all overflow-hidden flex flex-col justify-between">
-                     <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"/>
-                     <div className="w-16 h-16 lg:w-20 lg:h-20 bg-blue-500/10 text-blue-400 rounded-[28px] flex items-center justify-center group-hover:scale-110 group-hover:rotate-3 transition-all duration-500 border border-blue-500/20"><Briefcase size={40} className="lg:w-12 lg:h-12"/></div>
-                     <div><h3 className="text-3xl lg:text-4xl font-black mb-2 text-white font-display tracking-tight">{t('role_teacher', userSettings.language)}</h3><p className="text-zinc-400 font-medium text-base lg:text-lg leading-relaxed">{t('desc_teacher', userSettings.language)}</p></div>
+                 <button onClick={() => { setHomeView('teacher_subjects'); setUserRole('teacher'); }} className="group relative h-48 lg:h-72 rounded-[32px] lg:rounded-[40px] p-6 lg:p-8 text-left bg-white/60 dark:bg-black/40 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-2xl hover:scale-[1.02] active:scale-[0.98] transition-all overflow-hidden">
+                     <div className="relative z-10 flex flex-col h-full justify-between">
+                         <div className="p-3 lg:p-4 bg-gray-100 dark:bg-white/5 text-indigo-600 dark:text-indigo-400 rounded-2xl lg:rounded-3xl w-fit group-hover:scale-110 transition-transform duration-300"><Briefcase size={32} className="lg:w-10 lg:h-10"/></div>
+                         <div><h3 className="text-2xl lg:text-4xl font-black mb-1 lg:mb-2 text-zinc-900 dark:text-white">{t('role_teacher', userSettings.language)}</h3><p className="text-zinc-500 font-medium text-sm lg:text-lg">{t('desc_teacher', userSettings.language)}</p></div>
+                     </div>
                  </button>
              </div>
         </div>
       )}
 
       {homeView === 'university_select' && (
-        <div className={`max-w-5xl w-full flex-1 flex flex-col items-center justify-center relative z-10 animate-in slide-in-from-bottom-8 fade-in duration-700 overflow-y-auto custom-scrollbar p-6 lg:p-8 pb-safe`}>
-             <button onClick={() => setHomeView('landing')} className="absolute top-0 left-0 flex items-center gap-2 text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-all font-bold z-20 m-6 lg:m-8 bg-white/5 px-4 py-2 rounded-full border border-white/5 hover:bg-white/10 group">
-                <ArrowLeft size={20} className="group-hover:-translate-x-1 transition-transform"/> {t('back', userSettings.language)}
-             </button>
-             <h2 className="text-3xl lg:text-6xl font-black text-zinc-900 dark:text-white mb-10 lg:mb-16 tracking-tight mt-16 lg:mt-0 text-center px-4 break-words font-display">{t('select_role_uni', userSettings.language)}</h2>
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8 w-full max-w-4xl px-4">
-                 <button onClick={() => { setHomeView('uni_student_subjects'); setUserRole('uni_student'); }} className="group relative h-56 lg:h-80 rounded-[48px] p-8 lg:p-10 text-left bg-[#0c0c0e] border border-white/10 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.5)] hover:scale-[1.02] active:scale-[0.98] transition-all border border-white/10 overflow-hidden flex flex-col justify-between">
-                     <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"/>
-                     <div className="w-16 h-16 lg:w-20 lg:h-20 bg-emerald-500/10 text-emerald-400 rounded-[28px] flex items-center justify-center backdrop-blur-md group-hover:scale-110 group-hover:rotate-3 transition-all duration-500 border border-emerald-500/20"><GraduationCap size={40} className="lg:w-12 lg:h-12"/></div>
-                     <div><h3 className="text-3xl lg:text-4xl font-black mb-2 text-white font-display tracking-tight">{t('role_uni_student', userSettings.language)}</h3><p className="text-zinc-400 font-medium text-base lg:text-lg leading-relaxed">{t('desc_uni_student', userSettings.language)}</p></div>
+        <div className={`max-w-5xl w-full flex-1 flex flex-col items-center justify-center relative z-10 ${SLIDE_UP} duration-500 overflow-y-auto custom-scrollbar p-6 lg:p-8 pb-safe`}>
+             <button onClick={() => setHomeView('landing')} className="absolute top-0 left-0 flex items-center gap-2 text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors font-bold z-20 m-6 lg:m-8"><ArrowLeft size={20}/> {t('back', userSettings.language)}</button>
+             <h2 className="text-3xl lg:text-5xl font-black text-zinc-900 dark:text-white mb-8 lg:mb-12 tracking-tight mt-16 lg:mt-0 text-center px-4 break-words">{t('select_role_uni', userSettings.language)}</h2>
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6 w-full max-w-4xl px-2">
+                 <button onClick={() => { setHomeView('uni_student_subjects'); setUserRole('uni_student'); }} className="group relative h-48 lg:h-72 rounded-[32px] lg:rounded-[40px] p-6 lg:p-8 text-left bg-emerald-600/90 backdrop-blur-xl text-white shadow-2xl hover:scale-[1.02] active:scale-[0.98] transition-all border border-white/10 overflow-hidden">
+                     <div className="relative z-10 flex flex-col h-full justify-between">
+                         <div className="p-3 lg:p-4 bg-white/20 rounded-2xl lg:rounded-3xl w-fit backdrop-blur-md group-hover:scale-110 transition-transform duration-300"><GraduationCap size={32} className="lg:w-10 lg:h-10"/></div>
+                         <div><h3 className="text-2xl lg:text-4xl font-black mb-1 lg:mb-2">{t('role_uni_student', userSettings.language)}</h3><p className="opacity-80 font-medium text-sm lg:text-lg">{t('desc_uni_student', userSettings.language)}</p></div>
+                     </div>
+                     <div className="absolute inset-0 bg-gradient-to-br from-emerald-500 to-teal-600 opacity-50 rounded-[40px]"/>
                  </button>
-                 <button onClick={() => { setHomeView('uni_teacher_subjects'); setUserRole('uni_teacher'); }} className="group relative h-56 lg:h-80 rounded-[48px] p-8 lg:p-10 text-left bg-[#0c0c0e] border border-white/10 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.5)] hover:scale-[1.02] active:scale-[0.98] transition-all overflow-hidden flex flex-col justify-between">
-                     <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"/>
-                     <div className="w-16 h-16 lg:w-20 lg:h-20 bg-gray-100 dark:bg-white/5 text-emerald-600 dark:text-emerald-400 rounded-[28px] flex items-center justify-center group-hover:scale-110 group-hover:rotate-3 transition-all duration-500 border border-white/10"><Briefcase size={40} className="lg:w-12 lg:h-12"/></div>
-                     <div><h3 className="text-3xl lg:text-4xl font-black mb-2 text-white font-display tracking-tight">{t('role_uni_professor', userSettings.language)}</h3><p className="text-zinc-400 font-medium text-base lg:text-lg leading-relaxed">{t('desc_uni_professor', userSettings.language)}</p></div>
+                 <button onClick={() => { setHomeView('uni_teacher_subjects'); setUserRole('uni_teacher'); }} className="group relative h-48 lg:h-72 rounded-[32px] lg:rounded-[40px] p-6 lg:p-8 text-left bg-white/60 dark:bg-black/40 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-2xl hover:scale-[1.02] active:scale-[0.98] transition-all overflow-hidden">
+                     <div className="relative z-10 flex flex-col h-full justify-between">
+                         <div className="p-3 lg:p-4 bg-gray-100 dark:bg-white/5 text-emerald-600 dark:text-emerald-400 rounded-2xl lg:rounded-3xl w-fit group-hover:scale-110 transition-transform duration-300"><Briefcase size={32} className="lg:w-10 lg:h-10"/></div>
+                         <div><h3 className="text-2xl lg:text-4xl font-black mb-1 lg:mb-2 text-zinc-900 dark:text-white">{t('role_uni_professor', userSettings.language)}</h3><p className="text-zinc-500 font-medium text-sm lg:text-lg">{t('desc_uni_professor', userSettings.language)}</p></div>
+                     </div>
                  </button>
              </div>
         </div>
       )}
 
       {(homeView === 'student_subjects' || homeView === 'teacher_subjects' || homeView === 'uni_student_subjects' || homeView === 'uni_teacher_subjects') && (
-        <div className={`max-w-7xl w-full py-6 md:py-16 px-4 animate-in slide-in-from-bottom-10 fade-in duration-1000 relative z-10 overflow-y-auto custom-scrollbar flex-1 pb-safe`}>
-           <button onClick={() => setHomeView(homeView.includes('uni') ? 'university_select' : 'school_select')} className="mb-10 flex items-center gap-3 text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-all font-bold group sticky top-0 bg-background/50 backdrop-blur-xl py-3 z-20 w-fit rounded-full pr-6 border border-white/5 shadow-lg"><div className="p-2 md:p-3 bg-white/5 dark:bg-black/50 backdrop-blur-md rounded-full border border-indigo-500/10 shadow-sm group-hover:-translate-x-1 transition-transform"><ArrowLeft size={20} /></div> {t('back_to_roles', userSettings.language)}</button>
-           
-           <div className="mb-12 px-2">
-                <h2 className="text-4xl md:text-6xl font-black text-zinc-900 dark:text-white mb-4 tracking-tighter font-display">
-                    {homeView === 'student_subjects' ? t('role_student', userSettings.language) : 
-                        homeView === 'teacher_subjects' ? t('role_teacher', userSettings.language) : 
-                        homeView === 'uni_student_subjects' ? t('role_uni_student', userSettings.language) : t('role_uni_professor', userSettings.language)}
-                </h2>
-                <div className="flex items-center gap-3">
-                    <div className="h-1 w-12 bg-indigo-500 rounded-full" />
-                    <p className="text-zinc-500 font-bold uppercase tracking-[0.2em] text-xs lg:text-sm">{t('select_subject', userSettings.language)}</p>
-                </div>
-           </div>
-
-           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 lg:gap-8 pb-24">
+        <div className={`max-w-7xl w-full py-4 md:py-12 px-3 md:px-4 ${SLIDE_UP} duration-500 relative z-10 overflow-y-auto custom-scrollbar flex-1 pb-safe`}>
+           <button onClick={() => setHomeView(homeView.includes('uni') ? 'university_select' : 'school_select')} className="mb-6 md:mb-10 flex items-center gap-3 text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors font-semibold group sticky top-0 bg-background/50 backdrop-blur-md py-2 z-20 w-fit rounded-full pr-4"><div className="p-2 md:p-3 bg-white/50 dark:bg-black/50 backdrop-blur-md rounded-full border border-indigo-500/10 shadow-sm group-hover:-translate-x-1 transition-transform"><ArrowLeft size={18} /></div> {t('back_to_roles', userSettings.language)}</button>
+           <h2 className="text-2xl md:text-4xl font-bold text-zinc-900 dark:text-white mb-2 tracking-tight px-1">
+               {homeView === 'student_subjects' ? t('role_student', userSettings.language) : 
+                homeView === 'teacher_subjects' ? t('role_teacher', userSettings.language) : 
+                homeView === 'uni_student_subjects' ? t('role_uni_student', userSettings.language) : t('role_uni_professor', userSettings.language)} • {t('select_subject', userSettings.language)}
+           </h2>
+           <p className="text-gray-500 px-1 mb-8 md:mb-10 font-medium text-sm lg:text-base">{t('choose_subject', userSettings.language)}</p>
+           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 lg:gap-6 pb-20">
               {SUBJECTS.filter(s => s.id !== SubjectId.GENERAL && s.categories.includes(isUniView ? 'university' : 'school')).map((s, i) => (
-                <button key={s.id} onClick={() => handleSubjectChange(s)} style={getStaggeredDelay(i, delayStep)} className={`group flex flex-col items-center text-center p-6 lg:p-10 bg-[#0d0d0f]/60 backdrop-blur-2xl rounded-[40px] border border-white/5 hover:border-indigo-500/50 shadow-2xl transition-all duration-500 hover:-translate-y-3 ${FADE_IN} fill-mode-backwards ring-1 ring-white/5`}>
-                   <div className={`w-16 h-16 lg:w-24 lg:h-24 rounded-[28px] lg:rounded-[36px] ${s.color} text-white flex items-center justify-center mb-6 lg:mb-8 shadow-[0_20px_40px_rgba(0,0,0,0.4)] group-hover:scale-110 group-hover:rotate-3 transition-all duration-500 ring-2 ring-white/10`}><DynamicIcon name={s.icon} className="w-8 h-8 lg:w-12 lg:h-12" /></div>
-                   <h3 className="font-black text-zinc-900 dark:text-white text-sm lg:text-xl mb-2 line-clamp-2 leading-tight tracking-tight font-display">{t(`subject_${s.id}`, userSettings.language)}</h3>
-                   <div className="mt-2 w-0 group-hover:w-12 h-1 bg-indigo-500 rounded-full transition-all duration-500" />
+                <button key={s.id} onClick={() => handleSubjectChange(s)} style={getStaggeredDelay(i, delayStep)} className={`group flex flex-col items-center text-center p-5 lg:p-8 bg-white/40 dark:bg-white/5 backdrop-blur-xl rounded-[28px] lg:rounded-[32px] border border-white/30 dark:border-white/10 hover:border-indigo-500/50 shadow-sm hover:shadow-2xl hover:shadow-indigo-500/10 transition-all duration-300 hover:-translate-y-2 ${FADE_IN} fill-mode-backwards`}>
+                   <div className={`w-12 h-12 lg:w-20 lg:h-20 rounded-2xl lg:rounded-3xl ${s.color} text-white flex items-center justify-center mb-3 lg:mb-6 shadow-xl shadow-indigo-500/20 group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300`}><DynamicIcon name={s.icon} className="w-6 h-6 lg:w-10 lg:h-10" /></div>
+                   <h3 className="font-bold text-zinc-900 dark:text-white text-xs lg:text-xl mb-1 lg:mb-2 line-clamp-2">{t(`subject_${s.id}`, userSettings.language)}</h3>
                 </button>
               ))}
            </div>
