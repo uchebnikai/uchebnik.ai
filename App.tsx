@@ -230,6 +230,7 @@ export const App = () => {
   const liveSessionRef = useRef<any>(null);
   const nextStartTimeRef = useRef(0);
   const sourcesRef = useRef<Set<AudioBufferSourceNode>>(new Set());
+  const voiceCallStartTimeRef = useRef<number>(0);
   
   const activeSubjectRef = useRef(activeSubject);
   const sessionsRef = useRef(sessions);
@@ -399,6 +400,7 @@ export const App = () => {
         callbacks: {
           onopen: () => {
             setVoiceCallStatus('listening');
+            voiceCallStartTimeRef.current = Date.now();
             const source = inputCtx.createMediaStreamSource(stream);
             const scriptProcessor = inputCtx.createScriptProcessor(4096, 1, 1);
             scriptProcessor.onaudioprocess = (event) => {
@@ -449,7 +451,6 @@ export const App = () => {
         }
       });
       liveSessionRef.current = await sessionPromise;
-      grantXP(XP_PER_VOICE);
     } catch (err) {
       console.error(err);
       setIsVoiceCallActive(false);
@@ -462,6 +463,20 @@ export const App = () => {
       try { liveSessionRef.current.close(); } catch(e){}
       liveSessionRef.current = null;
     }
+    
+    // Grant XP based on call duration to prevent abuse
+    if (voiceCallStartTimeRef.current > 0) {
+        const durationSeconds = (Date.now() - voiceCallStartTimeRef.current) / 1000;
+        // Require at least 15 seconds for any XP reward
+        if (durationSeconds >= 15) {
+            // Grant 2 XP per second, capped at XP_PER_VOICE (60)
+            const earnedXP = Math.min(XP_PER_VOICE, Math.floor(durationSeconds * 2));
+            grantXP(earnedXP);
+            updateQuestProgress(userSettings.dailyQuests?.quests || [], 'voice', activeSubject?.id || '');
+        }
+        voiceCallStartTimeRef.current = 0;
+    }
+
     sourcesRef.current.forEach(s => { try{s.stop()}catch(e){} });
     sourcesRef.current.clear();
     setIsVoiceCallActive(false);
