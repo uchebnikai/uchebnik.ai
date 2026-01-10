@@ -34,11 +34,6 @@
   --foreground: 0 0% 98%;
 }
 
-/* Christmas Theme Overrides - Now handled dynamically via JS to prevent sticking */
-body.christmas-mode {
-  /* Variables are now injected into :root by useTheme.ts to ensure proper resetting */
-}
-
 body {
   font-family: 'Inter', sans-serif;
   -webkit-font-smoothing: antialiased;
@@ -71,7 +66,6 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-/* Custom Frame Colors - Updated to use Primary Border */
 .glass-panel, .glass-card, .border-indigo-500\/20, .border-indigo-500\/10 {
    border-color: rgba(var(--primary-500), 0.2) !important;
 }
@@ -79,7 +73,6 @@ body {
    border-color: rgba(var(--primary-500), 0.1) !important;
 }
 
-/* Custom Background Mode Adjustments */
 body.custom-bg-active .glass-panel {
   background: rgba(255, 255, 255, 0.2);
   border: 1px solid rgba(var(--primary-500), 0.2);
@@ -89,7 +82,6 @@ body.custom-bg-active.dark .glass-panel {
   border: 1px solid rgba(var(--primary-500), 0.2);
 }
 
-/* Specific Transparency Overrides for Custom BG */
 body.custom-bg-active .glass-card {
   background: rgba(255, 255, 255, 0.3);
 }
@@ -112,7 +104,6 @@ body.custom-bg-active.dark .glass-card {
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2), 0 2px 4px -1px rgba(0, 0, 0, 0.1);
 }
 
-/* Noise Texture */
 .bg-noise {
   position: fixed;
   top: 0; left: 0; width: 100%; height: 100%;
@@ -121,7 +112,6 @@ body.custom-bg-active.dark .glass-card {
   z-index: 0;
 }
 
-/* Typography & Markdown Safety */
 .markdown-content { 
   word-break: break-word; 
   overflow-wrap: break-word; 
@@ -141,7 +131,6 @@ body.custom-bg-active.dark .glass-card {
 .markdown-content a { color: rgb(var(--primary-500)); text-decoration: none; border-bottom: 1px solid transparent; transition: border-color 0.2s; word-break: break-all; }
 .markdown-content a:hover { border-bottom-color: rgb(var(--primary-500)); }
 
-/* Code Blocks */
 .markdown-content code { background: rgba(128,128,128,0.1); padding: 0.2em 0.4em; rounded: 6px; font-size: 0.85em; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; white-space: pre-wrap; word-break: break-all; }
 .markdown-content pre { background: transparent !important; padding: 0 !important; margin: 0 !important; overflow-x: auto; max-width: 100%; }
 .markdown-content pre code { white-space: pre; word-break: normal; display: block; }
@@ -154,7 +143,6 @@ body.custom-bg-active.dark .glass-card {
 .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
 .pt-safe { padding-top: env(safe-area-inset-top); }
 
-/* Snowflakes Optimized */
 .snowflake {
   position: fixed;
   top: -20px;
@@ -166,11 +154,16 @@ body.custom-bg-active.dark .glass-card {
   animation-timing-function: linear;
   animation-iteration-count: infinite;
   text-shadow: 0 0 2px rgba(0,0,0,0.1);
-  will-change: transform; /* Hardware Acceleration */
+  will-change: transform;
 }
 
 @keyframes snowfall {
   0% { transform: translate3d(0, 0, 0) rotate(0deg); opacity: 0; }
   20% { opacity: 1; }
   100% { transform: translate3d(0, 105vh, 0) rotate(360deg); opacity: 0.3; }
+}
+
+/* Year 2026 specifics */
+body.year-2026-mode {
+  /* Dynamic themes are injected by hook */
 }

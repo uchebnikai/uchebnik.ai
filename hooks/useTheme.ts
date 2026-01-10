@@ -6,16 +6,20 @@ import { hexToRgb, rgbToHsl, hslToRgb, adjustBrightness } from '../styles/theme'
 export const useTheme = (userSettings: UserSettings) => {
   useEffect(() => {
     // 1. Determine the effective theme color
+    // - If 2026 mode is on, force Deep Blue (#1e3a8a)
     // - If Christmas mode is on, force Red (#ef4444)
-    // - If New Year mode is on, force Dark Blue (#1e3a8a)
     // - Otherwise, use user setting, or fallback to default Indigo (#6366f1) if missing
-    let themeColor = userSettings.christmasMode 
-        ? '#ef4444' 
-        : (userSettings.newYearMode ? '#1e40af' : (userSettings.themeColor || '#6366f1'));
+    let themeColor;
+    if (userSettings.year2026Mode) {
+        themeColor = '#1e3a8a';
+    } else if (userSettings.christmasMode) {
+        themeColor = '#ef4444';
+    } else {
+        themeColor = userSettings.themeColor || '#6366f1';
+    }
 
     // 2. Apply colors to CSS Variables
     if (themeColor) {
-      // Ensure hexToRgb handles potential edge cases internally, but we also pass a valid string here
       const rgb = hexToRgb(themeColor);
       const root = document.documentElement;
       
@@ -34,13 +38,13 @@ export const useTheme = (userSettings: UserSettings) => {
 
       // 3. Calculate Accent Color
       let accentRgb;
-      if (userSettings.christmasMode) {
-          accentRgb = hexToRgb('#10b981'); 
-      } else if (userSettings.newYearMode) {
-          accentRgb = hexToRgb('#facc15'); // Gold for New Year
+      if (userSettings.year2026Mode) {
+          accentRgb = hexToRgb('#06b6d4'); // Cyan for New Year
+      } else if (userSettings.christmasMode) {
+          accentRgb = hexToRgb('#10b981'); // Green for Christmas
       } else {
           const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
-          const accentHsl = { ...hsl, h: (hsl.h + 35) % 360 }; // +35 degree hue shift
+          const accentHsl = { ...hsl, h: (hsl.h + 35) % 360 }; 
           accentRgb = hslToRgb(accentHsl.h, accentHsl.s, accentHsl.l);
       }
 
@@ -59,25 +63,23 @@ export const useTheme = (userSettings: UserSettings) => {
     }
 
     // 4. Handle Body Classes for Backgrounds & Special Modes
-    // 'custom-bg-active' handles glass transparency adjustments
-    if (userSettings.customBackground || userSettings.christmasMode || userSettings.newYearMode) {
+    if (userSettings.customBackground || userSettings.christmasMode || userSettings.year2026Mode) {
       document.body.classList.add('custom-bg-active');
     } else {
       document.body.classList.remove('custom-bg-active');
     }
     
-    // 'christmas-mode' handles fonts, snow, etc.
     if (userSettings.christmasMode) {
         document.body.classList.add('christmas-mode');
     } else {
         document.body.classList.remove('christmas-mode');
     }
 
-    if (userSettings.newYearMode) {
-        document.body.classList.add('new-year-mode');
+    if (userSettings.year2026Mode) {
+        document.body.classList.add('year-2026-mode');
     } else {
-        document.body.classList.remove('new-year-mode');
+        document.body.classList.remove('year-2026-mode');
     }
 
-  }, [userSettings.themeColor, userSettings.customBackground, userSettings.christmasMode, userSettings.newYearMode]);
+  }, [userSettings.themeColor, userSettings.customBackground, userSettings.christmasMode, userSettings.year2026Mode]);
 };
