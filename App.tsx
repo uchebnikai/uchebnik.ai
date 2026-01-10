@@ -10,7 +10,7 @@ import { Auth } from './components/auth/Auth';
 import { AuthSuccess } from './components/auth/AuthSuccess';
 import { 
   Loader2, X, AlertCircle, CheckCircle, Info, Minimize, Database, Radio, Gift, Minimize2, 
-  ArrowLeft, Zap, Book, FileJson, Megaphone, Bell, ExternalLink, TriangleAlert
+  ArrowLeft, Zap, Book, FileJson
 } from 'lucide-react';
 
 import { Session as SupabaseSession } from '@supabase/supabase-js';
@@ -163,7 +163,7 @@ export const App = () => {
   const [targetPlan, setTargetPlan] = useState<UserPlan | null>(null);
   const [unlockLoading, setUnlockLoading] = useState(false);
 
-  const [broadcastModal, setBroadcastModal] = useState<{isOpen: boolean, data: any} | null>(null);
+  const [broadcastModal, setBroadcastModal] = useState<{isOpen: boolean, message: string} | null>(null);
 
   const [globalConfig, setGlobalConfig] = useState({ showChristmasButton: true, showNewYearButton: true });
 
@@ -213,10 +213,10 @@ export const App = () => {
   
   const [focusMode, setFocusMode] = useState(false);
 
-  const [toasts, setToasts] = useState<{id: string, message: string, type: 'success'|'error'|'info'|'warning'}[]>([]);
+  const [toasts, setToasts] = useState<{id: string, message: string, type: 'success'|'error'|'info'}[]>([]);
   const [confirmModal, setConfirmModal] = useState<{isOpen: boolean, title: string, message: string, onConfirm: () => void} | null>(null);
 
-  const addToast = (message: string, type: 'success'|'error'|'info'|'warning' = 'info') => {
+  const addToast = (message: string, type: 'success'|'error'|'info' = 'info') => {
     const id = Date.now().toString();
     setToasts(prev => [...prev, {id, message, type}]);
     setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 4000);
@@ -810,18 +810,14 @@ export const App = () => {
       const channel = supabase.channel('global-broadcasts').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'broadcasts' }, (payload) => {
           const newB = payload.new as any;
           
-          const { sound_enabled, type, message, variant } = newB;
+          // Sound effect for broadcasts
+          try {
+            const audio = new Audio(BROADCAST_SOUND);
+            audio.play().catch(() => {});
+          } catch(e) {}
 
-          // Sound effect for broadcasts if enabled
-          if (sound_enabled !== false) {
-              try {
-                const audio = new Audio(BROADCAST_SOUND);
-                audio.play().catch(() => {});
-              } catch(e) {}
-          }
-
-          if (type === 'modal') setBroadcastModal({ isOpen: true, data: newB });
-          else addToast(message, variant || 'info');
+          if (newB.type === 'modal') setBroadcastModal({ isOpen: true, message: newB.message });
+          else addToast(newB.message, 'info');
       }).subscribe();
       return () => { supabase.removeChannel(channel); };
   }, []);
@@ -1227,54 +1223,26 @@ export const App = () => {
       <ConfirmModal isOpen={!!confirmModal} title={confirmModal?.title || ''} message={confirmModal?.message || ''} onConfirm={confirmModal?.onConfirm || (()=>{})} onCancel={() => setConfirmModal(null)} />
       
       {/* GLOBAL BROADCAST MODAL */}
-      {broadcastModal?.isOpen && (() => {
-          const { message, variant, sender_name, action_text, action_url, icon } = broadcastModal.data;
-          const variants: Record<string, string> = {
-              info: 'border-indigo-500/30 bg-indigo-500',
-              success: 'border-emerald-500/30 bg-emerald-500',
-              warning: 'border-amber-500/30 bg-amber-500',
-              danger: 'border-red-500/30 bg-red-500'
-          };
-          const currentVariant = variants[variant] || variants.info;
-          
-          return (
+      {broadcastModal?.isOpen && (
           <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-in fade-in">
-              <div className={`bg-white/95 dark:bg-zinc-900/95 border ${currentVariant.split(' ')[0]} w-full max-w-md p-8 rounded-[32px] shadow-2xl relative animate-in zoom-in-95 backdrop-blur-xl`}>
+              <div className="bg-white/90 dark:bg-zinc-900/90 border border-indigo-500/30 w-full max-w-md p-8 rounded-[32px] shadow-2xl relative animate-in zoom-in-95 backdrop-blur-xl">
                   <div className="flex flex-col items-center text-center gap-6">
-                      <div className={`w-16 h-16 rounded-2xl ${currentVariant.split(' ')[1]} flex items-center justify-center text-white shadow-lg shadow-current/30`}>
-                          <DynamicIcon name={icon || 'Bell'} className="w-8 h-8 animate-pulse" />
+                      <div className="w-16 h-16 rounded-2xl bg-indigo-500 flex items-center justify-center text-white shadow-lg shadow-indigo-500/30">
+                          <Radio size={32} className="animate-pulse" />
                       </div>
                       <div className="space-y-2">
-                          <div className="flex flex-col items-center gap-1">
-                             <h3 className="text-2xl font-black text-zinc-900 dark:text-white tracking-tight">Известие</h3>
-                             {sender_name && <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">От: {sender_name}</span>}
-                          </div>
-                          <p className="text-zinc-600 dark:text-zinc-400 font-medium leading-relaxed whitespace-pre-wrap">
-                              {message}
+                          <h3 className="text-2xl font-black text-zinc-900 dark:text-white tracking-tight">Важно известие</h3>
+                          <p className="text-zinc-600 dark:text-zinc-400 font-medium leading-relaxed">
+                              {broadcastModal.message}
                           </p>
                       </div>
-                      
-                      <div className="flex flex-col gap-3 w-full">
-                          {action_text && action_url && (
-                              <button 
-                                onClick={() => { window.open(action_url, '_blank'); setBroadcastModal(null); }}
-                                className={`w-full py-4 text-white font-bold rounded-2xl shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2 ${currentVariant.split(' ')[1]}`}
-                              >
-                                  {action_text} <ExternalLink size={18}/>
-                              </button>
-                          )}
-                          <button 
-                            onClick={() => setBroadcastModal(null)} 
-                            className="w-full py-3 text-zinc-500 dark:text-zinc-400 font-bold rounded-2xl hover:bg-black/5 dark:hover:bg-white/5 transition-all"
-                          >
-                              Затвори
-                          </button>
-                      </div>
+                      <Button onClick={() => setBroadcastModal(null)} className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-2xl shadow-lg shadow-indigo-500/20">
+                          Разбрах
+                      </Button>
                   </div>
               </div>
           </div>
-          );
-      })()}
+      )}
 
       <VoiceCallOverlay 
         isVoiceCallActive={isVoiceCallActive} 
@@ -1306,7 +1274,7 @@ export const App = () => {
       <div className="fixed top-4 right-4 z-[210] flex flex-col gap-2 pointer-events-none">
         {toasts.map(t => (
           <div key={t.id} className={`${TOAST_CONTAINER} ${t.type === 'error' ? TOAST_ERROR : t.type === 'success' ? TOAST_SUCCESS : TOAST_INFO}`}>
-             {t.type === 'error' ? <AlertCircle size={18}/> : t.type === 'success' ? <CheckCircle size={18}/> : t.type === 'warning' ? <TriangleAlert size={18}/> : <Info size={18}/>}
+             {t.type === 'error' ? <AlertCircle size={18}/> : t.type === 'success' ? <CheckCircle size={18}/> : <Info size={18}/>}
              <span className="font-medium text-sm">{t.message}</span>
           </div>
         ))}

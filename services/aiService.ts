@@ -81,20 +81,6 @@ export const generateResponse = async (
   
   // EASTER EGG RULE (HIGH PRIORITY)
   if (promptText.trim() === "67") {
-    // Fake thinking phase
-    if (onStreamUpdate) {
-        onStreamUpdate("⌛ Осъществявам връзка със сървърите на МВР...", "");
-        await wait(1400);
-        onStreamUpdate("🔍 Проверявам база данни за обект 67...", "");
-        await wait(1800);
-        onStreamUpdate("⚠️ Критична грешка: Файлът е защитен с 256-битово криптиране...", "");
-        await wait(1500);
-        onStreamUpdate("🧨 Преодолявам защитната стена...", "");
-        await wait(2000);
-        onStreamUpdate("🚫 ДОСТЪПЪТ ОТКАЗАН. Протокол 'Nuh-Uh' е активиран.", "");
-        await wait(1200);
-    }
-
     return {
         id: Date.now().toString(),
         role: 'model',
