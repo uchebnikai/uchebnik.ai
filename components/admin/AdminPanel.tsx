@@ -11,7 +11,6 @@ import {
   BarChart2, Wifi, HardDrive, Brain, LayoutDashboard,
   PieChart as PieChartIcon, MessageSquare, Flag, CheckSquare,
   Eye, EyeOff, Lock, Radio, LogOut, Snowflake,
-  // Fix: Added missing Settings icon import on line 20
   Settings
 } from 'lucide-react';
 import { Button } from '../ui/Button';
@@ -323,11 +322,21 @@ export const AdminPanel = ({
                         }
 
                         const avatarUrl = u.avatar_url || settings?.avatar || '';
+                        
+                        // Robust naming fallback
+                        let displayName = settings?.userName;
+                        const isNameGeneric = !displayName || displayName === 'Потребител' || displayName === 'Анонимен' || displayName === 'Anonymous' || displayName === 'Scholar';
+                        
+                        if (isNameGeneric && u.email) {
+                            displayName = u.email.split('@')[0];
+                        } else if (!displayName) {
+                            displayName = 'Анонимен';
+                        }
 
                         return {
                             id: u.id,
                             email: u.email, 
-                            name: settings?.userName || 'Анонимен',
+                            name: displayName,
                             avatar: avatarUrl,
                             plan: settings?.plan || 'free',
                             xp: u.xp || 0,
@@ -460,7 +469,7 @@ export const AdminPanel = ({
             await supabase.from('promo_codes').delete().eq('id', id);
             setDbKeys(prev => prev.filter(k => k.id !== id));
             addToast('Ключът е изтрит', 'success');
-        } catch (e) { addToast('Грешка при изтриване', 'error'); }
+        } catch (e) { addToast('Грешна при изтриване', 'error'); }
     };
 
     const handleSaveCalibration = async () => {

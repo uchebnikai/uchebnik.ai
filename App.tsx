@@ -40,7 +40,6 @@ import { SubjectDashboard } from './components/dashboard/SubjectDashboard';
 import { WelcomeScreen } from './components/welcome/WelcomeScreen';
 import { ChatHeader } from './components/chat/ChatHeader';
 import { MessageList } from './components/chat/MessageList';
-// Fix: Removed duplicate and incorrect import of ChatInputArea from MessageList on line 43
 import { ChatInputArea as ActualChatInputArea } from './components/chat/ChatInputArea';
 import { TermsOfService, PrivacyPolicy, CookiePolicy, About, Contact } from './components/pages/StaticPages';
 import { Snowfall } from './components/ui/Snowfall';
@@ -636,7 +635,16 @@ export const App = () => {
         isRemoteDataLoadedRef.current = false;
         setSyncStatus('syncing');
         try {
-            const { data: profileData } = await supabase.from('profiles').select('*').eq('id', userId).single();
+            const { data: profileData, error: profileError } = await supabase.from('profiles').select('*').eq('id', userId).single();
+            
+            // HEARTBEAT: If a session exists but the profile record is missing, 
+            // the account was likely deleted from the database. Trigger forced logout.
+            if (profileError && profileError.code === 'PGRST116') {
+                console.warn("Account deleted from database. Forced logout.");
+                await handleLogout();
+                return;
+            }
+
             if (profileData) {
                 const referralCode = profileData.referral_code;
                 const proExpiresAt = profileData.pro_expires_at;
@@ -646,18 +654,26 @@ export const App = () => {
                 if (profileData.settings) {
                     const { plan, stats, ...restSettings } = profileData.settings;
                     
-                    // Self-healing check for generic names in DB settings
-                    let dbName = restSettings.userName;
-                    const isNameGeneric = !dbName || dbName === 'Потребител' || dbName === 'Анонимен' || dbName === 'Anonymous' || dbName === 'Scholar';
+                    // Normalization check for Google Users showing as generic names
+                    let currentName = restSettings.userName || '';
+                    const isNameGeneric = !currentName || currentName === 'Потребител' || currentName === 'Анонимен' || currentName === 'Anonymous' || currentName === 'Scholar';
                     
                     if (isNameGeneric && authMetadata) {
-                        dbName = authMetadata.full_name || authMetadata.name || `${authMetadata.first_name || authMetadata.given_name || ''} ${authMetadata.last_name || authMetadata.family_name || ''}`.trim();
+                        currentName = authMetadata.full_name || authMetadata.name || `${authMetadata.given_name || ''} ${authMetadata.family_name || ''}`.trim();
+                        
+                        // Self-heal: Update database immediately if we have a better name from provider
+                        if (currentName && !isNameGeneric) {
+                            console.log("Synchronizing metadata from OAuth provider...");
+                            await supabase.from('profiles').update({
+                                settings: { ...profileData.settings, userName: currentName }
+                            }).eq('id', userId);
+                        }
                     }
 
                     setUserSettings(prev => ({ 
                         ...prev, 
                         ...restSettings, 
-                        userName: dbName || prev.userName,
+                        userName: currentName || prev.userName,
                         themeColor: profileData.theme_color, 
                         customBackground: profileData.custom_background, 
                         referralCode, 
@@ -698,9 +714,9 @@ export const App = () => {
             setShowAuthModal(false);
             const meta = supabaseSession.user.user_metadata;
             
-            // Handle metadata from different OAuth providers (Google uses given_name, family_name, name, picture)
-            const firstName = meta.first_name || meta.given_name || '';
-            const lastName = meta.last_name || meta.family_name || '';
+            // Enhanced Google Metadata Extraction
+            const firstName = meta.given_name || meta.first_name || '';
+            const lastName = meta.family_name || meta.last_name || '';
             const fullName = meta.full_name || meta.name || `${firstName} ${lastName}`.trim();
             const avatar = meta.avatar_url || meta.picture || '';
 
@@ -714,9 +730,10 @@ export const App = () => {
                 currentPassword: '' 
             });
 
+            // Local priority for UI responsiveness
             setUserSettings(prev => {
                 const isCurrentNameGeneric = !prev.userName || prev.userName === 'Потребител' || prev.userName === 'Анонимен' || prev.userName === 'Anonymous' || prev.userName === 'Scholar';
-                return isCurrentNameGeneric ? { ...prev, userName: fullName } : prev;
+                return isCurrentNameGeneric && fullName ? { ...prev, userName: fullName } : prev;
             });
 
             await loadRemoteUserData(supabaseSession.user.id, meta);
