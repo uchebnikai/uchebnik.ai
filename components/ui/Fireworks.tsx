@@ -11,42 +11,70 @@ class Particle {
   gravity: number;
   decay: number;
   size: number;
+  history: { x: number; y: number }[];
+  maxHistory: number;
 
   constructor(x: number, y: number, color: string) {
     this.x = x;
     this.y = y;
     this.color = color;
     this.alpha = 1;
-    this.size = Math.random() * 1.5 + 0.5;
-    this.friction = 0.985; // Much higher friction for more controlled "gliding"
-    this.gravity = 0.015;  // Very low gravity for "floating" effect
+    this.size = Math.random() * 2 + 1;
+    this.friction = 0.97; 
+    this.gravity = 0.02;
     
-    // Softer initial explosion
     const angle = Math.random() * Math.PI * 2;
-    const velocity = Math.random() * 3 + 1; 
+    const velocity = Math.random() * 4 + 1; 
     this.velocity = {
       x: Math.cos(angle) * velocity,
       y: Math.sin(angle) * velocity
     };
     
-    // Slower decay for longer-lasting trails
-    this.decay = Math.random() * 0.006 + 0.004; 
+    this.decay = Math.random() * 0.008 + 0.005; 
+    this.history = [];
+    this.maxHistory = 15; // Controls trail length
   }
 
   draw(ctx: CanvasRenderingContext2D) {
+    if (this.history.length < 2) return;
+
     ctx.save();
     ctx.globalAlpha = this.alpha;
+    
+    // Draw the shimmering trail
+    ctx.beginPath();
+    ctx.moveTo(this.history[0].x, this.history[0].y);
+    for (let i = 1; i < this.history.length; i++) {
+        ctx.lineTo(this.history[i].x, this.history[i].y);
+    }
+    
+    ctx.strokeStyle = this.color;
+    ctx.lineWidth = this.size;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    
+    // Add glow
+    ctx.shadowBlur = 6;
+    ctx.shadowColor = this.color;
+    
+    ctx.stroke();
+    
+    // Draw the "head" spark
     ctx.beginPath();
     ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-    ctx.fillStyle = this.color;
-    // Add glow effect
-    ctx.shadowBlur = 4;
-    ctx.shadowColor = this.color;
+    ctx.fillStyle = '#fff'; // Brilliant white core
     ctx.fill();
+    
     ctx.restore();
   }
 
   update() {
+    // Add current position to history for trail
+    this.history.push({ x: this.x, y: this.y });
+    if (this.history.length > this.maxHistory) {
+        this.history.shift();
+    }
+
     this.velocity.x *= this.friction;
     this.velocity.y *= this.friction;
     this.velocity.y += this.gravity;
@@ -62,26 +90,27 @@ export const Fireworks = ({ active }: { active: boolean }) => {
   const animationRef = useRef<number>(0);
 
   const createBurst = (x: number, y: number) => {
-    // Gala palette: Gold, Amber, White, Soft Blue
-    const colors = ['#fde68a', '#fbbf24', '#ffffff', '#93c5fd', '#d1d5db'];
+    // Elegant Festive Palette
+    const colors = ['#fde68a', '#fbbf24', '#ffffff', '#818cf8', '#f472b6', '#4ade80'];
     const color = colors[Math.floor(Math.random() * colors.length)];
-    const count = 35; 
+    const count = 30; 
     for (let i = 0; i < count; i++) {
       particlesRef.current.push(new Particle(x, y, color));
     }
   };
 
   useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
     if (!active) {
       if (animationRef.current) cancelAnimationFrame(animationRef.current);
       particlesRef.current = [];
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
       return;
     }
-
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d', { alpha: true });
-    if (!ctx) return;
 
     const resize = () => {
       canvas.width = window.innerWidth;
@@ -92,24 +121,21 @@ export const Fireworks = ({ active }: { active: boolean }) => {
     resize();
 
     let lastBurstTime = 0;
-    const burstDelay = 4000; // Infrequent, elegant bursts every 4 seconds
+    const burstDelay = 3500; // Elegant spacing
 
     const animate = (time: number) => {
-      // Instead of clearRect, we fill with semi-transparent black to create "trails"
-      // If we are in dark mode, this looks like long-exposure photography
-      ctx.globalCompositeOperation = 'destination-out';
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.globalCompositeOperation = 'lighter'; // Particles "glow" when they overlap
+      // Clean frame-by-frame clearing prevents ghosting/transparent leftovers
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
 
       if (time - lastBurstTime > burstDelay) {
         createBurst(
-          Math.random() * canvas.width * 0.6 + canvas.width * 0.2,
+          Math.random() * canvas.width * 0.7 + canvas.width * 0.15,
           Math.random() * canvas.height * 0.4 + canvas.height * 0.1
         );
         lastBurstTime = time;
       }
 
+      // Update and Draw particles
       particlesRef.current = particlesRef.current.filter(p => p.alpha > 0);
       particlesRef.current.forEach(p => {
         p.update();
