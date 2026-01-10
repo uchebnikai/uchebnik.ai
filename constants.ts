@@ -87,18 +87,18 @@ export const getSystemPrompt = (mode: string, lang: Language, teachingStyle: Tea
   `;
 
   const videoDiscoveryInstructions = `
-  IF THE USER ASKS FOR VIDEOS (YouTube, TikTok, etc):
-  1. Use your search tool to find relevant, educational videos.
-  2. For each video found, provide a JSON block.
-  Format:
+  IF THE USER ASKS FOR VIDEOS (YouTube, TikTok, Vimeo):
+  1. CRITICAL: You MUST use the 'googleSearch' tool to find ACTUAL, EXISTING videos.
+  2. NEVER hallucinate or invent a video URL. Only return URLs you verified through search.
+  3. Prefer YouTube for educational content as it allows in-app playback.
+  4. For each video, return this JSON block:
   \`\`\`json:video
   {
-    "url": "https://www.youtube.com/watch?v=...",
-    "title": "Clear video title",
-    "platform": "youtube"
+    "url": "https://...",
+    "title": "Exact video title from search",
+    "platform": "youtube" | "tiktok" | "vimeo" | "other"
   }
   \`\`\`
-  Always include the URL. Support platforms: youtube, tiktok, vimeo.
   `;
 
   const codingInstructions = `
