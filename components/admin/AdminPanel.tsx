@@ -11,7 +11,7 @@ import {
   BarChart2, Wifi, HardDrive, Brain, LayoutDashboard,
   PieChart as PieChartIcon, MessageSquare, Flag, CheckSquare,
   Eye, EyeOff, Lock, Radio, LogOut, Snowflake,
-  Settings
+  Settings, PartyPopper
 } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { supabase } from '../../supabaseClient';
@@ -272,8 +272,8 @@ export const AdminPanel = ({
         }
     };
 
-    const handleToggleChristmas = async (val: boolean) => {
-        const newConfig = { ...globalConfig, showChristmasButton: val };
+    const handleToggleGlobal = async (key: string, val: boolean) => {
+        const newConfig = { ...globalConfig, [key]: val };
         setGlobalConfig(newConfig);
         try {
             const { error } = await supabase
@@ -917,10 +917,28 @@ export const AdminPanel = ({
                                                      </div>
                                                  </div>
                                                  <button 
-                                                    onClick={() => handleToggleChristmas(!globalConfig.showChristmasButton)}
+                                                    onClick={() => handleToggleGlobal('showChristmasButton', !globalConfig.showChristmasButton)}
                                                     className={`w-12 h-6 rounded-full transition-all flex items-center px-1 ${globalConfig.showChristmasButton ? 'bg-indigo-600' : 'bg-zinc-700'}`}
                                                  >
                                                      <div className={`w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-300 ${globalConfig.showChristmasButton ? 'translate-x-6' : 'translate-x-0'}`} />
+                                                 </button>
+                                             </div>
+
+                                             <div className="flex items-center justify-between p-4 bg-black/40 rounded-2xl border border-white/5 transition-all hover:border-indigo-500/30">
+                                                 <div className="flex items-center gap-3">
+                                                     <div className="p-2.5 bg-blue-500/10 rounded-xl text-blue-400">
+                                                         <PartyPopper size={20}/>
+                                                     </div>
+                                                     <div>
+                                                         <div className="text-sm font-bold text-white">Нова Година бутон</div>
+                                                         <div className="text-[10px] text-zinc-500 uppercase tracking-widest">Видим за всички</div>
+                                                     </div>
+                                                 </div>
+                                                 <button 
+                                                    onClick={() => handleToggleGlobal('showNewYearButton', !globalConfig.showNewYearButton)}
+                                                    className={`w-12 h-6 rounded-full transition-all flex items-center px-1 ${globalConfig.showNewYearButton ? 'bg-indigo-600' : 'bg-zinc-700'}`}
+                                                 >
+                                                     <div className={`w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-300 ${globalConfig.showNewYearButton ? 'translate-x-6' : 'translate-x-0'}`} />
                                                  </button>
                                              </div>
                                          </div>

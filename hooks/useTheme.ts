@@ -7,10 +7,11 @@ export const useTheme = (userSettings: UserSettings) => {
   useEffect(() => {
     // 1. Determine the effective theme color
     // - If Christmas mode is on, force Red (#ef4444)
+    // - If New Year mode is on, force Dark Blue (#1e3a8a)
     // - Otherwise, use user setting, or fallback to default Indigo (#6366f1) if missing
-    const themeColor = userSettings.christmasMode 
+    let themeColor = userSettings.christmasMode 
         ? '#ef4444' 
-        : (userSettings.themeColor || '#6366f1');
+        : (userSettings.newYearMode ? '#1e40af' : (userSettings.themeColor || '#6366f1'));
 
     // 2. Apply colors to CSS Variables
     if (themeColor) {
@@ -32,11 +33,11 @@ export const useTheme = (userSettings: UserSettings) => {
       root.style.setProperty('--primary-950', adjustBrightness(rgb, -50));
 
       // 3. Calculate Accent Color
-      // - If Christmas mode: Force Emerald Green (#10b981)
-      // - Otherwise: Calculate algorithmic shift (e.g., +35 hue)
       let accentRgb;
       if (userSettings.christmasMode) {
           accentRgb = hexToRgb('#10b981'); 
+      } else if (userSettings.newYearMode) {
+          accentRgb = hexToRgb('#facc15'); // Gold for New Year
       } else {
           const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
           const accentHsl = { ...hsl, h: (hsl.h + 35) % 360 }; // +35 degree hue shift
@@ -59,7 +60,7 @@ export const useTheme = (userSettings: UserSettings) => {
 
     // 4. Handle Body Classes for Backgrounds & Special Modes
     // 'custom-bg-active' handles glass transparency adjustments
-    if (userSettings.customBackground || userSettings.christmasMode) {
+    if (userSettings.customBackground || userSettings.christmasMode || userSettings.newYearMode) {
       document.body.classList.add('custom-bg-active');
     } else {
       document.body.classList.remove('custom-bg-active');
@@ -72,5 +73,11 @@ export const useTheme = (userSettings: UserSettings) => {
         document.body.classList.remove('christmas-mode');
     }
 
-  }, [userSettings.themeColor, userSettings.customBackground, userSettings.christmasMode]);
+    if (userSettings.newYearMode) {
+        document.body.classList.add('new-year-mode');
+    } else {
+        document.body.classList.remove('new-year-mode');
+    }
+
+  }, [userSettings.themeColor, userSettings.customBackground, userSettings.christmasMode, userSettings.newYearMode]);
 };

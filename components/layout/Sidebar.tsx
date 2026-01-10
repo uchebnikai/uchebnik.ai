@@ -1,5 +1,6 @@
+
 import React, { useState } from 'react';
-import { MessageSquare, Trash2, Plus, School, GraduationCap, Briefcase, ChevronDown, User, Settings, CreditCard, HelpCircle, LogOut, ArrowRight, ChevronUp, FileText, CloudOff, RefreshCw, Cloud, PanelLeftClose, PanelLeftOpen, LogIn, Snowflake, Gift, Trophy, Target, AlertTriangle, Sparkles } from 'lucide-react';
+import { MessageSquare, Trash2, Plus, School, GraduationCap, Briefcase, ChevronDown, User, Settings, CreditCard, HelpCircle, LogOut, ArrowRight, ChevronUp, FileText, CloudOff, RefreshCw, Cloud, PanelLeftClose, PanelLeftOpen, LogIn, Snowflake, Gift, Trophy, Target, AlertTriangle, Sparkles, PartyPopper } from 'lucide-react';
 import { DynamicIcon } from '../ui/DynamicIcon';
 import { SUBJECTS } from '../../constants';
 import { SubjectId, AppMode, Session, UserRole, UserSettings, UserPlan, SubjectConfig, HomeViewType } from '../../types';
@@ -349,69 +350,68 @@ export const Sidebar = ({
              )}
           </div>
 
-          <div className={`p-4 border-t border-white/10 bg-white/20 dark:bg-black/20 space-y-3 backdrop-blur-md flex flex-col justify-center shrink-0`}>
-             {/* Christmas Toggle - Only show if globalConfig.showChristmasButton is true */}
+          <div className={`p-4 border-t border-white/10 bg-white/20 dark:bg-black/20 space-y-2 backdrop-blur-md flex flex-col justify-center shrink-0`}>
+             {/* Christmas Toggle */}
              {globalConfig?.showChristmasButton && (
                  <button 
-                    onClick={() => setUserSettings((prev: UserSettings) => ({...prev, christmasMode: !prev.christmasMode}))}
-                    className={`w-full flex items-center ${collapsed ? 'justify-center' : 'justify-between px-4'} py-3 lg:py-3.5 rounded-2xl transition-all relative overflow-hidden group shadow-md hover:shadow-lg active:scale-95 mb-1
+                    onClick={() => setUserSettings((prev: UserSettings) => ({...prev, christmasMode: !prev.christmasMode, newYearMode: false}))}
+                    className={`w-full flex items-center ${collapsed ? 'justify-center' : 'justify-between px-4'} py-2.5 rounded-2xl transition-all relative overflow-hidden group shadow-md hover:shadow-lg active:scale-95
                     ${userSettings.christmasMode 
                         ? 'bg-gradient-to-r from-red-600 via-red-500 to-green-600 text-white shadow-red-500/20' 
                         : 'bg-white/50 dark:bg-black/40 border border-red-200 dark:border-red-900/30 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10'}`}
                  >
-                     {userSettings.christmasMode && <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20" />}
-                     
                      <div className="flex items-center gap-3 relative z-10">
                          <div className={`p-1.5 rounded-lg ${userSettings.christmasMode ? 'bg-white/20' : 'bg-red-100 dark:bg-red-500/20'}`}>
-                            <Snowflake size={20} className={userSettings.christmasMode ? "animate-[spin_3s_linear_infinite]" : ""} fill={userSettings.christmasMode ? "currentColor" : "none"}/>
+                            <Snowflake size={18} className={userSettings.christmasMode ? "animate-[spin_3s_linear_infinite]" : ""} fill={userSettings.christmasMode ? "currentColor" : "none"}/>
                          </div>
-                         {!collapsed && (
-                             <div className="flex flex-col text-left">
-                                 <span className="font-bold text-sm">Коледен Режим</span>
-                                 <span className={`text-[10px] ${userSettings.christmasMode ? 'text-white/80' : 'text-red-400'}`}>
-                                     {userSettings.christmasMode ? 'Включен 🎄' : 'Изключен'}
-                                 </span>
-                             </div>
-                         )}
+                         {!collapsed && <span className="font-bold text-xs">Коледен Режим</span>}
                      </div>
-
                      {!collapsed && (
-                        <div className={`relative z-10 w-10 h-5 rounded-full transition-colors flex items-center px-0.5 ${userSettings.christmasMode ? 'bg-black/20' : 'bg-gray-200 dark:bg-white/10'}`}>
-                            <div className={`w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-300 ${userSettings.christmasMode ? 'translate-x-5' : 'translate-x-0'}`} />
+                        <div className={`relative z-10 w-8 h-4 rounded-full transition-colors flex items-center px-0.5 ${userSettings.christmasMode ? 'bg-black/20' : 'bg-gray-200 dark:bg-white/10'}`}>
+                            <div className={`w-3 h-3 rounded-full bg-white shadow-sm transition-transform duration-300 ${userSettings.christmasMode ? 'translate-x-3.5' : 'translate-x-0'}`} />
                         </div>
                      )}
                  </button>
              )}
 
-             {/* Referral Button - Highly Visible - Only show if shouldShowReferral is true AND logged in */}
-             {session && !collapsed && shouldShowReferral && (
-               <button onClick={() => setShowReferralModal(true)} className={`w-full mb-1 group relative overflow-hidden rounded-2xl p-4 text-left shadow-lg transition-all hover:scale-[1.02] active:scale-[0.98] bg-gradient-to-r from-amber-500 to-orange-500 text-white`}>
-                  <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20" />
-                  <div className="relative z-10 flex items-center justify-between">
-                     <div>
-                        <h3 className="font-bold text-sm tracking-tight flex items-center gap-2">
-                            {t('referrals', userSettings.language) || "Покани Приятел"}
-                        </h3>
-                        <p className="text-[10px] font-medium opacity-90">Вземи безплатен Pro</p>
+             {/* 2026 Mode Toggle */}
+             {globalConfig?.showNewYearButton && (
+                 <button 
+                    onClick={() => setUserSettings((prev: UserSettings) => ({...prev, newYearMode: !prev.newYearMode, christmasMode: false}))}
+                    className={`w-full flex items-center ${collapsed ? 'justify-center' : 'justify-between px-4'} py-2.5 rounded-2xl transition-all relative overflow-hidden group shadow-md hover:shadow-lg active:scale-95
+                    ${userSettings.newYearMode 
+                        ? 'bg-gradient-to-r from-blue-900 via-blue-800 to-indigo-900 text-white shadow-blue-900/30 border border-blue-500/30' 
+                        : 'bg-white/50 dark:bg-black/40 border border-blue-200 dark:border-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/10'}`}
+                 >
+                     <div className="flex items-center gap-3 relative z-10">
+                         <div className={`p-1.5 rounded-lg ${userSettings.newYearMode ? 'bg-white/20' : 'bg-blue-100 dark:bg-blue-500/20'}`}>
+                            <PartyPopper size={18} className={userSettings.newYearMode ? "animate-bounce" : ""}/>
+                         </div>
+                         {!collapsed && <span className="font-bold text-xs">Нова Година 2026</span>}
                      </div>
-                     <div className="w-8 h-8 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center border border-white/20">
-                        <Gift size={16} />
-                     </div>
-                  </div>
-               </button>
-             )}
-             
-             {/* Small Referral Icon - Collapsed */}
-             {session && collapsed && shouldShowReferral && (
-                 <button onClick={() => setShowReferralModal(true)} className="w-full flex justify-center mb-1 group relative">
-                     <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white shadow-lg">
-                         <Gift size={18}/>
-                     </div>
+                     {!collapsed && (
+                        <div className={`relative z-10 w-8 h-4 rounded-full transition-colors flex items-center px-0.5 ${userSettings.newYearMode ? 'bg-black/20' : 'bg-gray-200 dark:bg-white/10'}`}>
+                            <div className={`w-3 h-3 rounded-full bg-white shadow-sm transition-transform duration-300 ${userSettings.newYearMode ? 'translate-x-3.5' : 'translate-x-0'}`} />
+                        </div>
+                     )}
                  </button>
              )}
 
+             {/* Referral Button */}
+             {session && !collapsed && shouldShowReferral && (
+               <button onClick={() => setShowReferralModal(true)} className={`w-full group relative overflow-hidden rounded-2xl p-3 text-left shadow-lg transition-all hover:scale-[1.02] active:scale-[0.98] bg-gradient-to-r from-amber-500 to-orange-500 text-white`}>
+                  <div className="relative z-10 flex items-center justify-between">
+                     <div>
+                        <h3 className="font-bold text-[11px] tracking-tight flex items-center gap-2">Покани Приятел</h3>
+                        <p className="text-[9px] font-medium opacity-90">Вземи безплатен Pro</p>
+                     </div>
+                     <Gift size={14} />
+                  </div>
+               </button>
+             )}
+
              {session && (
-                 <div className="relative mb-1">
+                 <div className="relative pt-1">
                     {profileMenuOpen && (
                         <>
                             <div className="fixed inset-0 z-30" onClick={() => setProfileMenuOpen(false)} />
@@ -425,9 +425,6 @@ export const Sidebar = ({
                                  <button onClick={() => {setShowReportModal && setShowReportModal(true); setProfileMenuOpen(false)}} className="w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-white/5 text-sm font-medium flex items-center gap-3 transition-colors text-amber-500 hover:text-amber-600">
                                     <AlertTriangle size={16} /> Докладвай проблем
                                  </button>
-                                 <button onClick={() => {setActiveSubject(null); setHomeView('terms'); setProfileMenuOpen(false); if(isMobile) setSidebarOpen(false);}} className="w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-white/5 text-sm font-medium flex items-center gap-3 transition-colors">
-                                    <FileText size={16} className="text-gray-500"/> {t('terms', userSettings.language)}
-                                 </button>
                                  <div className="h-px bg-gray-100 dark:bg-white/5 mx-2" />
                                  <button onClick={handleLogout} className="w-full text-left px-4 py-3 hover:bg-red-50 dark:hover:bg-red-900/10 text-red-500 text-sm font-medium flex items-center gap-3 transition-colors">
                                     <LogOut size={16}/> {t('logout', userSettings.language)}
@@ -436,35 +433,29 @@ export const Sidebar = ({
                         </>
                     )}
                     
-                    <button onClick={() => setProfileMenuOpen(!profileMenuOpen)} className={`flex items-center gap-3 w-full p-2.5 lg:p-2.5 rounded-2xl hover:bg-white/50 dark:hover:bg-white/5 transition-all duration-200 border border-transparent hover:border-indigo-500/10 group ${collapsed ? 'justify-center' : ''}`}>
+                    <button onClick={() => setProfileMenuOpen(!profileMenuOpen)} className={`flex items-center gap-3 w-full p-2.5 rounded-2xl hover:bg-white/50 dark:hover:bg-white/5 transition-all duration-200 border border-transparent hover:border-indigo-500/10 group ${collapsed ? 'justify-center' : ''}`}>
                          <div className="relative shrink-0">
                              <img 
                                src={userMeta.avatar || "https://cdn-icons-png.freepik.com/256/3276/3276580.png"} 
                                alt="Profile" 
-                               className={`w-9 h-9 lg:w-10 lg:h-10 rounded-full object-cover border-2 ${currentRank.color === '#cd7f32' ? 'border-orange-700' : 'border-current'}`}
+                               className={`w-9 h-9 rounded-full object-cover border-2`}
                                style={{ borderColor: currentRank.color }}
                              />
                              <div className="absolute -bottom-1 -right-1 bg-black rounded-full p-0.5 border border-white/20">
-                                 <div className={`w-3 h-3 lg:w-4 lg:h-4 rounded-full flex items-center justify-center bg-gradient-to-br ${currentRank.gradient}`}>
-                                     <RankIcon size={isMobile ? 6 : 8} className="text-white"/>
+                                 <div className={`w-3 h-3 rounded-full flex items-center justify-center bg-gradient-to-br ${currentRank.gradient}`}>
+                                     <RankIcon size={6} className="text-white"/>
                                  </div>
                              </div>
                          </div>
                          {!collapsed && (
                              <>
                                 <div className="flex-1 min-w-0 text-left">
-                                    <div className="font-bold text-[13px] lg:text-sm truncate text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+                                    <div className="font-bold text-[13px] truncate text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
                                         {userMeta.firstName && userMeta.lastName 
                                             ? `${userMeta.firstName} ${userMeta.lastName}`
                                             : (userSettings.userName || 'Потребител')}
                                     </div>
-                                    <div className="flex items-center gap-2 mt-0.5">
-                                        <span className={`text-[9px] lg:text-[10px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded text-black bg-gradient-to-r ${currentRank.gradient}`}>
-                                            Lvl {userSettings.level}
-                                        </span>
-                                    </div>
-                                    {/* XP Progress */}
-                                    <div className="mt-1.5">
+                                    <div className="mt-1">
                                         <div className="w-full h-1 bg-black/10 dark:bg-white/10 rounded-full overflow-hidden">
                                             <div 
                                                 className={`h-full bg-gradient-to-r ${currentRank.gradient}`} 
