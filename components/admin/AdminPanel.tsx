@@ -278,11 +278,12 @@ export const AdminPanel = ({
         try {
             const { error } = await supabase
                 .from('global_settings')
-                .upsert({ key: 'site_config', value: newConfig });
+                .upsert({ key: 'site_config', value: newConfig }, { onConflict: 'key' });
             if (error) throw error;
-            addToast('Настройките са запазени.', 'success');
+            addToast('Настройките са запазени в базата данни.', 'success');
         } catch (e) {
-            addToast('Грешка при запазване.', 'error');
+            console.error("Failed to save global config", e);
+            addToast('Грешка при запис в базата.', 'error');
         }
     };
 
