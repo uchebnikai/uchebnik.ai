@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { GoogleGenAI, LiveServerMessage, Modality } from "@google/genai";
 import { SubjectConfig, SubjectId, AppMode, Message, Slide, UserSettings, Session, UserPlan, UserRole, HomeViewType } from './types';
@@ -487,7 +488,6 @@ export const App = () => {
                 const questResult = updateQuestProgress(prev.dailyQuests?.quests || [], 'voice', activeSubject?.id || '');
                 if (questResult.xpGained > 0) {
                     questResult.completedQuests.forEach(q => addToast(`Мисия завършена: ${q}! 🎉`, 'success'));
-                    // Note: grantXP happens later or inside here
                     const boostedXP = calculateXPWithBoost(questResult.xpGained, userPlan);
                     const newTotalXP = prev.xp + boostedXP;
                     return { 
@@ -512,7 +512,7 @@ export const App = () => {
     setVoiceCallStatus('idle');
   };
 
-  const toggleListening = () => {
+  const toggleListening = async () => {
     if (isListening) {
       if (recognitionRef.current) {
         recognitionRef.current.onend = null;
@@ -522,14 +522,22 @@ export const App = () => {
       return;
     }
     
+    // Ensure microphone access before starting
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        // Clean up stream immediately as we only needed permission
+        stream.getTracks().forEach(t => t.stop());
+    } catch (e) {
+        addToast('Трябва да позволите достъп до микрофона.', 'error');
+        return;
+    }
+
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SR) {
       addToast('Гласовата услуга не се поддържа от този браузър.', 'error');
       return;
     }
 
-    // Explicitly request mic on iPhone if needed, but normally SR handles it.
-    // However, some iPhone browsers need a trigger.
     if (recognitionRef.current) {
       recognitionRef.current.onend = null;
       try { recognitionRef.current.stop(); } catch(e){}
@@ -582,7 +590,7 @@ export const App = () => {
         } catch(e) {}
     };
     fetchGlobalConfig();
-    loadLocalStorageData(); // Load local data immediately on mount
+    loadLocalStorageData(); 
   }, []);
 
   useEffect(() => {
@@ -728,7 +736,7 @@ export const App = () => {
                         customBackground: profileData.custom_background || prev.customBackground, 
                         referralCode, 
                         proExpiresAt, 
-                        xp, // Explicitly prioritize DB columns
+                        xp, 
                         level 
                     }));
 
@@ -805,7 +813,33 @@ export const App = () => {
       return () => { supabase.removeChannel(channel); };
   }, []);
 
-  // Sync sessions
+  // --- Real-time Session Sync ---
+  useEffect(() => {
+    if (!session?.user?.id || !isRemoteDataLoaded) return;
+
+    const syncChannel = supabase
+        .channel(`user-sync-${session.user.id}`)
+        .on('postgres_changes', {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'user_data',
+            filter: `user_id=eq.${session.user.id}`
+        }, (payload) => {
+            const newData = payload.new.data;
+            if (newData && !isStreamingRef.current) {
+                // Determine if we should apply the incoming update
+                // We compare lengths or logic to decide, but generally "Pull" remote state
+                isIncomingUpdateRef.current = true;
+                setSessions(newData);
+                setSyncStatus('synced');
+            }
+        })
+        .subscribe();
+
+    return () => { supabase.removeChannel(syncChannel); };
+  }, [session?.user?.id, isRemoteDataLoaded]);
+
+  // Sync sessions push
   useEffect(() => {
       if (!session?.user?.id || !isRemoteDataLoaded || isStreamingRef.current) return;
       if (isIncomingUpdateRef.current) { isIncomingUpdateRef.current = false; return; }
@@ -819,17 +853,14 @@ export const App = () => {
       return () => { if(syncSessionsTimer.current) clearTimeout(syncSessionsTimer.current); };
   }, [sessions, session?.user?.id, isRemoteDataLoaded]);
 
-  // SYNC SETTINGS EFFECT (Fixed Persistence)
+  // SYNC SETTINGS EFFECT
   useEffect(() => {
-      // Local save always
       saveSettingsToStorage('uchebnik_settings', userSettings);
-      
       if (!isRemoteDataLoaded || !session?.user?.id) return;
 
       if (syncSettingsTimer.current) clearTimeout(syncSettingsTimer.current);
       syncSettingsTimer.current = setTimeout(async () => {
           const { xp, level, themeColor, customBackground, ...sanitizedSettings } = userSettings;
-          // Explicitly update XP and Level columns in DB
           await supabase.from('profiles').update({ 
               settings: { ...sanitizedSettings, plan: userPlan } as any, 
               xp, 
@@ -1018,18 +1049,16 @@ export const App = () => {
     grantXP(XP_PER_MESSAGE + (currentImgs.length * XP_PER_IMAGE));
     if (currentImgs.length > 0) incrementImageCount(currentImgs.length);
     
-    // Fix: Unified quest progress update
+    // Unified quest progress update
     setUserSettings(prev => {
         let currentQuests = prev.dailyQuests?.quests || [];
         let totalXPToGrant = 0;
         
-        // Update for message
         const msgQuestUpdate = updateQuestProgress(currentQuests, 'message', currentSubject.id);
         totalXPToGrant += msgQuestUpdate.xpGained;
         msgQuestUpdate.completedQuests.forEach(q => addToast(`Мисия завършена: ${q}! 🎉`, 'success'));
         currentQuests = msgQuestUpdate.updatedQuests;
 
-        // Update for images
         if (currentImgs.length > 0) {
             const imgQuestUpdate = updateQuestProgress(currentQuests, 'image', currentSubject.id, currentImgs.length);
             totalXPToGrant += imgQuestUpdate.xpGained;
