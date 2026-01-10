@@ -26,6 +26,8 @@ import { t } from './utils/translations';
 import { calculateLevel, XP_PER_MESSAGE, XP_PER_IMAGE, XP_PER_VOICE, calculateXPWithBoost, generateDailyQuests, updateQuestProgress } from './utils/gamification';
 
 // Components
+// Add missing DynamicIcon import to fix "Cannot find name 'DynamicIcon'"
+import { DynamicIcon } from './components/ui/DynamicIcon';
 import { Lightbox } from './components/ui/Lightbox';
 import { ConfirmModal } from './components/ui/ConfirmModal';
 import { AdminPanel } from './components/admin/AdminPanel';
@@ -568,7 +570,8 @@ export const App = () => {
           const loadedSettings = await getSettingsFromStorage(settingsKey);
           if (loadedSettings) {
               setUserSettings(prev => ({ ...prev, ...loadedSettings }));
-              if (loadedSettings.plan) setUserPlan(loadedSettings.plan);
+              // Fix Error: Property 'plan' does not exist on type 'UserSettings'. Cast to any.
+              if ((loadedSettings as any).plan) setUserPlan((loadedSettings as any).plan);
           }
       } catch (err) { console.error("Init Error", err); }
 
@@ -651,7 +654,8 @@ export const App = () => {
                 const level = profileData.level || 1;
                 
                 if (profileData.settings) {
-                    const { plan, stats, ...restSettings } = profileData.settings;
+                    // Fix Error: Property 'plan' does not exist on type 'UserSettings'. Cast settings to any.
+                    const { plan, stats, ...restSettings } = (profileData.settings as any);
                     
                     let currentName = restSettings.userName || '';
                     const isNameGeneric = !currentName || currentName === 'Потребител' || currentName === 'Анонимен' || currentName === 'Anonymous' || currentName === 'Scholar';
@@ -781,8 +785,10 @@ export const App = () => {
       syncSettingsTimer.current = setTimeout(async () => {
           // Fix: Destructure only valid properties from userSettings; 'plan' is a separate state variable.
           const { xp, level, themeColor, customBackground, ...sanitizedSettings } = userSettings;
+          // Fix Error in file App.tsx: Property 'plan' does not exist on type 'UserSettings'.
+          // Cast the settings object to any to allow the plan property in the DB JSON column.
           await supabase.from('profiles').update({ 
-              settings: { ...sanitizedSettings, plan: userPlan }, 
+              settings: { ...sanitizedSettings, plan: userPlan } as any, 
               xp, 
               level,
               theme_color: themeColor,
@@ -1035,7 +1041,7 @@ export const App = () => {
       if (!checkImageLimit(files.length)) return;
       setIsImageProcessing(true);
       const processed = await Promise.all(Array.from(files).map(file => resizeImage(file as File, 800, 0.6)));
-      setSelectedImages(prev => [...prev, ...processed]);
+          setSelectedImages(prev => [...prev, ...processed]);
       setIsImageProcessing(false);
     }
   };
@@ -1113,6 +1119,7 @@ export const App = () => {
 
                 <div className="max-w-3xl w-full text-center space-y-6 animate-in fade-in zoom-in-95 duration-500">
                     <div className={`w-24 h-24 mx-auto rounded-[32px] ${activeSubject.color} flex items-center justify-center text-white shadow-2xl shadow-indigo-500/30 rotate-3`}>
+                        {/* Fix "Cannot find name 'DynamicIcon'" by adding import and ensuring availability in this scope */}
                         <DynamicIcon name={activeSubject.icon} className="w-12 h-12" />
                     </div>
                     <h1 className="text-4xl md:text-5xl font-black text-zinc-900 dark:text-white font-display tracking-tight">{t(`subject_${activeSubject.id}`, userSettings.language)}</h1>
@@ -1234,3 +1241,7 @@ export const App = () => {
     </div>
   );
 };
+
+const ArrowRight = ({ size, className }: { size: number, className?: string }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+);

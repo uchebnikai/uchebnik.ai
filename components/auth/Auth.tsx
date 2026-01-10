@@ -1,6 +1,7 @@
+
 import React, { useState } from 'react';
 import { supabase } from '../../supabaseClient';
-import { Loader2, Mail, Lock, User, ArrowRight, Sparkles, CheckCircle, AlertCircle, Calendar, Eye, EyeOff, ArrowLeft, GraduationCap, Brain, Zap, ShieldCheck, X } from 'lucide-react';
+import { Loader2, Mail, Lock, User, ArrowRight, Sparkles, CheckCircle, AlertCircle, Calendar, Eye, EyeOff, ArrowLeft, GraduationCap, Brain, Zap, ShieldCheck, X, Check, Shield, Info } from 'lucide-react';
 import { INPUT_AUTH } from '../../styles/ui';
 import { FADE_IN, SLIDE_UP, ZOOM_IN } from '../../animations/transitions';
 
@@ -19,6 +20,8 @@ export const Auth = ({ isModal = false, onSuccess, initialMode = 'login', onNavi
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isExiting, setIsExiting] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [showTermsError, setShowTermsError] = useState(false);
   
   // Registration Fields
   const [firstName, setFirstName] = useState('');
@@ -40,6 +43,14 @@ export const Auth = ({ isModal = false, onSuccess, initialMode = 'login', onNavi
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Check for terms acceptance first
+    if (!termsAccepted && (mode === 'login' || mode === 'register')) {
+        setShowTermsError(true);
+        setError('За да продължите, моля приемете Общите условия и Политиката за поверителност чрез отметката по-долу.');
+        return;
+    }
+    
     setLoading(true);
     setError(null);
     setSuccessMsg(null);
@@ -97,6 +108,11 @@ export const Auth = ({ isModal = false, onSuccess, initialMode = 'login', onNavi
   };
 
   const handleGoogleLogin = async () => {
+    if (!termsAccepted) {
+        setShowTermsError(true);
+        setError('Трябва да приемете Общите условия преди да влезете с Google.');
+        return;
+    }
     setLoading(true);
     setError(null);
     try {
@@ -129,6 +145,16 @@ export const Auth = ({ isModal = false, onSuccess, initialMode = 'login', onNavi
     if (onNavigate) {
       onNavigate(view);
       handleClose();
+    }
+  };
+
+  const handleToggleTerms = () => {
+    const newState = !termsAccepted;
+    setTermsAccepted(newState);
+    if (newState) {
+        setShowTermsError(false);
+        // If the current error was about terms, clear it
+        if (error?.includes('приемете Общите условия')) setError(null);
     }
   };
 
@@ -217,8 +243,8 @@ export const Auth = ({ isModal = false, onSuccess, initialMode = 'login', onNavi
                     </div>
 
                     {error && (
-                        <div className="mb-6 p-4 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm flex gap-3 items-start animate-in slide-in-from-top-2">
-                            <AlertCircle size={18} className="shrink-0 mt-0.5" />
+                        <div className={`mb-6 p-4 rounded-2xl border text-sm flex gap-3 items-start animate-in slide-in-from-top-2 ${error.includes('приемете Общите условия') ? 'bg-amber-500/10 border-amber-500/20 text-amber-400' : 'bg-red-500/10 border-red-500/20 text-red-400'}`}>
+                            {error.includes('приемете Общите условия') ? <Info size={18} className="shrink-0 mt-0.5" /> : <AlertCircle size={18} className="shrink-0 mt-0.5" />}
                             <span>{error}</span>
                         </div>
                     )}
@@ -232,22 +258,22 @@ export const Auth = ({ isModal = false, onSuccess, initialMode = 'login', onNavi
 
                     <form onSubmit={handleAuth} className="space-y-4">
                         {(mode === 'login' || mode === 'register') && (
-                            <button
-                                onClick={handleGoogleLogin}
-                                type="button"
-                                disabled={loading}
-                                className="w-full py-3.5 rounded-xl bg-white hover:bg-zinc-100 text-zinc-950 font-bold shadow-xl transition-all active:scale-95 disabled:opacity-70 flex items-center justify-center gap-3 group"
-                            >
-                                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/1200px-Google_%22G%22_logo.svg.png" className="w-5 h-5" alt="Google" />
-                                <span>Продължи с Google</span>
-                            </button>
-                        )}
-
-                        {(mode === 'login' || mode === 'register') && (
-                            <div className="flex items-center gap-4 py-4">
-                                <div className="h-px bg-white/5 flex-1" />
-                                <span className="text-[10px] text-zinc-600 font-black uppercase tracking-widest">или с имейл</span>
-                                <div className="h-px bg-white/5 flex-1" />
+                            <div className="space-y-4">
+                                <button
+                                    onClick={handleGoogleLogin}
+                                    type="button"
+                                    disabled={loading}
+                                    className={`w-full py-3.5 rounded-xl bg-white hover:bg-zinc-100 text-zinc-950 font-bold shadow-xl transition-all active:scale-95 disabled:opacity-30 disabled:grayscale flex items-center justify-center gap-3 group ${showTermsError && !termsAccepted ? 'ring-2 ring-amber-500/50' : ''}`}
+                                >
+                                    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/1200px-Google_%22G%22_logo.svg.png" className="w-5 h-5" alt="Google" />
+                                    <span>Продължи с Google</span>
+                                </button>
+                                
+                                <div className="flex items-center gap-4 py-2">
+                                    <div className="h-px bg-white/5 flex-1" />
+                                    <span className="text-[10px] text-zinc-600 font-black uppercase tracking-widest">или с имейл</span>
+                                    <div className="h-px bg-white/5 flex-1" />
+                                </div>
                             </div>
                         )}
 
@@ -353,30 +379,51 @@ export const Auth = ({ isModal = false, onSuccess, initialMode = 'login', onNavi
                             </div>
                         )}
 
-                        <button
-                            type="submit"
-                            disabled={loading}
-                            className="w-full py-4 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-black shadow-2xl shadow-indigo-500/20 transition-all active:scale-95 disabled:opacity-70 disabled:scale-100 flex items-center justify-center gap-3 mt-4 group"
-                        >
-                            {loading ? <Loader2 size={22} className="animate-spin" /> : (
-                                <>
-                                    <span>
-                                        {mode === 'login' && 'Вход'}
-                                        {mode === 'register' && 'Регистрация'}
-                                        {mode === 'forgot_password' && 'Изпрати линк'}
-                                        {mode === 'update_password' && 'Обнови парола'}
-                                    </span>
-                                    <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
-                                </>
-                            )}
-                        </button>
+                        {(mode === 'login' || mode === 'register') && (
+                            <div 
+                                className={`flex items-start gap-3 p-3.5 rounded-2xl border transition-all duration-300 cursor-pointer group ${termsAccepted ? 'bg-indigo-500/5 border-indigo-500/20' : showTermsError ? 'bg-amber-500/5 border-amber-500/40 animate-shake shadow-[0_0_15px_rgba(245,158,11,0.1)]' : 'bg-white/5 border-white/5 hover:bg-white/10'}`}
+                                onClick={handleToggleTerms}
+                            >
+                                <div className={`mt-0.5 w-5 h-5 rounded-md border flex items-center justify-center shrink-0 transition-all ${termsAccepted ? 'bg-indigo-600 border-indigo-600 shadow-[0_0_10px_rgba(79,70,229,0.4)]' : showTermsError ? 'border-amber-500 bg-amber-500/10' : 'bg-black/20 border-white/20 group-hover:border-white/40'}`}>
+                                    {termsAccepted && <Check size={12} className="text-white" strokeWidth={4} />}
+                                </div>
+                                <div className="space-y-1">
+                                    <p className={`text-[11px] leading-relaxed select-none transition-colors ${showTermsError && !termsAccepted ? 'text-amber-400 font-bold' : 'text-zinc-400'}`}>
+                                        Потвърждавам, че приемам <button type="button" onClick={(e) => { e.stopPropagation(); handleFooterNavigate('terms'); }} className="text-indigo-400 hover:text-indigo-300 font-bold underline decoration-dotted transition-colors">Условията за ползване</button> и <button type="button" onClick={(e) => { e.stopPropagation(); handleFooterNavigate('privacy'); }} className="text-indigo-400 hover:text-indigo-300 font-bold underline decoration-dotted transition-colors">Политиката за поверителност</button> на Uchebnik AI.
+                                    </p>
+                                    {showTermsError && !termsAccepted && (
+                                        <p className="text-[9px] text-amber-500 font-black uppercase tracking-widest animate-pulse">Задължително за продължаване</p>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="relative pt-4">
+                            <button
+                                type="submit"
+                                disabled={loading}
+                                className={`w-full py-4 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-black shadow-2xl shadow-indigo-500/20 transition-all active:scale-95 disabled:opacity-30 disabled:grayscale disabled:scale-100 flex items-center justify-center gap-3 group ${showTermsError && !termsAccepted ? 'border border-amber-500/50' : ''}`}
+                            >
+                                {loading ? <Loader2 size={22} className="animate-spin" /> : (
+                                    <>
+                                        <span>
+                                            {mode === 'login' && 'Вход'}
+                                            {mode === 'register' && 'Регистрация'}
+                                            {mode === 'forgot_password' && 'Изпрати линк'}
+                                            {mode === 'update_password' && 'Обнови парола'}
+                                        </span>
+                                        <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
+                                    </>
+                                )}
+                            </button>
+                        </div>
                     </form>
 
                     <div className="mt-8 pt-8 border-t border-white/5 text-center">
                         {mode === 'login' && (
                             <p className="text-zinc-500 text-sm font-medium">
                                 Нямате акаунт?{' '}
-                                <button onClick={() => setMode('register')} className="text-white font-bold hover:underline">
+                                <button onClick={() => { setMode('register'); setShowTermsError(false); setError(null); }} className="text-white font-bold hover:underline">
                                     Създайте нов безплатно
                                 </button>
                             </p>
@@ -384,13 +431,13 @@ export const Auth = ({ isModal = false, onSuccess, initialMode = 'login', onNavi
                         {mode === 'register' && (
                             <p className="text-zinc-500 text-sm font-medium">
                                 Вече имате акаунт?{' '}
-                                <button onClick={() => setMode('login')} className="text-white font-bold hover:underline">
+                                <button onClick={() => { setMode('login'); setShowTermsError(false); setError(null); }} className="text-white font-bold hover:underline">
                                     Влезте тук
                                 </button>
                             </p>
                         )}
                         {(mode === 'forgot_password' || mode === 'update_password') && (
-                            <button onClick={() => setMode('login')} className="text-zinc-400 font-bold hover:text-white text-sm transition-colors flex items-center gap-2 mx-auto">
+                            <button onClick={() => { setMode('login'); setError(null); }} className="text-zinc-400 font-bold hover:text-white text-sm transition-colors flex items-center gap-2 mx-auto">
                                 <ArrowLeft size={16}/> Назад към вход
                             </button>
                         )}
@@ -410,6 +457,16 @@ export const Auth = ({ isModal = false, onSuccess, initialMode = 'login', onNavi
                 </div>
             </div>
         </div>
+        <style>{`
+            @keyframes shake {
+                0%, 100% { transform: translateX(0); }
+                25% { transform: translateX(-4px); }
+                75% { transform: translateX(4px); }
+            }
+            .animate-shake {
+                animation: shake 0.2s ease-in-out 0s 2;
+            }
+        `}</style>
     </div>
   );
 };
