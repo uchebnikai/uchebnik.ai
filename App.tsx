@@ -67,7 +67,7 @@ const DEMO_RESPONSE = `Анализирах въпроса ти и подгот�
 Uchebnik AI винаги предоставя пълно обяснение на логиката за решението, за да можеш не просто да получиш отговора, но и да научиш материала. Влез в профила си, за да отключиш останалата част от това решение и да получиш достъп до всички функции абсолютно безплатно!`;
 
 const CHRISTMAS_BG = "https://i.ibb.co/LGxCVX4/Gemini-Generated-Image-gt5habgt5habgt5h.png";
-const NEW_YEAR_BG = "https://i.ibb.co/v6z961CH/Gemini-Generated-Image-z0ishvz0ishvz0is.png";
+const NEW_YEAR_BG = "https://iili.io/fkvjTrX.png";
 
 function decode(base64: string) {
   const binaryString = atob(base64);
