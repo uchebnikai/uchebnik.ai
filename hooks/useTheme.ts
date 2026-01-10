@@ -6,16 +6,15 @@ import { hexToRgb, rgbToHsl, hslToRgb, adjustBrightness } from '../styles/theme'
 export const useTheme = (userSettings: UserSettings) => {
   useEffect(() => {
     // 1. Determine the effective theme color
-    // - If 2026 mode is on, force Deep Blue (#1e3a8a)
-    // - If Christmas mode is on, force Red (#ef4444)
-    // - Otherwise, use user setting, or fallback to default Indigo (#6366f1) if missing
-    let themeColor;
-    if (userSettings.year2026Mode) {
-        themeColor = '#1e3a8a';
-    } else if (userSettings.christmasMode) {
+    // - Christmas Mode: Force Red
+    // - New Year Mode: Force Deep Blue
+    // - Otherwise: User setting or Indigo fallback
+    let themeColor = userSettings.themeColor || '#6366f1';
+    
+    if (userSettings.christmasMode) {
         themeColor = '#ef4444';
-    } else {
-        themeColor = userSettings.themeColor || '#6366f1';
+    } else if (userSettings.newYearMode) {
+        themeColor = '#1e40af'; // Deep Navy Blue
     }
 
     // 2. Apply colors to CSS Variables
@@ -23,7 +22,6 @@ export const useTheme = (userSettings: UserSettings) => {
       const rgb = hexToRgb(themeColor);
       const root = document.documentElement;
       
-      // Update primary palette variables (Shades & Tints)
       root.style.setProperty('--primary-50', adjustBrightness(rgb, 90));
       root.style.setProperty('--primary-100', adjustBrightness(rgb, 80));
       root.style.setProperty('--primary-200', adjustBrightness(rgb, 60));
@@ -38,17 +36,16 @@ export const useTheme = (userSettings: UserSettings) => {
 
       // 3. Calculate Accent Color
       let accentRgb;
-      if (userSettings.year2026Mode) {
-          accentRgb = hexToRgb('#06b6d4'); // Cyan for New Year
-      } else if (userSettings.christmasMode) {
-          accentRgb = hexToRgb('#10b981'); // Green for Christmas
+      if (userSettings.christmasMode) {
+          accentRgb = hexToRgb('#10b981'); // Christmas Green
+      } else if (userSettings.newYearMode) {
+          accentRgb = hexToRgb('#eab308'); // Gold
       } else {
           const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
-          const accentHsl = { ...hsl, h: (hsl.h + 35) % 360 }; 
+          const accentHsl = { ...hsl, h: (hsl.h + 35) % 360 };
           accentRgb = hslToRgb(accentHsl.h, accentHsl.s, accentHsl.l);
       }
 
-      // Update accent palette variables
       root.style.setProperty('--accent-50', adjustBrightness(accentRgb, 90));
       root.style.setProperty('--accent-100', adjustBrightness(accentRgb, 80));
       root.style.setProperty('--accent-200', adjustBrightness(accentRgb, 60));
@@ -62,8 +59,8 @@ export const useTheme = (userSettings: UserSettings) => {
       root.style.setProperty('--accent-950', adjustBrightness(accentRgb, -50));
     }
 
-    // 4. Handle Body Classes for Backgrounds & Special Modes
-    if (userSettings.customBackground || userSettings.christmasMode || userSettings.year2026Mode) {
+    // 4. Handle Body Classes
+    if (userSettings.customBackground || userSettings.christmasMode || userSettings.newYearMode) {
       document.body.classList.add('custom-bg-active');
     } else {
       document.body.classList.remove('custom-bg-active');
@@ -71,15 +68,13 @@ export const useTheme = (userSettings: UserSettings) => {
     
     if (userSettings.christmasMode) {
         document.body.classList.add('christmas-mode');
-    } else {
+        document.body.classList.remove('new-year-mode');
+    } else if (userSettings.newYearMode) {
+        document.body.classList.add('new-year-mode');
         document.body.classList.remove('christmas-mode');
-    }
-
-    if (userSettings.year2026Mode) {
-        document.body.classList.add('year-2026-mode');
     } else {
-        document.body.classList.remove('year-2026-mode');
+        document.body.classList.remove('christmas-mode', 'new-year-mode');
     }
 
-  }, [userSettings.themeColor, userSettings.customBackground, userSettings.christmasMode, userSettings.year2026Mode]);
+  }, [userSettings.themeColor, userSettings.customBackground, userSettings.christmasMode, userSettings.newYearMode]);
 };

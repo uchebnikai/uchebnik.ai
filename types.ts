@@ -275,7 +275,7 @@ export interface UserSettings {
   enterToSend: boolean;
   fontFamily: FontFamily;
   christmasMode?: boolean; 
-  year2026Mode?: boolean; 
+  newYearMode?: boolean;
   preferredVoice: string; 
   referralCode?: string; 
   proExpiresAt?: string; 

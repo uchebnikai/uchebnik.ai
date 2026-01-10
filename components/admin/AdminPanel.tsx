@@ -177,12 +177,14 @@ export const AdminPanel = ({
         }
     }, [showAdminPanel, activeTab]);
 
+    // Fetch Heatmap Data when range changes
     useEffect(() => {
         if (showAdminPanel && activeTab === 'dashboard') {
             fetchSubjectStats();
         }
     }, [heatmapRange, showAdminPanel, activeTab]);
 
+    // Fetch User Chat History when a user is selected
     useEffect(() => {
         if (selectedUser) {
             fetchUserChatHistory(selectedUser.id);
@@ -270,7 +272,7 @@ export const AdminPanel = ({
         }
     };
 
-    const handleUpdateGlobalConfig = async (key: string, val: any) => {
+    const handleToggleGlobalOption = async (key: string, val: boolean) => {
         const newConfig = { ...globalConfig, [key]: val };
         setGlobalConfig(newConfig);
         try {
@@ -320,6 +322,8 @@ export const AdminPanel = ({
                         }
 
                         const avatarUrl = u.avatar_url || settings?.avatar || '';
+                        
+                        // Robust naming fallback
                         let displayName = settings?.userName;
                         const isNameGeneric = !displayName || displayName === 'Потребител' || displayName === 'Анонимен' || displayName === 'Anonymous' || displayName === 'Scholar';
                         
@@ -411,10 +415,30 @@ export const AdminPanel = ({
                         }
                     }
                 } catch(e) {}
+
+                try {
+                    const dbLogStr = localStorage.getItem('sys_monitor_db');
+                    if (dbLogStr) {
+                        const dbLog = JSON.parse(dbLogStr);
+                        setSystemHealth(prev => {
+                            const dbItem = prev.find(s => s.name.includes('Основна БД'));
+                            if (dbItem && dbItem.lastCheck === 0) {
+                                return prev.map(s => {
+                                    if(s.name.includes('Основна БД') || s.name.includes('Съхранение')) {
+                                        const normalizedStatus = dbLog.status === 'outage' ? 'down' : dbLog.status;
+                                        return { ...s, status: normalizedStatus, latency: dbLog.latency, lastCheck: dbLog.timestamp };
+                                    }
+                                    return s;
+                                });
+                            }
+                            return prev;
+                        });
+                    }
+                } catch(e) {}
             }
 
         } catch (e) {
-            console.error("Admin fetchData error", e);
+            console.error("Admin Fetch Error:", e);
         } finally {
             setLoadingData(false);
         }
@@ -650,7 +674,7 @@ export const AdminPanel = ({
                         </div>
                         <div>
                             <h2 className="font-bold text-white text-sm">Админ Панел</h2>
-                            <div className="text-[10px] text-zinc-500 font-mono">v4.0 • Live</div>
+                            <div className="text-[10px] text-zinc-500 font-mono">v4.1 • 2026 Ready</div>
                         </div>
                     </div>
                     <button onClick={() => setShowAdminPanel(false)} className="md:hidden p-2 text-zinc-400 hover:text-white transition-colors">
@@ -731,6 +755,7 @@ export const AdminPanel = ({
                  {/* Content Scroll Area */}
                  <div className="flex-1 overflow-y-auto custom-scrollbar p-4 md:p-8 pb-20 md:pb-8">
                      
+                     {/* USER DETAIL VIEW */}
                      {selectedUser && editForm ? (
                          <div className="max-w-5xl mx-auto space-y-6 animate-in slide-in-from-right fade-in duration-300">
                              <div className="bg-white/5 border border-white/10 rounded-3xl p-6 md:p-8 relative overflow-hidden group">
@@ -870,14 +895,17 @@ export const AdminPanel = ({
                          </div>
                      ) : (
                          <>
+                             {/* DASHBOARD TAB */}
                              {activeTab === 'dashboard' && (
                                  <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
+                                     
+                                     {/* Global Configuration Section */}
                                      <div className="bg-white/5 border border-indigo-500/20 rounded-3xl p-6 relative overflow-hidden group">
                                          <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/5 to-transparent pointer-events-none"/>
                                          <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-3">
                                              <Settings size={20} className="text-indigo-400"/> Глобални настройки на сайта
                                          </h3>
-                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                              <div className="flex items-center justify-between p-4 bg-black/40 rounded-2xl border border-white/5 transition-all hover:border-indigo-500/30">
                                                  <div className="flex items-center gap-3">
                                                      <div className="p-2.5 bg-red-500/10 rounded-xl text-red-400">
@@ -889,7 +917,7 @@ export const AdminPanel = ({
                                                      </div>
                                                  </div>
                                                  <button 
-                                                    onClick={() => handleUpdateGlobalConfig('showChristmasButton', !globalConfig.showChristmasButton)}
+                                                    onClick={() => handleToggleGlobalOption('showChristmasButton', !globalConfig.showChristmasButton)}
                                                     className={`w-12 h-6 rounded-full transition-all flex items-center px-1 ${globalConfig.showChristmasButton ? 'bg-indigo-600' : 'bg-zinc-700'}`}
                                                  >
                                                      <div className={`w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-300 ${globalConfig.showChristmasButton ? 'translate-x-6' : 'translate-x-0'}`} />
@@ -902,15 +930,15 @@ export const AdminPanel = ({
                                                          <PartyPopper size={20}/>
                                                      </div>
                                                      <div>
-                                                         <div className="text-sm font-bold text-white">Бутон Нова Година 2026</div>
-                                                         <div className="text-[10px] text-zinc-500 uppercase tracking-widest">Видим за всички</div>
+                                                         <div className="text-sm font-bold text-white">Бутон 2026</div>
+                                                         <div className="text-[10px] text-zinc-500 uppercase tracking-widest">Новогодишен режим</div>
                                                      </div>
                                                  </div>
                                                  <button 
-                                                    onClick={() => handleUpdateGlobalConfig('showYear2026Button', !globalConfig.showYear2026Button)}
-                                                    className={`w-12 h-6 rounded-full transition-all flex items-center px-1 ${globalConfig.showYear2026Button ? 'bg-indigo-600' : 'bg-zinc-700'}`}
+                                                    onClick={() => handleToggleGlobalOption('showNewYearButton', !globalConfig.showNewYearButton)}
+                                                    className={`w-12 h-6 rounded-full transition-all flex items-center px-1 ${globalConfig.showNewYearButton ? 'bg-indigo-600' : 'bg-zinc-700'}`}
                                                  >
-                                                     <div className={`w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-300 ${globalConfig.showYear2026Button ? 'translate-x-6' : 'translate-x-0'}`} />
+                                                     <div className={`w-4 h-4 rounded-full bg-white shadow-sm transition-transform duration-300 ${globalConfig.showNewYearButton ? 'translate-x-6' : 'translate-x-0'}`} />
                                                  </button>
                                              </div>
                                          </div>
@@ -946,9 +974,68 @@ export const AdminPanel = ({
                                              <Brain size={100} className="absolute -bottom-4 -right-4 text-purple-500/10 group-hover:scale-110 transition-transform"/>
                                          </div>
                                      </div>
+
+                                     <div className="bg-white/5 border border-white/5 rounded-3xl p-6 md:p-8 relative overflow-hidden">
+                                         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                                             <h3 className="text-xl font-bold text-white flex items-center gap-2"><PieChartIcon size={20} className="text-indigo-500"/> Популярност на Предметите</h3>
+                                             <div className="flex bg-black/30 p-1 rounded-xl border border-white/5 overflow-x-auto max-w-full">
+                                                 {[1, 7, 30, 36500].map(d => (
+                                                     <button key={d} onClick={() => setHeatmapRange(d)} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${heatmapRange === d ? 'bg-indigo-600 text-white' : 'text-zinc-500 hover:text-white'}`}>
+                                                         {d === 1 ? 'Днес' : d === 36500 ? 'Всичко' : `${d} Дни`}
+                                                     </button>
+                                                 ))}
+                                             </div>
+                                         </div>
+                                         
+                                         {subjectStats.length === 0 ? (
+                                             <div className="flex flex-col items-center justify-center py-12 text-zinc-500">
+                                                 {isHeatmapLoading ? <RefreshCw className="animate-spin mb-2"/> : <PieChartIcon size={32} className="mb-2 opacity-50"/>}
+                                                 <p>{isHeatmapLoading ? "Зареждане на данни..." : "Няма налични данни."}</p>
+                                             </div>
+                                         ) : (
+                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                                                 <div className="h-64">
+                                                     <ResponsiveContainer width="100%" height="100%">
+                                                         <PieChart>
+                                                             <Pie 
+                                                                 data={subjectStats} 
+                                                                 dataKey="count" 
+                                                                 nameKey="name" 
+                                                                 cx="50%" 
+                                                                 cy="50%" 
+                                                                 outerRadius={80} 
+                                                                 innerRadius={50} 
+                                                                 stroke="none"
+                                                             >
+                                                                 {subjectStats.map((entry, index) => (
+                                                                     <Cell key={`cell-${index}`} fill={getHexColor(entry.color)} />
+                                                                 ))}
+                                                             </Pie>
+                                                             <Tooltip contentStyle={{backgroundColor: '#111', borderColor: '#333', borderRadius: '8px'}} itemStyle={{color: '#fff'}} formatter={(val: number) => [`${val} сесии`, 'Използване']}/>
+                                                         </PieChart>
+                                                     </ResponsiveContainer>
+                                                 </div>
+                                                 <div className="grid grid-cols-1 gap-2 max-h-64 overflow-y-auto custom-scrollbar">
+                                                     {subjectStats.map((stat, i) => (
+                                                         <div key={i} className="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/5 hover:bg-white/10 transition-colors">
+                                                             <div className="flex items-center gap-3">
+                                                                 <div className="w-3 h-3 rounded-full" style={{backgroundColor: getHexColor(stat.color)}}></div>
+                                                                 <span className="text-sm font-bold text-zinc-200">{stat.name}</span>
+                                                             </div>
+                                                             <div className="text-right">
+                                                                 <div className="text-sm font-mono font-bold text-white">{stat.percentage.toFixed(1)}%</div>
+                                                                 <div className="text-xs text-zinc-500">{stat.count} сесии</div>
+                                                             </div>
+                                                         </div>
+                                                     ))}
+                                                 </div>
+                                             </div>
+                                         )}
+                                     </div>
                                  </div>
                              )}
 
+                             {/* REPORTS TAB */}
                              {activeTab === 'reports' && (
                                  <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
                                      <div className="bg-white/5 border border-white/5 rounded-3xl p-6 md:p-8">
@@ -960,6 +1047,7 @@ export const AdminPanel = ({
                                                  Последни 50 доклада
                                              </div>
                                          </div>
+
                                          <div className="space-y-4">
                                              {dbReports.length === 0 ? (
                                                  <div className="text-center py-12 text-zinc-500">
@@ -982,15 +1070,25 @@ export const AdminPanel = ({
                                                                  <h4 className="font-bold text-white text-lg mt-1">{report.title}</h4>
                                                              </div>
                                                              <div className="flex gap-2">
-                                                                 <button onClick={() => handleResolveReport(report.id, report.status)} className={`p-2 rounded-lg transition-colors ${report.status === 'resolved' ? 'text-zinc-500 hover:text-amber-400 bg-white/5' : 'text-green-400 hover:bg-green-500/20 bg-green-500/10'}`}>
+                                                                 <button 
+                                                                     onClick={() => handleResolveReport(report.id, report.status)}
+                                                                     className={`p-2 rounded-lg transition-colors ${report.status === 'resolved' ? 'text-zinc-500 hover:text-amber-400 bg-white/5' : 'text-green-400 hover:bg-green-500/20 bg-green-500/10'}`}
+                                                                     title={report.status === 'resolved' ? 'Маркирай като отворен' : 'Маркирай като решен'}
+                                                                 >
                                                                      {report.status === 'resolved' ? <RotateCcw size={16}/> : <CheckSquare size={16}/>}
                                                                  </button>
-                                                                 <button onClick={() => handleDeleteReport(report.id)} className="p-2 text-red-400 hover:bg-red-500/20 bg-red-500/10 rounded-lg transition-colors">
+                                                                 <button 
+                                                                     onClick={() => handleDeleteReport(report.id)}
+                                                                     className="p-2 text-red-400 hover:bg-red-500/20 bg-red-500/10 rounded-lg transition-colors"
+                                                                     title="Изтрий"
+                                                                 >
                                                                      <Trash2 size={16}/>
                                                                  </button>
                                                              </div>
                                                          </div>
+                                                         
                                                          <p className="text-sm text-zinc-300 mb-4 whitespace-pre-wrap">{report.description}</p>
+                                                         
                                                          {report.images && Array.isArray(report.images) && report.images.length > 0 && (
                                                              <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
                                                                  {report.images.map((img, i) => (
@@ -998,10 +1096,12 @@ export const AdminPanel = ({
                                                                  ))}
                                                              </div>
                                                          )}
+
                                                          <div className="flex items-center gap-2 pt-3 border-t border-white/5 text-xs text-zinc-500">
                                                              <Users size={12}/>
                                                              <span className="font-bold text-zinc-400">{report.user_name}</span>
                                                              <span className="font-mono">({report.user_email})</span>
+                                                             <span className="font-mono ml-auto opacity-50">ID: {report.user_id.substring(0, 8)}</span>
                                                          </div>
                                                      </div>
                                                  ))
@@ -1011,6 +1111,7 @@ export const AdminPanel = ({
                                  </div>
                              )}
 
+                             {/* BROADCAST TAB */}
                              {activeTab === 'broadcast' && (
                                  <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
                                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -1022,12 +1123,43 @@ export const AdminPanel = ({
                                                      <p className="text-zinc-500 text-sm">Изпратете съобщение в реално време до всички активни потребители.</p>
                                                  </div>
                                              </div>
+
                                              <div className="space-y-6">
                                                  <div className="space-y-2">
                                                      <label className="text-xs font-bold text-zinc-500 uppercase ml-1">Съобщение</label>
-                                                     <textarea value={broadcastMsg} onChange={(e) => setBroadcastMsg(e.target.value)} className="w-full bg-black/30 border border-white/10 rounded-2xl p-4 text-white outline-none focus:border-indigo-500 transition-all min-h-[120px] resize-none"/>
+                                                     <textarea 
+                                                         value={broadcastMsg}
+                                                         onChange={(e) => setBroadcastMsg(e.target.value)}
+                                                         placeholder="Внимание: Планирана поддръжка..."
+                                                         className="w-full bg-black/30 border border-white/10 rounded-2xl p-4 text-white outline-none focus:border-indigo-500 transition-all min-h-[120px] resize-none"
+                                                     />
                                                  </div>
-                                                 <Button onClick={handleSendBroadcast} disabled={isBroadcasting || !broadcastMsg.trim()} className={`w-full py-4 text-base shadow-xl ${broadcastType === 'modal' ? 'bg-red-600 hover:bg-red-500 shadow-red-500/20' : 'bg-indigo-600 hover:bg-indigo-50 shadow-indigo-500/20'}`}>
+
+                                                 <div className="space-y-2">
+                                                     <label className="text-xs font-bold text-zinc-500 uppercase ml-1">Тип</label>
+                                                     <div className="grid grid-cols-2 gap-3">
+                                                         <button 
+                                                             onClick={() => setBroadcastType('toast')}
+                                                             className={`p-4 rounded-xl border flex flex-col items-center gap-2 transition-all ${broadcastType === 'toast' ? 'bg-indigo-500/10 border-indigo-500 text-indigo-400' : 'bg-black/20 border-white/5 text-zinc-500 hover:bg-white/5'}`}
+                                                         >
+                                                             <AlertCircle size={24}/>
+                                                             <span className="font-bold text-sm">Toast (Известие)</span>
+                                                         </button>
+                                                         <button 
+                                                             onClick={() => setBroadcastType('modal')}
+                                                             className={`p-4 rounded-xl border flex flex-col items-center gap-2 transition-all ${broadcastType === 'modal' ? 'bg-red-500/10 border-red-500 text-red-400' : 'bg-black/20 border-white/5 text-zinc-500 hover:bg-white/5'}`}
+                                                         >
+                                                             <PieChartIcon size={24}/>
+                                                             <span className="font-bold text-sm">Modal (Прозорец)</span>
+                                                         </button>
+                                                     </div>
+                                                 </div>
+
+                                                 <Button 
+                                                     onClick={handleSendBroadcast} 
+                                                     disabled={isBroadcasting || !broadcastMsg.trim()}
+                                                     className={`w-full py-4 text-base shadow-xl ${broadcastType === 'modal' ? 'bg-red-600 hover:bg-red-500 shadow-red-500/20' : 'bg-indigo-600 hover:bg-indigo-50 shadow-indigo-500/20'}`}
+                                                 >
                                                      {isBroadcasting ? 'Изпращане...' : 'Изпрати Съобщение'}
                                                  </Button>
                                              </div>
@@ -1036,25 +1168,44 @@ export const AdminPanel = ({
                                  </div>
                              )}
 
+                             {/* SYSTEM STATUS TAB */}
                              {activeTab === 'status' && (
                                  <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
                                      <div className="bg-white/5 border border-white/5 rounded-3xl p-6 md:p-8 mb-8">
-                                         <h2 className="text-3xl font-black text-white mb-6">Системно Здраве</h2>
+                                         <div className="flex flex-col md:flex-row justify-between md:items-end mb-6 gap-2">
+                                             <h2 className="text-3xl font-black text-white">Системно Здраве</h2>
+                                             <div className="flex items-center gap-2 text-sm font-bold text-emerald-400">
+                                                 <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"/>
+                                                 Мониторинг на живо
+                                             </div>
+                                         </div>
+                                         
                                          <div className="grid gap-4">
                                              {systemHealth.map((service, idx) => (
-                                                 <div key={idx} className="bg-black/30 border border-white/5 rounded-2xl p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                                 <div key={idx} className="bg-black/30 border border-white/5 rounded-2xl p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 group hover:border-white/10 transition-colors">
                                                      <div className="flex items-center gap-4">
-                                                         <div className={`p-3 rounded-xl ${service.status === 'operational' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'}`}>
+                                                         <div className={`p-3 rounded-xl ${service.status === 'operational' ? 'bg-emerald-500/10 text-emerald-500' : service.status === 'unknown' ? 'bg-zinc-700/20 text-zinc-500' : 'bg-red-500/10 text-red-500'}`}>
                                                              <service.icon size={24} />
                                                          </div>
                                                          <div>
                                                              <h4 className="font-bold text-white text-lg">{service.name}</h4>
                                                              <div className="flex items-center gap-3 text-xs font-mono text-zinc-500 mt-1">
-                                                                 <span className={service.status === 'operational' ? 'text-emerald-400' : 'text-red-400'}>{service.status}</span>
+                                                                 <span className={service.status === 'operational' ? 'text-emerald-400' : service.status === 'unknown' ? 'text-zinc-500' : 'text-red-400'}>
+                                                                     {service.status === 'operational' ? 'Оперативен' : service.status === 'unknown' ? 'Няма активност' : 'Влошен'}
+                                                                 </span>
                                                                  <span>•</span>
-                                                                 <span>{service.latency}ms</span>
+                                                                 <span>{service.status === 'unknown' ? 'N/A' : `${service.latency}ms`}</span>
+                                                                 {service.lastCheck > 0 && (
+                                                                     <>
+                                                                         <span>•</span>
+                                                                         <span>{new Date(service.lastCheck).toLocaleTimeString()}</span>
+                                                                     </>
+                                                                 )}
                                                              </div>
                                                          </div>
+                                                     </div>
+                                                     <div className="flex-1 md:text-right">
+                                                         <UptimeBar status={service.status} />
                                                      </div>
                                                  </div>
                                              ))}
@@ -1063,22 +1214,68 @@ export const AdminPanel = ({
                                  </div>
                              )}
 
+                             {/* FINANCE TAB */}
+                             {activeTab === 'finance' && (
+                                 <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
+                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                         <div className="p-8 bg-emerald-500/5 border border-emerald-500/20 rounded-[32px] relative overflow-hidden">
+                                             <div className="flex justify-between items-start mb-6">
+                                                 <div className="flex items-center gap-3 text-emerald-400"><div className="p-2 bg-emerald-500/20 rounded-xl"><DollarSign size={24}/></div><span className="font-bold uppercase tracking-wider text-xs">Месечен Приход</span></div>
+                                                 <div className="px-3 py-1 bg-emerald-500/10 rounded-full text-emerald-300 text-xs font-bold">MRR</div>
+                                             </div>
+                                             <div className="text-5xl font-black text-white tracking-tight mb-2">€{revenue.toFixed(2)}</div>
+                                             <p className="text-sm text-zinc-500">Базирано на активни Stripe абонаменти.</p>
+                                         </div>
+                                         <div className="p-8 bg-red-500/5 border border-red-500/20 rounded-[32px] relative overflow-hidden">
+                                             <div className="flex justify-between items-start mb-6">
+                                                 <div className="flex items-center gap-3 text-red-400"><div className="p-2 bg-red-500/20 rounded-xl"><Cloud size={24}/></div><span className="font-bold uppercase tracking-wider text-xs">AI Разходи</span></div>
+                                                 <div className="flex items-center gap-2">{showEstimate && (<button onClick={() => { setCalibrationValue(costCorrection.toString()); setIsCalibrating(true); }} className="text-[10px] text-red-300 hover:text-white underline decoration-dotted font-bold">Корекция?</button>)}</div>
+                                             </div>
+                                             <div className="text-5xl font-black text-white tracking-tight mb-2">${displayCost.toFixed(4)}</div>
+                                             <p className="text-sm text-zinc-500 flex items-center gap-2">{showEstimate ? 'Изчислено от токени + корекция.' : 'Директно от Google Cloud.'}</p>
+                                             {isCalibrating && (<div className="absolute inset-0 bg-black/90 backdrop-blur-md flex flex-col items-center justify-center p-4 z-20 animate-in fade-in"><div className="text-center w-full"><h4 className="text-white font-bold mb-2 text-sm">Калибриране на разходи</h4><div className="flex gap-2 justify-center"><input type="number" value={calibrationValue} onChange={e => setCalibrationValue(e.target.value)} className="w-24 bg-white/10 border border-white/20 rounded-lg px-2 py-1 text-white text-center outline-none focus:border-indigo-500" placeholder="0.34" autoFocus /><button onClick={handleSaveCalibration} className="bg-green-600 hover:bg-green-500 text-white rounded-lg p-2"><Check size={16}/></button><button onClick={() => setIsCalibrating(false)} className="bg-gray-600 hover:bg-gray-500 text-white rounded-lg p-2"><X size={16}/></button></div></div></div>)}
+                                         </div>
+                                     </div>
+                                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                         <div className="md:col-span-1 p-6 rounded-3xl border border-white/10 bg-white/5 flex flex-col justify-center items-center text-center"><div className="text-sm font-bold text-zinc-400 uppercase tracking-wider mb-2">Нетна Печалба</div><div className={`text-4xl font-black ${netProfit >= 0 ? 'text-indigo-400' : 'text-orange-500'}`}>€{netProfit.toFixed(2)}</div><div className="text-xs text-zinc-500 mt-1">Марж: {profitMargin.toFixed(1)}%</div></div>
+                                         <div className="md:col-span-2 p-6 rounded-3xl border border-white/10 bg-white/5"><h4 className="text-sm font-bold text-white uppercase tracking-wider mb-4 flex items-center gap-2"><CreditCard size={16}/> Счетоводна Книга</h4><div className="space-y-3 text-sm font-mono"><div className="flex justify-between items-center text-zinc-400"><span>Вход ({totalInputTokens.toLocaleString()})</span><span>${liveInputCost.toFixed(4)}</span></div><div className="flex justify-between items-center text-zinc-400"><span>Изход ({totalOutputTokens.toLocaleString()})</span><span>${liveOutputCost.toFixed(4)}</span></div>{costCorrection > 0 && (<div className="flex justify-between items-center text-amber-500"><span>Историческа Корекция</span><span>${costCorrection.toFixed(4)}</span></div>)}<div className="flex justify-between items-center text-indigo-400 border-t border-white/5 pt-2"><span>Stripe Такси (Прибл. 3%)</span><span>€{estimatedFees.toFixed(2)}</span></div></div></div>
+                                     </div>
+                                 </div>
+                             )}
+
+                             {/* USERS TAB */}
                              {activeTab === 'users' && (
                                  <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
                                      <div className="flex flex-col md:flex-row gap-4">
-                                         <div className="flex-1 relative group"><Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500"/><input type="text" placeholder="Търсене..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="w-full bg-white/5 border border-white/5 rounded-2xl pl-12 pr-4 py-4 text-white outline-none focus:border-indigo-500/50 transition-all"/></div>
+                                         <div className="flex-1 relative group"><Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-white transition-colors" size={18}/><input type="text" placeholder="Търсене по име, имейл или ID..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="w-full bg-white/5 border border-white/5 rounded-2xl pl-12 pr-4 py-4 text-white placeholder-zinc-600 outline-none focus:border-indigo-500/50 focus:bg-black/40 transition-all shadow-lg"/></div>
+                                         <div className="flex gap-2">
+                                             <button onClick={() => setSortUsers(sortUsers === 'recent' ? 'usage' : 'recent')} className="px-4 bg-white/5 hover:bg-white/10 border border-white/5 rounded-2xl text-zinc-400 hover:text-white font-medium text-sm transition-all min-w-[100px]">{sortUsers === 'recent' ? 'Последни' : 'Топ Употреба'}</button>
+                                             <div className="relative"><button onClick={() => setShowFilterMenu(!showFilterMenu)} className={`h-full px-6 flex items-center gap-2 bg-white/5 border border-white/5 rounded-2xl text-sm font-bold transition-all hover:bg-white/10 ${filterPlan !== 'all' ? 'text-indigo-400 bg-indigo-500/10 border-indigo-500/30' : 'text-zinc-400'}`}><Filter size={18}/> {filterPlan === 'all' ? 'Всички' : filterPlan}</button>{showFilterMenu && (<div className="absolute top-full right-0 mt-2 w-32 bg-[#111] border border-white/10 rounded-xl shadow-2xl overflow-hidden z-50 animate-in slide-in-from-top-2 fade-in">{['all', 'free', 'plus', 'pro'].map(p => (<button key={p} onClick={() => { setFilterPlan(p as any); setShowFilterMenu(false); }} className={`w-full text-left px-4 py-3 text-xs font-bold uppercase hover:bg-white/5 ${filterPlan === p ? 'text-indigo-400' : 'text-zinc-500'}`}>{p}</button>))}</div>)}</div>
+                                         </div>
                                      </div>
                                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                         {dbUsers.filter(u => !searchQuery || u.name.toLowerCase().includes(searchQuery.toLowerCase())).map((user) => (
-                                             <div key={user.id} onClick={() => handleUserClick(user)} className="bg-white/5 border border-white/5 rounded-3xl p-5 hover:border-indigo-500/30 transition-all cursor-pointer">
-                                                 <div className="flex items-start gap-4">
-                                                     <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-lg font-bold text-white" style={{ backgroundColor: user.theme }}>{user.avatar ? <img src={user.avatar} className="w-full h-full object-cover rounded-2xl"/> : user.name.charAt(0).toUpperCase()}</div>
+                                         {dbUsers.filter(u => !searchQuery || u.name.toLowerCase().includes(searchQuery.toLowerCase()) || (u.email && u.email.toLowerCase().includes(searchQuery.toLowerCase())) || u.id.includes(searchQuery)).filter(u => filterPlan === 'all' || u.plan === filterPlan).sort((a, b) => sortUsers === 'recent' ? new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime() : (b.totalInput + b.totalOutput) - (a.totalInput + a.totalOutput)).map((user) => (
+                                             <div key={user.id} onClick={() => handleUserClick(user)} className="group bg-white/5 border border-white/5 rounded-3xl p-5 hover:border-indigo-500/30 hover:bg-white/10 transition-all cursor-pointer shadow-md hover:shadow-xl relative overflow-hidden">
+                                                 <div className="flex items-start gap-4 relative z-10">
+                                                     <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-lg font-bold text-white shadow-lg overflow-hidden relative" style={{ backgroundColor: user.theme }}>
+                                                         {user.avatar ? <img src={user.avatar} className="w-full h-full object-cover"/> : user.name.charAt(0).toUpperCase()}
+                                                         {isUserOnline(user.updatedAt) && <div className="absolute top-1 right-1 w-2.5 h-2.5 bg-green-500 rounded-full border border-black animate-pulse"></div>}
+                                                     </div>
                                                      <div className="flex-1 min-w-0">
                                                          <div className="flex justify-between items-start">
-                                                             <h4 className="font-bold text-white truncate">{user.name}</h4>
-                                                             <span className="text-[10px] font-black px-2 py-0.5 rounded uppercase bg-zinc-700 text-zinc-400">{user.plan}</span>
+                                                             <h4 className="font-bold text-white truncate pr-2">{user.name}</h4>
+                                                             <span className={`text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-wider ${user.plan === 'pro' ? 'bg-amber-500 text-black' : user.plan === 'plus' ? 'bg-indigo-500 text-white' : 'bg-zinc-700 text-zinc-400'}`}>{user.plan}</span>
                                                          </div>
-                                                         <div className="text-xs text-zinc-500 font-mono mt-1">Lvl {user.level}</div>
+                                                         <div className="flex items-center gap-3 text-xs text-zinc-500 font-mono mt-1">
+                                                             <span>ID: {user.id.substring(0,6)}</span>
+                                                             <span className="w-1 h-1 rounded-full bg-zinc-700"/>
+                                                             <span className="text-amber-500 font-bold">Lvl {user.level}</span>
+                                                         </div>
+                                                         <div className="mt-3 pt-3 border-t border-white/5 flex gap-4 text-[10px] font-mono text-zinc-400">
+                                                             <div>In: {(user.totalInput/1000).toFixed(1)}k</div>
+                                                             <div>Out: {(user.totalOutput/1000).toFixed(1)}k</div>
+                                                             <div className="ml-auto text-zinc-600">{new Date(user.updatedAt).toLocaleDateString('bg-BG')}</div>
+                                                         </div>
                                                      </div>
                                                  </div>
                                              </div>
@@ -1087,13 +1284,15 @@ export const AdminPanel = ({
                                  </div>
                              )}
 
+                             {/* KEYS TAB */}
                              {activeTab === 'keys' && (
                                  <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
-                                     <div className="bg-white/5 border border-white/5 rounded-3xl p-8 flex flex-col md:flex-row items-center gap-8 shadow-xl">
-                                         <div className="flex-1"><h4 className="text-2xl font-black text-white mb-2">Генератор на Ключове</h4></div>
-                                         <Button onClick={handleGenerate} icon={Plus} className="px-8 py-4 bg-white text-black hover:bg-zinc-200 shadow-xl rounded-2xl">Генерирай</Button>
+                                     <div className="bg-white/5 border border-white/5 rounded-3xl p-8 flex flex-col md:flex-row items-center gap-8 shadow-xl relative overflow-hidden">
+                                         <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-purple-500/5 pointer-events-none"/><div className="flex-1 relative z-10"><h4 className="text-2xl font-black text-white mb-2">Генератор на Ключове</h4><p className="text-zinc-400 text-sm max-w-md">Създайте промоционални ключове за достъп.</p></div>
+                                         <div className="flex items-center gap-4 bg-black/30 p-2 rounded-2xl border border-white/5 backdrop-blur-md relative z-10"><button onClick={() => setSelectedPlan('plus')} className={`px-6 py-3 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${selectedPlan === 'plus' ? 'bg-indigo-600 text-white shadow-lg' : 'text-zinc-500 hover:text-white'}`}><Zap size={16}/> Plus</button><button onClick={() => setSelectedPlan('pro')} className={`px-6 py-3 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${selectedPlan === 'pro' ? 'bg-amber-600 text-white shadow-lg' : 'text-zinc-500 hover:text-white'}`}><Crown size={16}/> Pro</button></div>
+                                         <Button onClick={handleGenerate} icon={Plus} className="px-8 py-4 bg-white text-black hover:bg-zinc-200 shadow-xl rounded-2xl text-base relative z-10">Генерирай</Button>
                                      </div>
-                                     <div className="bg-white/5 border border-white/5 rounded-3xl overflow-hidden"><table className="w-full text-left"><thead><tr className="border-b border-white/5 bg-black/20"><th className="p-5 text-xs font-bold text-zinc-500 uppercase">Код</th><th className="p-5 text-xs font-bold text-zinc-500 uppercase">Статус</th></tr></thead><tbody className="divide-y divide-white/5">{dbKeys.map((k, i) => (<tr key={i} className="hover:bg-white/5"><td className="p-5 font-mono text-sm text-indigo-400">{k.code}</td><td className="p-5"><div className={`flex items-center gap-2 text-xs font-bold ${k.isUsed ? 'text-red-400' : 'text-emerald-400'}`}>{k.isUsed ? 'Използван' : 'Активен'}</div></td></tr>))}</tbody></table></div>
+                                     <div className="bg-white/5 border border-white/5 rounded-3xl overflow-hidden shadow-lg"><div className="overflow-x-auto"><table className="w-full text-left"><thead><tr className="border-b border-white/5 bg-black/20"><th className="p-5 text-xs font-bold text-zinc-500 uppercase tracking-wider">Код</th><th className="p-5 text-xs font-bold text-zinc-500 uppercase tracking-wider">План</th><th className="p-5 text-xs font-bold text-zinc-500 uppercase tracking-wider">Създаден</th><th className="p-5 text-xs font-bold text-zinc-500 uppercase tracking-wider">Статус</th><th className="p-5 text-right text-xs font-bold text-zinc-500 uppercase tracking-wider">Действие</th></tr></thead><tbody className="divide-y divide-white/5">{dbKeys.map((k, i) => (<tr key={i} className="hover:bg-white/5 transition-colors group"><td className="p-5 font-mono text-sm text-indigo-400 font-medium">{k.code}</td><td className="p-5"><span className={`text-[10px] font-black px-2 py-1 rounded-md uppercase ${k.plan === 'pro' ? 'bg-amber-500/10 text-amber-400' : 'bg-indigo-500/10 text-indigo-400'}`}>{k.plan || 'pro'}</span></td><td className="p-5 text-xs text-zinc-500">{k.createdAt ? new Date(k.createdAt).toLocaleDateString('bg-BG') : '-'}</td><td className="p-5"><div className={`flex items-center gap-2 text-xs font-bold ${k.isUsed ? 'text-red-400' : 'text-emerald-400'}`}><div className={`w-2 h-2 rounded-full ${k.isUsed ? 'bg-red-500' : 'bg-emerald-500'}`}/>{k.isUsed ? 'Изполвван' : 'Активен'}</div></td><td className="p-5 text-right flex justify-end gap-2"><button onClick={() => {navigator.clipboard.writeText(k.code); addToast('Копирано', 'success')}} className="p-2 hover:bg-white/10 rounded-lg text-zinc-500 hover:text-white transition-colors"><Copy size={16}/></button>{k.id && <button onClick={() => handleDeleteKey(k.id!)} className="p-2 hover:bg-red-500/20 rounded-lg text-zinc-500 hover:text-red-400 transition-colors"><Trash2 size={16}/></button>}</td></tr>))}</tbody></table></div></div>
                                  </div>
                              )}
                          </>
@@ -1101,6 +1300,7 @@ export const AdminPanel = ({
                  </div>
              </div>
              
+             {/* Lightbox for Reports */}
              <Lightbox image={zoomedImage} onClose={() => setZoomedImage(null)} />
            </div>
         </div>

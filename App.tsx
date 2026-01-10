@@ -67,7 +67,7 @@ const DEMO_RESPONSE = `Анализирах въпроса ти и подгот�
 Uchebnik AI винаги предоставя пълно обяснение на логиката за решението, за да можеш не просто да получиш отговора, но и да научиш материала. Влез в профила си, за да отключиш останалата част от това решение и да получиш достъп до всички функции абсолютно безплатно!`;
 
 const CHRISTMAS_BG = "https://i.ibb.co/LGxCVX4/Gemini-Generated-Image-gt5habgt5habgt5h.png";
-const NEW_YEAR_2026_BG = "https://i.ibb.co/v6z961CH/Gemini-Generated-Image-z0ishvz0ishvz0is.png";
+const NEW_YEAR_BG = "https://i.ibb.co/v6z961CH/Gemini-Generated-Image-z0ishvz0ishvz0is.png";
 
 function decode(base64: string) {
   const binaryString = atob(base64);
@@ -163,7 +163,7 @@ export const App = () => {
 
   const [broadcastModal, setBroadcastModal] = useState<{isOpen: boolean, message: string} | null>(null);
 
-  const [globalConfig, setGlobalConfig] = useState({ showChristmasButton: true, showYear2026Button: true });
+  const [globalConfig, setGlobalConfig] = useState({ showChristmasButton: true, showNewYearButton: true });
 
   const [isVoiceCallActive, setIsVoiceCallActive] = useState(false);
   const [voiceCallStatus, setVoiceCallStatus] = useState<'idle' | 'listening' | 'processing' | 'speaking'>('idle');
@@ -189,7 +189,7 @@ export const App = () => {
     fontFamily: 'inter',
     customPersona: '',
     christmasMode: false,
-    year2026Mode: false,
+    newYearMode: false,
     preferredVoice: DEFAULT_VOICE,
     referralCode: '',
     proExpiresAt: '',
@@ -987,14 +987,12 @@ export const App = () => {
 
   if (authLoading) return <div className="h-screen w-full flex items-center justify-center bg-background"><Loader2 className="animate-spin text-indigo-500" size={40} /></div>;
 
-  const effectiveBg = userSettings.year2026Mode 
-    ? NEW_YEAR_2026_BG 
-    : (userSettings.christmasMode && !userSettings.customBackground ? CHRISTMAS_BG : userSettings.customBackground);
+  const effectiveBg = userSettings.christmasMode && !userSettings.customBackground ? CHRISTMAS_BG : (userSettings.newYearMode && !userSettings.customBackground ? NEW_YEAR_BG : userSettings.customBackground);
 
   return (
     <div className="flex h-full w-full relative overflow-hidden text-foreground">
-      <Snowfall active={!!userSettings.christmasMode && !userSettings.year2026Mode} />
-      <Fireworks active={!!userSettings.year2026Mode} />
+      <Snowfall active={!!userSettings.christmasMode} />
+      <Fireworks active={!!userSettings.newYearMode} />
       {!effectiveBg && <div className={`fixed inset-0 z-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-indigo-200/20 via-background to-background dark:from-indigo-900/20 dark:via-background dark:to-background pointer-events-none transition-all duration-1000 ${focusMode ? 'brightness-[0.4]' : ''}`} />}
       {effectiveBg && <div className={`fixed inset-0 z-0 bg-cover bg-center pointer-events-none transition-all duration-1000 ${focusMode ? 'brightness-[0.2] grayscale' : ''}`} style={getBackgroundImageStyle(effectiveBg)} />}
       
