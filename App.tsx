@@ -9,7 +9,8 @@ import { supabase } from './supabaseClient';
 import { Auth } from './components/auth/Auth';
 import { AuthSuccess } from './components/auth/AuthSuccess';
 import { 
-  Loader2, X, AlertCircle, CheckCircle, Info, Minimize, Database, Radio, Gift, Minimize2
+  Loader2, X, AlertCircle, CheckCircle, Info, Minimize, Database, Radio, Gift, Minimize2, 
+  ArrowLeft, Zap, Book, FileJson
 } from 'lucide-react';
 
 import { Session as SupabaseSession } from '@supabase/supabase-js';
@@ -61,7 +62,7 @@ const DEMO_RESPONSE = `Анализирах въпроса ти и подгот�
 2. **Избор на методология**: Въз основа на темата, най-подходящият подход е прилагането на логически изводи и доказани научни принципи.
 3. **Дефинирано разписване**: Тут започваме със самото решаване, като преминаваме през всеки междинен етап за максимална яснота...
 
-Uchebnik AI винаги предоставя пълно обяснение на логиката зад решението, за да можеш не просто да получиш отговора, но и да научиш материала. Влез в профила си, за да отключиш останалата част от това решение и да получиш достъп до всички функции абсолютно безплатно!`;
+Uchebnik AI винаги предоставя пълно обяснение на логиката за решението, за да можеш не просто да получиш отговора, но и да научиш материала. Влез в профила си, за да отключиш останалата част от това решение и да получиш достъп до всички функции абсолютно безплатно!`;
 
 const CHRISTMAS_BG = "https://i.ibb.co/1YqHm3rw/Gemini-Generated-Image-g5c7r7g5c7r7g5c7.png";
 
@@ -565,12 +566,12 @@ export const App = () => {
           else setSessions([]);
           
           const loadedSettings = await getSettingsFromStorage(settingsKey);
-          if (loadedSettings) setUserSettings(loadedSettings);
+          if (loadedSettings) {
+              setUserSettings(prev => ({ ...prev, ...loadedSettings }));
+              if (loadedSettings.plan) setUserPlan(loadedSettings.plan);
+          }
       } catch (err) { console.error("Init Error", err); }
 
-      setUserPlan('free');
-      localStorage.setItem('uchebnik_user_plan', 'free');
-      
       const today = new Date().toDateString();
       const lastUsageDate = localStorage.getItem('uchebnik_image_date');
       if (lastUsageDate !== today) {
@@ -637,8 +638,6 @@ export const App = () => {
         try {
             const { data: profileData, error: profileError } = await supabase.from('profiles').select('*').eq('id', userId).single();
             
-            // HEARTBEAT: If a session exists but the profile record is missing, 
-            // the account was likely deleted from the database. Trigger forced logout.
             if (profileError && profileError.code === 'PGRST116') {
                 console.warn("Account deleted from database. Forced logout.");
                 await handleLogout();
@@ -654,14 +653,12 @@ export const App = () => {
                 if (profileData.settings) {
                     const { plan, stats, ...restSettings } = profileData.settings;
                     
-                    // Normalization check for Google Users showing as generic names
                     let currentName = restSettings.userName || '';
                     const isNameGeneric = !currentName || currentName === 'Потребител' || currentName === 'Анонимен' || currentName === 'Anonymous' || currentName === 'Scholar';
                     
                     if (isNameGeneric && authMetadata) {
                         currentName = authMetadata.full_name || authMetadata.name || `${authMetadata.given_name || ''} ${authMetadata.family_name || ''}`.trim();
                         
-                        // Self-heal: Update database immediately if we have a better name from provider
                         if (currentName && !isNameGeneric) {
                             console.log("Synchronizing metadata from OAuth provider...");
                             await supabase.from('profiles').update({
@@ -674,12 +671,12 @@ export const App = () => {
                         ...prev, 
                         ...restSettings, 
                         userName: currentName || prev.userName,
-                        themeColor: profileData.theme_color, 
-                        customBackground: profileData.custom_background, 
+                        themeColor: profileData.theme_color || prev.themeColor, 
+                        customBackground: profileData.custom_background || prev.customBackground, 
                         referralCode, 
                         proExpiresAt, 
-                        xp, 
-                        level 
+                        xp: xp || prev.xp, 
+                        level: level || prev.level 
                     }));
 
                     if (plan) setUserPlan(plan);
@@ -714,7 +711,6 @@ export const App = () => {
             setShowAuthModal(false);
             const meta = supabaseSession.user.user_metadata;
             
-            // Enhanced Google Metadata Extraction
             const firstName = meta.given_name || meta.first_name || '';
             const lastName = meta.family_name || meta.last_name || '';
             const fullName = meta.full_name || meta.name || `${firstName} ${lastName}`.trim();
@@ -730,7 +726,6 @@ export const App = () => {
                 currentPassword: '' 
             });
 
-            // Local priority for UI responsiveness
             setUserSettings(prev => {
                 const isCurrentNameGeneric = !prev.userName || prev.userName === 'Потребител' || prev.userName === 'Анонимен' || prev.userName === 'Anonymous' || prev.userName === 'Scholar';
                 return isCurrentNameGeneric && fullName ? { ...prev, userName: fullName } : prev;
@@ -759,6 +754,7 @@ export const App = () => {
       return () => { supabase.removeChannel(channel); };
   }, []);
 
+  // Sync sessions effect
   useEffect(() => {
       if (!session?.user?.id || missingDbTables || !isRemoteDataLoaded || isStreamingRef.current) return;
       if (isIncomingUpdateRef.current) { isIncomingUpdateRef.current = false; return; }
@@ -771,6 +767,32 @@ export const App = () => {
       }, 2000);
       return () => { if(syncSessionsTimer.current) clearTimeout(syncSessionsTimer.current); };
   }, [sessions, session?.user?.id, isRemoteDataLoaded]);
+
+  // SYNC SETTINGS EFFECT (Fixed: Handles Level/XP persistence)
+  useEffect(() => {
+      if (!isRemoteDataLoaded) return;
+      
+      // Always save to indexedDB locally
+      saveSettingsToStorage('uchebnik_settings', userSettings);
+      
+      if (!session?.user?.id) return;
+
+      if (syncSettingsTimer.current) clearTimeout(syncSettingsTimer.current);
+      syncSettingsTimer.current = setTimeout(async () => {
+          // Fix: Destructure only valid properties from userSettings; 'plan' is a separate state variable.
+          const { xp, level, themeColor, customBackground, ...sanitizedSettings } = userSettings;
+          await supabase.from('profiles').update({ 
+              settings: { ...sanitizedSettings, plan: userPlan }, 
+              xp, 
+              level,
+              theme_color: themeColor,
+              custom_background: customBackground,
+              updated_at: new Date().toISOString() 
+          }).eq('id', session.user.id);
+      }, 3000);
+
+      return () => { if(syncSettingsTimer.current) clearTimeout(syncSettingsTimer.current); };
+  }, [userSettings, userPlan, session?.user?.id, isRemoteDataLoaded]);
 
   useEffect(() => {
     const handleResize = () => { if (window.innerWidth >= 1024) setSidebarOpen(true); else setSidebarOpen(false); };
@@ -812,7 +834,7 @@ export const App = () => {
 
   const createNewSession = (subjectId: SubjectId, role?: UserRole, initialMode?: AppMode) => {
     const sub = SUBJECTS.find(s => s.id === subjectId);
-    const sTitle = `...`; // Placeholder, will be updated after first message
+    const sTitle = `...`; 
     const newSession: Session = {
       id: crypto.randomUUID(), subjectId, title: sTitle, createdAt: Date.now(), lastModified: Date.now(), preview: '...', messages: [], role: role || userRole || undefined, mode: initialMode
     };
@@ -894,7 +916,6 @@ export const App = () => {
 
     if (!currentSubject || !currentSessionId) return;
 
-    // 67 easter egg - COMBINED INTO ONE MESSAGE
     if (textToSend === "67" && currentImgs.length === 0) {
         const newUserMsg: Message = { id: Date.now().toString(), role: 'user', text: textToSend, timestamp: Date.now() };
         const combinedModelMsg: Message = { 
@@ -906,12 +927,7 @@ export const App = () => {
             videoUrl: "https://d3o8hbmq1ueggw.cloudfront.net/6wi1m%2Ffile%2Fb59147eb78369895be2e537a5c9d1a32_e3f57f90735ecbd0b463a700d621de4c.mp4?response-content-disposition=inline%3Bfilename%3D%22b59147eb78369895be2e537a5c9d1a32_e3f57f90735ecbd0b463a700d621de4c.mp4%22%3B&response-content-type=video%2Fmp4&Expires=1768006059&Signature=DVEaJVHqVJmNevr9hLwVwaxjqiJMExXJ8J1bhuvWKWDV0Wk-96o2km6nZ97VGr3ktoj2--c95pztarLsCSBT5F9yg7RmWD5BqHsBmE-R~9BBXAFvvY1QTBvcx9Utb8~PHEFVomNT9bcvoC5GbjE91v5aGoA~Ibjg1BcLDRx5rMWMahEsRLW5KC16CI2gw6fJPUpHUWZc-irJoTY0lTsJf~ffw0o8Igpa9ToYfkZvyKs-CKLyAjDgRzypmyCqZoXptIgGlViTJ1xY0BTvf5FWXegvnKNrhxsHQ~zKc7YmWH4XzsVMGebCflN1D7u76imhAC85RYnHIHtbki6OPYJepQ__&Key-Pair-Id=APKAJT5WQLLEOADKLHBQ" 
         };
 
-        setSessions(prev => prev.map(s => s.id === currentSessionId ? { 
-            ...s, 
-            messages: [...s.messages, newUserMsg, combinedModelMsg], 
-            lastModified: Date.now(), 
-            preview: "nuh uh" 
-        } : s));
+        setSessions(prev => prev.map(s => s.id === currentSessionId ? { ...s, messages: [...s.messages, newUserMsg, combinedModelMsg], lastModified: Date.now(), preview: "nuh uh" } : s));
         setInputValue('');
         setSelectedImages([]);
         return;
@@ -967,7 +983,6 @@ export const App = () => {
     const tempAiMsgId = (Date.now() + 1).toString();
     const tempAiMsg: Message = { id: tempAiMsgId, role: 'model', text: "", timestamp: Date.now(), reasoning: "", isStreaming: true };
     
-    // Update title dynamically on the first user message
     const currentSess = sessionsRef.current.find(s => s.id === currentSessionId);
     const isFirstUserMsg = currentSess && currentSess.messages.filter(m => m.role === 'user').length === 0;
 
@@ -1025,6 +1040,36 @@ export const App = () => {
     }
   };
 
+  // Fixed specialized handlers for settings upload
+  const handleBackgroundUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files[0]) {
+        try {
+            const resized = await resizeImage(files[0] as File, 1920, 0.7);
+            setUserSettings(prev => ({ ...prev, customBackground: resized }));
+            addToast('Фонът е обновен успешно.', 'success');
+        } catch (err) {
+            console.error(err);
+            addToast('Грешка при качване на фон.', 'error');
+        }
+    }
+    e.target.value = '';
+  };
+
+  const handleAvatarUploadSettings = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files[0]) {
+        try {
+            const resized = await resizeImage(files[0] as File, 400, 0.8);
+            setEditProfile(prev => ({ ...prev, avatar: resized }));
+        } catch (err) {
+            console.error(err);
+            addToast('Грешка при обработка на аватар.', 'error');
+        }
+    }
+    e.target.value = '';
+  };
+
   const handleLogout = async () => {
     await resetAppState();
     await supabase.auth.signOut();
@@ -1063,7 +1108,62 @@ export const App = () => {
         ) : !activeSubject ? (
             <WelcomeScreen homeView={homeView} userMeta={userMeta} userSettings={userSettings} handleSubjectChange={handleSubjectChange} setHomeView={setHomeView} setUserRole={setUserRole} setShowAdminAuth={setShowAdminAuth} onQuickStart={(txt, imgs) => { setPendingHomeInput({text: txt, images: imgs||[]}); handleSubjectChange(SUBJECTS[0]); }} setSidebarOpen={setSidebarOpen} setShowAuthModal={setShowAuthModal} session={session} setShowSettings={setShowSettings} />
         ) : showSubjectDashboard ? (
-            <SubjectDashboard activeSubject={activeSubject} setActiveSubject={setActiveSubject} setHomeView={setHomeView} userRole={userRole} userSettings={userSettings} handleStartMode={handleStartMode} />
+            <div className={`flex-1 overflow-y-auto custom-scrollbar p-4 md:p-8 flex flex-col items-center justify-center relative overflow-x-hidden bg-transparent`}>
+                <button onClick={() => { setActiveSubject(null); setHomeView(userRole?.includes('uni') ? 'university_select' : 'school_select'); }} className="absolute top-6 left-6 p-2 text-gray-500 hover:bg-white/20 dark:hover:bg-black/20 backdrop-blur-md rounded-full transition-colors z-20"><ArrowLeft size={24}/></button>
+
+                <div className="max-w-3xl w-full text-center space-y-6 animate-in fade-in zoom-in-95 duration-500">
+                    <div className={`w-24 h-24 mx-auto rounded-[32px] ${activeSubject.color} flex items-center justify-center text-white shadow-2xl shadow-indigo-500/30 rotate-3`}>
+                        <DynamicIcon name={activeSubject.icon} className="w-12 h-12" />
+                    </div>
+                    <h1 className="text-4xl md:text-5xl font-black text-zinc-900 dark:text-white font-display tracking-tight">{t(`subject_${activeSubject.id}`, userSettings.language)}</h1>
+                    <p className="text-xl text-gray-500 dark:text-gray-400">{(userRole === 'student' || userRole === 'uni_student') ? t('what_to_do', userSettings.language) : t('teacher_tools', userSettings.language)}</p>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
+                        {(userRole === 'student' || userRole === 'uni_student') ? (
+                            <>
+                                <button onClick={() => handleStartMode(AppMode.SOLVE)} className="group p-6 bg-white/60 dark:bg-black/40 backdrop-blur-xl border border-white/20 dark:border-white/10 rounded-3xl text-left hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl hover:shadow-2xl hover:border-indigo-500/30">
+                                    <div className="p-3 bg-indigo-100/50 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 rounded-2xl w-fit mb-4 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                                        <Zap size={24}/>
+                                    </div>
+                                    <h3 className="text-2xl font-bold mb-2">{t('mode_solve', userSettings.language)}</h3>
+                                    <p className="text-gray-500 font-medium">{t('mode_solve_desc', userSettings.language)}</p>
+                                </button>
+                                <button onClick={() => handleStartMode(AppMode.LEARN)} className="group p-6 bg-white/60 dark:bg-black/40 backdrop-blur-xl border border-white/20 dark:border-white/10 rounded-3xl text-left hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl hover:shadow-2xl hover:border-emerald-500/30">
+                                    <div className="p-3 bg-emerald-100/50 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-2xl w-fit mb-4 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+                                        <Book size={24}/>
+                                    </div>
+                                    <h3 className="text-2xl font-bold mb-2">{t('mode_learn', userSettings.language)}</h3>
+                                    <p className="text-gray-500 font-medium">{t('mode_learn_desc', userSettings.language)}</p>
+                                </button>
+                            </>
+                        ) : (
+                            <>
+                                <button onClick={() => handleStartMode(AppMode.TEACHER_TEST)} className="group p-6 bg-white/60 dark:bg-black/40 backdrop-blur-xl border border-white/20 dark:border-white/10 rounded-3xl text-left hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl hover:shadow-2xl hover:border-indigo-500/30">
+                                    <div className="p-3 bg-indigo-100/50 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 rounded-2xl w-fit mb-4 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                                        <CheckCircle size={24}/>
+                                    </div>
+                                    <h3 className="text-2xl font-bold mb-2">{t('mode_test', userSettings.language)}</h3>
+                                    <p className="text-gray-500 font-medium">{t('mode_test_desc', userSettings.language)}</p>
+                                </button>
+                                <button onClick={() => handleStartMode(AppMode.TEACHER_PLAN)} className="group p-6 bg-white/60 dark:bg-black/40 backdrop-blur-xl border border-white/20 dark:border-white/10 rounded-3xl text-left hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl hover:shadow-2xl hover:border-amber-500/30">
+                                    <div className="p-3 bg-amber-100/50 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 rounded-2xl w-fit mb-4 group-hover:bg-amber-600 group-hover:text-white transition-colors">
+                                        <FileJson size={24}/>
+                                    </div>
+                                    <h3 className="text-2xl font-bold mb-2">{t('mode_plan', userSettings.language)}</h3>
+                                    <p className="text-gray-500 font-medium">{t('mode_plan_desc', userSettings.language)}</p>
+                                </button>
+                                <button onClick={() => handleStartMode(AppMode.TEACHER_RESOURCES)} className="col-span-full group p-6 bg-white/60 dark:bg-black/40 backdrop-blur-xl border border-white/20 dark:border-white/10 rounded-3xl text-left hover:scale-[1.01] active:scale-[0.99] transition-all shadow-xl hover:shadow-2xl hover:border-pink-500/30">
+                                    <div className="p-3 bg-pink-100/50 dark:bg-pink-500/20 text-pink-600 dark:text-pink-400 rounded-2xl w-fit mb-4 group-hover:bg-pink-600 group-hover:text-white transition-colors">
+                                        <Zap size={24}/>
+                                    </div>
+                                    <h3 className="text-2xl font-bold mb-2">{t('mode_resources', userSettings.language)}</h3>
+                                    <p className="text-gray-500 font-medium">{t('mode_resources_desc', userSettings.language)}</p>
+                                </button>
+                            </>
+                        )}
+                    </div>
+                </div>
+            </div>
         ) : (
             <div className={`flex-1 flex flex-col relative h-full bg-transparent overflow-hidden w-full`}>
                 {!focusMode && <ChatHeader setSidebarOpen={setSidebarOpen} activeSubject={activeSubject} setActiveSubject={setActiveSubject} setUserSettings={setUserSettings} userRole={userRole} activeMode={activeMode} startVoiceCall={startVoiceCall} createNewSession={createNewSession} setHistoryDrawerOpen={setHistoryDrawerOpen} userSettings={userSettings} setFocusMode={setFocusMode} isGuest={!session} />}
@@ -1085,7 +1185,7 @@ export const App = () => {
       </main>
 
       <UpgradeModal showUnlockModal={showUnlockModal} setShowUnlockModal={setShowUnlockModal} targetPlan={targetPlan} setTargetPlan={setTargetPlan} unlockKeyInput={unlockKeyInput} setUnlockKeyInput={setUnlockKeyInput} handleUnlockSubmit={handleUnlockSubmit} userPlan={userPlan} userSettings={userSettings} addToast={addToast} unlockLoading={unlockLoading} />
-      <SettingsModal showSettings={showSettings} setShowSettings={setShowSettings} userMeta={userMeta} editProfile={editProfile} setEditProfile={setEditProfile} handleUpdateAccount={handleUpdateAccount} handleAvatarUpload={handleImageUpload} userSettings={userSettings} setUserSettings={setUserSettings} isPremium={userPlan!=='free'} isDarkMode={isDarkMode} setIsDarkMode={setIsDarkMode} handleBackgroundUpload={handleImageUpload} handleDeleteAllChats={handleDeleteAllChats} addToast={addToast} userPlan={userPlan} />
+      <SettingsModal showSettings={showSettings} setShowSettings={setShowSettings} userMeta={userMeta} editProfile={editProfile} setEditProfile={setEditProfile} handleUpdateAccount={handleUpdateAccount} handleAvatarUpload={handleAvatarUploadSettings} userSettings={userSettings} setUserSettings={setUserSettings} isPremium={userPlan!=='free'} isDarkMode={isDarkMode} setIsDarkMode={setIsDarkMode} handleBackgroundUpload={handleBackgroundUpload} handleDeleteAllChats={handleDeleteAllChats} addToast={addToast} userPlan={userPlan} />
       <ReferralModal isOpen={showReferralModal} onClose={() => setShowReferralModal(false)} userSettings={userSettings} addToast={addToast} />
       <LeaderboardModal isOpen={showLeaderboard} onClose={() => setShowLeaderboard(false)} currentUserId={session?.user?.id} />
       <DailyQuestsModal isOpen={showQuests} onClose={() => setShowQuests(false)} quests={userSettings.dailyQuests?.quests || []} />
