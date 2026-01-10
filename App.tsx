@@ -228,6 +228,7 @@ export const App = () => {
   // --- Refs ---
   const audioContextRef = useRef<AudioContext | null>(null);
   const liveSessionRef = useRef<any>(null);
+  const voiceStreamRef = useRef<MediaStream | null>(null);
   const nextStartTimeRef = useRef(0);
   const sourcesRef = useRef<Set<AudioBufferSourceNode>>(new Set());
   const voiceCallStartTimeRef = useRef<number>(0);
@@ -248,6 +249,9 @@ export const App = () => {
   const syncSettingsTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   const isIncomingUpdateRef = useRef(false);
+
+  const recognitionRef = useRef<any>(null);
+  const startingTextRef = useRef('');
 
   // --- Custom Hooks ---
   useTheme(userSettings);
@@ -391,9 +395,10 @@ export const App = () => {
     }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      voiceStreamRef.current = stream;
       const ai = new GoogleGenAI({ apiKey });
       const inputCtx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
-      const outputCtx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
+      const outputCtx = new (window.AudioContext || (window as any).webkitRecognition ? (window as any).AudioContext || (window as any).webkitAudioContext : window.AudioContext)({ sampleRate: 24000 });
       audioContextRef.current = outputCtx;
       const sessionPromise = ai.live.connect({
         model: LIVE_MODEL,
@@ -464,6 +469,11 @@ export const App = () => {
       liveSessionRef.current = null;
     }
     
+    if (voiceStreamRef.current) {
+      voiceStreamRef.current.getTracks().forEach(track => track.stop());
+      voiceStreamRef.current = null;
+    }
+    
     // Grant XP based on call duration to prevent abuse
     if (voiceCallStartTimeRef.current > 0) {
         const durationSeconds = (Date.now() - voiceCallStartTimeRef.current) / 1000;
@@ -472,7 +482,16 @@ export const App = () => {
             // Grant 2 XP per second, capped at XP_PER_VOICE (60)
             const earnedXP = Math.min(XP_PER_VOICE, Math.floor(durationSeconds * 2));
             grantXP(earnedXP);
-            updateQuestProgress(userSettings.dailyQuests?.quests || [], 'voice', activeSubject?.id || '');
+            
+            const questResult = updateQuestProgress(userSettings.dailyQuests?.quests || [], 'voice', activeSubject?.id || '');
+            if (questResult.xpGained > 0) {
+                grantXP(questResult.xpGained);
+                questResult.completedQuests.forEach(q => addToast(`Мисия завършена: ${q}! 🎉`, 'success'));
+            }
+            setUserSettings(prev => ({
+                ...prev,
+                dailyQuests: prev.dailyQuests ? { ...prev.dailyQuests, quests: questResult.updatedQuests } : prev.dailyQuests
+            }));
         }
         voiceCallStartTimeRef.current = 0;
     }
@@ -481,6 +500,60 @@ export const App = () => {
     sourcesRef.current.clear();
     setIsVoiceCallActive(false);
     setVoiceCallStatus('idle');
+  };
+
+  const toggleListening = () => {
+    if (isListening) {
+      if (recognitionRef.current) {
+        recognitionRef.current.onend = null;
+        recognitionRef.current.stop();
+      }
+      setIsListening(false);
+      return;
+    }
+    
+    const SR = (window as any).SpeechRecognition || (window as any).webkitRecognition;
+    if (!SR) {
+      addToast('Гласовата услуга не се поддържа от този браузър.', 'error');
+      return;
+    }
+
+    if (recognitionRef.current) {
+      recognitionRef.current.onend = null;
+      try { recognitionRef.current.stop(); } catch(e){}
+    }
+
+    const rec = new SR();
+    rec.lang = userSettings.language === 'en' ? 'en-US' : (userSettings.language === 'bg' ? 'bg-BG' : userSettings.language); 
+    rec.interimResults = true;
+    rec.continuous = false;
+    startingTextRef.current = inputValue;
+
+    rec.onresult = (e: any) => {
+      let f = '', inter = '';
+      for(let i = e.resultIndex; i < e.results.length; ++i) {
+        e.results[i].isFinal ? f += e.results[i][0].transcript : inter += e.results[i][0].transcript;
+      }
+      setInputValue((startingTextRef.current + ' ' + f + inter).trim());
+    };
+
+    rec.onstart = () => setIsListening(true);
+    rec.onend = () => setIsListening(false);
+    rec.onerror = (e: any) => {
+      console.error("Mic error:", e.error);
+      if(e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+        addToast('Липсва достъп до микрофона.', 'error');
+      }
+      setIsListening(false);
+    };
+    
+    recognitionRef.current = rec;
+    try {
+      rec.start();
+    } catch (err) {
+      console.error("Speech recognition start error:", err);
+      setIsListening(false);
+    }
   };
 
   useEffect(() => {
@@ -932,7 +1005,29 @@ export const App = () => {
 
     grantXP(XP_PER_MESSAGE + (currentImgs.length * XP_PER_IMAGE));
     if (currentImgs.length > 0) incrementImageCount(currentImgs.length);
-    updateQuestProgress(userSettings.dailyQuests?.quests || [], 'message', currentSubject.id);
+    
+    // Fix: Correctly update quest progress in userSettings state
+    const questUpdate = updateQuestProgress(userSettings.dailyQuests?.quests || [], 'message', currentSubject.id);
+    if (questUpdate.xpGained > 0) {
+        grantXP(questUpdate.xpGained);
+        questUpdate.completedQuests.forEach(q => addToast(`Мисия завършена: ${q}! 🎉`, 'success'));
+    }
+    if (currentImgs.length > 0) {
+        const imageQuestUpdate = updateQuestProgress(questUpdate.updatedQuests, 'image', currentSubject.id, currentImgs.length);
+        if (imageQuestUpdate.xpGained > 0) {
+            grantXP(imageQuestUpdate.xpGained);
+            imageQuestUpdate.completedQuests.forEach(q => addToast(`Мисия завършена: ${q}! 🎉`, 'success'));
+        }
+        setUserSettings(prev => ({
+            ...prev,
+            dailyQuests: prev.dailyQuests ? { ...prev.dailyQuests, quests: imageQuestUpdate.updatedQuests } : prev.dailyQuests
+        }));
+    } else {
+        setUserSettings(prev => ({
+            ...prev,
+            dailyQuests: prev.dailyQuests ? { ...prev.dailyQuests, quests: questUpdate.updatedQuests } : prev.dailyQuests
+        }));
+    }
 
     try {
       if (isFirstUserMsg && textToSend.trim()) {
@@ -1039,7 +1134,7 @@ export const App = () => {
                 {!focusMode && <ChatHeader setSidebarOpen={setSidebarOpen} activeSubject={activeSubject} setActiveSubject={setActiveSubject} setUserSettings={setUserSettings} userRole={userRole} activeMode={activeMode} startVoiceCall={startVoiceCall} createNewSession={createNewSession} setHistoryDrawerOpen={setHistoryDrawerOpen} userSettings={userSettings} setFocusMode={setFocusMode} isGuest={!session} />}
                 <AdSenseContainer userPlan={userPlan} />
                 <MessageList currentMessages={currentMessages} userSettings={userSettings} setZoomedImage={setZoomedImage} handleRate={() => {}} handleReply={setReplyingTo} handleCopy={(t,id) => {navigator.clipboard.writeText(t); setCopiedId(id); setTimeout(()=>setCopiedId(null), 2000)}} copiedId={copiedId} handleShare={() => {}} loadingSubject={!!loadingSubjects[activeSubject.id]} activeSubject={activeSubject} messagesEndRef={messagesEndRef} setShowAuthModal={setShowAuthModal} isGuest={!session} />
-                <ActualChatInputArea replyingTo={replyingTo} setReplyingTo={setReplyingTo} userSettings={userSettings} setUserSettings={setUserSettings} activeMode={activeMode} fileInputRef={fileInputRef} loadingSubject={!!loadingSubjects[activeSubject.id]} handleImageUpload={handleImageUpload} toggleListening={() => {}} isListening={isListening} inputValue={inputValue} setInputValue={setInputValue} handleSend={() => handleSend()} selectedImages={selectedImages} handleRemoveImage={(idx) => setSelectedImages(prev => prev.filter((_,i)=>i!==idx))} onStopGeneration={handleStopGeneration} onImagesAdd={(imgs) => setSelectedImages(prev => [...prev, ...imgs])} />
+                <ActualChatInputArea replyingTo={replyingTo} setReplyingTo={setReplyingTo} userSettings={userSettings} setUserSettings={setUserSettings} activeMode={activeMode} fileInputRef={fileInputRef} loadingSubject={!!loadingSubjects[activeSubject.id]} handleImageUpload={handleImageUpload} toggleListening={toggleListening} isListening={isListening} inputValue={inputValue} setInputValue={setInputValue} handleSend={() => handleSend()} selectedImages={selectedImages} handleRemoveImage={(idx) => setSelectedImages(prev => prev.filter((_,i)=>i!==idx))} onStopGeneration={handleStopGeneration} onImagesAdd={(imgs) => setSelectedImages(prev => [...prev, ...imgs])} />
                 
                 {focusMode && (
                     <button 
