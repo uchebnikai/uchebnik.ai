@@ -631,7 +631,7 @@ export const App = () => {
     };
     handleAuthRedirects();
 
-    const loadRemoteUserData = async (userId: string) => {
+    const loadRemoteUserData = async (userId: string, authMetadata?: any) => {
         setIsRemoteDataLoaded(false);
         isRemoteDataLoadedRef.current = false;
         setSyncStatus('syncing');
@@ -642,9 +642,30 @@ export const App = () => {
                 const proExpiresAt = profileData.pro_expires_at;
                 const xp = profileData.xp || 0;
                 const level = profileData.level || 1;
+                
                 if (profileData.settings) {
                     const { plan, stats, ...restSettings } = profileData.settings;
-                    setUserSettings(prev => ({ ...prev, ...restSettings, themeColor: profileData.theme_color, customBackground: profileData.custom_background, referralCode, proExpiresAt, xp, level }));
+                    
+                    // Self-healing check for generic names in DB settings
+                    let dbName = restSettings.userName;
+                    const isNameGeneric = !dbName || dbName === 'Потребител' || dbName === 'Анонимен' || dbName === 'Anonymous' || dbName === 'Scholar';
+                    
+                    if (isNameGeneric && authMetadata) {
+                        dbName = authMetadata.full_name || authMetadata.name || `${authMetadata.first_name || authMetadata.given_name || ''} ${authMetadata.last_name || authMetadata.family_name || ''}`.trim();
+                    }
+
+                    setUserSettings(prev => ({ 
+                        ...prev, 
+                        ...restSettings, 
+                        userName: dbName || prev.userName,
+                        themeColor: profileData.theme_color, 
+                        customBackground: profileData.custom_background, 
+                        referralCode, 
+                        proExpiresAt, 
+                        xp, 
+                        level 
+                    }));
+
                     if (plan) setUserPlan(plan);
                     if (stats) {
                         setTotalInputTokens(stats.totalInputTokens || 0);
@@ -676,13 +697,29 @@ export const App = () => {
         if (supabaseSession) {
             setShowAuthModal(false);
             const meta = supabaseSession.user.user_metadata;
-            setUserMeta({ firstName: meta.first_name || '', lastName: meta.last_name || '', avatar: meta.avatar_url || '' });
-            setEditProfile({ firstName: meta.first_name || '', lastName: meta.last_name || '', avatar: meta.avatar_url || '', email: supabaseSession.user.email || '', password: '', currentPassword: '' });
-            setUserSettings(prev => {
-                const fullName = meta.full_name || `${meta.first_name || ''} ${meta.last_name || ''}`.trim();
-                return prev.userName ? prev : { ...prev, userName: fullName };
+            
+            // Handle metadata from different OAuth providers (Google uses given_name, family_name, name, picture)
+            const firstName = meta.first_name || meta.given_name || '';
+            const lastName = meta.last_name || meta.family_name || '';
+            const fullName = meta.full_name || meta.name || `${firstName} ${lastName}`.trim();
+            const avatar = meta.avatar_url || meta.picture || '';
+
+            setUserMeta({ firstName, lastName, avatar });
+            setEditProfile({ 
+                firstName, 
+                lastName, 
+                avatar, 
+                email: supabaseSession.user.email || '', 
+                password: '', 
+                currentPassword: '' 
             });
-            await loadRemoteUserData(supabaseSession.user.id);
+
+            setUserSettings(prev => {
+                const isCurrentNameGeneric = !prev.userName || prev.userName === 'Потребител' || prev.userName === 'Анонимен' || prev.userName === 'Anonymous' || prev.userName === 'Scholar';
+                return isCurrentNameGeneric ? { ...prev, userName: fullName } : prev;
+            });
+
+            await loadRemoteUserData(supabaseSession.user.id, meta);
         } else {
             await resetAppState();
         }
