@@ -141,7 +141,7 @@
         touch-action: none;
         user-select: none;
         transform: scale(1) !important;
-        transform-origin: bottom left !important;
+        transform-origin: bottom right !important;
       }
       #bmc-wbtn:active {
         cursor: grabbing !important;
@@ -170,8 +170,9 @@
       @media (max-width: 640px) {
         #bmc-wbtn {
           transform: scale(0.6) !important;
-          bottom: 100px !important;
-          left: 10px !important;
+          /* Removed !important from position to allow dragging */
+          bottom: 100px;
+          right: 18px;
         }
         #bmc-iframe {
           width: 100vw !important;
@@ -224,7 +225,7 @@
     <script type="module" src="/index.tsx"></script>
     
     <!-- Buy Me A Coffee Widget -->
-    <script data-name="BMC-Widget" data-cfasync="false" src="https://cdnjs.buymeacoffee.com/1.0.0/widget.prod.min.js" data-id="uchebnikai" data-description="Support me on Buy me a coffee!" data-message="Подкрепи развитието на Uchebnik AI☕" data-color="#BD5FFF" data-position="Left" data-x_margin="18" data-y_margin="110"></script>
+    <script data-name="BMC-Widget" data-cfasync="false" src="https://cdnjs.buymeacoffee.com/1.0.0/widget.prod.min.js" data-id="uchebnikai" data-description="Support me on Buy me a coffee!" data-message="Подкрепи развитието на Uchebnik AI☕" data-color="#BD5FFF" data-position="Right" data-x_margin="18" data-y_margin="110"></script>
 
     <script>
       // Enhanced Draggable logic for BMC Widget with click prevention and frame syncing
@@ -250,12 +251,17 @@
           startX = e.clientX;
           startY = e.clientY;
           
-          const style = window.getComputedStyle(el);
-          initialLeft = parseInt(style.left) || 0;
-          initialBottom = parseInt(style.bottom) || 0;
+          const rect = el.getBoundingClientRect();
+          initialLeft = rect.left;
+          initialBottom = window.innerHeight - rect.bottom;
           
           el.setPointerCapture(e.pointerId);
           el.style.transition = 'none';
+          
+          // Force layout mode to left/bottom for consistency
+          el.style.right = 'auto';
+          el.style.left = initialLeft + 'px';
+          el.style.bottom = initialBottom + 'px';
           
           // Disable transitions for the frame too while dragging
           const frame = document.getElementById('bmc-iframe') || document.getElementById('bmc-wframe');
@@ -279,23 +285,22 @@
             
             el.style.left = boundedLeft + 'px';
             el.style.bottom = boundedBottom + 'px';
-            el.style.right = 'auto';
 
-            // SYNC IFRAME POSITION ON THE LEFT SIDE OF BUTTON:
+            // SYNC IFRAME POSITION
             const frame = document.getElementById('bmc-iframe') || document.getElementById('bmc-wframe');
             if (frame) {
                 const iframeWidth = 420;
-                const buttonWidth = 64;
+                const buttonWidth = el.offsetWidth;
                 
-                // Align iframe's RIGHT edge with the button's RIGHT edge to put it "on the left side"
-                let iframeLeft = boundedLeft + buttonWidth - iframeWidth;
-                
-                // Viewport safety check
-                if (iframeLeft < 10) iframeLeft = 10;
-
-                frame.style.left = iframeLeft + 'px';
-                frame.style.bottom = (boundedBottom + 72) + 'px';
-                frame.style.right = 'auto';
+                // On mobile, iframe centers itself via CSS logic (width 100vw)
+                // On desktop, we want it roughly above/near the button.
+                if (window.innerWidth > 640) {
+                  let iframeLeft = boundedLeft + buttonWidth - iframeWidth;
+                  if (iframeLeft < 10) iframeLeft = 10;
+                  frame.style.left = iframeLeft + 'px';
+                  frame.style.bottom = (boundedBottom + 72) + 'px';
+                  frame.style.right = 'auto';
+                }
             }
           }
         };
