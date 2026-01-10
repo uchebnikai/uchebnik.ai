@@ -21,6 +21,7 @@ interface WelcomeScreenProps {
   setShowAuthModal: (val: boolean) => void;
   session?: any;
   setShowSettings?: (val: boolean) => void;
+  isAdmin?: boolean;
 }
 
 interface MockMessage {
@@ -40,7 +41,8 @@ export const WelcomeScreen = ({
   setSidebarOpen,
   setShowAuthModal,
   session,
-  setShowSettings
+  setShowSettings,
+  isAdmin = false
 }: WelcomeScreenProps) => {
 
     const [inputValue, setInputValue] = useState('');
@@ -195,13 +197,15 @@ export const WelcomeScreen = ({
                     >
                         <Menu size={20} />
                     </button>
-                    <button 
-                        onClick={() => setShowAdminAuth(true)} 
-                        className="p-2.5 bg-white/10 dark:bg-black/20 hover:bg-white/20 backdrop-blur-md rounded-xl text-zinc-500 hover:text-indigo-500 transition-all border border-white/5 shadow-sm"
-                        title="Админ панел"
-                    >
-                        <Shield size={20} />
-                    </button>
+                    {isAdmin && (
+                        <button 
+                            onClick={() => setShowAdminAuth(true)} 
+                            className="p-2.5 bg-white/10 dark:bg-black/20 hover:bg-white/20 backdrop-blur-md rounded-xl text-zinc-500 hover:text-indigo-500 transition-all border border-white/5 shadow-sm"
+                            title="Админ панел"
+                        >
+                            <Shield size={20} />
+                        </button>
+                    )}
                 </div>
 
                 <div className="flex-1 flex flex-col items-center justify-center p-4 lg:p-8 w-full max-w-7xl mx-auto min-h-fit mt-12 mb-12">
@@ -342,9 +346,11 @@ export const WelcomeScreen = ({
                     </div>
                 </div>
                 <div className="flex items-center gap-2 lg:gap-4">
-                    <button onClick={() => setShowAdminAuth(true)} className="p-2 text-zinc-400 hover:text-indigo-500 transition-colors">
-                        <Shield size={18} />
-                    </button>
+                    {isAdmin && (
+                        <button onClick={() => setShowAdminAuth(true)} className="p-2 text-zinc-400 hover:text-indigo-500 transition-colors">
+                            <Shield size={18} />
+                        </button>
+                    )}
                     <button onClick={() => setShowAuthModal(true)} className="flex items-center gap-2 px-4 lg:px-5 py-2 lg:py-2.5 bg-zinc-900 dark:bg-white text-white dark:text-black rounded-full font-bold text-xs lg:text-sm shadow-xl hover:scale-105 active:scale-95 transition-all">
                         {t('enter', userSettings.language)}
                     </button>

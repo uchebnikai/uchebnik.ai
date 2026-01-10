@@ -112,6 +112,7 @@ export const App = () => {
 
   // --- State ---
   const [userRole, setUserRole] = useState<UserRole | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [activeSubject, setActiveSubject] = useState<SubjectConfig | null>(null);
   const [showSubjectDashboard, setShowSubjectDashboard] = useState(false); 
   const [activeMode, setActiveMode] = useState<AppMode>(AppMode.SOLVE);
@@ -663,6 +664,7 @@ export const App = () => {
       setHomeView('landing');
       setShowSubjectDashboard(false);
       setUserRole(null);
+      setIsAdmin(false);
       setUserPlan('free');
       setUserMeta({ firstName: '', lastName: '', avatar: '' });
       setIsRemoteDataLoaded(false);
@@ -715,7 +717,10 @@ export const App = () => {
                 const proExpiresAt = profileData.pro_expires_at;
                 const xp = profileData.xp ?? 0;
                 const level = profileData.level ?? 1;
+                const adminFlag = !!profileData.is_admin;
                 
+                setIsAdmin(adminFlag);
+
                 if (profileData.settings) {
                     const { plan, stats, xp: _jsonXP, level: _jsonLvl, ...restSettings } = (profileData.settings as any);
                     let currentName = restSettings.userName || '';
@@ -1184,7 +1189,7 @@ export const App = () => {
       {showAuthModal && <Auth isModal={false} onSuccess={closeAuthModal} initialMode={initialAuthMode} onNavigate={setHomeView} />}
 
       {!focusMode && session && (
-          <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} userSettings={userSettings} setUserSettings={setUserSettings} userPlan={userPlan} activeSubject={activeSubject} setActiveSubject={setActiveSubject} setHomeView={setHomeView} setUserRole={setUserRole} handleSubjectChange={handleSubjectChange} activeSessionId={activeSessionId} setActiveSessionId={setActiveSessionId} sessions={sessions} deleteSession={deleteSession} createNewSession={createNewSession} unreadSubjects={unreadSubjects} activeMode={activeMode} userMeta={userMeta} session={session} setShowUnlockModal={setShowUnlockModal} setShowReferralModal={setShowReferralModal} setShowSettings={setShowSettings} handleLogout={handleLogout} setShowAuthModal={setShowAuthModal} addToast={addToast} setShowSubjectDashboard={setShowSubjectDashboard} userRole={userRole} streak={0} syncStatus={syncStatus} homeView={homeView} dailyImageCount={dailyImageCount} setShowLeaderboard={setShowLeaderboard} setShowQuests={setShowQuests} setShowReportModal={setShowReportModal} globalConfig={globalConfig} />
+          <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} userSettings={userSettings} setUserSettings={setUserSettings} userPlan={userPlan} activeSubject={activeSubject} setActiveSubject={setActiveSubject} setHomeView={setHomeView} setUserRole={setUserRole} handleSubjectChange={handleSubjectChange} activeSessionId={activeSessionId} setActiveSessionId={setActiveSessionId} sessions={sessions} deleteSession={deleteSession} createNewSession={createNewSession} unreadSubjects={unreadSubjects} activeMode={activeMode} userMeta={userMeta} session={session} setShowUnlockModal={setShowUnlockModal} setShowReferralModal={setShowReferralModal} setShowSettings={setShowSettings} handleLogout={handleLogout} setShowAuthModal={setShowAuthModal} addToast={addToast} setShowSubjectDashboard={setShowSubjectDashboard} userRole={userRole} streak={0} syncStatus={syncStatus} homeView={homeView} dailyImageCount={dailyImageCount} setShowLeaderboard={setShowLeaderboard} setShowQuests={setShowQuests} setShowReportModal={setShowReportModal} globalConfig={globalConfig} isAdmin={isAdmin} />
       )}
       
       <main className="flex-1 flex flex-col relative w-full h-full overflow-hidden z-10">
@@ -1201,7 +1206,7 @@ export const App = () => {
         ) : homeView === 'contact' ? (
             <Contact onBack={() => setHomeView('landing')} userSettings={userSettings} />
         ) : !activeSubject ? (
-            <WelcomeScreen homeView={homeView} userMeta={userMeta} userSettings={userSettings} handleSubjectChange={handleSubjectChange} setHomeView={setHomeView} setUserRole={setUserRole} setShowAdminAuth={setShowAdminAuth} onQuickStart={(txt, imgs) => { setPendingHomeInput({text: txt, images: imgs||[]}); handleSubjectChange(SUBJECTS[0]); }} setSidebarOpen={setSidebarOpen} setShowAuthModal={setShowAuthModal} session={session} setShowSettings={setShowSettings} />
+            <WelcomeScreen homeView={homeView} userMeta={userMeta} userSettings={userSettings} handleSubjectChange={handleSubjectChange} setHomeView={setHomeView} setUserRole={setUserRole} setShowAdminAuth={setShowAdminAuth} onQuickStart={(txt, imgs) => { setPendingHomeInput({text: txt, images: imgs||[]}); handleSubjectChange(SUBJECTS[0]); }} setSidebarOpen={setSidebarOpen} setShowAuthModal={setShowAuthModal} session={session} setShowSettings={setShowSettings} isAdmin={isAdmin} />
         ) : showSubjectDashboard ? (
             <SubjectDashboard activeSubject={activeSubject} setActiveSubject={setActiveSubject} setHomeView={setHomeView} userRole={userRole} userSettings={userSettings} handleStartMode={handleStartMode} />
         ) : (

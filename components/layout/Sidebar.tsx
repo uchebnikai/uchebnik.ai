@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { MessageSquare, Trash2, Plus, School, GraduationCap, Briefcase, ChevronDown, User, Settings, CreditCard, HelpCircle, LogOut, ArrowRight, ChevronUp, FileText, CloudOff, RefreshCw, Cloud, PanelLeftClose, PanelLeftOpen, LogIn, Snowflake, Gift, Trophy, Target, AlertTriangle, Sparkles, PartyPopper } from 'lucide-react';
+import { MessageSquare, Trash2, Plus, School, GraduationCap, Briefcase, ChevronDown, User, Settings, CreditCard, HelpCircle, LogOut, ArrowRight, ChevronUp, FileText, CloudOff, RefreshCw, Cloud, PanelLeftClose, PanelLeftOpen, LogIn, Snowflake, Gift, Trophy, Target, AlertTriangle, Sparkles, PartyPopper, Shield } from 'lucide-react';
 import { DynamicIcon } from '../ui/DynamicIcon';
 import { SUBJECTS } from '../../constants';
 import { SubjectId, AppMode, Session, UserRole, UserSettings, UserPlan, SubjectConfig, HomeViewType } from '../../types';
@@ -42,6 +42,7 @@ interface SidebarProps {
   setShowQuests?: (val: boolean) => void;
   setShowReportModal?: (val: boolean) => void;
   globalConfig: any;
+  isAdmin?: boolean;
 }
 
 export const Sidebar = ({
@@ -78,7 +79,8 @@ export const Sidebar = ({
   setShowLeaderboard,
   setShowQuests,
   setShowReportModal,
-  globalConfig
+  globalConfig,
+  isAdmin = false
 }: SidebarProps) => {
     
     // Internal State for Folders
@@ -142,6 +144,11 @@ export const Sidebar = ({
             </button>
             
             <div className="flex items-center gap-2">
+                {isAdmin && (
+                    <button onClick={() => setShowSettings(true)} className="flex p-2 text-zinc-400 hover:text-indigo-500 hover:bg-gray-100 dark:hover:bg-white/5 rounded-lg transition-colors">
+                        <Shield size={20} />
+                    </button>
+                )}
                 <button onClick={toggleCollapse} className="hidden lg:flex p-2 text-gray-400 hover:text-indigo-500 hover:bg-gray-100 dark:hover:bg-white/5 rounded-lg transition-colors">
                     {collapsed ? <PanelLeftOpen size={20}/> : <PanelLeftClose size={20}/>}
                 </button>
@@ -480,7 +487,7 @@ export const Sidebar = ({
                              />
                              <div className="absolute -bottom-1 -right-1 bg-black rounded-full p-0.5 border border-white/20">
                                  <div className={`w-3 h-3 lg:w-4 lg:h-4 rounded-full flex items-center justify-center bg-gradient-to-br ${currentRank.gradient}`}>
-                                     <RankIcon size={isMobile ? 6 : 8} className="text-white"/>
+                                     <RankIcon size={18} className="text-white"/>
                                  </div>
                              </div>
                          </div>
