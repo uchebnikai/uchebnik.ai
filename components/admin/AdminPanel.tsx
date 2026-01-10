@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   Shield, X, Copy, CheckCircle, Key, Users, Activity, 
   RefreshCw, Search, Filter, Trash2, Plus, Zap, Crown, 
@@ -11,8 +10,12 @@ import {
   BarChart2, Wifi, HardDrive, Brain, LayoutDashboard,
   PieChart as PieChartIcon, MessageSquare, Flag, CheckSquare,
   Eye, EyeOff, Lock, Radio, LogOut, Snowflake,
-  Settings, PartyPopper
+  Settings, PartyPopper, Bell, Gift, Megaphone, Link as LinkIcon,
+  Loader2, ExternalLink, Info, Sparkles, Star, Heart, MapPin, 
+  Calendar, Camera, Code, Calculator, Binary, Pill, Layout, 
+  FileText, Briefcase, Target, Languages, Globe, HelpCircle, Trophy, ImageIcon, Upload
 } from 'lucide-react';
+import * as LucideIcons from 'lucide-react';
 import { Button } from '../ui/Button';
 import { supabase } from '../../supabaseClient';
 import { UserPlan, Session } from '../../types';
@@ -20,6 +23,8 @@ import { PieChart, Pie, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { SUBJECTS } from '../../constants';
 import { t } from '../../utils/translations';
 import { Lightbox } from '../ui/Lightbox';
+import { DynamicIcon } from '../ui/DynamicIcon';
+import { resizeImage } from '../../utils/image';
 
 // Pricing Constants (Gemini 2.5 Flash)
 const PRICE_INPUT_1M = 0.075;
@@ -106,6 +111,8 @@ interface AdminPanelProps {
   setGlobalConfig: (val: any) => void;
 }
 
+const PRESET_ICONS = ['Bell', 'Sparkles', 'Zap', 'Gift', 'Shield', 'AlertTriangle', 'Megaphone', 'Info', 'Trophy', 'Target', 'Star', 'Heart'];
+
 export const AdminPanel = ({
   showAdminAuth,
   setShowAdminAuth,
@@ -151,8 +158,19 @@ export const AdminPanel = ({
 
     // Broadcast State
     const [broadcastMsg, setBroadcastMsg] = useState('');
+    const [broadcastTitle, setBroadcastTitle] = useState('Важно известие');
+    const [broadcastSender, setBroadcastSender] = useState('Екипът на Uchebnik AI');
     const [broadcastType, setBroadcastType] = useState<'toast' | 'modal'>('toast');
+    const [broadcastIcon, setBroadcastIcon] = useState('Bell');
+    const [broadcastColor, setBroadcastColor] = useState('#6366f1');
+    const [broadcastBgImage, setBroadcastBgImage] = useState('');
+    const [broadcastSchedule, setBroadcastSchedule] = useState('');
+    const [broadcastButtons, setBroadcastButtons] = useState<{label: string, url: string}[]>([]);
     const [isBroadcasting, setIsBroadcasting] = useState(false);
+    const [isIconPickerOpen, setIsIconPickerOpen] = useState(false);
+    const [iconSearchTerm, setIconSearchTerm] = useState('');
+    const [visibleIconCount, setVisibleIconCount] = useState(150);
+    const broadcastBgInputRef = useRef<HTMLInputElement>(null);
 
     // User Details & Chat
     const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
@@ -170,6 +188,24 @@ export const AdminPanel = ({
         { name: 'Съхранение на Данни', status: 'unknown', latency: 0, uptime: 100, icon: HardDrive, lastCheck: 0 },
         { name: 'Плащания (Stripe)', status: 'unknown', latency: 0, uptime: 100, icon: CreditCard, lastCheck: 0 },
     ]);
+
+    // Optimized Icon Picker logic with incremental loading
+    const filteredIconsList = useMemo(() => {
+        const iconNames = Object.keys(LucideIcons).filter(name => !name.includes('Icon') && name.length > 2);
+        if (!iconSearchTerm.trim()) return iconNames;
+        const search = iconSearchTerm.toLowerCase();
+        return iconNames.filter(name => name.toLowerCase().includes(search));
+    }, [iconSearchTerm]);
+
+    // Slice the filtered list for rendering to avoid DOM lag
+    const renderedIcons = useMemo(() => {
+        return filteredIconsList.slice(0, visibleIconCount);
+    }, [filteredIconsList, visibleIconCount]);
+
+    // Handle search change - reset count for performance
+    useEffect(() => {
+        setVisibleIconCount(150);
+    }, [iconSearchTerm]);
 
     useEffect(() => {
         if (showAdminPanel) {
@@ -253,23 +289,66 @@ export const AdminPanel = ({
         try {
             const { error } = await supabase.from('broadcasts').insert({
                 message: broadcastMsg,
-                type: broadcastType
+                title: broadcastTitle,
+                type: broadcastType,
+                sender_name: broadcastSender,
+                icon_name: broadcastIcon,
+                color_theme: broadcastColor,
+                background_image: broadcastBgImage || null,
+                scheduled_for: broadcastSchedule || null,
+                buttons: broadcastButtons
             });
 
             if (error) throw error;
             
             setBroadcastMsg('');
+            setBroadcastButtons([]);
+            setBroadcastSchedule('');
+            setBroadcastBgImage('');
             addToast('Съобщението е изпратено успешно!', 'success');
         } catch (e: any) {
             console.error("Broadcast failed:", e);
             if (e.code === '42P01') {
                 addToast('Грешка: Таблица "broadcasts" липсва.', 'error');
+            } else if (e.message.includes('column "background_image" does not exist')) {
+                addToast('Грешка: Трябва да добавите SQL колона "background_image".', 'error');
             } else {
                 addToast('Грешка при изпращане.', 'error');
             }
         } finally {
             setIsBroadcasting(false);
         }
+    };
+
+    const handleBroadcastBgUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        
+        if (file.type === 'image/gif') {
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                setBroadcastBgImage(ev.target?.result as string);
+            };
+            reader.readAsDataURL(file);
+        } else {
+            // Use resizeImage for other formats to optimize, but keep high enough for full width
+            resizeImage(file, 1280, 0.7).then(setBroadcastBgImage);
+        }
+    };
+
+    const handleAddBroadcastButton = () => {
+        if (broadcastButtons.length >= 2) return;
+        setBroadcastButtons([...broadcastButtons, { label: '', url: '' }]);
+    };
+
+    const handleRemoveBroadcastButton = (idx: number) => {
+        setBroadcastButtons(broadcastButtons.filter((_, i) => i !== idx));
+    };
+
+    const handleUpdateButtonLink = (idx: number, field: 'label' | 'url', val: string) => {
+        const next = [...broadcastButtons];
+        next[idx][field] = val;
+        setBroadcastButtons(next);
     };
 
     const handleToggleGlobalOption = async (key: string, val: boolean) => {
@@ -1123,56 +1202,303 @@ export const AdminPanel = ({
 
                              {/* BROADCAST TAB */}
                              {activeTab === 'broadcast' && (
-                                 <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
-                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                         <div className="bg-white/5 border border-white/5 rounded-3xl p-6 md:p-8 shadow-xl">
-                                             <div className="flex items-center gap-4 mb-6">
+                                 <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 pb-12">
+                                     <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
+                                         
+                                         {/* Editor Column */}
+                                         <div className="md:col-span-7 bg-white/5 border border-white/5 rounded-3xl p-6 md:p-8 shadow-xl space-y-6">
+                                             <div className="flex items-center gap-4 mb-2">
                                                  <div className="p-3 bg-red-500/10 rounded-xl text-red-500 border border-red-500/20"><Radio size={24}/></div>
                                                  <div>
-                                                     <h3 className="text-2xl font-bold text-white">Глобално Съобщение</h3>
-                                                     <p className="text-zinc-500 text-sm">Изпратете съобщение в реално време до всички активни потребители.</p>
+                                                     <h3 className="text-2xl font-bold text-white">Център за известия</h3>
+                                                     <p className="text-zinc-500 text-sm">Изпратете съобщение в реално време до всички потребители.</p>
                                                  </div>
                                              </div>
 
-                                             <div className="space-y-6">
+                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                  <div className="space-y-2">
-                                                     <label className="text-xs font-bold text-zinc-500 uppercase ml-1">Съобщение</label>
-                                                     <textarea 
-                                                         value={broadcastMsg}
-                                                         onChange={(e) => setBroadcastMsg(e.target.value)}
-                                                         placeholder="Внимание: Планирана поддръжка..."
-                                                         className="w-full bg-black/30 border border-white/10 rounded-2xl p-4 text-white outline-none focus:border-indigo-500 transition-all min-h-[120px] resize-none"
+                                                     <label className="text-xs font-bold text-zinc-500 uppercase ml-1">Заглавие</label>
+                                                     <input 
+                                                         value={broadcastTitle}
+                                                         onChange={e => setBroadcastTitle(e.target.value)}
+                                                         className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-indigo-500 transition-all"
+                                                         placeholder="Напр. Важно известие"
                                                      />
                                                  </div>
-
                                                  <div className="space-y-2">
-                                                     <label className="text-xs font-bold text-zinc-500 uppercase ml-1">Тип</label>
-                                                     <div className="grid grid-cols-2 gap-3">
+                                                     <label className="text-xs font-bold text-zinc-500 uppercase ml-1">От името на</label>
+                                                     <input 
+                                                         value={broadcastSender}
+                                                         onChange={e => setBroadcastSender(e.target.value)}
+                                                         className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-indigo-500 transition-all"
+                                                         placeholder="Напр. Екипът на Uchebnik AI"
+                                                     />
+                                                 </div>
+                                                 <div className="space-y-2 col-span-full">
+                                                     <label className="text-xs font-bold text-zinc-500 uppercase ml-1">Планирай за (Опционално)</label>
+                                                     <input 
+                                                         type="datetime-local"
+                                                         value={broadcastSchedule}
+                                                         onChange={e => setBroadcastSchedule(e.target.value)}
+                                                         className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-indigo-500 transition-all"
+                                                     />
+                                                 </div>
+                                             </div>
+
+                                             <div className="space-y-2">
+                                                 <label className="text-xs font-bold text-zinc-500 uppercase ml-1">Съобщение</label>
+                                                 <textarea 
+                                                     value={broadcastMsg}
+                                                     onChange={(e) => setBroadcastMsg(e.target.value)}
+                                                     placeholder="Внимание: Планирана поддръжка..."
+                                                     className="w-full bg-black/30 border border-white/10 rounded-2xl p-4 text-white outline-none focus:border-indigo-500 transition-all min-h-[100px] resize-none"
+                                                 />
+                                             </div>
+
+                                             <div className="space-y-2">
+                                                 <label className="text-xs font-bold text-zinc-500 uppercase ml-1">Икона</label>
+                                                 <div className="flex flex-wrap gap-2">
+                                                     {PRESET_ICONS.map(icon => (
                                                          <button 
-                                                             onClick={() => setBroadcastType('toast')}
-                                                             className={`p-4 rounded-xl border flex flex-col items-center gap-2 transition-all ${broadcastType === 'toast' ? 'bg-indigo-500/10 border-indigo-500 text-indigo-400' : 'bg-black/20 border-white/5 text-zinc-500 hover:bg-white/5'}`}
+                                                            key={icon} 
+                                                            onClick={() => setBroadcastIcon(icon)}
+                                                            className={`p-3 rounded-xl border flex items-center justify-center transition-all ${broadcastIcon === icon ? 'bg-indigo-500 text-white border-indigo-500 shadow-lg shadow-indigo-500/20' : 'bg-black/20 border-white/5 text-zinc-500 hover:text-zinc-300'}`}
                                                          >
-                                                             <AlertCircle size={24}/>
-                                                             <span className="font-bold text-sm">Toast (Известие)</span>
+                                                             <DynamicIcon name={icon} className="w-5 h-5"/>
                                                          </button>
-                                                         <button 
-                                                             onClick={() => setBroadcastType('modal')}
-                                                             className={`p-4 rounded-xl border flex flex-col items-center gap-2 transition-all ${broadcastType === 'modal' ? 'bg-red-500/10 border-red-500 text-red-400' : 'bg-black/20 border-white/5 text-zinc-500 hover:bg-white/5'}`}
-                                                         >
-                                                             <PieChartIcon size={24}/>
-                                                             <span className="font-bold text-sm">Modal (Прозорец)</span>
-                                                         </button>
+                                                     ))}
+                                                     <button 
+                                                        onClick={() => setIsIconPickerOpen(true)}
+                                                        className={`p-3 rounded-xl border border-dashed flex items-center justify-center transition-all ${!PRESET_ICONS.includes(broadcastIcon) ? 'bg-indigo-500 text-white border-indigo-500' : 'bg-black/20 border-white/10 text-zinc-500 hover:text-indigo-400 hover:border-indigo-400/50'}`}
+                                                     >
+                                                         <Plus size={20}/>
+                                                     </button>
+                                                 </div>
+                                             </div>
+
+                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                 <div className="space-y-2">
+                                                     <label className="text-xs font-bold text-zinc-500 uppercase ml-1">Цвят на акцента</label>
+                                                     <div className="flex flex-wrap gap-2">
+                                                         {['#6366f1', '#ef4444', '#f59e0b', '#10b981', '#ec4899', '#8b5cf6', '#06b6d4', '#000000'].map(color => (
+                                                             <button 
+                                                                key={color} 
+                                                                onClick={() => setBroadcastColor(color)}
+                                                                className={`w-10 h-10 rounded-xl border-2 transition-all ${broadcastColor === color ? 'border-white scale-110 shadow-lg' : 'border-transparent opacity-60 hover:opacity-100'}`}
+                                                                style={{ backgroundColor: color }}
+                                                             />
+                                                         ))}
+                                                         <input 
+                                                            type="color" 
+                                                            value={broadcastColor}
+                                                            onChange={e => setBroadcastColor(e.target.value)}
+                                                            className="w-10 h-10 rounded-xl bg-transparent border-none cursor-pointer overflow-hidden p-0"
+                                                         />
                                                      </div>
                                                  </div>
 
-                                                 <Button 
-                                                     onClick={handleSendBroadcast} 
-                                                     disabled={isBroadcasting || !broadcastMsg.trim()}
-                                                     className={`w-full py-4 text-base shadow-xl ${broadcastType === 'modal' ? 'bg-red-600 hover:bg-red-500 shadow-red-500/20' : 'bg-indigo-600 hover:bg-indigo-50 shadow-indigo-500/20'}`}
-                                                 >
-                                                     {isBroadcasting ? 'Изпращане...' : 'Изпрати Съобщение'}
-                                                 </Button>
+                                                 <div className="space-y-2">
+                                                     <label className="text-xs font-bold text-zinc-500 uppercase ml-1">Фон (Upload Image/GIF)</label>
+                                                     <div className="flex gap-2">
+                                                         <button 
+                                                            onClick={() => broadcastBgInputRef.current?.click()}
+                                                            className={`flex-1 flex flex-col items-center justify-center gap-2 p-4 rounded-2xl border-2 border-dashed transition-all relative overflow-hidden bg-black/20 ${broadcastBgImage ? 'border-indigo-500 text-indigo-400' : 'border-white/10 text-zinc-500 hover:border-indigo-400 hover:text-indigo-400'}`}
+                                                         >
+                                                             {broadcastBgImage ? (
+                                                                 <>
+                                                                    <img src={broadcastBgImage} className="absolute inset-0 w-full h-full object-cover opacity-40" />
+                                                                    <div className="relative z-10 flex flex-col items-center">
+                                                                        <Check size={20}/>
+                                                                        <span className="text-[10px] font-bold">Промени</span>
+                                                                    </div>
+                                                                 </>
+                                                             ) : (
+                                                                 <>
+                                                                    <Upload size={20}/>
+                                                                    <span className="text-[10px] font-bold">Качи файл</span>
+                                                                 </>
+                                                             )}
+                                                         </button>
+                                                         {broadcastBgImage && (
+                                                             <button 
+                                                                onClick={() => setBroadcastBgImage('')}
+                                                                className="p-4 bg-red-500/10 text-red-500 border border-red-500/20 rounded-2xl hover:bg-red-500 hover:text-white transition-all"
+                                                             >
+                                                                <Trash2 size={20}/>
+                                                             </button>
+                                                         )}
+                                                     </div>
+                                                     <input 
+                                                        type="file" 
+                                                        ref={broadcastBgInputRef} 
+                                                        onChange={handleBroadcastBgUpload} 
+                                                        className="hidden" 
+                                                        accept="image/*"
+                                                     />
+                                                 </div>
                                              </div>
+
+                                             <div className="space-y-3">
+                                                 <div className="flex justify-between items-center">
+                                                     <label className="text-xs font-bold text-zinc-500 uppercase ml-1">Бутони (макс 2)</label>
+                                                     {broadcastButtons.length < 2 && (
+                                                         <button onClick={handleAddBroadcastButton} className="text-xs font-bold text-indigo-400 hover:text-indigo-300 flex items-center gap-1 transition-colors">
+                                                             <Plus size={14}/> Добави бутон
+                                                         </button>
+                                                     )}
+                                                 </div>
+                                                 
+                                                 <div className="space-y-3">
+                                                     {broadcastButtons.map((btn, idx) => (
+                                                         <div key={idx} className="bg-black/40 border border-white/5 rounded-2xl p-4 space-y-3 animate-in slide-in-from-top-2">
+                                                             <div className="flex justify-between items-center">
+                                                                 <span className="text-[10px] font-black text-zinc-600 uppercase tracking-widest">Бутон {idx + 1}</span>
+                                                                 <button onClick={() => handleRemoveBroadcastButton(idx)} className="text-red-500 hover:text-red-400 transition-colors"><Trash2 size={14}/></button>
+                                                             </div>
+                                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                                 <input 
+                                                                    placeholder="Текст на бутона" 
+                                                                    value={btn.label} 
+                                                                    onChange={e => handleUpdateButtonLink(idx, 'label', e.target.value)}
+                                                                    className="bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-indigo-500"
+                                                                 />
+                                                                 <div className="relative">
+                                                                     <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" size={12}/>
+                                                                     <input 
+                                                                        placeholder="URL (https://...)" 
+                                                                        value={btn.url} 
+                                                                        onChange={e => handleUpdateButtonLink(idx, 'url', e.target.value)}
+                                                                        className="w-full bg-white/5 border border-white/10 rounded-xl pl-8 pr-3 py-2 text-xs text-white outline-none focus:border-indigo-500"
+                                                                     />
+                                                                 </div>
+                                                             </div>
+                                                         </div>
+                                                     ))}
+                                                 </div>
+                                             </div>
+
+                                             <div className="pt-4">
+                                                 <label className="text-xs font-bold text-zinc-500 uppercase ml-1">Тип показване</label>
+                                                 <div className="grid grid-cols-2 gap-3 mt-2">
+                                                     <button 
+                                                         onClick={() => setBroadcastType('toast')}
+                                                         className={`p-4 rounded-xl border flex flex-col items-center gap-2 transition-all ${broadcastType === 'toast' ? 'bg-indigo-500/10 border-indigo-500 text-indigo-400' : 'bg-black/20 border-white/5 text-zinc-500 hover:bg-white/5'}`}
+                                                     >
+                                                         <Info size={24}/>
+                                                         <span className="font-bold text-sm">Toast (Известие)</span>
+                                                     </button>
+                                                     <button 
+                                                         onClick={() => setBroadcastType('modal')}
+                                                         className={`p-4 rounded-xl border flex flex-col items-center gap-2 transition-all ${broadcastType === 'modal' ? 'bg-red-500/10 border-red-500 text-red-400' : 'bg-black/20 border-white/5 text-zinc-500 hover:bg-white/5'}`}
+                                                     >
+                                                         <PieChartIcon size={24}/>
+                                                         <span className="font-bold text-sm">Modal (Прозорец)</span>
+                                                     </button>
+                                                 </div>
+                                             </div>
+
+                                             <Button 
+                                                 onClick={handleSendBroadcast} 
+                                                 disabled={isBroadcasting || !broadcastMsg.trim()}
+                                                 className={`w-full py-4 text-base shadow-xl bg-indigo-600 hover:bg-indigo-50 shadow-indigo-500/20`}
+                                             >
+                                                 {isBroadcasting ? <Loader2 size={20} className="animate-spin mr-2"/> : null}
+                                                 {isBroadcasting ? 'Изпращане...' : broadcastSchedule ? 'Планирай известие' : 'Изпрати сега'}
+                                             </Button>
+                                         </div>
+
+                                         {/* Preview Column */}
+                                         <div className="md:col-span-5 sticky top-0 space-y-6">
+                                             <h4 className="text-xs font-black text-zinc-500 uppercase tracking-widest ml-1">Преглед на живо</h4>
+                                             
+                                             {broadcastType === 'modal' ? (
+                                                 /* Modal Preview - Synchronized with App.tsx actual modal */
+                                                 <div className="bg-[#09090b] rounded-[40px] p-8 border border-white/10 shadow-2xl relative overflow-hidden flex flex-col items-center text-center gap-6 animate-in zoom-in-95 duration-300 ring-1 ring-white/5">
+                                                      {broadcastBgImage ? (
+                                                          <>
+                                                            <img src={broadcastBgImage} className="absolute inset-0 w-full h-full object-cover pointer-events-none" />
+                                                            <div className="absolute inset-0 bg-black/50 backdrop-blur-[2px] pointer-events-none" />
+                                                          </>
+                                                      ) : (
+                                                        <div className="absolute inset-x-0 top-0 h-32 opacity-20 pointer-events-none" style={{ background: `linear-gradient(to bottom, ${broadcastColor}, transparent)` }} />
+                                                      )}
+                                                      
+                                                      <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-indigo-500/30 relative z-10" style={{ backgroundColor: broadcastColor }}>
+                                                          <DynamicIcon name={broadcastIcon} className="w-8 h-8" />
+                                                      </div>
+                                                      
+                                                      <div className="space-y-2 relative z-10">
+                                                          <h3 className="text-2xl font-black text-white tracking-tight leading-tight drop-shadow-md">{broadcastTitle || "Важно известие"}</h3>
+                                                          {broadcastSender && (
+                                                              <div className="text-[10px] font-black text-zinc-300 uppercase tracking-widest flex items-center justify-center gap-2 drop-shadow-md">
+                                                                  <span>{broadcastSender}</span>
+                                                              </div>
+                                                          )}
+                                                          <p className="text-zinc-100 font-medium leading-relaxed mt-4 drop-shadow-md">
+                                                              {broadcastMsg || "Тук ще се появи вашето съобщение..."}
+                                                          </p>
+                                                      </div>
+
+                                                      <div className="flex flex-col gap-3 w-full relative z-10">
+                                                          {broadcastButtons.length > 0 ? broadcastButtons.map((btn, i) => (
+                                                              <div 
+                                                                  key={i} 
+                                                                  className="w-full py-4 text-white font-bold rounded-2xl shadow-lg flex items-center justify-center gap-2 transition-transform active:scale-95 border border-white/10"
+                                                                  style={{ backgroundColor: broadcastColor }}
+                                                              >
+                                                                  {btn.label || "Текст на бутона"} <ExternalLink size={16}/>
+                                                              </div>
+                                                          )) : null}
+                                                          <Button variant="secondary" className="w-full py-4 font-bold rounded-2xl !bg-white/10 !text-white hover:!bg-white/20 !border-white/20">
+                                                              Затвори
+                                                          </Button>
+                                                      </div>
+                                                 </div>
+                                             ) : (
+                                                 /* Toast Preview - Synchronized with App.tsx actual toast system */
+                                                 <div className="flex flex-col gap-4 items-center justify-center py-20">
+                                                     <div className="bg-white/60 dark:bg-[#09090b]/80 border border-white/10 rounded-xl px-4 py-3 flex flex-col gap-2 shadow-2xl backdrop-blur-xl animate-in slide-in-from-right duration-300 max-w-sm ring-1 ring-white/5 relative overflow-hidden">
+                                                         {broadcastBgImage && (
+                                                             <>
+                                                                <img src={broadcastBgImage} className="absolute inset-0 w-full h-full object-cover pointer-events-none opacity-40 group-hover:opacity-60 transition-opacity" />
+                                                                <div className="absolute inset-0 bg-black/30 backdrop-blur-[1px] pointer-events-none" />
+                                                             </>
+                                                         )}
+                                                         <div className="flex items-center gap-3 relative z-10">
+                                                            <div className="p-2.5 rounded-xl shrink-0 text-white shadow-lg" style={{ backgroundColor: broadcastColor }}>
+                                                                <DynamicIcon name={broadcastIcon} className="w-5 h-5"/>
+                                                            </div>
+                                                            <div className="flex-1 min-w-0">
+                                                                <p className={`text-[10px] font-black uppercase tracking-widest mb-0.5 ${broadcastBgImage ? 'text-zinc-200' : 'text-zinc-500'}`}>{broadcastTitle || broadcastSender}</p>
+                                                                <p className={`text-sm font-bold line-clamp-2 leading-tight ${broadcastBgImage ? 'text-white' : 'text-zinc-800 dark:text-zinc-200'}`}>{broadcastMsg || "Тук ще се появи вашето съобщение..."}</p>
+                                                            </div>
+                                                            <button className={`${broadcastBgImage ? 'text-white/60' : 'text-zinc-500'} ml-2 self-start mt-1`}>
+                                                               <X size={14}/>
+                                                            </button>
+                                                         </div>
+                                                         
+                                                         {/* Action buttons in Toast preview */}
+                                                         {broadcastButtons.length > 0 && (
+                                                             <div className="flex gap-2 relative z-10">
+                                                                 {broadcastButtons.map((btn, i) => (
+                                                                     <div 
+                                                                         key={i} 
+                                                                         className="flex-1 py-2 rounded-lg text-white text-[10px] font-black uppercase tracking-widest text-center shadow-md border border-white/10"
+                                                                         style={{ backgroundColor: broadcastColor }}
+                                                                     >
+                                                                         {btn.label || "Action"} <ExternalLink size={10}/>
+                                                                     </div>
+                                                                 ))}
+                                                             </div>
+                                                         )}
+                                                     </div>
+                                                     <p className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest">Toast Преглед</p>
+                                                 </div>
+                                             )}
+
+                                             <p className="text-[10px] text-center text-zinc-600 font-medium px-4">
+                                                 Бележка: Това е 1:1 симулация на изгледа. Текстът и бутоните ще изглеждат точно така в реалното приложение.
+                                             </p>
                                          </div>
                                      </div>
                                  </div>
@@ -1243,7 +1569,7 @@ export const AdminPanel = ({
                                              </div>
                                              <div className="text-5xl font-black text-white tracking-tight mb-2">${displayCost.toFixed(4)}</div>
                                              <p className="text-sm text-zinc-500 flex items-center gap-2">{showEstimate ? 'Изчислено от токени + корекция.' : 'Директно от Google Cloud.'}</p>
-                                             {isCalibrating && (<div className="absolute inset-0 bg-black/90 backdrop-blur-md flex flex-col items-center justify-center p-4 z-20 animate-in fade-in"><div className="text-center w-full"><h4 className="text-white font-bold mb-2 text-sm">Калибриране на разходи</h4><div className="flex gap-2 justify-center"><input type="number" value={calibrationValue} onChange={e => setCalibrationValue(e.target.value)} className="w-24 bg-white/10 border border-white/20 rounded-lg px-2 py-1 text-white text-center outline-none focus:border-indigo-500" placeholder="0.34" autoFocus /><button onClick={handleSaveCalibration} className="bg-green-600 hover:bg-green-500 text-white rounded-lg p-2"><Check size={16}/></button><button onClick={() => setIsCalibrating(false)} className="bg-gray-600 hover:bg-gray-500 text-white rounded-lg p-2"><X size={16}/></button></div></div></div>)}
+                                             {isCalibrating && (<div className="absolute inset-0 bg-black/90 backdrop-blur-md flex flex-col items-center justify-center p-4 z-20 animate-in fade-in"><div className="text-center w-full"><h4 className="text-white font-bold mb-2 text-sm">Калибриране на разходи</h4><div className="flex gap-2 justify-center"><input type="number" value={calibrationValue} onChange={e => setCalibrationValue(e.target.value)} className="w-24 bg-white/10 border border-white/20 rounded-lg px-2 py-1 text-white text-center outline-none focus:border-indigo-500" placeholder="0.34" autoFocus /><button onClick={handleSaveCalibration} className="bg-green-600 hover:bg-green-50 text-white rounded-lg p-2"><Check size={16}/></button><button onClick={() => setIsCalibrating(false)} className="bg-gray-600 hover:bg-gray-50 text-white rounded-lg p-2"><X size={16}/></button></div></div></div>)}
                                          </div>
                                      </div>
                                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -1310,6 +1636,74 @@ export const AdminPanel = ({
                  </div>
              </div>
              
+             {/* Optimized Icon Picker Modal with Infinite Loading */}
+             {isIconPickerOpen && (
+                 <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in" onClick={() => setIsIconPickerOpen(false)}>
+                     <div className="bg-[#0f0f11] border border-white/10 w-full max-w-2xl p-6 rounded-[32px] shadow-2xl animate-in zoom-in-95 flex flex-col max-h-[85vh]" onClick={e => e.stopPropagation()}>
+                         <div className="flex justify-between items-center mb-6 shrink-0">
+                             <div className="flex items-center gap-3">
+                                <div className="p-2 bg-indigo-500/10 rounded-lg text-indigo-400">
+                                    <Plus size={20}/>
+                                </div>
+                                <h3 className="text-xl font-bold text-white">Всички икони</h3>
+                             </div>
+                             <button onClick={() => setIsIconPickerOpen(false)} className="p-2 hover:bg-white/10 rounded-full text-zinc-400 transition-colors"><X size={20}/></button>
+                         </div>
+                         
+                         <div className="relative mb-6 shrink-0">
+                             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" size={18}/>
+                             <input 
+                                value={iconSearchTerm}
+                                onChange={e => setIconSearchTerm(e.target.value)}
+                                placeholder="Търси икона (на английски)..."
+                                className="w-full bg-white/5 border border-white/10 rounded-2xl pl-12 pr-4 py-4 text-white outline-none focus:border-indigo-500 transition-all shadow-inner"
+                                autoFocus
+                             />
+                         </div>
+                         
+                         <div className="flex-1 overflow-y-auto custom-scrollbar p-1 pb-10">
+                             <div className="grid grid-cols-5 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-3">
+                                 {renderedIcons.map(name => (
+                                     <button 
+                                        key={name} 
+                                        onClick={() => { setBroadcastIcon(name); setIsIconPickerOpen(false); }}
+                                        className="aspect-square rounded-xl bg-white/5 border border-white/5 flex flex-col items-center justify-center gap-1 hover:bg-indigo-500 hover:border-indigo-400 hover:text-white transition-all group p-1 shadow-sm"
+                                        title={name}
+                                     >
+                                         <DynamicIcon name={name} className="w-6 h-6 shrink-0"/>
+                                         <span className="text-[7px] font-bold uppercase truncate w-full text-center opacity-0 group-hover:opacity-100 transition-opacity">{name}</span>
+                                     </button>
+                                 ))}
+                             </div>
+                             
+                             {visibleIconCount < filteredIconsList.length && (
+                                 <div className="mt-8 flex justify-center">
+                                     <button 
+                                        onClick={() => setVisibleIconCount(prev => prev + 150)}
+                                        className="px-6 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-zinc-400 font-bold text-xs transition-all flex items-center gap-2"
+                                     >
+                                        Зареди още ({filteredIconsList.length - visibleIconCount} оставащи)
+                                        <RefreshCw size={14} />
+                                     </button>
+                                 </div>
+                             )}
+
+                             {filteredIconsList.length === 0 && (
+                                 <div className="py-20 text-center text-zinc-500 space-y-2">
+                                     <HelpCircle size={32} className="mx-auto opacity-30"/>
+                                     <p>Няма икони с такова име.</p>
+                                 </div>
+                             )}
+                         </div>
+                         
+                         <div className="pt-4 border-t border-white/5 mt-auto shrink-0 flex justify-between items-center text-[10px] font-bold text-zinc-600 uppercase tracking-widest px-2">
+                            <span>Общо икони: {filteredIconsList.length}</span>
+                            <span>Показани: {renderedIcons.length}</span>
+                         </div>
+                     </div>
+                 </div>
+             )}
+
              {/* Lightbox for Reports */}
              <Lightbox image={zoomedImage} onClose={() => setZoomedImage(null)} />
            </div>

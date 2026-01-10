@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { GoogleGenAI, LiveServerMessage, Modality } from "@google/genai";
 import { SubjectConfig, SubjectId, AppMode, Message, Slide, UserSettings, Session, UserPlan, UserRole, HomeViewType } from './types';
@@ -10,7 +9,7 @@ import { Auth } from './components/auth/Auth';
 import { AuthSuccess } from './components/auth/AuthSuccess';
 import { 
   Loader2, X, AlertCircle, CheckCircle, Info, Minimize, Database, Radio, Gift, Minimize2, 
-  ArrowLeft, Zap, Book, FileJson
+  ArrowLeft, Zap, Book, FileJson, ExternalLink
 } from 'lucide-react';
 
 import { Session as SupabaseSession } from '@supabase/supabase-js';
@@ -163,7 +162,7 @@ export const App = () => {
   const [targetPlan, setTargetPlan] = useState<UserPlan | null>(null);
   const [unlockLoading, setUnlockLoading] = useState(false);
 
-  const [broadcastModal, setBroadcastModal] = useState<{isOpen: boolean, message: string} | null>(null);
+  const [broadcastModal, setBroadcastModal] = useState<{isOpen: boolean, message: string, title?: string, sender_name?: string, icon_name?: string, color_theme?: string, background_image?: string, buttons?: {label: string, url: string}[]} | null>(null);
 
   const [globalConfig, setGlobalConfig] = useState({ showChristmasButton: true, showNewYearButton: true });
 
@@ -213,13 +212,14 @@ export const App = () => {
   
   const [focusMode, setFocusMode] = useState(false);
 
-  const [toasts, setToasts] = useState<{id: string, message: string, type: 'success'|'error'|'info'}[]>([]);
+  const [toasts, setToasts] = useState<{id: string, message: string, type: 'success'|'error'|'info', title?: string, icon?: string, sender?: string, color?: string, background_image?: string, buttons?: {label: string, url: string}[]}[]>([]);
   const [confirmModal, setConfirmModal] = useState<{isOpen: boolean, title: string, message: string, onConfirm: () => void} | null>(null);
 
-  const addToast = (message: string, type: 'success'|'error'|'info' = 'info') => {
+  const addToast = (message: string, type: 'success'|'error'|'info' = 'info', icon?: string, sender?: string, color?: string, title?: string, buttons?: {label: string, url: string}[], background_image?: string) => {
     const id = Date.now().toString();
-    setToasts(prev => [...prev, {id, message, type}]);
-    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 4000);
+    setToasts(prev => [...prev, {id, message, type, icon, sender, color, title, buttons, background_image}]);
+    const duration = (buttons && buttons.length > 0) ? 12000 : 5000;
+    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), duration);
   };
 
   const closeAuthModal = () => {
@@ -816,8 +816,20 @@ export const App = () => {
             audio.play().catch(() => {});
           } catch(e) {}
 
-          if (newB.type === 'modal') setBroadcastModal({ isOpen: true, message: newB.message });
-          else addToast(newB.message, 'info');
+          if (newB.type === 'modal') {
+              setBroadcastModal({ 
+                  isOpen: true, 
+                  message: newB.message, 
+                  title: newB.title,
+                  sender_name: newB.sender_name, 
+                  icon_name: newB.icon_name, 
+                  color_theme: newB.color_theme, 
+                  background_image: newB.background_image,
+                  buttons: newB.buttons 
+              });
+          } else {
+              addToast(newB.message, 'info', newB.icon_name, newB.sender_name, newB.color_theme, newB.title, newB.buttons, newB.background_image);
+          }
       }).subscribe();
       return () => { supabase.removeChannel(channel); };
   }, []);
@@ -960,7 +972,7 @@ export const App = () => {
     setConfirmModal({
       isOpen: true,
       title: 'Изтриване на чат',
-      message: 'Сигурни ли сте, че искате да изтриете този разговор?',
+      message: 'Сигурни ли сте? Всички ваши разговори ще бъдат изтрити завинаги.',
       onConfirm: () => {
         setSessions(prev => prev.filter(s => s.id !== id));
         if (activeSessionId === id) setActiveSessionId(null);
@@ -1222,23 +1234,51 @@ export const App = () => {
       <Lightbox image={zoomedImage} onClose={() => setZoomedImage(null)} />
       <ConfirmModal isOpen={!!confirmModal} title={confirmModal?.title || ''} message={confirmModal?.message || ''} onConfirm={confirmModal?.onConfirm || (()=>{})} onCancel={() => setConfirmModal(null)} />
       
-      {/* GLOBAL BROADCAST MODAL */}
+      {/* GLOBAL BROADCAST MODAL - Fully Synchronized with Admin Preview */}
       {broadcastModal?.isOpen && (
           <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-in fade-in">
-              <div className="bg-white/90 dark:bg-zinc-900/90 border border-indigo-500/30 w-full max-w-md p-8 rounded-[32px] shadow-2xl relative animate-in zoom-in-95 backdrop-blur-xl">
-                  <div className="flex flex-col items-center text-center gap-6">
-                      <div className="w-16 h-16 rounded-2xl bg-indigo-500 flex items-center justify-center text-white shadow-lg shadow-indigo-500/30">
-                          <Radio size={32} className="animate-pulse" />
+              <div className="bg-[#09090b] border border-white/10 w-full max-w-md p-8 rounded-[40px] shadow-2xl relative animate-in zoom-in-95 backdrop-blur-xl overflow-hidden ring-1 ring-white/5">
+                  {broadcastModal.background_image ? (
+                      <>
+                        <img src={broadcastModal.background_image} className="absolute inset-0 w-full h-full object-cover pointer-events-none" />
+                        <div className="absolute inset-0 bg-black/50 backdrop-blur-[2px] pointer-events-none" />
+                      </>
+                  ) : (
+                    <div className="absolute inset-x-0 top-0 h-32 opacity-20 pointer-events-none" style={{ background: `linear-gradient(to bottom, ${broadcastModal.color_theme || '#6366f1'}, transparent)` }} />
+                  )}
+                  
+                  <div className="flex flex-col items-center text-center gap-6 relative z-10">
+                      <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-indigo-500/30" style={{ backgroundColor: broadcastModal.color_theme || '#6366f1' }}>
+                          <DynamicIcon name={broadcastModal.icon_name || 'Bell'} className="w-8 h-8" />
                       </div>
                       <div className="space-y-2">
-                          <h3 className="text-2xl font-black text-zinc-900 dark:text-white tracking-tight">Важно известие</h3>
-                          <p className="text-zinc-600 dark:text-zinc-400 font-medium leading-relaxed">
+                          <h3 className="text-2xl font-black text-white tracking-tight leading-tight drop-shadow-md">{broadcastModal.title || "Важно известие"}</h3>
+                          {broadcastModal.sender_name && (
+                              <div className="text-[10px] font-black text-zinc-300 uppercase tracking-widest flex items-center justify-center gap-2 drop-shadow-md">
+                                  <span>{broadcastModal.sender_name}</span>
+                              </div>
+                          )}
+                          <p className="text-zinc-100 font-medium leading-relaxed mt-4 drop-shadow-md">
                               {broadcastModal.message}
                           </p>
                       </div>
-                      <Button onClick={() => setBroadcastModal(null)} className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-2xl shadow-lg shadow-indigo-500/20">
-                          Разбрах
-                      </Button>
+                      <div className="flex flex-col gap-3 w-full">
+                          {broadcastModal.buttons && broadcastModal.buttons.length > 0 ? broadcastModal.buttons.map((btn, idx) => (
+                              <a 
+                                  key={idx} 
+                                  href={btn.url} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="w-full py-4 text-white font-bold rounded-2xl shadow-lg flex items-center justify-center gap-2 transition-transform active:scale-95 border border-white/10"
+                                  style={{ backgroundColor: broadcastModal.color_theme || '#6366f1' }}
+                              >
+                                  {btn.label} <ExternalLink size={16}/>
+                              </a>
+                          )) : null}
+                          <Button onClick={() => setBroadcastModal(null)} variant="secondary" className="w-full py-4 font-bold rounded-2xl !bg-white/10 !text-white hover:!bg-white/20 !border-white/20">
+                              Затвори
+                          </Button>
+                      </div>
                   </div>
               </div>
           </div>
@@ -1271,11 +1311,46 @@ export const App = () => {
         setActiveSubject={setActiveSubject} 
       />
 
+      {/* RENDER TOASTS */}
       <div className="fixed top-4 right-4 z-[210] flex flex-col gap-2 pointer-events-none">
         {toasts.map(t => (
-          <div key={t.id} className={`${TOAST_CONTAINER} ${t.type === 'error' ? TOAST_ERROR : t.type === 'success' ? TOAST_SUCCESS : TOAST_INFO}`}>
-             {t.type === 'error' ? <AlertCircle size={18}/> : t.type === 'success' ? <CheckCircle size={18}/> : <Info size={18}/>}
-             <span className="font-medium text-sm">{t.message}</span>
+          <div key={t.id} className={`${TOAST_CONTAINER} ${t.type === 'error' ? TOAST_ERROR : t.type === 'success' ? TOAST_SUCCESS : TOAST_INFO} max-w-sm ring-1 ring-white/5 flex-col items-stretch gap-2 transition-all relative overflow-hidden`}>
+             {t.background_image && (
+                 <>
+                    <img src={t.background_image} className="absolute inset-0 w-full h-full object-cover pointer-events-none opacity-40 group-hover:opacity-60 transition-opacity" />
+                    <div className="absolute inset-0 bg-black/30 backdrop-blur-[1px] pointer-events-none" />
+                 </>
+             )}
+             <div className="flex items-center gap-3 relative z-10">
+                 <div className={`p-2.5 rounded-xl shrink-0 text-white shadow-lg transition-colors`} style={t.color ? {backgroundColor: t.color} : {}}>
+                    {t.icon ? <DynamicIcon name={t.icon} className="w-5 h-5"/> : (t.type === 'error' ? <AlertCircle size={20}/> : t.type === 'success' ? <CheckCircle size={20}/> : <Info size={20}/>)}
+                 </div>
+                 <div className="flex-1 min-w-0">
+                    <p className={`text-[10px] font-black uppercase tracking-widest mb-0.5 truncate ${t.background_image ? 'text-zinc-200' : 'text-zinc-500'}`}>{t.title || t.sender || (t.type === 'info' ? 'Известие' : t.type)}</p>
+                    <span className={`font-bold text-sm leading-tight block ${t.background_image ? 'text-white' : 'text-zinc-800 dark:text-zinc-200'}`}>{t.message}</span>
+                 </div>
+                 <button onClick={() => setToasts(prev => prev.filter(toast => toast.id !== t.id))} className={`${t.background_image ? 'text-white/60 hover:text-white' : 'text-zinc-500 hover:text-zinc-300'} self-start mt-1 shrink-0`}>
+                    <X size={14}/>
+                 </button>
+             </div>
+             
+             {/* Toast Action Buttons */}
+             {t.buttons && t.buttons.length > 0 && (
+                 <div className="flex gap-2 mt-1 relative z-10">
+                     {t.buttons.map((btn, idx) => (
+                         <a 
+                             key={idx} 
+                             href={btn.url} 
+                             target="_blank" 
+                             rel="noopener noreferrer"
+                             className="flex-1 py-2 rounded-lg text-white text-[10px] font-black uppercase tracking-widest text-center shadow-md active:scale-95 transition-transform flex items-center justify-center gap-1 border border-white/10"
+                             style={{ backgroundColor: t.color || '#6366f1' }}
+                         >
+                             {btn.label} <ExternalLink size={10}/>
+                         </a>
+                     ))}
+                 </div>
+             )}
           </div>
         ))}
       </div>
