@@ -3,7 +3,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import remarkGfm from 'remark-gfm';
-import { Projector, Download, Check, ThumbsUp, ThumbsDown, Reply, Volume2, Square, Copy, Share2, Loader2, Globe, ExternalLink, Lock, Sparkles, UserPlus, Brain, ChevronDown, ChevronUp } from 'lucide-react';
+import { Projector, Download, Check, ThumbsUp, ThumbsDown, Reply, Volume2, Square, Copy, Share2, Loader2, Globe, ExternalLink, Lock, Sparkles, UserPlus, Brain, ChevronDown, ChevronUp, ArrowRight } from 'lucide-react';
 import { Message, UserSettings, SubjectConfig } from '../../types';
 import { handleDownloadPPTX } from '../../utils/exportUtils';
 import { CodeBlock } from '../ui/CodeBlock';
@@ -30,17 +30,37 @@ interface MessageListProps {
 }
 
 const LOADING_MESSAGES = [
-    "Търся в интернет...",
-    "Проверявам информацията...",
-    "Подготвям отговора...",
+    "Търсене в Google...",
     "Анализирам въпроса...",
-    "Формулирам решение..."
+    "Проверявам информацията...",
+    "Формулирам решение...",
+    "Подготвям отговора...",
+    "Филтрирам резултатите..."
 ];
 
-const getLoadingMessage = (id: string) => {
-    let sum = 0;
-    for (let i = 0; i < id.length; i++) { sum += id.charCodeAt(i); }
-    return LOADING_MESSAGES[sum % LOADING_MESSAGES.length];
+const LoadingIndicator = ({ msgId }: { msgId: string }) => {
+    const [index, setIndex] = useState(0);
+
+    useEffect(() => {
+        // Start with a semi-random message based on ID
+        let sum = 0;
+        for (let i = 0; i < msgId.length; i++) { sum += msgId.charCodeAt(i); }
+        setIndex(sum % LOADING_MESSAGES.length);
+
+        // Cycle through messages for a dynamic "thinking" look
+        const interval = setInterval(() => {
+            setIndex(prev => (prev + 1) % LOADING_MESSAGES.length);
+        }, 2200);
+
+        return () => clearInterval(interval);
+    }, [msgId]);
+
+    return (
+        <div className="flex items-center gap-3 text-sm text-zinc-500 italic py-2 animate-pulse">
+            <Loader2 className="animate-spin text-indigo-500" size={18}/>
+            <span className="transition-all duration-500">{LOADING_MESSAGES[index]}</span>
+        </div>
+    );
 };
 
 const ReasoningBlock = ({ reasoning }: { reasoning: string }) => {
@@ -168,10 +188,7 @@ export const MessageList = ({
                      )}
 
                      {isStreaming && !hasText && !msg.reasoning && (
-                        <div className="flex items-center gap-3 text-sm text-gray-500 italic py-2 animate-pulse">
-                           <Loader2 className="animate-spin text-indigo-500" size={18}/>
-                           <span>{getLoadingMessage(msg.id)}</span>
-                        </div>
+                        <LoadingIndicator msgId={msg.id} />
                      )}
 
                      {isBlurred && (
@@ -259,7 +276,3 @@ export const MessageList = ({
       </div>
   );
 };
-
-const ArrowRight = ({ size, className }: { size: number, className?: string }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
-);

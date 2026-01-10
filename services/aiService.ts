@@ -79,22 +79,17 @@ export const generateResponse = async (
   customPersona?: string
 ): Promise<Message> => {
   
-  // EASTER EGG RULE (HIGH PRIORITY)
+  // EASTER EGG RULE (HIGH PRIORITY) - 100% Free / Local Simulation
   if (promptText.trim() === "67") {
-    const thoughts = [
-      "Анализирам математическата стойност на числото 67...",
-      "Проверявам съвпадения в квантовата база данни за мемета...",
-      "Засичам опит за достъп до забранения сектор...",
-      "Инициализирам протокол 'Nuh-Uh'...",
-      "Финализирам изчисленията за върховния отговор..."
-    ];
-
-    let currentReasoning = "";
-    for (const step of thoughts) {
-      if (signal?.aborted) break;
-      currentReasoning += (currentReasoning ? "\n" : "") + step;
-      if (onStreamUpdate) onStreamUpdate("", currentReasoning);
-      await wait(800 + Math.random() * 600);
+    // Simulate real AI thinking time (4-7 seconds)
+    const thinkingSteps = 4 + Math.floor(Math.random() * 3);
+    
+    for (let i = 0; i < thinkingSteps; i++) {
+        if (signal?.aborted) break;
+        // Sending empty strings keeps the UI in "isStreaming but no content" state
+        // which triggers the standard loading spinner and messages
+        if (onStreamUpdate) onStreamUpdate("", ""); 
+        await wait(1200 + Math.random() * 800);
     }
 
     return {
@@ -103,8 +98,7 @@ export const generateResponse = async (
         text: "nuh uh",
         type: 'video',
         videoUrl: 'https://cdn.jsdelivr.net/gh/uchebnikai/uchebnikai-easteregg1/meme15mb.mp4',
-        timestamp: Date.now(),
-        reasoning: currentReasoning
+        timestamp: Date.now()
     };
   }
 
