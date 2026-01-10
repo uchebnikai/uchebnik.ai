@@ -149,38 +149,39 @@ export const Sidebar = ({
             </div>
           </div>
 
-          <div className="space-y-1 px-4 mt-2 shrink-0">
-              <button 
-                onClick={() => { handleSubjectChange(SUBJECTS[0]); setHomeView('landing'); }} 
-                className={`w-full flex items-center ${collapsed ? 'justify-center px-0 py-3' : 'gap-3 px-4 py-3.5'} rounded-2xl transition-all relative overflow-hidden group border ${activeSubject?.id === SubjectId.GENERAL ? 'bg-indigo-600 border-indigo-500 text-white shadow-lg shadow-indigo-500/25' : 'glass-button border-indigo-500/10 text-zinc-700 dark:text-zinc-300 hover:border-indigo-500/30'}`}
-                title="Общ Чат"
-              >
-                   <div className={`p-1.5 rounded-lg shrink-0 ${activeSubject?.id === SubjectId.GENERAL ? 'bg-white/20' : 'bg-gray-100 dark:bg-white/5 text-indigo-600 dark:text-indigo-400'}`}><MessageSquare size={18} /></div>
-                   {!collapsed && <span className="font-bold text-sm">{t('chat_general', userSettings.language)}</span>}
-                   {unreadSubjects.has(SubjectId.GENERAL) && <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full animate-pulse" />}
-              </button>
-              
-              {activeSubject?.id === SubjectId.GENERAL && !collapsed && (
-                  <div className="ml-4 mt-1 space-y-0.5 border-l-2 border-indigo-500/20 pl-2 animate-in slide-in-from-top-2">
-                     {sessions.filter(s => s.subjectId === SubjectId.GENERAL).map(s => (
-                         <div key={s.id} className="flex items-center group/session">
-                            <button 
-                                onClick={() => { setActiveSessionId(s.id); if(isMobile) setSidebarOpen(false); }}
-                                className={`flex-1 text-left px-3 py-2 rounded-lg text-xs font-medium truncate transition-colors ${activeSessionId === s.id ? 'bg-indigo-100 dark:bg-white/10 text-indigo-600 dark:text-white' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5'}`}
-                            >
-                                {s.title}
-                            </button>
-                            <button onClick={() => deleteSession(s.id)} className="p-1 text-gray-400 hover:text-red-500 opacity-0 group-hover/session:opacity-100 transition-opacity"><Trash2 size={12}/></button>
-                         </div>
-                     ))}
-                     <button onClick={() => { createNewSession(SubjectId.GENERAL); if(isMobile) setSidebarOpen(false); }} className="w-full text-left px-3 py-2 text-xs font-bold text-indigo-500 hover:text-indigo-600 flex items-center gap-1">
-                        <Plus size={12}/> {t('new_chat', userSettings.language)}
-                     </button>
-                  </div>
-              )}
-          </div>
-
           <div className="flex-1 overflow-y-auto px-4 pb-4 custom-scrollbar">
+             {/* General Chat - Moved inside scrollable area */}
+             <div className="space-y-1 mt-2 mb-4 shrink-0">
+                  <button 
+                    onClick={() => { handleSubjectChange(SUBJECTS[0]); setHomeView('landing'); }} 
+                    className={`w-full flex items-center ${collapsed ? 'justify-center px-0 py-3' : 'gap-3 px-4 py-3.5'} rounded-2xl transition-all relative overflow-hidden group border ${activeSubject?.id === SubjectId.GENERAL ? 'bg-indigo-600 border-indigo-500 text-white shadow-lg shadow-indigo-500/25' : 'glass-button border-indigo-500/10 text-zinc-700 dark:text-zinc-300 hover:border-indigo-500/30'}`}
+                    title="Общ Чат"
+                  >
+                       <div className={`p-1.5 rounded-lg shrink-0 ${activeSubject?.id === SubjectId.GENERAL ? 'bg-white/20' : 'bg-gray-100 dark:bg-white/5 text-indigo-600 dark:text-indigo-400'}`}><MessageSquare size={18} /></div>
+                       {!collapsed && <span className="font-bold text-sm">{t('chat_general', userSettings.language)}</span>}
+                       {unreadSubjects.has(SubjectId.GENERAL) && <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full animate-pulse" />}
+                  </button>
+                  
+                  {activeSubject?.id === SubjectId.GENERAL && !collapsed && (
+                      <div className="ml-4 mt-1 space-y-0.5 border-l-2 border-indigo-500/20 pl-2 animate-in slide-in-from-top-2">
+                         {sessions.filter(s => s.subjectId === SubjectId.GENERAL).map(s => (
+                             <div key={s.id} className="flex items-center group/session">
+                                <button 
+                                    onClick={() => { setActiveSessionId(s.id); if(isMobile) setSidebarOpen(false); }}
+                                    className={`flex-1 text-left px-3 py-2 rounded-lg text-xs font-medium truncate transition-colors ${activeSessionId === s.id ? 'bg-indigo-100 dark:bg-white/10 text-indigo-600 dark:text-white' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5'}`}
+                                >
+                                    {s.title}
+                                </button>
+                                <button onClick={() => deleteSession(s.id)} className="p-1 text-gray-400 hover:text-red-500 opacity-0 group-hover/session:opacity-100 transition-opacity"><Trash2 size={12}/></button>
+                             </div>
+                         ))}
+                         <button onClick={() => { createNewSession(SubjectId.GENERAL); if(isMobile) setSidebarOpen(false); }} className="w-full text-left px-3 py-2 text-xs font-bold text-indigo-500 hover:text-indigo-600 flex items-center gap-1">
+                            <Plus size={12}/> {t('new_chat', userSettings.language)}
+                         </button>
+                      </div>
+                  )}
+             </div>
+
              {/* Gamification Grid */}
              {session && (
                  <div className={`mt-2 mb-2 ${collapsed ? 'space-y-2' : 'grid grid-cols-2 gap-2'}`}>
