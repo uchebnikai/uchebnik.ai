@@ -146,14 +146,29 @@
       #bmc-wbtn:active {
         cursor: grabbing !important;
       }
+
+      /* Draggable Shaking Effect */
+      @keyframes bmc-drag-shake {
+        0% { transform: scale(var(--bmc-scale, 1)) rotate(0deg); }
+        25% { transform: scale(var(--bmc-scale, 1)) rotate(2deg); }
+        50% { transform: scale(var(--bmc-scale, 1)) rotate(0deg); }
+        75% { transform: scale(var(--bmc-scale, 1)) rotate(-2deg); }
+        100% { transform: scale(var(--bmc-scale, 1)) rotate(0deg); }
+      }
+      .bmc-shaking {
+        animation: bmc-drag-shake 0.2s infinite !important;
+        cursor: grabbing !important;
+        opacity: 0.8 !important;
+      }
+
       /* POPUP IFRAME STYLES */
       #bmc-iframe {
         /* Slightly lower z-index than the button */
         z-index: 1999999 !important;
         width: 420px !important;
         max-width: 95vw !important;
-        height: 560px !important; /* Increased for PC visibility */
-        max-height: 85vh !important; /* Increased for PC visibility */
+        height: 560px !important; 
+        max-height: 85vh !important; 
         border-radius: 18px !important;
         transform-origin: bottom right !important;
         transform: scale(0) !important; 
@@ -169,8 +184,8 @@
       /* MOBILE ONLY: FILL THE SCREEN AND SMALLER BUTTON */
       @media (max-width: 640px) {
         #bmc-wbtn {
+          --bmc-scale: 0.6;
           transform: scale(0.6) !important;
-          /* Removed !important from position to allow dragging */
           bottom: 100px;
           right: 18px;
         }
@@ -228,7 +243,7 @@
     <script data-name="BMC-Widget" data-cfasync="false" src="https://cdnjs.buymeacoffee.com/1.0.0/widget.prod.min.js" data-id="uchebnikai" data-description="Support me on Buy me a coffee!" data-message="Подкрепи развитието на Uchebnik AI☕" data-color="#BD5FFF" data-position="Right" data-x_margin="18" data-y_margin="110"></script>
 
     <script>
-      // Enhanced Draggable logic for BMC Widget with click prevention and frame syncing
+      // Enhanced Draggable logic for BMC Widget with hold-to-drag and shaking
       const initDraggableWidget = () => {
         const checkInterval = setInterval(() => {
           const widget = document.getElementById('bmc-wbtn');
@@ -240,87 +255,105 @@
       };
 
       const setupDragging = (el) => {
+        let isHoldActive = false;
         let isDragging = false;
+        let holdTimer = null;
         let startX, startY, initialLeft, initialBottom;
         let totalMoved = 0;
 
         const onPointerDown = (e) => {
-          isDragging = true;
-          totalMoved = 0;
-          
           startX = e.clientX;
           startY = e.clientY;
-          
+          totalMoved = 0;
+          isDragging = false;
+          isHoldActive = false;
+
           const rect = el.getBoundingClientRect();
           initialLeft = rect.left;
           initialBottom = window.innerHeight - rect.bottom;
-          
-          el.setPointerCapture(e.pointerId);
-          el.style.transition = 'none';
-          
-          // Force layout mode to left/bottom for consistency
-          el.style.right = 'auto';
-          el.style.left = initialLeft + 'px';
-          el.style.bottom = initialBottom + 'px';
-          
-          // Disable transitions for the frame too while dragging
-          const frame = document.getElementById('bmc-iframe') || document.getElementById('bmc-wframe');
-          if (frame) frame.style.transition = 'none';
+
+          // Start hold timer
+          holdTimer = setTimeout(() => {
+            isHoldActive = true;
+            el.classList.add('bmc-shaking');
+            el.setPointerCapture(e.pointerId);
+            
+            // Force layout mode to absolute values for dragging
+            el.style.right = 'auto';
+            el.style.left = initialLeft + 'px';
+            el.style.bottom = initialBottom + 'px';
+            el.style.transition = 'none';
+
+            // Sync frame transition
+            const frame = document.getElementById('bmc-iframe') || document.getElementById('bmc-wframe');
+            if (frame) frame.style.transition = 'none';
+          }, 600); // 600ms hold time
         };
 
         const onPointerMove = (e) => {
-          if (!isDragging) return;
-          
           const dx = e.clientX - startX;
           const dy = e.clientY - startY;
-          const distance = Math.abs(dx) + Math.abs(dy);
-          totalMoved += distance;
+          const moveDist = Math.sqrt(dx*dx + dy*dy);
+          totalMoved = moveDist;
 
-          if (totalMoved > 10) {
-            const newLeft = initialLeft + dx;
-            const newBottom = initialBottom - dy;
-            
-            const boundedLeft = Math.max(0, Math.min(newLeft, window.innerWidth - el.offsetWidth));
-            const boundedBottom = Math.max(0, Math.min(newBottom, window.innerHeight - el.offsetHeight));
-            
-            el.style.left = boundedLeft + 'px';
-            el.style.bottom = boundedBottom + 'px';
-
-            // SYNC IFRAME POSITION
-            const frame = document.getElementById('bmc-iframe') || document.getElementById('bmc-wframe');
-            if (frame) {
-                const iframeWidth = 420;
-                const buttonWidth = el.offsetWidth;
-                
-                // On mobile, iframe centers itself via CSS logic (width 100vw)
-                // On desktop, we want it roughly above/near the button.
-                if (window.innerWidth > 640) {
-                  let iframeLeft = boundedLeft + buttonWidth - iframeWidth;
-                  if (iframeLeft < 10) iframeLeft = 10;
-                  frame.style.left = iframeLeft + 'px';
-                  frame.style.bottom = (boundedBottom + 72) + 'px';
-                  frame.style.right = 'auto';
-                }
+          // If moved too much before hold activates, cancel hold
+          if (!isHoldActive && moveDist > 10) {
+            if (holdTimer) {
+              clearTimeout(holdTimer);
+              holdTimer = null;
             }
+          }
+
+          if (!isHoldActive) return;
+
+          isDragging = true;
+          const newLeft = initialLeft + dx;
+          const newBottom = initialBottom - dy;
+          
+          const boundedLeft = Math.max(0, Math.min(newLeft, window.innerWidth - el.offsetWidth));
+          const boundedBottom = Math.max(0, Math.min(newBottom, window.innerHeight - el.offsetHeight));
+          
+          el.style.left = boundedLeft + 'px';
+          el.style.bottom = boundedBottom + 'px';
+
+          // Sync iframe on PC
+          const frame = document.getElementById('bmc-iframe') || document.getElementById('bmc-wframe');
+          if (frame && window.innerWidth > 640) {
+              const iframeWidth = 420;
+              const buttonWidth = el.offsetWidth;
+              let iframeLeft = boundedLeft + buttonWidth - iframeWidth;
+              if (iframeLeft < 10) iframeLeft = 10;
+              frame.style.left = iframeLeft + 'px';
+              frame.style.bottom = (boundedBottom + 72) + 'px';
+              frame.style.right = 'auto';
           }
         };
 
         const onPointerUp = (e) => {
-          if (!isDragging) return;
-          isDragging = false;
-          el.releasePointerCapture(e.pointerId);
-          el.style.transition = 'transform 0.2s ease-out';
-          
-          // Re-enable transitions for the frame
-          const frame = document.getElementById('bmc-iframe') || document.getElementById('bmc-wframe');
-          if (frame) frame.style.transition = 'all .25s ease, transform .25s ease';
+          if (holdTimer) {
+            clearTimeout(holdTimer);
+            holdTimer = null;
+          }
+
+          if (isHoldActive) {
+            el.classList.remove('bmc-shaking');
+            el.releasePointerCapture(e.pointerId);
+            el.style.transition = 'transform 0.2s ease-out';
+            
+            const frame = document.getElementById('bmc-iframe') || document.getElementById('bmc-wframe');
+            if (frame) frame.style.transition = 'all .25s ease, transform .25s ease';
+            
+            isHoldActive = false;
+          }
         };
 
         const onClickCapture = (e) => {
-            if (totalMoved > 15) {
+            // Only block click if we actually dragged while in hold mode
+            if (isDragging) {
                 e.preventDefault();
                 e.stopPropagation();
                 e.stopImmediatePropagation();
+                isDragging = false;
             }
         };
 
