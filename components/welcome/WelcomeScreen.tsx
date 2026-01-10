@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Shield, MessageSquare, ArrowRight, School, GraduationCap, Briefcase, ArrowLeft, ArrowUpRight, Search, ImageIcon, Mic, MicOff, X, Menu, Landmark, Sparkles, BookOpen, Brain, Zap, CheckCircle2, Users, LayoutDashboard, Settings, MapPin, Mail, Globe, MoreVertical, Paperclip, Send, Lock, Star, Trophy, Target, AlertTriangle } from 'lucide-react';
 import { SubjectConfig, UserRole, UserSettings, HomeViewType, SubjectId } from '../../types';
@@ -187,9 +186,20 @@ export const WelcomeScreen = ({
         return (
             <div className="w-full h-full overflow-y-auto overflow-x-hidden custom-scrollbar flex flex-col relative pb-safe">
                 
-                {/* Admin Access for Logged In Users */}
-                <div className="absolute top-6 left-6 z-30">
-                    <button onClick={() => setShowAdminAuth(true)} className="p-2.5 bg-white/10 dark:bg-black/20 hover:bg-white/20 backdrop-blur-md rounded-xl text-zinc-500 hover:text-indigo-500 transition-all border border-white/5 shadow-sm">
+                {/* Mobile Menu & Admin Access */}
+                <div className="absolute top-6 left-6 z-30 flex items-center gap-2">
+                    <button 
+                        onClick={() => setSidebarOpen(true)} 
+                        className="lg:hidden p-2.5 bg-white/10 dark:bg-black/20 hover:bg-white/20 backdrop-blur-md rounded-xl text-zinc-500 hover:text-indigo-500 transition-all border border-white/5 shadow-sm"
+                        title="Отвори менюто"
+                    >
+                        <Menu size={20} />
+                    </button>
+                    <button 
+                        onClick={() => setShowAdminAuth(true)} 
+                        className="p-2.5 bg-white/10 dark:bg-black/20 hover:bg-white/20 backdrop-blur-md rounded-xl text-zinc-500 hover:text-indigo-500 transition-all border border-white/5 shadow-sm"
+                        title="Админ панел"
+                    >
                         <Shield size={20} />
                     </button>
                 </div>
@@ -217,7 +227,7 @@ export const WelcomeScreen = ({
                                 <MessageSquare size={24} className="lg:w-7 lg:h-7" />
                             </div>
                             <h3 className="text-xl lg:text-2xl font-bold text-white mb-2">{t('chat_general', userSettings.language)}</h3>
-                            <p className="text-zinc-500 text-sm font-medium mb-6 flex-1">Попитай ме каквото и да е за училище или университет.</p>
+                            <p className="text-zinc-500 text-sm font-medium mb-6 flex-1">Попитай me каквото и да е за училище или университет.</p>
                             <div className="px-6 py-2.5 bg-white/5 hover:bg-indigo-500 text-zinc-300 hover:text-white rounded-full font-bold text-xs flex items-center gap-2 transition-all group-hover:pl-8 border border-white/5 self-start">
                                 {t('start', userSettings.language)} <ArrowRight size={14} />
                             </div>
