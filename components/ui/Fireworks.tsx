@@ -90,8 +90,8 @@ export const Fireworks = ({ active }: { active: boolean }) => {
   const animationRef = useRef<number>(0);
 
   const createBurst = (x: number, y: number) => {
-    // Elegant Festive Palette
-    const colors = ['#fde68a', '#fbbf24', '#ffffff', '#818cf8', '#f472b6', '#4ade80'];
+    // Elegant Festive Palette: Gold, Cyan, White, Purple
+    const colors = ['#fde68a', '#fbbf24', '#ffffff', '#818cf8', '#f472b6', '#22d3ee'];
     const color = colors[Math.floor(Math.random() * colors.length)];
     const count = 30; 
     for (let i = 0; i < count; i++) {
@@ -121,16 +121,18 @@ export const Fireworks = ({ active }: { active: boolean }) => {
     resize();
 
     let lastBurstTime = 0;
-    const burstDelay = 3500; // Elegant spacing
+    const burstDelay = 3500; // Majestically paced bursts
 
     const animate = (time: number) => {
-      // Clean frame-by-frame clearing prevents ghosting/transparent leftovers
+      // Clean frame-by-frame clearing
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
       if (time - lastBurstTime > burstDelay) {
+        // Constrain explosions to the SKY area (top 45% of the screen)
+        // Avoid the bottom part where the buildings and people are
         createBurst(
-          Math.random() * canvas.width * 0.7 + canvas.width * 0.15,
-          Math.random() * canvas.height * 0.4 + canvas.height * 0.1
+          Math.random() * canvas.width * 0.8 + canvas.width * 0.1,
+          Math.random() * canvas.height * 0.35 + canvas.height * 0.05
         );
         lastBurstTime = time;
       }
@@ -158,7 +160,7 @@ export const Fireworks = ({ active }: { active: boolean }) => {
   return (
     <canvas
       ref={canvasRef}
-      className="fixed inset-0 pointer-events-none z-[9999] transition-opacity duration-1000"
+      className="fixed inset-0 pointer-events-none z-[5] transition-opacity duration-1000"
       style={{ opacity: active ? 1 : 0 }}
     />
   );
