@@ -390,11 +390,12 @@ export const AdminPanel = ({
         try {
             if (['users', 'dashboard', 'finance', 'reports'].includes(activeTab)) {
                 const dbStart = performance.now();
+                // Increased limit to 1000 to catch more users for global stats
                 const { data: users, error } = await supabase
                     .from('profiles')
                     .select('*')
                     .order('updated_at', { ascending: false })
-                    .limit(500); 
+                    .limit(1000); 
                 const dbLatency = Math.round(performance.now() - dbStart);
                 
                 updateHealthItem('Основна БД', !error, dbLatency, Date.now());
@@ -410,8 +411,9 @@ export const AdminPanel = ({
                             try { settings = JSON.parse(settings); } catch (e) {}
                         }
                         
-                        const uIn = settings?.stats?.totalInputTokens || 0;
-                        const uOut = settings?.stats?.totalOutputTokens || 0;
+                        // Robust token extraction
+                        const uIn = Number(settings?.stats?.totalInputTokens || 0);
+                        const uOut = Number(settings?.stats?.totalOutputTokens || 0);
                         
                         tIn += uIn;
                         tOut += uOut;
@@ -441,7 +443,7 @@ export const AdminPanel = ({
                             xp: u.xp || 0,
                             level: u.level || 1,
                             usage: settings?.stats?.dailyImageCount || 0,
-                            lastVisit: settings?.stats?.lastVisit || new Date(u.updated_at).toLocaleDateString('bg-BG'),
+                            lastVisit: settings?.stats?.lastVisit || (u.updated_at ? new Date(u.updated_at).toLocaleDateString('bg-BG') : '-'),
                             createdAt: u.created_at,
                             theme: u.theme_color || '#6366f1',
                             rawSettings: settings,
@@ -803,7 +805,7 @@ export const AdminPanel = ({
                         </div>
                         <div>
                             <h2 className="font-bold text-white text-sm">Админ Панел</h2>
-                            <div className="text-[10px] text-zinc-500 font-mono">v4.3 • Advanced Sorting</div>
+                            <div className="text-[10px] text-zinc-500 font-mono">v4.4 • Accurate Token Counting</div>
                         </div>
                     </div>
                     <button onClick={() => setShowAdminPanel(false)} className="md:hidden p-2 text-zinc-400 hover:text-white transition-colors">
@@ -1718,7 +1720,7 @@ export const AdminPanel = ({
                                                                  <span className={`text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-wider ${user.plan === 'pro' ? 'bg-amber-500 text-black' : user.plan === 'plus' ? 'bg-indigo-500 text-white' : 'bg-zinc-700 text-zinc-400'}`}>{user.plan}</span>
                                                              </div>
                                                              <div className="flex items-center gap-3 text-xs text-zinc-500 font-mono mt-1">
-                                                                 <span className="flex items-center gap-1"><Calendar size={10}/> {new Date(user.createdAt).toLocaleDateString('bg-BG')}</span>
+                                                                 <span className="flex items-center gap-1"><Calendar size={10}/> {user.createdAt ? new Date(user.createdAt).toLocaleDateString('bg-BG') : '-'}</span>
                                                                  <span className="w-1 h-1 rounded-full bg-zinc-700"/>
                                                                  <span className="text-amber-500 font-bold">Lvl {user.level}</span>
                                                              </div>

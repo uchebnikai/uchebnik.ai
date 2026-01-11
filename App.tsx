@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { GoogleGenAI, LiveServerMessage, Modality } from "@google/genai";
 import { SubjectConfig, SubjectId, AppMode, Message, Slide, UserSettings, Session, UserPlan, UserRole, HomeViewType } from './types';
@@ -200,6 +201,11 @@ export const App = () => {
     dailyQuests: {
         date: new Date().toDateString(),
         quests: generateDailyQuests()
+    },
+    stats: {
+        totalInputTokens: 0,
+        totalOutputTokens: 0,
+        dailyImageCount: 0
     }
   });
 
@@ -744,15 +750,11 @@ export const App = () => {
                         referralCode, 
                         proExpiresAt, 
                         xp, 
-                        level 
+                        level,
+                        stats: stats || prev.stats
                     }));
 
                     if (plan) setUserPlan(plan);
-                    if (stats) {
-                        setTotalInputTokens(stats.totalInputTokens || 0);
-                        setTotalOutputTokens(stats.totalOutputTokens || 0);
-                        setCostCorrection(stats.costCorrection || 0);
-                    }
                 }
             }
             const { data: sessionData } = await supabase.from('user_data').select('data').eq('user_id', userId).single();
@@ -1118,6 +1120,19 @@ export const App = () => {
       const response = await generateResponse(currentSubject.id, currentMode, textToSend, currentImgs, historyForAI, userSettings.preferredModel, (txt, reason) => {
           setSessions(prev => prev.map(s => s.id === currentSessionId ? { ...s, messages: s.messages.map(m => m.id === tempAiMsgId ? { ...m, text: txt, reasoning: reason } : m) } : s));
       }, controller.signal, userSettings.language, userSettings.teachingStyle, userSettings.customPersona);
+      
+      // Update token counts in settings for persistence
+      if (response.usage) {
+          setUserSettings(prev => ({
+              ...prev,
+              stats: {
+                  ...prev.stats,
+                  totalInputTokens: (prev.stats?.totalInputTokens || 0) + response.usage!.inputTokens,
+                  totalOutputTokens: (prev.stats?.totalOutputTokens || 0) + response.usage!.outputTokens,
+              }
+          }));
+      }
+
       setSessions(prev => prev.map(s => s.id === currentSessionId ? { ...s, messages: s.messages.map(m => m.id === tempAiMsgId ? { ...m, ...response, isStreaming: false } : m), lastModified: Date.now(), preview: response.text.substring(0, 50) } : s));
     } catch (e: any) {
        console.error("AI Error", e);
