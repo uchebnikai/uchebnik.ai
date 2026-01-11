@@ -35,6 +35,7 @@ import { SettingsModal } from './components/settings/SettingsModal';
 import { ReferralModal } from './components/referrals/ReferralModal';
 import { LeaderboardModal } from './components/gamification/LeaderboardModal';
 import { DailyQuestsModal } from './components/gamification/DailyQuestsModal';
+import { DailyQuestsModal as QuestsModal } from './components/gamification/DailyQuestsModal';
 import { HistoryDrawer } from './components/history/HistoryDrawer';
 import { VoiceCallOverlay } from './components/voice/VoiceCallOverlay';
 import { Sidebar } from './components/layout/Sidebar';
@@ -130,7 +131,13 @@ export const App = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   
   const [historyDrawerOpen, setHistoryDrawerOpen] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(true); 
+  
+  // Theme State
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    const saved = localStorage.getItem('uchebnik_dark_mode');
+    return saved === null ? true : saved === 'true';
+  });
+  
   const [showSettings, setShowSettings] = useState(false);
   const [showReferralModal, setShowReferralModal] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
@@ -190,7 +197,6 @@ export const App = () => {
     socraticMode: false,
     enterToSend: true,
     fontFamily: 'inter',
-    customPersona: '',
     christmasMode: false,
     newYearMode: false,
     preferredVoice: DEFAULT_VOICE,
@@ -264,6 +270,16 @@ export const App = () => {
 
   // --- Custom Hooks ---
   useTheme(userSettings);
+
+  // --- Effect: Dark Mode Toggle ---
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    localStorage.setItem('uchebnik_dark_mode', String(isDarkMode));
+  }, [isDarkMode]);
 
   // --- Admin Logic ---
   const handleAdminLogin = async () => {
@@ -1247,7 +1263,7 @@ export const App = () => {
       <SettingsModal showSettings={showSettings} setShowSettings={setShowSettings} userMeta={userMeta} editProfile={editProfile} setEditProfile={setEditProfile} handleUpdateAccount={handleUpdateAccount} handleAvatarUpload={handleAvatarUploadSettings} userSettings={userSettings} setUserSettings={setUserSettings} isPremium={userPlan!=='free'} isDarkMode={isDarkMode} setIsDarkMode={setIsDarkMode} handleBackgroundUpload={handleBackgroundUpload} handleDeleteAllChats={handleDeleteAllChats} addToast={addToast} userPlan={userPlan} />
       <ReferralModal isOpen={showReferralModal} onClose={() => setShowReferralModal(false)} userSettings={userSettings} addToast={addToast} />
       <LeaderboardModal isOpen={showLeaderboard} onClose={() => setShowLeaderboard(false)} currentUserId={session?.user?.id} />
-      <DailyQuestsModal isOpen={showQuests} onClose={() => setShowQuests(false)} quests={userSettings.dailyQuests?.quests || []} />
+      <QuestsModal isOpen={showQuests} onClose={() => setShowQuests(false)} quests={userSettings.dailyQuests?.quests || []} />
       <ReportModal isOpen={showReportModal} onClose={() => setShowReportModal(false)} userSettings={userSettings} addToast={addToast} userId={session?.user?.id} />
       <AdminPanel showAdminAuth={showAdminAuth} setShowAdminAuth={setShowAdminAuth} showAdminPanel={showAdminPanel} setShowAdminPanel={setShowAdminPanel} adminPasswordInput={adminPasswordInput} setAdminPasswordInput={setAdminPasswordInput} handleAdminLogin={handleAdminLogin} generateKey={handleGenerateKey} generatedKeys={generatedKeys as any} addToast={addToast} globalConfig={globalConfig} setGlobalConfig={setGlobalConfig} />
       <Lightbox image={zoomedImage} onClose={() => setZoomedImage(null)} />
