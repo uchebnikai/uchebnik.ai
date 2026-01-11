@@ -1,12 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Shield, MessageSquare, ArrowRight, School, GraduationCap, Briefcase, ArrowLeft, ArrowUpRight, Search, ImageIcon, Mic, MicOff, X, Menu, Landmark, Sparkles, BookOpen, Brain, Zap, CheckCircle2, Users, LayoutDashboard, Settings, MapPin, Mail, Globe, MoreVertical, Paperclip, Send, Lock, Star, Trophy, Target, AlertTriangle } from 'lucide-react';
 import { SubjectConfig, UserRole, UserSettings, HomeViewType, SubjectId } from '../../types';
-import { SUBJECTS } from '../../constants';
+import { SUBJECTS, DEFAULT_AVATAR } from '../../constants';
 import { DynamicIcon } from '../ui/DynamicIcon';
 import { ZOOM_IN, SLIDE_UP, FADE_IN, SLIDE_RIGHT } from '../../animations/transitions';
 import { getStaggeredDelay } from '../../animations/utils';
 import { resizeImage } from '../../utils/image';
 import { t } from '../../utils/translations';
+import { supabase } from '../../supabaseClient';
 
 interface WelcomeScreenProps {
   homeView: HomeViewType;
@@ -48,6 +49,7 @@ export const WelcomeScreen = ({
     const [inputValue, setInputValue] = useState('');
     const [selectedImages, setSelectedImages] = useState<string[]>([]);
     const [isListening, setIsListening] = useState(false);
+    const [realUserAvatars, setRealUserAvatars] = useState<string[]>([]);
     const recognitionRef = useRef<any>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const startingTextRef = useRef('');
@@ -77,6 +79,26 @@ export const WelcomeScreen = ({
     ]);
     const [isMockTyping, setIsMockTyping] = useState(false);
     const isMockDisabled = mockMessages.length >= 4;
+
+    useEffect(() => {
+        const fetchRecentAvatars = async () => {
+            try {
+                const { data, error } = await supabase
+                    .from('profiles')
+                    .select('avatar_url')
+                    .not('avatar_url', 'is', null)
+                    .order('updated_at', { ascending: false })
+                    .limit(4);
+                
+                if (!error && data) {
+                    setRealUserAvatars(data.map(d => d.avatar_url));
+                }
+            } catch (e) {
+                console.error("Avatar fetch error", e);
+            }
+        };
+        fetchRecentAvatars();
+    }, []);
 
     const handleMockSend = () => {
         if (!mockInputValue.trim() || isMockTyping || isMockDisabled) return;
@@ -374,9 +396,15 @@ export const WelcomeScreen = ({
                             <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform"/>
                         </button>
                         <div className="flex -space-x-2 lg:-space-x-3 items-center ml-2">
-                            {[1,2,3,4].map(i => (
-                                <img key={i} src={`https://i.pravatar.cc/100?u=user${i}`} className="w-8 h-8 lg:w-10 lg:h-10 rounded-full border-2 border-white dark:border-zinc-900 object-cover shadow-sm" />
-                            ))}
+                            {realUserAvatars.length > 0 ? (
+                                realUserAvatars.map((url, i) => (
+                                    <img key={i} src={url || DEFAULT_AVATAR} className="w-8 h-8 lg:w-10 lg:h-10 rounded-full border-2 border-white dark:border-zinc-900 object-cover shadow-sm" />
+                                ))
+                            ) : (
+                                [1,2,3,4].map(i => (
+                                    <img key={i} src={DEFAULT_AVATAR} className="w-8 h-8 lg:w-10 lg:h-10 rounded-full border-2 border-white dark:border-zinc-900 object-cover shadow-sm" />
+                                ))
+                            )}
                             <span className="pl-4 lg:pl-6 text-[10px] lg:text-sm font-bold text-zinc-500">+100 ученици</span>
                         </div>
                     </div>
@@ -548,7 +576,7 @@ export const WelcomeScreen = ({
                  </button>
                  <button onClick={() => { setHomeView('uni_teacher_subjects'); setUserRole('uni_teacher'); }} className="group relative h-48 lg:h-72 rounded-[32px] lg:rounded-[40px] p-6 lg:p-8 text-left bg-white/60 dark:bg-black/40 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-2xl hover:scale-[1.02] active:scale-[0.98] transition-all overflow-hidden">
                      <div className="relative z-10 flex flex-col h-full justify-between">
-                         <div className="p-3 lg:p-4 bg-gray-100 dark:bg-white/5 text-emerald-600 dark:text-emerald-400 rounded-2xl lg:rounded-3xl w-fit group-hover:scale-110 transition-transform duration-300"><Briefcase size={32} className="lg:w-10 lg:h-10"/></div>
+                         <div className="p-3 lg:p-4 bg-gray-100 dark:bg-white/5 text-indigo-600 dark:text-indigo-400 rounded-2xl lg:rounded-3xl w-fit group-hover:scale-110 transition-transform duration-300"><Briefcase size={32} className="lg:w-10 lg:h-10"/></div>
                          <div><h3 className="text-2xl lg:text-4xl font-black mb-1 lg:mb-2 text-zinc-900 dark:text-white">{t('role_uni_professor', userSettings.language)}</h3><p className="text-zinc-500 font-medium text-sm lg:text-lg">{t('desc_uni_professor', userSettings.language)}</p></div>
                      </div>
                  </button>

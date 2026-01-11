@@ -1,10 +1,10 @@
-
 import React, { useEffect, useState } from 'react';
 import { X, Trophy, Crown, Zap, Shield, HelpCircle, Info, Medal, User } from 'lucide-react';
 import { supabase } from '../../supabaseClient';
 import { LeaderboardEntry } from '../../types';
 import { getRank, calculateLevel } from '../../utils/gamification';
 import { MODAL_ENTER, FADE_IN } from '../../animations/transitions';
+import { DEFAULT_AVATAR } from '../../constants';
 
 interface LeaderboardModalProps {
     isOpen: boolean;
@@ -44,8 +44,8 @@ export const LeaderboardModal = ({ isOpen, onClose, currentUserId }: Leaderboard
                     // Fallback level calculation if not in DB yet
                     const level = profile.level || calculateLevel(profile.xp || 0);
                     
-                    // Prioritize dedicated avatar_url, fall back to settings, then null
-                    const avatar = profile.avatar_url || settings?.avatar || null;
+                    // Prioritize dedicated avatar_url, fall back to settings, then default
+                    const avatar = profile.avatar_url || settings?.avatar || DEFAULT_AVATAR;
 
                     return {
                         userId: profile.id,
@@ -124,36 +124,6 @@ export const LeaderboardModal = ({ isOpen, onClose, currentUserId }: Leaderboard
                     </div>
                 </div>
 
-                {/* Help Banner (Toggleable) */}
-                {showInfo && (
-                    <div className="mx-6 mb-4 p-5 bg-gradient-to-r from-indigo-500/10 to-purple-500/10 border border-indigo-500/20 rounded-2xl animate-in slide-in-from-top-2 backdrop-blur-md">
-                        <h4 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
-                            <Zap size={16} className="text-amber-400" fill="currentColor"/> Как да се издигна?
-                        </h4>
-                        <div className="space-y-2">
-                            <div className="flex items-center justify-between text-xs text-zinc-300 bg-black/20 p-2 rounded-lg border border-white/5">
-                                <span className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-blue-400"/> Писане на съобщения</span>
-                                <span className="font-mono text-white font-bold">+20 XP</span>
-                            </div>
-                            <div className="flex items-center justify-between text-xs text-zinc-300 bg-black/20 p-2 rounded-lg border border-white/5">
-                                <span className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-purple-400"/> Качване на снимки</span>
-                                <span className="font-mono text-white font-bold">+40 XP</span>
-                            </div>
-                            <div className="flex items-center justify-between text-xs text-zinc-300 bg-black/20 p-2 rounded-lg border border-white/5">
-                                <span className="flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-pink-400"/> Гласови разговори</span>
-                                <span className="font-mono text-white font-bold">+60 XP</span>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {/* Table Header */}
-                <div className="grid grid-cols-12 gap-3 px-6 py-3 text-[10px] font-bold text-zinc-500 uppercase tracking-wider border-b border-white/5 bg-black/20 relative z-10 backdrop-blur-sm">
-                    <div className="col-span-2 text-center">#</div>
-                    <div className="col-span-7">Потребител</div>
-                    <div className="col-span-3 text-right">XP</div>
-                </div>
-
                 {/* List */}
                 <div className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-1 relative z-10">
                     {loading ? (
@@ -199,7 +169,6 @@ export const LeaderboardModal = ({ isOpen, onClose, currentUserId }: Leaderboard
                                                     </div>
                                                 )}
                                             </div>
-                                            {/* Rank Tier Badge - Smaller */}
                                             <div className="absolute -bottom-1 -right-1 bg-[#09090b] rounded-full p-[2px] z-20">
                                                 <div className={`w-4 h-4 rounded-full flex items-center justify-center bg-gradient-to-br ${rankInfo.gradient} ring-1 ring-black shadow-sm`}>
                                                     <RankIcon size={8} className="text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.5)]"/>
@@ -214,7 +183,6 @@ export const LeaderboardModal = ({ isOpen, onClose, currentUserId }: Leaderboard
                                                 </span>
                                                 {entry.isCurrentUser && <span className="text-[9px] bg-indigo-500/20 text-indigo-300 px-1.5 py-0.5 rounded uppercase font-bold tracking-wider border border-indigo-500/20">YOU</span>}
                                             </div>
-                                            {/* Explicit Tier Label */}
                                             <div className="flex items-center gap-2 mt-0.5">
                                                 <span className="text-[10px] font-bold text-zinc-500">Lvl {entry.level}</span>
                                                 <span className="w-1 h-1 rounded-full bg-zinc-700"></span>
@@ -237,38 +205,6 @@ export const LeaderboardModal = ({ isOpen, onClose, currentUserId }: Leaderboard
                         })
                     )}
                 </div>
-
-                {/* Footer (Current User Stats) */}
-                {currentUserEntry && (
-                    <div className="p-4 bg-[#09090b]/90 backdrop-blur-xl border-t border-white/10 shrink-0 relative z-20">
-                        <div className="flex items-center justify-between bg-gradient-to-r from-indigo-900/40 to-purple-900/40 rounded-2xl p-4 border border-white/10 shadow-lg relative overflow-hidden group">
-                            <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"/>
-                            
-                            <div className="flex items-center gap-4 relative z-10">
-                                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-700 flex items-center justify-center text-white shadow-lg shadow-indigo-500/30 ring-1 ring-white/10">
-                                    <div className="text-xs font-black">#{currentUserEntry.rank}</div>
-                                </div>
-                                <div>
-                                    <div className="text-[10px] text-indigo-300 font-bold uppercase tracking-wider mb-0.5">Твоята позиция</div>
-                                    <div className="font-bold text-white text-base">Ниво {currentUserEntry.level}</div>
-                                </div>
-                            </div>
-                            
-                            <div className="text-right relative z-10">
-                                <div className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider mb-0.5">Общо XP</div>
-                                <div className="font-black text-xl text-white font-mono flex items-center justify-end gap-1.5">
-                                    {currentUserEntry.xp.toLocaleString()}
-                                    <Zap size={16} className="text-amber-400" fill="currentColor"/>
-                                </div>
-                            </div>
-                        </div>
-                        {currentUserEntry.rank > 3 && (
-                            <p className="text-center text-[10px] text-zinc-500 mt-3 font-medium animate-pulse">
-                                Продължавай да учиш, за да стигнеш върха! 🚀
-                            </p>
-                        )}
-                    </div>
-                )}
             </div>
         </div>
     );

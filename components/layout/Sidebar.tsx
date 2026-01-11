@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { MessageSquare, Trash2, Plus, School, GraduationCap, Briefcase, ChevronDown, User, Settings, CreditCard, HelpCircle, LogOut, ArrowRight, ChevronUp, FileText, CloudOff, RefreshCw, Cloud, PanelLeftClose, PanelLeftOpen, LogIn, Snowflake, Gift, Trophy, Target, AlertTriangle, Sparkles, PartyPopper, Shield } from 'lucide-react';
 import { DynamicIcon } from '../ui/DynamicIcon';
-import { SUBJECTS } from '../../constants';
+import { SUBJECTS, DEFAULT_AVATAR } from '../../constants';
 import { SubjectId, AppMode, Session, UserRole, UserSettings, UserPlan, SubjectConfig, HomeViewType } from '../../types';
 import { t } from '../../utils/translations';
 import { getRank, getLevelStats } from '../../utils/gamification';
@@ -155,7 +155,7 @@ export const Sidebar = ({
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto px-4 pb-4 custom-scrollbar">
+          <div className="flex-1-1 overflow-y-auto px-4 pb-4 custom-scrollbar">
              {/* General Chat */}
              <div className="space-y-1 mt-2 mb-4 shrink-0">
                   <button 
@@ -480,7 +480,7 @@ export const Sidebar = ({
                     <button onClick={() => setProfileMenuOpen(!profileMenuOpen)} className={`flex items-center gap-3 w-full p-2.5 lg:p-2.5 rounded-2xl hover:bg-white/50 dark:hover:bg-white/5 transition-all duration-200 border border-transparent hover:border-indigo-500/10 group ${collapsed ? 'justify-center' : ''}`}>
                          <div className="relative shrink-0">
                              <img 
-                               src={userMeta.avatar || "https://cdn-icons-png.freepik.com/256/3276/3276580.png"} 
+                               src={userMeta.avatar || DEFAULT_AVATAR} 
                                alt="Profile" 
                                className={`w-9 h-9 lg:w-10 lg:h-10 rounded-full object-cover border-2 ${currentRank.color === '#cd7f32' ? 'border-orange-700' : 'border-current'}`}
                                style={{ borderColor: currentRank.color }}
