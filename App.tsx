@@ -401,7 +401,7 @@ export const App = () => {
       voiceStreamRef.current = stream;
       const ai = new GoogleGenAI({ apiKey });
       const inputCtx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
-      const outputCtx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
+      const outputCtx = new (window.AudioContext || (window as any).webkitRecognition || (window as any).AudioContext)({ sampleRate: 24000 });
       audioContextRef.current = outputCtx;
       const sessionPromise = ai.live.connect({
         model: LIVE_MODEL,
@@ -872,8 +872,7 @@ export const App = () => {
       setSyncStatus('syncing');
       if (syncSessionsTimer.current) clearTimeout(syncSessionsTimer.current);
       syncSessionsTimer.current = setTimeout(async () => {
-          const sanitized = sessions.map(s => ({ ...s, messages: s.messages.map(m => ({ ...m, images: m.images ? [] : undefined })) }));
-          await supabase.from('user_data').upsert({ user_id: session.user.id, data: sanitized, updated_at: new Date().toISOString() });
+          await supabase.from('user_data').upsert({ user_id: session.user.id, data: sessions, updated_at: new Date().toISOString() });
           setSyncStatus('synced');
       }, 2000);
       return () => { if(syncSessionsTimer.current) clearTimeout(syncSessionsTimer.current); };
