@@ -41,6 +41,7 @@ const ALLOWED_MODELS = [
 
 /**
  * Generates a concise title (2-6 words) based on user's first message.
+ * Strictly enforced in Bulgarian.
  */
 export const generateChatTitle = async (userInput: string): Promise<string | null> => {
   const apiKey = process.env.API_KEY || "";
@@ -55,7 +56,7 @@ export const generateChatTitle = async (userInput: string): Promise<string | nul
       1. Extract the main topic or goal.
       2. No generic words like "Chat", "Question", "Help".
       3. Reply ONLY with the title.
-      4. If the message is in Bulgarian, provide the title in Bulgarian.`,
+      4. IMPORTANT: THE TITLE MUST BE IN BULGARIAN (български език) regardless of the input language.`,
     });
 
     return response.text?.trim().replace(/["']/g, "") || null;
