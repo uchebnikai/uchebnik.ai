@@ -11,10 +11,10 @@
     <meta name="google-adsense-account" content="ca-pub-7792843462232007">
 
     <!-- Primary Meta Tags -->
-    <title>Uchebnik AI</title>
-    <meta name="title" content="Uchebnik AI" />
-    <meta name="description" content="Твоят интелигентен училищен помощник. Решения, тестове, уроци и поддръжка за ученици." />
-    <meta name="keywords" content="AI, образование, училище, задачи, тестове, учители, ученици, помощник, uchebnik, изкуствен интелект, домашно, уроци" />
+    <title>Uchebnik AI - Твоят интелигентен училищен помощник</title>
+    <meta name="title" content="Uchebnik AI - Твоят интелигентен училищен помощник" />
+    <meta name="description" content="Учи по-лесно с изкуствен интелект. Uchebnik AI решава задачи по математика, химия, физика и помага с уроците за училище и университет. 100% безплатно!" />
+    <meta name="keywords" content="AI, образование, училище, задачи, тестове, учители, ученици, помощник, uchebnik, изкуствен интелект, домашно, уроци, математика, химия" />
     <meta name="author" content="Uchebnik AI" />
     <meta name="theme-color" content="#4F46E5" />
     <link rel="canonical" href="https://uchebnikai.com/" />
@@ -22,8 +22,8 @@
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://uchebnikai.com/" />
-    <meta property="og:title" content="Uchebnik AI" />
-    <meta property="og:description" content="Твоят интелигентен училищен помощник. Решения, тестове, уроци и поддръжка за ученици." />
+    <meta property="og:title" content="Uchebnik AI - Учи по-лесно с изкуствен интелект" />
+    <meta property="og:description" content="Решавай задачи, учи нови езици и се подготвяй за изпити с твоя персонален AI учител." />
     <meta property="og:image" content="https://i.ibb.co/HTwPfh4q/6151f23e-b922-4c62-930f-853884bf4c89.png" />
     <meta property="og:site_name" content="Uchebnik AI" />
     <meta property="og:locale" content="bg_BG" />
@@ -31,13 +31,17 @@
     <!-- Twitter -->
     <meta property="twitter:card" content="summary_large_image" />
     <meta property="twitter:url" content="https://uchebnikai.com/" />
-    <meta property="twitter:title" content="Uchebnik AI" />
-    <meta property="twitter:description" content="Твоят интелигентен училищен помощник. Решения, тестове, уроци и поддръжка за ученици." />
+    <meta property="twitter:title" content="Uchebnik AI - Учи по-лесно с изкуствен интелект" />
+    <meta property="twitter:description" content="Твоят интелигентен училищен помощник за решаване на задачи и уроци." />
     <meta property="twitter:image" content="https://i.ibb.co/HTwPfh4q/6151f23e-b922-4c62-930f-853884bf4c89.png" />
 
-    <!-- Favicon -->
+    <!-- Favicons & App Icons -->
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
-    <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="icon" type="image/png" sizes="32x32" href="https://i.ibb.co/LDgTCm9N/6151f23e-b922-4c62-930f-853884bf4c89.png" />
+    <link rel="apple-touch-icon" href="https://i.ibb.co/LDgTCm9N/6151f23e-b922-4c62-930f-853884bf4c89.png" />
+    <meta name="apple-mobile-web-app-title" content="Uchebnik AI" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -140,7 +144,6 @@
       #bmc-wbtn {
         transition: transform 0.2s ease-out, opacity 0.2s ease-out !important;
         cursor: grab !important;
-        /* Highest z-index to stay OVER the iframe */
         z-index: 2000000 !important;
         touch-action: none;
         user-select: none;
@@ -151,7 +154,6 @@
         cursor: grabbing !important;
       }
 
-      /* Draggable Shaking Effect */
       @keyframes bmc-drag-shake {
         0% { transform: scale(var(--bmc-scale, 1)) rotate(0deg); }
         25% { transform: scale(var(--bmc-scale, 1)) rotate(2deg); }
@@ -165,9 +167,7 @@
         opacity: 0.8 !important;
       }
 
-      /* POPUP IFRAME STYLES */
       #bmc-iframe {
-        /* Slightly lower z-index than the button */
         z-index: 1999999 !important;
         width: 420px !important;
         max-width: 95vw !important;
@@ -176,16 +176,13 @@
         border-radius: 18px !important;
         transform-origin: bottom right !important;
         transform: scale(0) !important; 
-        /* CRITICAL: Prevent blocking when invisible */
         pointer-events: none !important;
         transition: all .25s ease, transform .25s ease !important;
       }
-      /* If active, apply standard scale and enable interactions */
       #bmc-iframe[style*="opacity: 1"] {
         transform: scale(0.85) !important;
         pointer-events: auto !important;
       }
-      /* MOBILE ONLY: FILL THE SCREEN AND SMALLER BUTTON */
       @media (max-width: 640px) {
         #bmc-wbtn {
           --bmc-scale: 0.6;
@@ -204,7 +201,6 @@
           right: 0 !important;
           border-radius: 0 !important;
           margin: 0 !important;
-          /* Still scale(0) when hidden even on mobile */
           transform: scale(0) !important;
         }
         #bmc-iframe[style*="opacity: 1"] {
@@ -247,7 +243,6 @@
     <script data-name="BMC-Widget" data-cfasync="false" src="https://cdnjs.buymeacoffee.com/1.0.0/widget.prod.min.js" data-id="uchebnikai" data-description="Support me on Buy me a coffee!" data-message="Подкрепи развитието на Uchebnik AI☕" data-color="#BD5FFF" data-position="Right" data-x_margin="18" data-y_margin="110"></script>
 
     <script>
-      // Enhanced Draggable logic for BMC Widget with hold-to-drag and shaking
       const initDraggableWidget = () => {
         const checkInterval = setInterval(() => {
           const widget = document.getElementById('bmc-wbtn');
@@ -276,22 +271,19 @@
           initialLeft = rect.left;
           initialBottom = window.innerHeight - rect.bottom;
 
-          // Start hold timer
           holdTimer = setTimeout(() => {
             isHoldActive = true;
             el.classList.add('bmc-shaking');
             el.setPointerCapture(e.pointerId);
             
-            // Force layout mode to absolute values for dragging
             el.style.right = 'auto';
             el.style.left = initialLeft + 'px';
             el.style.bottom = initialBottom + 'px';
             el.style.transition = 'none';
 
-            // Sync frame transition
             const frame = document.getElementById('bmc-iframe') || document.getElementById('bmc-wframe');
             if (frame) frame.style.transition = 'none';
-          }, 600); // 600ms hold time
+          }, 600);
         };
 
         const onPointerMove = (e) => {
@@ -300,7 +292,6 @@
           const moveDist = Math.sqrt(dx*dx + dy*dy);
           totalMoved = moveDist;
 
-          // If moved too much before hold activates, cancel hold
           if (!isHoldActive && moveDist > 10) {
             if (holdTimer) {
               clearTimeout(holdTimer);
@@ -320,7 +311,6 @@
           el.style.left = boundedLeft + 'px';
           el.style.bottom = boundedBottom + 'px';
 
-          // Sync iframe on PC
           const frame = document.getElementById('bmc-iframe') || document.getElementById('bmc-wframe');
           if (frame && window.innerWidth > 640) {
               const iframeWidth = 420;
@@ -352,7 +342,6 @@
         };
 
         const onClickCapture = (e) => {
-            // Only block click if we actually dragged while in hold mode
             if (isDragging) {
                 e.preventDefault();
                 e.stopPropagation();
