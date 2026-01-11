@@ -15,7 +15,7 @@ import {
   Loader2, ExternalLink, Info, Sparkles, Star, Heart, MapPin, 
   Calendar, Camera, Code, Calculator, Binary, Pill, Layout, 
   FileText, Briefcase, Target, Languages, Globe, HelpCircle, Trophy, ImageIcon, Upload,
-  ArrowDownWideNarrow, SortAsc
+  ArrowDownWideNarrow, SortAsc, UserPlus, History, SortDesc
 } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { Button } from '../ui/Button';
@@ -153,7 +153,7 @@ export const AdminPanel = ({
     const [filterStatus, setFilterStatus] = useState<'all' | 'online'>('all');
     const [showFilterMenu, setShowFilterMenu] = useState(false);
     const [showSortMenu, setShowSortMenu] = useState(false);
-    const [sortUsers, setSortUsers] = useState<'recent' | 'usage' | 'level' | 'name'>('recent');
+    const [sortUsers, setSortUsers] = useState<'activity' | 'newest' | 'oldest' | 'usage' | 'level' | 'name'>('activity');
 
     // Heatmap State
     const [subjectStats, setSubjectStats] = useState<SubjectStat[]>([]);
@@ -442,7 +442,7 @@ export const AdminPanel = ({
                             level: u.level || 1,
                             usage: settings?.stats?.dailyImageCount || 0,
                             lastVisit: settings?.stats?.lastVisit || new Date(u.updated_at).toLocaleDateString('bg-BG'),
-                            createdAt: u.created_at || u.updated_at,
+                            createdAt: u.created_at,
                             theme: u.theme_color || '#6366f1',
                             rawSettings: settings,
                             updatedAt: u.updated_at,
@@ -720,10 +720,12 @@ export const AdminPanel = ({
 
         return result.sort((a, b) => {
             switch (sortUsers) {
-                case 'recent':
-                    const timeA = new Date(a.updatedAt || a.createdAt).getTime();
-                    const timeB = new Date(b.updatedAt || b.createdAt).getTime();
-                    return timeB - timeA;
+                case 'activity':
+                    return new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime();
+                case 'newest':
+                    return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+                case 'oldest':
+                    return new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime();
                 case 'usage':
                     const usageA = (a.totalInput || 0) + (a.totalOutput || 0);
                     const usageB = (b.totalInput || 0) + (b.totalOutput || 0);
@@ -801,7 +803,7 @@ export const AdminPanel = ({
                         </div>
                         <div>
                             <h2 className="font-bold text-white text-sm">Админ Панел</h2>
-                            <div className="text-[10px] text-zinc-500 font-mono">v4.2 • Filtering Update</div>
+                            <div className="text-[10px] text-zinc-500 font-mono">v4.3 • Advanced Sorting</div>
                         </div>
                     </div>
                     <button onClick={() => setShowAdminPanel(false)} className="md:hidden p-2 text-zinc-400 hover:text-white transition-colors">
@@ -1631,20 +1633,24 @@ export const AdminPanel = ({
                                              <div className="relative">
                                                  <button 
                                                     onClick={() => { setShowSortMenu(!showSortMenu); setShowFilterMenu(false); }} 
-                                                    className={`h-full px-6 flex items-center gap-2 bg-white/5 border border-white/5 rounded-2xl text-sm font-bold transition-all hover:bg-white/10 ${sortUsers !== 'recent' ? 'text-indigo-400 bg-indigo-500/10 border-indigo-500/30' : 'text-zinc-400'}`}
+                                                    className={`h-full px-6 flex items-center gap-2 bg-white/5 border border-white/5 rounded-2xl text-sm font-bold transition-all hover:bg-white/10 ${sortUsers !== 'activity' ? 'text-indigo-400 bg-indigo-500/10 border-indigo-500/30' : 'text-zinc-400'}`}
                                                  >
                                                      <ArrowDownWideNarrow size={18}/> 
                                                      <span className="hidden sm:inline">Сортирай: {
-                                                         sortUsers === 'recent' ? 'Последни' : 
+                                                         sortUsers === 'activity' ? 'Активност' : 
+                                                         sortUsers === 'newest' ? 'Нови' : 
+                                                         sortUsers === 'oldest' ? 'Стари' : 
                                                          sortUsers === 'usage' ? 'Употреба' : 
                                                          sortUsers === 'level' ? 'Ниво' : 'Име'
                                                      }</span>
                                                  </button>
                                                  {showSortMenu && (
-                                                     <div className="absolute top-full right-0 mt-2 w-48 bg-[#111] border border-white/10 rounded-xl shadow-2xl overflow-hidden z-50 animate-in slide-in-from-top-2 fade-in">
+                                                     <div className="absolute top-full right-0 mt-2 w-56 bg-[#111] border border-white/10 rounded-xl shadow-2xl overflow-hidden z-50 animate-in slide-in-from-top-2 fade-in">
                                                          {[
-                                                             {id: 'recent', label: 'Последни активни', icon: Clock},
-                                                             {id: 'usage', label: 'Топ Употреба', icon: Activity},
+                                                             {id: 'activity', label: 'Последна активност', icon: History},
+                                                             {id: 'newest', label: 'Регистрация (Нови)', icon: UserPlus},
+                                                             {id: 'oldest', label: 'Регистрация (Стари)', icon: Clock},
+                                                             {id: 'usage', label: 'Топ Употреба (Tokens)', icon: Activity},
                                                              {id: 'level', label: 'Най-високо Ниво', icon: Trophy},
                                                              {id: 'name', label: 'По Име (А-Я)', icon: SortAsc}
                                                          ].map(s => (
@@ -1712,7 +1718,7 @@ export const AdminPanel = ({
                                                                  <span className={`text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-wider ${user.plan === 'pro' ? 'bg-amber-500 text-black' : user.plan === 'plus' ? 'bg-indigo-500 text-white' : 'bg-zinc-700 text-zinc-400'}`}>{user.plan}</span>
                                                              </div>
                                                              <div className="flex items-center gap-3 text-xs text-zinc-500 font-mono mt-1">
-                                                                 <span>ID: {user.id.substring(0,6)}</span>
+                                                                 <span className="flex items-center gap-1"><Calendar size={10}/> {new Date(user.createdAt).toLocaleDateString('bg-BG')}</span>
                                                                  <span className="w-1 h-1 rounded-full bg-zinc-700"/>
                                                                  <span className="text-amber-500 font-bold">Lvl {user.level}</span>
                                                              </div>
