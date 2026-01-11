@@ -247,7 +247,7 @@ export const WelcomeScreen = ({
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-6 w-full max-w-5xl mb-14 px-2">
                         <button 
                             onClick={() => handleSubjectChange(SUBJECTS[0])}
-                            className="group relative bg-[#121214]/60 hover:bg-[#18181b]/80 border border-white/5 hover:border-indigo-500/30 rounded-[32px] p-6 lg:p-8 transition-all duration-300 hover:-translate-y-2 overflow-hidden shadow-2xl backdrop-blur-md text-left flex flex-col items-start h-full min-h-[220px]"
+                            className={`group relative bg-[#121214]/60 hover:bg-[#18181b]/80 border border-white/5 hover:border-indigo-500/30 rounded-[32px] p-6 lg:p-8 transition-all duration-300 hover:-translate-y-2 overflow-hidden shadow-2xl backdrop-blur-md text-left flex flex-col items-start h-full min-h-[220px] ${SLIDE_UP} delay-100`}
                         >
                             <div className="absolute inset-0 bg-gradient-to-b from-indigo-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"/>
                             <div className="w-12 h-12 lg:w-14 lg:h-14 bg-white/5 text-indigo-300 rounded-2xl flex items-center justify-center mb-6 border border-white/5 shadow-inner group-hover:scale-110 transition-transform duration-300">
@@ -262,7 +262,7 @@ export const WelcomeScreen = ({
 
                         <button 
                             onClick={() => setHomeView('school_select')}
-                            className="group relative bg-[#121214]/60 hover:bg-[#18181b]/80 border border-white/5 hover:border-blue-500/30 rounded-[32px] p-6 lg:p-8 transition-all duration-300 hover:-translate-y-2 overflow-hidden shadow-2xl backdrop-blur-md text-left flex flex-col items-start h-full min-h-[220px]"
+                            className={`group relative bg-[#121214]/60 hover:bg-[#18181b]/80 border border-white/5 hover:border-blue-500/30 rounded-[32px] p-6 lg:p-8 transition-all duration-300 hover:-translate-y-2 overflow-hidden shadow-2xl backdrop-blur-md text-left flex flex-col items-start h-full min-h-[220px] ${SLIDE_UP} delay-200`}
                         >
                             <div className="absolute inset-0 bg-gradient-to-b from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"/>
                             <div className="w-12 h-12 lg:w-14 lg:h-14 bg-white/5 text-blue-300 rounded-2xl flex items-center justify-center mb-6 border border-white/5 shadow-inner group-hover:scale-110 transition-transform duration-300">
@@ -277,7 +277,7 @@ export const WelcomeScreen = ({
 
                         <button 
                             onClick={() => setHomeView('university_select')}
-                            className="group relative bg-[#121214]/60 hover:bg-[#18181b]/80 border border-white/5 hover:border-emerald-500/30 rounded-[32px] p-6 lg:p-8 transition-all duration-300 hover:-translate-y-2 overflow-hidden shadow-2xl backdrop-blur-md text-left flex flex-col items-start h-full min-h-[220px]"
+                            className={`group relative bg-[#121214]/60 hover:bg-[#18181b]/80 border border-white/5 hover:border-emerald-500/30 rounded-[32px] p-6 lg:p-8 transition-all duration-300 hover:-translate-y-2 overflow-hidden shadow-2xl backdrop-blur-md text-left flex flex-col items-start h-full min-h-[220px] ${SLIDE_UP} delay-300`}
                         >
                             <div className="absolute inset-0 bg-gradient-to-b from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"/>
                             <div className="w-12 h-12 lg:w-14 lg:h-14 bg-white/5 text-emerald-300 rounded-2xl flex items-center justify-center mb-6 border border-white/5 shadow-inner group-hover:scale-110 transition-transform duration-300">
@@ -326,7 +326,7 @@ export const WelcomeScreen = ({
                             <button 
                                 onClick={() => (inputValue.trim() || selectedImages.length > 0) && onQuickStart(inputValue, selectedImages)}
                                 disabled={!inputValue.trim() && selectedImages.length === 0}
-                                className="w-9 h-9 lg:w-10 lg:h-10 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white flex items-center justify-center shadow-lg shadow-indigo-600/20 disabled:opacity-30 disabled:bg-white/5 disabled:text-zinc-500 transition-all active:scale-95 shrink-0"
+                                className="w-9 h-9 lg:w-10 lg:h-10 rounded-full bg-indigo-600 hover:bg-indigo-50 text-white flex items-center justify-center shadow-lg shadow-indigo-600/20 disabled:opacity-30 disabled:bg-white/5 disabled:text-zinc-500 transition-all active:scale-95 shrink-0"
                             >
                                 <ArrowUpRight size={18} className="lg:w-5 lg:h-5" />
                             </button>
@@ -544,14 +544,14 @@ export const WelcomeScreen = ({
              <button onClick={() => setHomeView('landing')} className="absolute top-0 left-0 flex items-center gap-2 text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors font-bold z-20 m-6 lg:m-8"><ArrowLeft size={20}/> {t('back', userSettings.language)}</button>
              <h2 className="text-3xl lg:text-5xl font-black text-zinc-900 dark:text-white mb-8 lg:mb-12 tracking-tight mt-16 lg:mt-0 text-center px-4 break-words">{t('select_role', userSettings.language)}</h2>
              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6 w-full max-w-4xl px-2">
-                 <button onClick={() => { setHomeView('student_subjects'); setUserRole('student'); }} className="group relative h-48 lg:h-72 rounded-[32px] lg:rounded-[40px] p-6 lg:p-8 text-left bg-indigo-600/90 backdrop-blur-xl text-white shadow-2xl hover:scale-[1.02] active:scale-[0.98] transition-all border border-white/10 overflow-hidden">
+                 <button onClick={() => { setHomeView('student_subjects'); setUserRole('student'); }} className={`group relative h-48 lg:h-72 rounded-[32px] lg:rounded-[40px] p-6 lg:p-8 text-left bg-indigo-600/90 backdrop-blur-xl text-white shadow-2xl hover:scale-[1.02] active:scale-[0.98] transition-all border border-white/10 overflow-hidden ${SLIDE_UP} delay-100`}>
                      <div className="relative z-10 flex flex-col h-full justify-between">
                          <div className="p-3 lg:p-4 bg-white/20 rounded-2xl lg:rounded-3xl w-fit backdrop-blur-md group-hover:scale-110 transition-transform duration-300"><GraduationCap size={32} className="lg:w-10 lg:h-10"/></div>
                          <div><h3 className="text-2xl lg:text-4xl font-black mb-1 lg:mb-2">{t('role_student', userSettings.language)}</h3><p className="opacity-80 font-medium text-sm lg:text-lg">{t('desc_student', userSettings.language)}</p></div>
                      </div>
                      <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 to-blue-600 opacity-50 rounded-[40px]"/>
                  </button>
-                 <button onClick={() => { setHomeView('teacher_subjects'); setUserRole('teacher'); }} className="group relative h-48 lg:h-72 rounded-[32px] lg:rounded-[40px] p-6 lg:p-8 text-left bg-white/60 dark:bg-black/40 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-2xl hover:scale-[1.02] active:scale-[0.98] transition-all overflow-hidden">
+                 <button onClick={() => { setHomeView('teacher_subjects'); setUserRole('teacher'); }} className={`group relative h-48 lg:h-72 rounded-[32px] lg:rounded-[40px] p-6 lg:p-8 text-left bg-white/60 dark:bg-black/40 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-2xl hover:scale-[1.02] active:scale-[0.98] transition-all overflow-hidden ${SLIDE_UP} delay-200`}>
                      <div className="relative z-10 flex flex-col h-full justify-between">
                          <div className="p-3 lg:p-4 bg-gray-100 dark:bg-white/5 text-indigo-600 dark:text-indigo-400 rounded-2xl lg:rounded-3xl w-fit group-hover:scale-110 transition-transform duration-300"><Briefcase size={32} className="lg:w-10 lg:h-10"/></div>
                          <div><h3 className="text-2xl lg:text-4xl font-black mb-1 lg:mb-2 text-zinc-900 dark:text-white">{t('role_teacher', userSettings.language)}</h3><p className="text-zinc-500 font-medium text-sm lg:text-lg">{t('desc_teacher', userSettings.language)}</p></div>
@@ -566,14 +566,14 @@ export const WelcomeScreen = ({
              <button onClick={() => setHomeView('landing')} className="absolute top-0 left-0 flex items-center gap-2 text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors font-bold z-20 m-6 lg:m-8"><ArrowLeft size={20}/> {t('back', userSettings.language)}</button>
              <h2 className="text-3xl lg:text-5xl font-black text-zinc-900 dark:text-white mb-8 lg:mb-12 tracking-tight mt-16 lg:mt-0 text-center px-4 break-words">{t('select_role_uni', userSettings.language)}</h2>
              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6 w-full max-w-4xl px-2">
-                 <button onClick={() => { setHomeView('uni_student_subjects'); setUserRole('uni_student'); }} className="group relative h-48 lg:h-72 rounded-[32px] lg:rounded-[40px] p-6 lg:p-8 text-left bg-emerald-600/90 backdrop-blur-xl text-white shadow-2xl hover:scale-[1.02] active:scale-[0.98] transition-all border border-white/10 overflow-hidden">
+                 <button onClick={() => { setHomeView('uni_student_subjects'); setUserRole('uni_student'); }} className={`group relative h-48 lg:h-72 rounded-[32px] lg:rounded-[40px] p-6 lg:p-8 text-left bg-emerald-600/90 backdrop-blur-xl text-white shadow-2xl hover:scale-[1.02] active:scale-[0.98] transition-all border border-white/10 overflow-hidden ${SLIDE_UP} delay-100`}>
                      <div className="relative z-10 flex flex-col h-full justify-between">
                          <div className="p-3 lg:p-4 bg-white/20 rounded-2xl lg:rounded-3xl w-fit backdrop-blur-md group-hover:scale-110 transition-transform duration-300"><GraduationCap size={32} className="lg:w-10 lg:h-10"/></div>
                          <div><h3 className="text-2xl lg:text-4xl font-black mb-1 lg:mb-2">{t('role_uni_student', userSettings.language)}</h3><p className="opacity-80 font-medium text-sm lg:text-lg">{t('desc_uni_student', userSettings.language)}</p></div>
                      </div>
                      <div className="absolute inset-0 bg-gradient-to-br from-emerald-500 to-teal-600 opacity-50 rounded-[40px]"/>
                  </button>
-                 <button onClick={() => { setHomeView('uni_teacher_subjects'); setUserRole('uni_teacher'); }} className="group relative h-48 lg:h-72 rounded-[32px] lg:rounded-[40px] p-6 lg:p-8 text-left bg-white/60 dark:bg-black/40 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-2xl hover:scale-[1.02] active:scale-[0.98] transition-all overflow-hidden">
+                 <button onClick={() => { setHomeView('uni_teacher_subjects'); setUserRole('uni_teacher'); }} className={`group relative h-48 lg:h-72 rounded-[32px] lg:rounded-[40px] p-6 lg:p-8 text-left bg-white/60 dark:bg-black/40 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-2xl hover:scale-[1.02] active:scale-[0.98] transition-all overflow-hidden ${SLIDE_UP} delay-200`}>
                      <div className="relative z-10 flex flex-col h-full justify-between">
                          <div className="p-3 lg:p-4 bg-gray-100 dark:bg-white/5 text-indigo-600 dark:text-indigo-400 rounded-2xl lg:rounded-3xl w-fit group-hover:scale-110 transition-transform duration-300"><Briefcase size={32} className="lg:w-10 lg:h-10"/></div>
                          <div><h3 className="text-2xl lg:text-4xl font-black mb-1 lg:mb-2 text-zinc-900 dark:text-white">{t('role_uni_professor', userSettings.language)}</h3><p className="text-zinc-500 font-medium text-sm lg:text-lg">{t('desc_uni_professor', userSettings.language)}</p></div>
