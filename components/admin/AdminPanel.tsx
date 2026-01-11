@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   Shield, X, Copy, CheckCircle, Key, Users, Activity, 
@@ -13,7 +14,8 @@ import {
   Settings, PartyPopper, Bell, Gift, Megaphone, Link as LinkIcon,
   Loader2, ExternalLink, Info, Sparkles, Star, Heart, MapPin, 
   Calendar, Camera, Code, Calculator, Binary, Pill, Layout, 
-  FileText, Briefcase, Target, Languages, Globe, HelpCircle, Trophy, ImageIcon, Upload
+  FileText, Briefcase, Target, Languages, Globe, HelpCircle, Trophy, ImageIcon, Upload,
+  ArrowDownWideNarrow, SortAsc
 } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { Button } from '../ui/Button';
@@ -148,8 +150,10 @@ export const AdminPanel = ({
     
     // Filtering & Sorting
     const [filterPlan, setFilterPlan] = useState<'all' | 'free' | 'plus' | 'pro'>('all');
+    const [filterStatus, setFilterStatus] = useState<'all' | 'online'>('all');
     const [showFilterMenu, setShowFilterMenu] = useState(false);
-    const [sortUsers, setSortUsers] = useState<'recent' | 'usage'>('recent');
+    const [showSortMenu, setShowSortMenu] = useState(false);
+    const [sortUsers, setSortUsers] = useState<'recent' | 'usage' | 'level' | 'name'>('recent');
 
     // Heatmap State
     const [subjectStats, setSubjectStats] = useState<SubjectStat[]>([]);
@@ -229,6 +233,12 @@ export const AdminPanel = ({
             setActiveSessionId(null);
         }
     }, [selectedUser]);
+
+    const isUserOnline = (updatedAt: string) => {
+        if (!updatedAt) return false;
+        const diff = new Date().getTime() - new Date(updatedAt).getTime();
+        return diff < 5 * 60 * 1000;
+    };
 
     const fetchUserChatHistory = async (userId: string) => {
         setLoadingSessions(true);
@@ -371,7 +381,7 @@ export const AdminPanel = ({
             addToast('Настройките са запазени в облака.', 'success');
         } catch (e) {
             console.error("Failed to save global config", e);
-            addToast('Грешка при запис в базата. Моля, опитайте отново.', 'error');
+            addToast('Грешка при запис в базата. Моля, опитайте отново по-късно.', 'error');
         }
     };
 
@@ -384,7 +394,7 @@ export const AdminPanel = ({
                     .from('profiles')
                     .select('*')
                     .order('updated_at', { ascending: false })
-                    .limit(100); 
+                    .limit(500); 
                 const dbLatency = Math.round(performance.now() - dbStart);
                 
                 updateHealthItem('Основна БД', !error, dbLatency, Date.now());
@@ -653,11 +663,6 @@ export const AdminPanel = ({
         });
     };
 
-    const isUserOnline = (updatedAt: string) => {
-        const diff = new Date().getTime() - new Date(updatedAt).getTime();
-        return diff < 5 * 60 * 1000;
-    };
-
     const revenue = financials ? financials.mrr / 100 : 0; 
     const billedCloudCost = financials?.googleCloudCost || 0;
     const liveInputCost = (totalInputTokens / 1000000) * PRICE_INPUT_1M;
@@ -699,6 +704,39 @@ export const AdminPanel = ({
         const key = colorClass.replace('bg-', '');
         return COLOR_MAP[key] || '#6b7280';
     };
+
+    const filteredAndSortedUsers = useMemo(() => {
+        let result = dbUsers.filter(u => {
+            const matchesSearch = !searchQuery || 
+                u.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                (u.email && u.email.toLowerCase().includes(searchQuery.toLowerCase())) || 
+                u.id.includes(searchQuery);
+            
+            const matchesPlan = filterPlan === 'all' || u.plan === filterPlan;
+            const matchesStatus = filterStatus === 'all' || (filterStatus === 'online' && isUserOnline(u.updatedAt));
+
+            return matchesSearch && matchesPlan && matchesStatus;
+        });
+
+        return result.sort((a, b) => {
+            switch (sortUsers) {
+                case 'recent':
+                    const timeA = new Date(a.updatedAt || a.createdAt).getTime();
+                    const timeB = new Date(b.updatedAt || b.createdAt).getTime();
+                    return timeB - timeA;
+                case 'usage':
+                    const usageA = (a.totalInput || 0) + (a.totalOutput || 0);
+                    const usageB = (b.totalInput || 0) + (b.totalOutput || 0);
+                    return usageB - usageA;
+                case 'level':
+                    return (b.level || 0) - (a.level || 0);
+                case 'name':
+                    return a.name.localeCompare(b.name, 'bg');
+                default:
+                    return 0;
+            }
+        });
+    }, [dbUsers, searchQuery, filterPlan, filterStatus, sortUsers]);
 
     if (showAdminAuth) {
       return (
@@ -763,7 +801,7 @@ export const AdminPanel = ({
                         </div>
                         <div>
                             <h2 className="font-bold text-white text-sm">Админ Панел</h2>
-                            <div className="text-[10px] text-zinc-500 font-mono">v4.1 • 2026 Ready</div>
+                            <div className="text-[10px] text-zinc-500 font-mono">v4.2 • Filtering Update</div>
                         </div>
                     </div>
                     <button onClick={() => setShowAdminPanel(false)} className="md:hidden p-2 text-zinc-400 hover:text-white transition-colors">
@@ -1583,39 +1621,111 @@ export const AdminPanel = ({
                              {activeTab === 'users' && (
                                  <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
                                      <div className="flex flex-col md:flex-row gap-4">
-                                         <div className="flex-1 relative group"><Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-white transition-colors" size={18}/><input type="text" placeholder="Търсене по име, имейл или ID..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="w-full bg-white/5 border border-white/5 rounded-2xl pl-12 pr-4 py-4 text-white placeholder-zinc-600 outline-none focus:border-indigo-500/50 focus:bg-black/40 transition-all shadow-lg"/></div>
+                                         <div className="flex-1 relative group">
+                                             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-white transition-colors" size={18}/>
+                                             <input type="text" placeholder="Търсене по име, имейл или ID..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="w-full bg-white/5 border border-white/5 rounded-2xl pl-12 pr-4 py-4 text-white placeholder-zinc-600 outline-none focus:border-indigo-500/50 focus:bg-black/40 transition-all shadow-lg"/>
+                                         </div>
+                                         
                                          <div className="flex gap-2">
-                                             <button onClick={() => setSortUsers(sortUsers === 'recent' ? 'usage' : 'recent')} className="px-4 bg-white/5 hover:bg-white/10 border border-white/5 rounded-2xl text-zinc-400 hover:text-white font-medium text-sm transition-all min-w-[100px]">{sortUsers === 'recent' ? 'Последни' : 'Топ Употреба'}</button>
-                                             <div className="relative"><button onClick={() => setShowFilterMenu(!showFilterMenu)} className={`h-full px-6 flex items-center gap-2 bg-white/5 border border-white/5 rounded-2xl text-sm font-bold transition-all hover:bg-white/10 ${filterPlan !== 'all' ? 'text-indigo-400 bg-indigo-500/10 border-indigo-500/30' : 'text-zinc-400'}`}><Filter size={18}/> {filterPlan === 'all' ? 'Всички' : filterPlan}</button>{showFilterMenu && (<div className="absolute top-full right-0 mt-2 w-32 bg-[#111] border border-white/10 rounded-xl shadow-2xl overflow-hidden z-50 animate-in slide-in-from-top-2 fade-in">{['all', 'free', 'plus', 'pro'].map(p => (<button key={p} onClick={() => { setFilterPlan(p as any); setShowFilterMenu(false); }} className={`w-full text-left px-4 py-3 text-xs font-bold uppercase hover:bg-white/5 ${filterPlan === p ? 'text-indigo-400' : 'text-zinc-500'}`}>{p}</button>))}</div>)}</div>
+                                             {/* Sort Menu */}
+                                             <div className="relative">
+                                                 <button 
+                                                    onClick={() => { setShowSortMenu(!showSortMenu); setShowFilterMenu(false); }} 
+                                                    className={`h-full px-6 flex items-center gap-2 bg-white/5 border border-white/5 rounded-2xl text-sm font-bold transition-all hover:bg-white/10 ${sortUsers !== 'recent' ? 'text-indigo-400 bg-indigo-500/10 border-indigo-500/30' : 'text-zinc-400'}`}
+                                                 >
+                                                     <ArrowDownWideNarrow size={18}/> 
+                                                     <span className="hidden sm:inline">Сортирай: {
+                                                         sortUsers === 'recent' ? 'Последни' : 
+                                                         sortUsers === 'usage' ? 'Употреба' : 
+                                                         sortUsers === 'level' ? 'Ниво' : 'Име'
+                                                     }</span>
+                                                 </button>
+                                                 {showSortMenu && (
+                                                     <div className="absolute top-full right-0 mt-2 w-48 bg-[#111] border border-white/10 rounded-xl shadow-2xl overflow-hidden z-50 animate-in slide-in-from-top-2 fade-in">
+                                                         {[
+                                                             {id: 'recent', label: 'Последни активни', icon: Clock},
+                                                             {id: 'usage', label: 'Топ Употреба', icon: Activity},
+                                                             {id: 'level', label: 'Най-високо Ниво', icon: Trophy},
+                                                             {id: 'name', label: 'По Име (А-Я)', icon: SortAsc}
+                                                         ].map(s => (
+                                                             <button 
+                                                                key={s.id} 
+                                                                onClick={() => { setSortUsers(s.id as any); setShowSortMenu(false); }} 
+                                                                className={`w-full text-left px-4 py-3 text-xs font-bold uppercase hover:bg-white/5 flex items-center gap-2 ${sortUsers === s.id ? 'text-indigo-400 bg-indigo-500/5' : 'text-zinc-500'}`}
+                                                             >
+                                                                 <s.icon size={14}/> {s.label}
+                                                             </button>
+                                                         ))}
+                                                     </div>
+                                                 )}
+                                             </div>
+
+                                             {/* Filter Menu */}
+                                             <div className="relative">
+                                                 <button 
+                                                    onClick={() => { setShowFilterMenu(!showFilterMenu); setShowSortMenu(false); }} 
+                                                    className={`h-full px-6 flex items-center gap-2 bg-white/5 border border-white/5 rounded-2xl text-sm font-bold transition-all hover:bg-white/10 ${filterPlan !== 'all' || filterStatus !== 'all' ? 'text-indigo-400 bg-indigo-500/10 border-indigo-500/30' : 'text-zinc-400'}`}
+                                                 >
+                                                     <Filter size={18}/> 
+                                                     <span className="hidden sm:inline">Филтри</span>
+                                                 </button>
+                                                 {showFilterMenu && (
+                                                     <div className="absolute top-full right-0 mt-2 w-56 bg-[#111] border border-white/10 rounded-xl shadow-2xl overflow-hidden z-50 animate-in slide-in-from-top-2 fade-in">
+                                                         <div className="px-4 py-2 border-b border-white/5 text-[10px] font-black text-zinc-600 uppercase tracking-widest">План</div>
+                                                         {['all', 'free', 'plus', 'pro'].map(p => (
+                                                             <button key={p} onClick={() => { setFilterPlan(p as any); }} className={`w-full text-left px-4 py-2.5 text-xs font-bold uppercase hover:bg-white/5 ${filterPlan === p ? 'text-indigo-400' : 'text-zinc-500'}`}>
+                                                                 {p === 'all' ? 'Всички планове' : p}
+                                                             </button>
+                                                         ))}
+                                                         <div className="px-4 py-2 border-y border-white/5 text-[10px] font-black text-zinc-600 uppercase tracking-widest">Статус</div>
+                                                         {['all', 'online'].map(s => (
+                                                             <button key={s} onClick={() => { setFilterStatus(s as any); }} className={`w-full text-left px-4 py-2.5 text-xs font-bold uppercase hover:bg-white/5 ${filterStatus === s ? 'text-emerald-400' : 'text-zinc-500'}`}>
+                                                                 {s === 'all' ? 'Всички статуси' : 'Само Онлайн'}
+                                                             </button>
+                                                         ))}
+                                                         <div className="p-2 border-t border-white/5">
+                                                             <button onClick={() => { setFilterPlan('all'); setFilterStatus('all'); setShowFilterMenu(false); }} className="w-full py-2 bg-white/5 hover:bg-white/10 rounded-lg text-[10px] font-black uppercase text-zinc-400 transition-colors">Нулирай всички</button>
+                                                         </div>
+                                                     </div>
+                                                 )}
+                                             </div>
                                          </div>
                                      </div>
+
                                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                         {dbUsers.filter(u => !searchQuery || u.name.toLowerCase().includes(searchQuery.toLowerCase()) || (u.email && u.email.toLowerCase().includes(searchQuery.toLowerCase())) || u.id.includes(searchQuery)).filter(u => filterPlan === 'all' || u.plan === filterPlan).sort((a, b) => sortUsers === 'recent' ? new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime() : (b.totalInput + b.totalOutput) - (a.totalInput + a.totalOutput)).map((user) => (
-                                             <div key={user.id} onClick={() => handleUserClick(user)} className="group bg-white/5 border border-white/5 rounded-3xl p-5 hover:border-indigo-500/30 hover:bg-white/10 transition-all cursor-pointer shadow-md hover:shadow-xl relative overflow-hidden">
-                                                 <div className="flex items-start gap-4 relative z-10">
-                                                     <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-lg font-bold text-white shadow-lg overflow-hidden relative" style={{ backgroundColor: user.theme }}>
-                                                         {user.avatar ? <img src={user.avatar} className="w-full h-full object-cover"/> : user.name.charAt(0).toUpperCase()}
-                                                         {isUserOnline(user.updatedAt) && <div className="absolute top-1 right-1 w-2.5 h-2.5 bg-green-500 rounded-full border border-black animate-pulse"></div>}
-                                                     </div>
-                                                     <div className="flex-1 min-w-0">
-                                                         <div className="flex justify-between items-start">
-                                                             <h4 className="font-bold text-white truncate pr-2">{user.name}</h4>
-                                                             <span className={`text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-wider ${user.plan === 'pro' ? 'bg-amber-500 text-black' : user.plan === 'plus' ? 'bg-indigo-500 text-white' : 'bg-zinc-700 text-zinc-400'}`}>{user.plan}</span>
+                                         {filteredAndSortedUsers.length === 0 ? (
+                                             <div className="col-span-full py-20 text-center text-zinc-500 space-y-4">
+                                                 <Search size={48} className="mx-auto opacity-20"/>
+                                                 <p className="font-medium">Няма намерени потребители с тези критерии.</p>
+                                             </div>
+                                         ) : (
+                                             filteredAndSortedUsers.map((user) => (
+                                                 <div key={user.id} onClick={() => handleUserClick(user)} className="group bg-white/5 border border-white/5 rounded-3xl p-5 hover:border-indigo-500/30 hover:bg-white/10 transition-all cursor-pointer shadow-md hover:shadow-xl relative overflow-hidden">
+                                                     <div className="flex items-start gap-4 relative z-10">
+                                                         <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-lg font-bold text-white shadow-lg overflow-hidden relative" style={{ backgroundColor: user.theme }}>
+                                                             {user.avatar ? <img src={user.avatar} className="w-full h-full object-cover"/> : user.name.charAt(0).toUpperCase()}
+                                                             {isUserOnline(user.updatedAt) && <div className="absolute top-1 right-1 w-2.5 h-2.5 bg-green-500 rounded-full border border-black animate-pulse shadow-[0_0_10px_#22c55e]"></div>}
                                                          </div>
-                                                         <div className="flex items-center gap-3 text-xs text-zinc-500 font-mono mt-1">
-                                                             <span>ID: {user.id.substring(0,6)}</span>
-                                                             <span className="w-1 h-1 rounded-full bg-zinc-700"/>
-                                                             <span className="text-amber-500 font-bold">Lvl {user.level}</span>
-                                                         </div>
-                                                         <div className="mt-3 pt-3 border-t border-white/5 flex gap-4 text-[10px] font-mono text-zinc-400">
-                                                             <div>In: {(user.totalInput/1000).toFixed(1)}k</div>
-                                                             <div>Out: {(user.totalOutput/1000).toFixed(1)}k</div>
-                                                             <div className="ml-auto text-zinc-600">{new Date(user.updatedAt).toLocaleDateString('bg-BG')}</div>
+                                                         <div className="flex-1 min-w-0">
+                                                             <div className="flex justify-between items-start">
+                                                                 <h4 className="font-bold text-white truncate pr-2">{user.name}</h4>
+                                                                 <span className={`text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-wider ${user.plan === 'pro' ? 'bg-amber-500 text-black' : user.plan === 'plus' ? 'bg-indigo-500 text-white' : 'bg-zinc-700 text-zinc-400'}`}>{user.plan}</span>
+                                                             </div>
+                                                             <div className="flex items-center gap-3 text-xs text-zinc-500 font-mono mt-1">
+                                                                 <span>ID: {user.id.substring(0,6)}</span>
+                                                                 <span className="w-1 h-1 rounded-full bg-zinc-700"/>
+                                                                 <span className="text-amber-500 font-bold">Lvl {user.level}</span>
+                                                             </div>
+                                                             <div className="mt-3 pt-3 border-t border-white/5 flex gap-4 text-[10px] font-mono text-zinc-400">
+                                                                 <div>In: {(user.totalInput/1000).toFixed(1)}k</div>
+                                                                 <div>Out: {(user.totalOutput/1000).toFixed(1)}k</div>
+                                                                 <div className="ml-auto text-zinc-600">Активен: {user.lastVisit}</div>
+                                                             </div>
                                                          </div>
                                                      </div>
                                                  </div>
-                                             </div>
-                                         ))}
+                                             ))
+                                         )}
                                      </div>
                                  </div>
                              )}
