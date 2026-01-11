@@ -130,7 +130,6 @@ export const App = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   
   const [historyDrawerOpen, setHistoryDrawerOpen] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(true); 
   const [showSettings, setShowSettings] = useState(false);
   const [showReferralModal, setShowReferralModal] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
@@ -196,6 +195,7 @@ export const App = () => {
     preferredVoice: DEFAULT_VOICE,
     referralCode: '',
     proExpiresAt: '',
+    isDarkMode: true,
     xp: 0,
     level: 1,
     dailyQuests: {
@@ -1244,7 +1244,7 @@ export const App = () => {
       </main>
 
       <UpgradeModal showUnlockModal={showUnlockModal} setShowUnlockModal={setShowUnlockModal} targetPlan={targetPlan} setTargetPlan={setTargetPlan} unlockKeyInput={unlockKeyInput} setUnlockKeyInput={setUnlockKeyInput} handleUnlockSubmit={handleUnlockSubmit} userPlan={userPlan} userSettings={userSettings} addToast={addToast} unlockLoading={unlockLoading} />
-      <SettingsModal showSettings={showSettings} setShowSettings={setShowSettings} userMeta={userMeta} editProfile={editProfile} setEditProfile={setEditProfile} handleUpdateAccount={handleUpdateAccount} handleAvatarUpload={handleAvatarUploadSettings} userSettings={userSettings} setUserSettings={setUserSettings} isPremium={userPlan!=='free'} isDarkMode={isDarkMode} setIsDarkMode={setIsDarkMode} handleBackgroundUpload={handleBackgroundUpload} handleDeleteAllChats={handleDeleteAllChats} addToast={addToast} userPlan={userPlan} />
+      <SettingsModal showSettings={showSettings} setShowSettings={setShowSettings} userMeta={userMeta} editProfile={editProfile} setEditProfile={setEditProfile} handleUpdateAccount={handleUpdateAccount} handleAvatarUpload={handleAvatarUploadSettings} userSettings={userSettings} setUserSettings={setUserSettings} isPremium={userPlan!=='free'} handleBackgroundUpload={handleBackgroundUpload} handleDeleteAllChats={handleDeleteAllChats} addToast={addToast} userPlan={userPlan} />
       <ReferralModal isOpen={showReferralModal} onClose={() => setShowReferralModal(false)} userSettings={userSettings} addToast={addToast} />
       <LeaderboardModal isOpen={showLeaderboard} onClose={() => setShowLeaderboard(false)} currentUserId={session?.user?.id} />
       <DailyQuestsModal isOpen={showQuests} onClose={() => setShowQuests(false)} quests={userSettings.dailyQuests?.quests || []} />

@@ -5,7 +5,14 @@ import { hexToRgb, rgbToHsl, hslToRgb, adjustBrightness } from '../styles/theme'
 
 export const useTheme = (userSettings: UserSettings) => {
   useEffect(() => {
-    // 1. Determine the effective theme color
+    // 1. Manage Dark/Light Class
+    if (userSettings.isDarkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+
+    // 2. Determine the effective theme color
     // - Christmas Mode: Force Red
     // - New Year Mode: Force Deep Blue
     // - Otherwise: User setting or Indigo fallback
@@ -17,7 +24,7 @@ export const useTheme = (userSettings: UserSettings) => {
         themeColor = '#1e40af'; // Deep Navy Blue
     }
 
-    // 2. Apply colors to CSS Variables
+    // 3. Apply colors to CSS Variables
     if (themeColor) {
       const rgb = hexToRgb(themeColor);
       const root = document.documentElement;
@@ -34,7 +41,7 @@ export const useTheme = (userSettings: UserSettings) => {
       root.style.setProperty('--primary-900', adjustBrightness(rgb, -40));
       root.style.setProperty('--primary-950', adjustBrightness(rgb, -50));
 
-      // 3. Calculate Accent Color
+      // 4. Calculate Accent Color
       let accentRgb;
       if (userSettings.christmasMode) {
           accentRgb = hexToRgb('#10b981'); // Christmas Green
@@ -59,7 +66,7 @@ export const useTheme = (userSettings: UserSettings) => {
       root.style.setProperty('--accent-950', adjustBrightness(accentRgb, -50));
     }
 
-    // 4. Handle Body Classes
+    // 5. Handle Body Classes
     if (userSettings.customBackground || userSettings.christmasMode || userSettings.newYearMode) {
       document.body.classList.add('custom-bg-active');
     } else {
@@ -76,5 +83,5 @@ export const useTheme = (userSettings: UserSettings) => {
         document.body.classList.remove('christmas-mode', 'new-year-mode');
     }
 
-  }, [userSettings.themeColor, userSettings.customBackground, userSettings.christmasMode, userSettings.newYearMode]);
+  }, [userSettings.themeColor, userSettings.customBackground, userSettings.christmasMode, userSettings.newYearMode, userSettings.isDarkMode]);
 };

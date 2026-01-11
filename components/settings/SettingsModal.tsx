@@ -27,8 +27,6 @@ interface SettingsModalProps {
   userSettings: UserSettings;
   setUserSettings: (val: any) => void;
   isPremium: boolean;
-  isDarkMode: boolean;
-  setIsDarkMode: (val: boolean) => void;
   handleBackgroundUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleDeleteAllChats: () => void;
   addToast: (msg: string, type: 'success' | 'error' | 'info') => void;
@@ -67,8 +65,6 @@ export const SettingsModal = ({
   userSettings,
   setUserSettings,
   isPremium,
-  isDarkMode,
-  setIsDarkMode,
   handleBackgroundUpload,
   handleDeleteAllChats,
   addToast,
@@ -85,29 +81,6 @@ export const SettingsModal = ({
 
   const isCustomColor = !PRESET_COLORS.includes(userSettings.themeColor);
   const isCustomBackground = userSettings.customBackground && !PRESET_BACKGROUNDS.includes(userSettings.customBackground);
-
-  // Temporarily Disabled
-  /*
-  const handleManageSubscription = async () => {
-      setLoadingPortal(true);
-      try {
-          const { data, error } = await supabase.functions.invoke('create-portal-session', {
-              body: { returnUrl: window.location.origin }
-          });
-
-          if (error) throw error;
-          if (data?.url) {
-              window.location.href = data.url;
-          } else {
-              throw new Error("No portal URL returned");
-          }
-      } catch (error: any) {
-          console.error("Portal error:", error);
-          addToast("Възникна грешка при отваряне на портала за управление.", "error");
-          setLoadingPortal(false);
-      }
-  };
-  */
 
   const handleExportData = () => {
       const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(localStorage));
@@ -132,6 +105,7 @@ export const SettingsModal = ({
 
   const isPro = userPlan === 'pro';
   const currentLang = LANGUAGES.find(l => l.code === userSettings.language) || LANGUAGES[0];
+  const isDarkMode = userSettings.isDarkMode;
 
   return (
   <div className="fixed inset-0 z-[90] bg-black/60 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-300">
@@ -188,7 +162,6 @@ export const SettingsModal = ({
                           <p className="text-gray-500">Управлявайте вашата лична информация и абонамент.</p>
                       </div>
 
-                      {/* ... existing profile inputs ... */}
                       <div className="flex flex-col items-center md:items-start gap-6">
                           <div className="relative group cursor-pointer" onClick={() => avatarInputRef.current?.click()}>
                               <div className="w-28 h-28 rounded-[2rem] p-1 border-2 border-dashed border-gray-300 dark:border-white/20 hover:border-indigo-500 transition-colors">
@@ -215,7 +188,6 @@ export const SettingsModal = ({
                               <input value={editProfile.email} onChange={e => setEditProfile({...editProfile, email: e.target.value})} className="w-full bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 outline-none focus:border-indigo-500 transition-all font-medium"/>
                           </div>
                           
-                          {/* Password Change Section */}
                           <div className="col-span-1 md:col-span-2 pt-2 border-t border-gray-100 dark:border-white/5 mt-2">
                               <h4 className="text-sm font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2"><Lock size={16} className="text-indigo-500"/> Смяна на парола</h4>
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -274,11 +246,9 @@ export const SettingsModal = ({
                                      )}
                                  </div>
                                  <Button 
-                                    // onClick={handleManageSubscription} 
-                                    disabled={true} // Temporarily disabled
+                                    disabled={true} 
                                     className="bg-white text-indigo-600 hover:bg-indigo-50 border-none shadow-none opacity-80"
                                 >
-                                    {/* {loadingPortal ? <Loader2 size={18} className="animate-spin"/> : 'Управление'} */}
                                     Очаквайте скоро
                                  </Button>
                              </div>
@@ -353,8 +323,7 @@ export const SettingsModal = ({
                           </div>
                       </section>
 
-                      {/* Theme Colors - NO CHANGES HERE */}
-                      {/* ... Existing Theme Color Section ... */}
+                      {/* Theme Colors */}
                       <section className={`space-y-4 p-6 bg-gray-50/50 dark:bg-white/5 rounded-2xl border border-gray-200 dark:border-white/10 ${!isPremium ? 'opacity-70' : ''}`}>
                           <div className="flex justify-between items-center mb-2">
                               <label className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
@@ -374,7 +343,6 @@ export const SettingsModal = ({
                                   </button>
                               ))}
 
-                              {/* Custom Color Picker */}
                               <div className="relative group">
                                   <input
                                       type="color"
@@ -434,7 +402,7 @@ export const SettingsModal = ({
                               </div>
                           </div>
                           <button 
-                            onClick={() => setIsDarkMode(!isDarkMode)} 
+                            onClick={() => setUserSettings((prev: any) => ({...prev, isDarkMode: !prev.isDarkMode}))} 
                             className={`w-14 h-8 rounded-full transition-colors flex items-center px-1 ${isDarkMode ? 'bg-indigo-600' : 'bg-gray-300'}`}
                           >
                               <div className={`w-6 h-6 rounded-full bg-white shadow-md transition-transform duration-300 ${isDarkMode ? 'translate-x-6' : 'translate-x-0'}`} />
@@ -442,7 +410,6 @@ export const SettingsModal = ({
                       </section>
 
                       {/* Chat Backgrounds */}
-                      {/* ... existing Chat BG section ... */}
                       <section className={`space-y-4 ${!isPremium ? 'opacity-70' : ''}`}>
                            <div className="flex justify-between items-center">
                               <label className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
@@ -523,14 +490,11 @@ export const SettingsModal = ({
                           <p className="text-gray-500">Настройте поведението на вашия асистент.</p>
                       </div>
 
-                      {/* AI Model Selection */}
-                      {/* ... existing model selection ... */}
                       <section className="space-y-4">
                           <label className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
                               <Cpu size={18} className="text-blue-500"/> AI Модел
                           </label>
                           <div className="grid grid-cols-1 gap-3">
-                              {/* Auto Option */}
                               <button
                                   onClick={() => setUserSettings({...userSettings, preferredModel: 'auto'})}
                                   className={`p-4 rounded-xl text-left border transition-all flex items-center gap-4 ${userSettings.preferredModel === 'auto'
@@ -546,7 +510,6 @@ export const SettingsModal = ({
                                   </div>
                               </button>
 
-                              {/* Gemini 2.5 Flash -> Standard AI */}
                               <button
                                   onClick={() => setUserSettings({...userSettings, preferredModel: 'gemini-2.5-flash'})}
                                   className={`p-4 rounded-xl text-left border transition-all flex items-center gap-4 ${userSettings.preferredModel === 'gemini-2.5-flash'
@@ -562,7 +525,6 @@ export const SettingsModal = ({
                                   </div>
                               </button>
 
-                              {/* Gemini 3 Flash Preview -> Advanced AI */}
                               <button
                                   onClick={() => isPremium ? setUserSettings({...userSettings, preferredModel: 'gemini-3-flash-preview'}) : addToast('Този модел изисква Plus или Pro план.', 'info')}
                                   className={`p-4 rounded-xl text-left border transition-all flex items-center gap-4 relative overflow-hidden ${userSettings.preferredModel === 'gemini-3-flash-preview'
@@ -583,7 +545,6 @@ export const SettingsModal = ({
                           </div>
                       </section>
 
-                      {/* Voice Selection - NEW */}
                       <section className={`space-y-4 p-6 bg-gray-50/50 dark:bg-white/5 rounded-2xl border border-gray-200 dark:border-white/10 ${!isPremium ? 'opacity-80' : ''}`}>
                           <div className="flex justify-between items-center mb-2">
                               <label className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
@@ -609,7 +570,6 @@ export const SettingsModal = ({
                           </div>
                       </section>
 
-                      {/* Teaching Style */}
                       <section className="space-y-4">
                           <label className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
                               <Brain size={18} className="text-purple-500"/> Стил на преподаване
@@ -636,8 +596,6 @@ export const SettingsModal = ({
                           </div>
                       </section>
 
-                      {/* Custom Persona (Pro Feature) */}
-                      {/* ... existing custom persona section ... */}
                       <section className={`space-y-4 p-6 bg-gradient-to-br from-indigo-50/50 to-purple-50/50 dark:from-indigo-900/10 dark:to-purple-900/10 rounded-2xl border border-indigo-200 dark:border-indigo-500/20 ${!isPro ? 'opacity-70' : ''}`}>
                           <div className="flex justify-between items-center mb-2">
                               <label className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
@@ -672,7 +630,6 @@ export const SettingsModal = ({
                           </div>
                       </section>
 
-                      {/* ... existing sections ... */}
                       <div className="grid grid-cols-1 gap-6">
                           <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl p-6 space-y-4">
                               <label className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">

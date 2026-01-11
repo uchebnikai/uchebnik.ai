@@ -77,7 +77,7 @@ export enum SubjectId {
   UNI_STEM_CHEMISTRY = 'uni_stem_chemistry',
   UNI_STEM_BIOLOGY = 'uni_stem_biology',
   UNI_STEM_CS_PROG = 'uni_stem_cs_prog',
-  UNI_STEM_INFO_SYSTEMS = 'uni_stem_info_systems',
+  UNI_STEM_INFO_SYSTEMS = 'uni_stem_info_seconds',
   UNI_STEM_SW_ENGINEERING = 'uni_stem_sw_engineering',
   UNI_STEM_DSA = 'uni_stem_dsa',
   UNI_STEM_DATABASES = 'uni_stem_databases',
@@ -279,6 +279,7 @@ export interface UserSettings {
   preferredVoice: string; 
   referralCode?: string; 
   proExpiresAt?: string; 
+  isDarkMode: boolean;
   
   // Gamification
   xp: number;
