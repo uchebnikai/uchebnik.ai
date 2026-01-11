@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Shield, MessageSquare, ArrowRight, School, GraduationCap, Briefcase, ArrowLeft, ArrowUpRight, Search, ImageIcon, Mic, MicOff, X, Menu, Landmark, Sparkles, BookOpen, Brain, Zap, CheckCircle2, Users, LayoutDashboard, Settings, MapPin, Mail, Globe, MoreVertical, Paperclip, Send, Lock, Star, Trophy, Target, AlertTriangle } from 'lucide-react';
 import { SubjectConfig, UserRole, UserSettings, HomeViewType, SubjectId } from '../../types';
@@ -402,7 +403,7 @@ export const WelcomeScreen = ({
                                     {realUserAvatars.map((url, i) => (
                                         <img key={i} src={url} className="w-8 h-8 lg:w-10 lg:h-10 rounded-full border-2 border-white dark:border-zinc-900 object-cover shadow-sm" />
                                     ))}
-                                    <span className="pl-4 lg:pl-6 text-[10px] lg:text-sm font-bold text-zinc-500">+100 ученици</span>
+                                    <span className="pl-4 lg:pl-6 text-[10px] lg:text-sm font-bold text-zinc-500">+100 потребители</span>
                                 </>
                             )}
                         </div>
