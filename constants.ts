@@ -1,3 +1,4 @@
+
 import { SubjectId, AppMode, SubjectConfig, TeachingStyle } from './types';
 import { Language } from './utils/translations';
 
@@ -6,8 +7,6 @@ export const STRIPE_PRICES = {
   PLUS: 'price_1SfPSpE0C0vexh9Cg2YUGPah',
   PRO: 'price_1SfPTEE0C0vexh9C9RZMvkHB'
 };
-
-export const DEFAULT_AVATAR = "https://cdn-icons-png.freepik.com/256/3276/3276580.png";
 
 export const AI_MODELS = [
   { id: 'gemini-2.5-flash', name: 'Standard AI', description: 'Бърз, ефективен и икономичен.' },
@@ -134,7 +133,7 @@ export const SUBJECTS: SubjectConfig[] = [
     icon: 'MessageSquare',
     color: 'bg-indigo-500',
     modes: [AppMode.CHAT],
-    description: 'Попитай me каквото и да е.',
+    description: 'Попитай ме каквото и да е.',
     categories: ['school', 'university']
   },
   

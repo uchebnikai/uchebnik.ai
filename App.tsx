@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { GoogleGenAI, LiveServerMessage, Modality } from "@google/genai";
 import { SubjectConfig, SubjectId, AppMode, Message, Slide, UserSettings, Session, UserPlan, UserRole, HomeViewType } from './types';
-import { SUBJECTS, VOICES, DEFAULT_VOICE, DEFAULT_AVATAR } from './constants';
+import { SUBJECTS, VOICES, DEFAULT_VOICE } from './constants';
 import { generateResponse, generateChatTitle } from './services/aiService';
 import { createBlob as createAudioBlob } from './services/audioService'; 
 import { supabase } from './supabaseClient';
@@ -141,8 +141,8 @@ export const App = () => {
   const [renameSessionId, setRenameSessionId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
   
-  const [userMeta, setUserMeta] = useState({ firstName: '', lastName: '', avatar: DEFAULT_AVATAR });
-  const [editProfile, setEditProfile] = useState({ firstName: '', lastName: '', avatar: DEFAULT_AVATAR, email: '', password: '', currentPassword: '' });
+  const [userMeta, setUserMeta] = useState({ firstName: '', lastName: '', avatar: '' });
+  const [editProfile, setEditProfile] = useState({ firstName: '', lastName: '', avatar: '', email: '', password: '', currentPassword: '' });
 
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   
@@ -401,7 +401,7 @@ export const App = () => {
       voiceStreamRef.current = stream;
       const ai = new GoogleGenAI({ apiKey });
       const inputCtx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
-      const outputCtx = new (window.AudioContext || (window as any).webkitRecognition || (window as any).AudioContext)({ sampleRate: 24000 });
+      const outputCtx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
       audioContextRef.current = outputCtx;
       const sessionPromise = ai.live.connect({
         model: LIVE_MODEL,
@@ -666,7 +666,7 @@ export const App = () => {
       setUserRole(null);
       setIsAdmin(false);
       setUserPlan('free');
-      setUserMeta({ firstName: '', lastName: '', avatar: DEFAULT_AVATAR });
+      setUserMeta({ firstName: '', lastName: '', avatar: '' });
       setIsRemoteDataLoaded(false);
       setSyncStatus('synced');
       await loadLocalStorageData();
@@ -735,8 +735,6 @@ export const App = () => {
                         }
                     }
 
-                    const avatarUrl = profileData.avatar_url || restSettings.avatar || DEFAULT_AVATAR;
-
                     setUserSettings(prev => ({ 
                         ...prev, 
                         ...restSettings, 
@@ -755,8 +753,6 @@ export const App = () => {
                         setTotalOutputTokens(stats.totalOutputTokens || 0);
                         setCostCorrection(stats.costCorrection || 0);
                     }
-
-                    setUserMeta(prev => ({ ...prev, avatar: avatarUrl }));
                 }
             }
             const { data: sessionData } = await supabase.from('user_data').select('data').eq('user_id', userId).single();
@@ -784,7 +780,7 @@ export const App = () => {
             const firstName = meta.given_name || meta.first_name || '';
             const lastName = meta.family_name || meta.last_name || '';
             const fullName = meta.full_name || meta.name || `${firstName} ${lastName}`.trim();
-            const avatar = meta.avatar_url || meta.picture || DEFAULT_AVATAR;
+            const avatar = meta.avatar_url || meta.picture || '';
 
             setUserMeta({ firstName, lastName, avatar });
             setEditProfile({ 

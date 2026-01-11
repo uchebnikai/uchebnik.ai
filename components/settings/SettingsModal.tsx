@@ -1,3 +1,4 @@
+
 import React, { useRef, useState } from 'react';
 import { 
   X, User, Upload, Lock, Check, Palette, Plus, Moon, Sun, 
@@ -13,7 +14,7 @@ import { getDynamicColorStyle } from '../../styles/theme';
 import { MODAL_ENTER, FADE_IN } from '../../animations/transitions';
 import { supabase } from '../../supabaseClient';
 import { LANGUAGES, t } from '../../utils/translations';
-import { VOICES, DEFAULT_AVATAR } from '../../constants';
+import { VOICES } from '../../constants';
 
 interface SettingsModalProps {
   showSettings: boolean;
@@ -84,6 +85,29 @@ export const SettingsModal = ({
 
   const isCustomColor = !PRESET_COLORS.includes(userSettings.themeColor);
   const isCustomBackground = userSettings.customBackground && !PRESET_BACKGROUNDS.includes(userSettings.customBackground);
+
+  // Temporarily Disabled
+  /*
+  const handleManageSubscription = async () => {
+      setLoadingPortal(true);
+      try {
+          const { data, error } = await supabase.functions.invoke('create-portal-session', {
+              body: { returnUrl: window.location.origin }
+          });
+
+          if (error) throw error;
+          if (data?.url) {
+              window.location.href = data.url;
+          } else {
+              throw new Error("No portal URL returned");
+          }
+      } catch (error: any) {
+          console.error("Portal error:", error);
+          addToast("Възникна грешка при отваряне на портала за управление.", "error");
+          setLoadingPortal(false);
+      }
+  };
+  */
 
   const handleExportData = () => {
       const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(localStorage));
@@ -164,10 +188,11 @@ export const SettingsModal = ({
                           <p className="text-gray-500">Управлявайте вашата лична информация и абонамент.</p>
                       </div>
 
+                      {/* ... existing profile inputs ... */}
                       <div className="flex flex-col items-center md:items-start gap-6">
                           <div className="relative group cursor-pointer" onClick={() => avatarInputRef.current?.click()}>
                               <div className="w-28 h-28 rounded-[2rem] p-1 border-2 border-dashed border-gray-300 dark:border-white/20 hover:border-indigo-500 transition-colors">
-                                  <img src={editProfile.avatar || DEFAULT_AVATAR} className="w-full h-full rounded-[1.8rem] object-cover bg-gray-50 dark:bg-zinc-800"/>
+                                  <img src={editProfile.avatar || "https://cdn-icons-png.freepik.com/256/3276/3276580.png"} className="w-full h-full rounded-[1.8rem] object-cover bg-gray-50 dark:bg-zinc-800"/>
                               </div>
                               <div className="absolute inset-0 bg-black/40 rounded-[2rem] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                                   <Edit2 size={24} className="text-white"/>
@@ -190,6 +215,7 @@ export const SettingsModal = ({
                               <input value={editProfile.email} onChange={e => setEditProfile({...editProfile, email: e.target.value})} className="w-full bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 outline-none focus:border-indigo-500 transition-all font-medium"/>
                           </div>
                           
+                          {/* Password Change Section */}
                           <div className="col-span-1 md:col-span-2 pt-2 border-t border-gray-100 dark:border-white/5 mt-2">
                               <h4 className="text-sm font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2"><Lock size={16} className="text-indigo-500"/> Смяна на парола</h4>
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -248,9 +274,11 @@ export const SettingsModal = ({
                                      )}
                                  </div>
                                  <Button 
-                                    disabled={true}
+                                    // onClick={handleManageSubscription} 
+                                    disabled={true} // Temporarily disabled
                                     className="bg-white text-indigo-600 hover:bg-indigo-50 border-none shadow-none opacity-80"
                                 >
+                                    {/* {loadingPortal ? <Loader2 size={18} className="animate-spin"/> : 'Управление'} */}
                                     Очаквайте скоро
                                  </Button>
                              </div>
@@ -264,7 +292,7 @@ export const SettingsModal = ({
                   </div>
               )}
 
-              {/* ... other tabs ... */}
+              {/* APPEARANCE TAB */}
               {activeTab === 'appearance' && (
                   <div className={`space-y-8 max-w-2xl mx-auto ${FADE_IN}`}>
                       <div>
@@ -325,7 +353,8 @@ export const SettingsModal = ({
                           </div>
                       </section>
 
-                      {/* Theme Colors */}
+                      {/* Theme Colors - NO CHANGES HERE */}
+                      {/* ... Existing Theme Color Section ... */}
                       <section className={`space-y-4 p-6 bg-gray-50/50 dark:bg-white/5 rounded-2xl border border-gray-200 dark:border-white/10 ${!isPremium ? 'opacity-70' : ''}`}>
                           <div className="flex justify-between items-center mb-2">
                               <label className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
@@ -345,6 +374,7 @@ export const SettingsModal = ({
                                   </button>
                               ))}
 
+                              {/* Custom Color Picker */}
                               <div className="relative group">
                                   <input
                                       type="color"
@@ -412,6 +442,7 @@ export const SettingsModal = ({
                       </section>
 
                       {/* Chat Backgrounds */}
+                      {/* ... existing Chat BG section ... */}
                       <section className={`space-y-4 ${!isPremium ? 'opacity-70' : ''}`}>
                            <div className="flex justify-between items-center">
                               <label className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
@@ -484,7 +515,313 @@ export const SettingsModal = ({
                   </div>
               )}
 
-              {/* ... other tabs ... */}
+              {/* INTELLIGENCE TAB */}
+              {activeTab === 'ai' && (
+                  <div className={`space-y-8 max-w-2xl mx-auto ${FADE_IN}`}>
+                      <div>
+                          <h3 className="text-3xl font-black text-zinc-900 dark:text-white mb-2">{t('ai_settings', userSettings.language)}</h3>
+                          <p className="text-gray-500">Настройте поведението на вашия асистент.</p>
+                      </div>
+
+                      {/* AI Model Selection */}
+                      {/* ... existing model selection ... */}
+                      <section className="space-y-4">
+                          <label className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                              <Cpu size={18} className="text-blue-500"/> AI Модел
+                          </label>
+                          <div className="grid grid-cols-1 gap-3">
+                              {/* Auto Option */}
+                              <button
+                                  onClick={() => setUserSettings({...userSettings, preferredModel: 'auto'})}
+                                  className={`p-4 rounded-xl text-left border transition-all flex items-center gap-4 ${userSettings.preferredModel === 'auto'
+                                      ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-500 text-blue-700 dark:text-blue-300 shadow-md'
+                                      : 'bg-white dark:bg-white/5 border-gray-200 dark:border-white/10 hover:border-blue-300'}`}
+                              >
+                                  <div className={`p-2 rounded-full ${userSettings.preferredModel === 'auto' ? 'bg-blue-200 dark:bg-blue-500/30' : 'bg-gray-100 dark:bg-white/10'}`}>
+                                      <Sparkles size={20} />
+                                  </div>
+                                  <div>
+                                      <div className="font-bold text-sm">Автоматично (Препоръчително)</div>
+                                      <div className="text-xs opacity-70">Избира най-добрия модел според плана ви.</div>
+                                  </div>
+                              </button>
+
+                              {/* Gemini 2.5 Flash -> Standard AI */}
+                              <button
+                                  onClick={() => setUserSettings({...userSettings, preferredModel: 'gemini-2.5-flash'})}
+                                  className={`p-4 rounded-xl text-left border transition-all flex items-center gap-4 ${userSettings.preferredModel === 'gemini-2.5-flash'
+                                      ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-500 text-indigo-700 dark:text-indigo-300 shadow-md'
+                                      : 'bg-white dark:bg-white/5 border-gray-200 dark:border-white/10 hover:border-indigo-300'}`}
+                              >
+                                  <div className={`p-2 rounded-full ${userSettings.preferredModel === 'gemini-2.5-flash' ? 'bg-indigo-200 dark:bg-indigo-500/30' : 'bg-gray-100 dark:bg-white/10'}`}>
+                                      <Zap size={20} />
+                                  </div>
+                                  <div>
+                                      <div className="font-bold text-sm">Standard Model</div>
+                                      <div className="text-xs opacity-70">Бърз и лек. Идеален за прости задачи.</div>
+                                  </div>
+                              </button>
+
+                              {/* Gemini 3 Flash Preview -> Advanced AI */}
+                              <button
+                                  onClick={() => isPremium ? setUserSettings({...userSettings, preferredModel: 'gemini-3-flash-preview'}) : addToast('Този модел изисква Plus или Pro план.', 'info')}
+                                  className={`p-4 rounded-xl text-left border transition-all flex items-center gap-4 relative overflow-hidden ${userSettings.preferredModel === 'gemini-3-flash-preview'
+                                      ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-500 text-amber-700 dark:text-amber-300 shadow-md'
+                                      : `bg-white dark:bg-white/5 border-gray-200 dark:border-white/10 ${isPremium ? 'hover:border-amber-300' : 'opacity-60 cursor-not-allowed'}`}`}
+                              >
+                                  <div className={`p-2 rounded-full ${userSettings.preferredModel === 'gemini-3-flash-preview' ? 'bg-amber-200 dark:bg-amber-500/30' : 'bg-gray-100 dark:bg-white/10'}`}>
+                                      <Brain size={20} />
+                                  </div>
+                                  <div>
+                                      <div className="font-bold text-sm flex items-center gap-2">
+                                          Advanced Reasoning
+                                          {!isPremium && <span className="text-[10px] bg-amber-500 text-white px-2 py-0.5 rounded-full uppercase tracking-wider">Plus / Pro</span>}
+                                      </div>
+                                      <div className="text-xs opacity-70">Висок интелект и логика (High Intelligence).</div>
+                                  </div>
+                              </button>
+                          </div>
+                      </section>
+
+                      {/* Voice Selection - NEW */}
+                      <section className={`space-y-4 p-6 bg-gray-50/50 dark:bg-white/5 rounded-2xl border border-gray-200 dark:border-white/10 ${!isPremium ? 'opacity-80' : ''}`}>
+                          <div className="flex justify-between items-center mb-2">
+                              <label className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                                  <Volume2 size={18} className="text-indigo-500"/> Избор на Глас
+                              </label>
+                              {!isPremium && <span className="px-2 py-1 bg-gray-200 dark:bg-white/10 rounded text-[10px] font-bold text-gray-500 uppercase">Plus / Pro required</span>}
+                          </div>
+                          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                              {VOICES.map(voice => (
+                                  <div key={voice.id} className="relative group">
+                                      <button
+                                          onClick={() => isPremium ? setUserSettings({...userSettings, preferredVoice: voice.id}) : addToast('Тази функция изисква Plus или Pro план.', 'info')}
+                                          className={`w-full p-3 rounded-xl text-center text-sm font-bold border transition-all ${
+                                              userSettings.preferredVoice === voice.id
+                                              ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-500 text-indigo-700 dark:text-indigo-300 shadow-sm'
+                                              : 'bg-white dark:bg-white/5 border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/10'
+                                          } ${!isPremium ? 'cursor-not-allowed' : ''}`}
+                                      >
+                                          {voice.name}
+                                      </button>
+                                  </div>
+                              ))}
+                          </div>
+                      </section>
+
+                      {/* Teaching Style */}
+                      <section className="space-y-4">
+                          <label className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                              <Brain size={18} className="text-purple-500"/> Стил на преподаване
+                          </label>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                              {[
+                                  { id: 'normal', label: 'Балансиран (Default)', desc: 'Стандартни и точни отговори.' },
+                                  { id: 'socratic', label: 'Сократов (Guide)', desc: 'Не дава отговори, а задава въпроси.' },
+                                  { id: 'eli5', label: 'ELI5 (Simple)', desc: 'Обясни като на 5-годишно дете.' },
+                                  { id: 'academic', label: 'Академичен', desc: 'Строг и научен език.' },
+                                  { id: 'motivational', label: 'Мотивиращ (Coach)', desc: 'Позитивен и насърчаващ.' },
+                              ].map((style) => (
+                                  <button
+                                      key={style.id}
+                                      onClick={() => setUserSettings({...userSettings, teachingStyle: style.id})}
+                                      className={`p-4 rounded-xl text-left border transition-all ${userSettings.teachingStyle === style.id 
+                                          ? 'bg-purple-50 dark:bg-purple-900/20 border-purple-500 text-purple-700 dark:text-purple-300 shadow-md' 
+                                          : 'bg-white dark:bg-white/5 border-gray-200 dark:border-white/10 hover:border-purple-300 dark:hover:border-purple-500/50'}`}
+                                  >
+                                      <div className="font-bold text-sm mb-1">{style.label}</div>
+                                      <div className="text-xs opacity-70">{style.desc}</div>
+                                  </button>
+                              ))}
+                          </div>
+                      </section>
+
+                      {/* Custom Persona (Pro Feature) */}
+                      {/* ... existing custom persona section ... */}
+                      <section className={`space-y-4 p-6 bg-gradient-to-br from-indigo-50/50 to-purple-50/50 dark:from-indigo-900/10 dark:to-purple-900/10 rounded-2xl border border-indigo-200 dark:border-indigo-500/20 ${!isPro ? 'opacity-70' : ''}`}>
+                          <div className="flex justify-between items-center mb-2">
+                              <label className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                                  <Zap size={18} className="text-amber-500"/> Персонализирана Роля (Persona)
+                              </label>
+                              {!isPro && <span className="px-2 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded text-[10px] font-bold uppercase">Pro Only</span>}
+                          </div>
+                          <div className={`space-y-3 ${!isPro ? 'pointer-events-none grayscale' : ''}`}>
+                              <p className="text-xs text-gray-500">Напишете как точно искате AI да се държи. Това ще замени стандартния стил на преподаване.</p>
+                              <textarea 
+                                  value={userSettings.customPersona || ''}
+                                  onChange={(e) => setUserSettings({...userSettings, customPersona: e.target.value})}
+                                  placeholder='Пример: "Ти си Шерлок Холмс. Използвай дедукция и говори загадъчно."'
+                                  className="w-full bg-white dark:bg-black/30 border border-gray-200 dark:border-white/10 rounded-xl p-4 text-sm min-h-[100px] outline-none focus:border-indigo-500 transition-all resize-none"
+                              />
+                              <div className="flex flex-wrap gap-2">
+                                  {CUSTOM_PERSONAS.map((p, i) => (
+                                      <button 
+                                          key={i} 
+                                          onClick={() => setUserSettings({...userSettings, customPersona: p.prompt})}
+                                          className="px-3 py-1.5 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg text-xs font-medium hover:bg-indigo-50 dark:hover:bg-white/10 hover:text-indigo-600 dark:hover:text-white transition-colors"
+                                      >
+                                          {p.label}
+                                      </button>
+                                  ))}
+                                  {userSettings.customPersona && (
+                                      <button onClick={() => setUserSettings({...userSettings, customPersona: ''})} className="px-3 py-1.5 bg-red-50 dark:bg-red-900/20 text-red-500 rounded-lg text-xs font-bold hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors">
+                                          Изчисти
+                                      </button>
+                                  )}
+                              </div>
+                          </div>
+                      </section>
+
+                      {/* ... existing sections ... */}
+                      <div className="grid grid-cols-1 gap-6">
+                          <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl p-6 space-y-4">
+                              <label className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                                  <Cpu size={18} className="text-emerald-500"/> {t('response_length', userSettings.language)}
+                              </label>
+                              <div className="flex bg-gray-100 dark:bg-black/30 p-1 rounded-xl">
+                                  {['concise', 'detailed'].map((len) => (
+                                      <button
+                                          key={len}
+                                          onClick={() => setUserSettings({...userSettings, responseLength: len})}
+                                          className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all ${userSettings.responseLength === len 
+                                              ? 'bg-white dark:bg-zinc-800 text-indigo-600 dark:text-white shadow-sm' 
+                                              : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
+                                      >
+                                          {len === 'concise' ? 'Кратък' : 'Подробен'}
+                                      </button>
+                                  ))}
+                              </div>
+                          </div>
+
+                          <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl p-6 space-y-4">
+                              <label className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                                  <Layout size={18} className="text-amber-500"/> {t('text_size', userSettings.language)}
+                              </label>
+                              <div className="flex gap-4 items-end px-4 py-4 bg-gray-50 dark:bg-black/20 rounded-xl">
+                                  <button onClick={() => setUserSettings({...userSettings, textSize: 'small'})} className={`flex-1 text-xs font-bold transition-colors ${userSettings.textSize === 'small' ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-400'}`}>Aa Small</button>
+                                  <button onClick={() => setUserSettings({...userSettings, textSize: 'normal'})} className={`flex-1 text-base font-bold transition-colors ${userSettings.textSize === 'normal' ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-400'}`}>Aa Normal</button>
+                                  <button onClick={() => setUserSettings({...userSettings, textSize: 'large'})} className={`flex-1 text-xl font-bold transition-colors ${userSettings.textSize === 'large' ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-400'}`}>Aa Large</button>
+                              </div>
+                          </div>
+                      </div>
+                  </div>
+              )}
+
+              {/* SYSTEM TAB */}
+              {activeTab === 'system' && (
+                  <div className={`space-y-8 max-w-2xl mx-auto ${FADE_IN}`}>
+                      <div>
+                          <h3 className="text-3xl font-black text-zinc-900 dark:text-white mb-2">Системни</h3>
+                          <p className="text-gray-500">Настройки за въвеждане и интерфейс.</p>
+                      </div>
+
+                      <section className="space-y-4">
+                          <div className="flex items-center justify-between p-5 bg-white dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-2xl">
+                              <div className="flex items-center gap-3">
+                                  <div className="p-2.5 rounded-xl bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400">
+                                      <Keyboard size={20}/>
+                                  </div>
+                                  <div>
+                                      <div className="font-bold text-sm text-gray-900 dark:text-white">Enter за изпращане</div>
+                                      <div className="text-xs text-gray-500">Изключи за нов ред с Enter.</div>
+                                  </div>
+                              </div>
+                              <button 
+                                onClick={() => setUserSettings({...userSettings, enterToSend: !userSettings.enterToSend})} 
+                                className={`w-14 h-8 rounded-full transition-colors flex items-center px-1 ${userSettings.enterToSend ? 'bg-indigo-600' : 'bg-gray-300'}`}
+                              >
+                                  <div className={`w-6 h-6 rounded-full bg-white shadow-md transition-transform duration-300 ${userSettings.enterToSend ? 'translate-x-6' : 'translate-x-0'}`} />
+                              </button>
+                          </div>
+
+                          <div className="flex items-center justify-between p-5 bg-white dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-2xl">
+                              <div className="flex items-center gap-3">
+                                  <div className="p-2.5 rounded-xl bg-pink-100 dark:bg-pink-500/20 text-pink-600 dark:text-pink-400">
+                                      <Smartphone size={20}/>
+                                  </div>
+                                  <div>
+                                      <div className="font-bold text-sm text-gray-900 dark:text-white">Haptic Feedback</div>
+                                      <div className="text-xs text-gray-500">Вибрация при взаимодействие.</div>
+                                  </div>
+                              </div>
+                              <button 
+                                onClick={() => setUserSettings({...userSettings, haptics: !userSettings.haptics})} 
+                                className={`w-14 h-8 rounded-full transition-colors flex items-center px-1 ${userSettings.haptics ? 'bg-indigo-600' : 'bg-gray-300'}`}
+                              >
+                                  <div className={`w-6 h-6 rounded-full bg-white shadow-md transition-transform duration-300 ${userSettings.haptics ? 'translate-x-6' : 'translate-x-0'}`} />
+                              </button>
+                          </div>
+
+                          <div className="flex items-center justify-between p-5 bg-white dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-2xl">
+                              <div className="flex items-center gap-3">
+                                  <div className="p-2.5 rounded-xl bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400">
+                                      <MessageCircle size={20}/>
+                                  </div>
+                                  <div>
+                                      <div className="font-bold text-sm text-gray-900 dark:text-white">Звукови Ефекти</div>
+                                      <div className="text-xs text-gray-500">Звук при нови съобщения.</div>
+                                  </div>
+                              </div>
+                              <button 
+                                onClick={() => setUserSettings({...userSettings, sound: !userSettings.sound})} 
+                                className={`w-14 h-8 rounded-full transition-colors flex items-center px-1 ${userSettings.sound ? 'bg-indigo-600' : 'bg-gray-300'}`}
+                              >
+                                  <div className={`w-6 h-6 rounded-full bg-white shadow-md transition-transform duration-300 ${userSettings.sound ? 'translate-x-6' : 'translate-x-0'}`} />
+                              </button>
+                          </div>
+                      </section>
+                  </div>
+              )}
+
+              {/* DATA TAB */}
+              {activeTab === 'data' && (
+                  <div className={`space-y-8 max-w-2xl mx-auto ${FADE_IN}`}>
+                      <div>
+                          <h3 className="text-3xl font-black text-zinc-900 dark:text-white mb-2">{t('data', userSettings.language)}</h3>
+                          <p className="text-gray-500">Контролирайте вашата история и данни.</p>
+                      </div>
+
+                      <div className="grid grid-cols-1 gap-4">
+                          <button onClick={handleExportData} className="w-full flex items-center justify-between p-6 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl hover:bg-gray-50 dark:hover:bg-white/10 transition-colors group text-left">
+                             <div className="flex items-center gap-4">
+                                 <div className="p-3 bg-blue-100 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-xl shadow-sm"><Download size={20}/></div>
+                                 <div>
+                                     <div className="font-bold text-gray-900 dark:text-white">Експорт на данни</div>
+                                     <div className="text-xs text-gray-500">Изтегли историята като JSON.</div>
+                                 </div>
+                             </div>
+                             <ArrowRight size={18} className="text-gray-300 group-hover:text-blue-500 transition-colors"/>
+                          </button>
+
+                          <div className="bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-500/10 rounded-2xl overflow-hidden mt-4">
+                              <div className="p-6 border-b border-red-100 dark:border-red-500/10">
+                                  <h4 className="font-bold text-red-700 dark:text-red-400 mb-1 flex items-center gap-2"><Database size={18}/> Зона на опасност</h4>
+                                  <p className="text-xs text-red-600/70 dark:text-red-400/70">Действията тук са необратими.</p>
+                              </div>
+                              <button 
+                                onClick={handleDeleteAllChats} 
+                                className="w-full flex items-center justify-between p-6 hover:bg-red-100 dark:hover:bg-red-900/20 transition-colors group text-left"
+                              >
+                                 <div className="flex items-center gap-4">
+                                     <div className="p-3 bg-white dark:bg-red-500/20 text-red-600 dark:text-red-400 rounded-xl shadow-sm"><Trash2 size={20}/></div>
+                                     <div>
+                                         <div className="font-bold text-gray-900 dark:text-white">{t('delete_all_chats', userSettings.language)}</div>
+                                         <div className="text-xs text-gray-500">{t('delete_history_desc', userSettings.language)}</div>
+                                     </div>
+                                 </div>
+                                 <ArrowRight size={18} className="text-gray-300 group-hover:text-red-500 transition-colors"/>
+                            </button>
+                          </div>
+                      </div>
+                      
+                      <div className="p-6 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-center">
+                          <p className="text-sm text-gray-500">
+                              Всички данни се съхраняват криптирани. За пълно изтриване на акаунта, моля свържете се с нас.
+                          </p>
+                      </div>
+                  </div>
+              )}
+
           </div>
       </div>
     </div>
