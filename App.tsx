@@ -741,8 +741,15 @@ export const App = () => {
                 
                 setIsAdmin(adminFlag);
 
+                // Priority fix for Custom Avatar/Profile Data
+                const dbFirstName = profileData.first_name || '';
+                const dbLastName = profileData.last_name || '';
+                const dbAvatar = profileData.avatar_url || '';
+
                 if (profileData.settings) {
                     const { plan, stats, xp: _jsonXP, level: _jsonLvl, ...restSettings } = (profileData.settings as any);
+                    
+                    // Prioritize database stored name over OAuth metadata if it's already set properly
                     let currentName = restSettings.userName || '';
                     const isNameGeneric = !currentName || ['Потребител', 'Анонимен', 'Anonymous', 'Scholar'].includes(currentName);
                     
@@ -754,6 +761,21 @@ export const App = () => {
                             }).eq('id', userId);
                         }
                     }
+
+                    // Update local Display State - Source of Truth is the Database fields
+                    setUserMeta({ 
+                        firstName: dbFirstName || (authMetadata?.given_name || ''), 
+                        lastName: dbLastName || (authMetadata?.family_name || ''), 
+                        avatar: dbAvatar || (authMetadata?.avatar_url || authMetadata?.picture || '') 
+                    });
+
+                    setEditProfile(prev => ({
+                        ...prev,
+                        firstName: dbFirstName || prev.firstName,
+                        lastName: dbLastName || prev.lastName,
+                        avatar: dbAvatar || prev.avatar,
+                        email: profileData.email || prev.email
+                    }));
 
                     setUserSettings(prev => ({ 
                         ...prev, 
@@ -798,6 +820,7 @@ export const App = () => {
             const fullName = meta.full_name || meta.name || `${firstName} ${lastName}`.trim();
             const avatar = meta.avatar_url || meta.picture || '';
 
+            // Set initial metadata from OAuth, but loadRemoteUserData will soon overwrite with DB values if present
             setUserMeta({ firstName, lastName, avatar });
             setEditProfile({ 
                 firstName, 
