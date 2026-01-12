@@ -1,9 +1,9 @@
 
 import React from 'react';
-import { Menu, Phone, Plus, History, Maximize, ArrowLeft } from 'lucide-react';
+import { Menu, Phone, Plus, History, Maximize, ArrowLeft, Lock } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { DynamicIcon } from '../ui/DynamicIcon';
-import { SubjectConfig, UserRole, AppMode, SubjectId, UserSettings } from '../../types';
+import { SubjectConfig, UserRole, AppMode, SubjectId, UserSettings, UserPlan } from '../../types';
 import { t } from '../../utils/translations';
 
 interface ChatHeaderProps {
@@ -19,6 +19,7 @@ interface ChatHeaderProps {
   userSettings: UserSettings;
   setFocusMode: (val: boolean) => void;
   isGuest?: boolean;
+  userPlan: UserPlan;
 }
 
 export const ChatHeader = ({
@@ -33,8 +34,10 @@ export const ChatHeader = ({
   setHistoryDrawerOpen,
   userSettings,
   setFocusMode,
-  isGuest = false
+  isGuest = false,
+  userPlan
 }: ChatHeaderProps) => {
+    const isPro = userPlan === 'pro';
     
     return (
       <header className={`sticky top-0 lg:top-4 mx-0 lg:mx-8 z-30 h-16 lg:h-18 
@@ -78,7 +81,25 @@ export const ChatHeader = ({
              {!isGuest ? (
                  <>
                      <Button variant="ghost" onClick={() => setFocusMode(true)} className="w-9 h-9 lg:w-10 lg:h-10 p-0 rounded-full" icon={Maximize} title="Focus Mode" />
-                     <Button variant="secondary" onClick={startVoiceCall} className="w-10 h-10 lg:w-12 lg:h-12 p-0 rounded-full border-none bg-indigo-50 text-indigo-600 hover:bg-indigo-100 dark:bg-indigo-500/20 dark:text-indigo-300 dark:hover:bg-indigo-500/30" icon={Phone} />
+                     <div className="relative group/voice">
+                        <Button 
+                            variant="secondary" 
+                            onClick={startVoiceCall} 
+                            className={`w-10 h-10 lg:w-12 lg:h-12 p-0 rounded-full border-none shadow-sm transition-all
+                                ${isPro 
+                                    ? 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100 dark:bg-indigo-500/20 dark:text-indigo-300 dark:hover:bg-indigo-500/30' 
+                                    : 'bg-zinc-100 text-zinc-400 dark:bg-white/5 dark:text-zinc-500'}`}
+                            icon={Phone} 
+                        />
+                        {!isPro && (
+                            <div className="absolute -top-1 -right-1 bg-amber-500 text-black rounded-full p-1 border-2 border-white dark:border-zinc-900 shadow-sm z-10 pointer-events-none">
+                                <Lock size={8} strokeWidth={4} />
+                            </div>
+                        )}
+                        <div className="absolute top-full right-0 mt-2 hidden group-hover/voice:block whitespace-nowrap bg-black/80 backdrop-blur-md text-white text-[10px] font-bold px-2 py-1 rounded-lg border border-white/10 z-50">
+                            {isPro ? "Гласов режим" : "Pro функция"}
+                        </div>
+                     </div>
                      <div className="hidden lg:block h-8 w-px bg-gray-200 dark:bg-white/10 mx-1" />
                      <Button variant="primary" onClick={() => activeSubject && createNewSession(activeSubject.id, userRole || undefined, activeMode)} className="h-9 lg:h-10 px-3 lg:px-4 text-xs lg:text-sm rounded-xl shadow-none"><Plus size={16} className="lg:w-[18px] lg:h-[18px]"/><span className="hidden sm:inline">Нов</span></Button>
                      <Button variant="ghost" onClick={() => setHistoryDrawerOpen(true)} className="w-9 h-9 lg:w-10 lg:h-10 p-0 rounded-full" icon={History} />

@@ -394,6 +394,13 @@ export const App = () => {
 
   const startVoiceCall = async () => {
     if (isVoiceCallActive) return;
+
+    if (userPlan !== 'pro') {
+      addToast("Гласовият режим е достъпен само за Pro потребители.", "info");
+      setShowUnlockModal(true);
+      return;
+    }
+
     setIsVoiceCallActive(true);
     setVoiceCallStatus('idle');
     const apiKey = process.env.API_KEY || "";
@@ -1225,7 +1232,7 @@ export const App = () => {
             <SubjectDashboard activeSubject={activeSubject} setActiveSubject={setActiveSubject} setHomeView={setHomeView} userRole={userRole} userSettings={userSettings} handleStartMode={handleStartMode} />
         ) : (
             <div className={`flex-1 flex flex-col relative h-full bg-transparent overflow-hidden w-full`}>
-                {!focusMode && <ChatHeader setSidebarOpen={setSidebarOpen} activeSubject={activeSubject} setActiveSubject={setActiveSubject} setUserSettings={setUserSettings} userRole={userRole} activeMode={activeMode} startVoiceCall={startVoiceCall} createNewSession={createNewSession} setHistoryDrawerOpen={setHistoryDrawerOpen} userSettings={userSettings} setFocusMode={setFocusMode} isGuest={!session} />}
+                <ChatHeader setSidebarOpen={setSidebarOpen} activeSubject={activeSubject} setActiveSubject={setActiveSubject} setUserSettings={setUserSettings} userRole={userRole} activeMode={activeMode} startVoiceCall={startVoiceCall} createNewSession={createNewSession} setHistoryDrawerOpen={setHistoryDrawerOpen} userSettings={userSettings} setFocusMode={setFocusMode} isGuest={!session} userPlan={userPlan} />
                 <AdSenseContainer userPlan={userPlan} />
                 <MessageList currentMessages={currentMessages} userSettings={userSettings} setZoomedImage={setZoomedImage} handleRate={() => {}} handleReply={setReplyingTo} handleCopy={(t,id) => {navigator.clipboard.writeText(t); setCopiedId(id); setTimeout(()=>setCopiedId(null), 2000)}} copiedId={copiedId} handleShare={() => {}} loadingSubject={!!loadingSubjects[activeSubject.id]} activeSubject={activeSubject} messagesEndRef={messagesEndRef} setShowAuthModal={setShowAuthModal} isGuest={!session} />
                 <ActualChatInputArea replyingTo={replyingTo} setReplyingTo={setReplyingTo} userSettings={userSettings} setUserSettings={setUserSettings} activeMode={activeMode} fileInputRef={fileInputRef} loadingSubject={!!loadingSubjects[activeSubject.id]} handleImageUpload={handleImageUpload} toggleListening={toggleListening} isListening={isListening} inputValue={inputValue} setInputValue={setInputValue} handleSend={() => handleSend()} selectedImages={selectedImages} handleRemoveImage={(idx) => setSelectedImages(prev => prev.filter((_,i)=>i!==idx))} onStopGeneration={handleStopGeneration} onImagesAdd={(imgs) => setSelectedImages(prev => [...prev, ...imgs])} />
