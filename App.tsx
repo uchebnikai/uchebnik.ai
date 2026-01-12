@@ -645,6 +645,13 @@ export const App = () => {
       }
   }, [userSettings.dailyQuests]);
 
+  // Plan Restriction Enforcement Effect
+  useEffect(() => {
+    if (userPlan === 'free' && userSettings.customBackground) {
+        setUserSettings(prev => ({ ...prev, customBackground: null }));
+    }
+  }, [userPlan]);
+
   const loadLocalStorageData = async () => {
       const sessionsKey = 'uchebnik_sessions';
       const settingsKey = 'uchebnik_settings';
@@ -752,8 +759,8 @@ export const App = () => {
                         ...prev, 
                         ...restSettings, 
                         userName: currentName || prev.userName,
-                        themeColor: profileData.theme_color || prev.themeColor, 
-                        customBackground: profileData.custom_background || prev.customBackground, 
+                        themeColor: profileData.theme_color !== undefined ? profileData.theme_color : prev.themeColor, 
+                        customBackground: profileData.custom_background !== undefined ? profileData.custom_background : prev.customBackground, 
                         referralCode, 
                         proExpiresAt, 
                         xp, 
@@ -1254,6 +1261,7 @@ export const App = () => {
       <SettingsModal showSettings={showSettings} setShowSettings={setShowSettings} userMeta={userMeta} editProfile={editProfile} setEditProfile={setEditProfile} handleUpdateAccount={handleUpdateAccount} handleAvatarUpload={handleAvatarUploadSettings} userSettings={userSettings} setUserSettings={setUserSettings} isPremium={userPlan!=='free'} handleBackgroundUpload={handleBackgroundUpload} handleDeleteAllChats={handleDeleteAllChats} addToast={addToast} userPlan={userPlan} />
       <ReferralModal isOpen={showReferralModal} onClose={() => setShowReferralModal(false)} userSettings={userSettings} addToast={addToast} />
       <LeaderboardModal isOpen={showLeaderboard} onClose={() => setShowLeaderboard(false)} currentUserId={session?.user?.id} />
+      <DailyQuestsModal isOpen={showQuests} onClose={() => setShowQuests(false)} quests={userSettings.dailyQuests?.quests || []} />
       <DailyQuestsModal isOpen={showQuests} onClose={() => setShowQuests(false)} quests={userSettings.dailyQuests?.quests || []} />
       <ReportModal isOpen={showReportModal} onClose={() => setShowReportModal(false)} userSettings={userSettings} addToast={addToast} userId={session?.user?.id} />
       <AdminPanel showAdminAuth={showAdminAuth} setShowAdminAuth={setShowAdminAuth} showAdminPanel={showAdminPanel} setShowAdminPanel={setShowAdminPanel} adminPasswordInput={adminPasswordInput} setAdminPasswordInput={setAdminPasswordInput} handleAdminLogin={handleAdminLogin} generateKey={handleGenerateKey} generatedKeys={generatedKeys as any} addToast={addToast} globalConfig={globalConfig} setGlobalConfig={setGlobalConfig} />
