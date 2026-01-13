@@ -645,7 +645,7 @@ export const App = () => {
       }
   }, [userSettings.dailyQuests]);
 
-  // Plan Restriction Enforcement Effect
+  // Plan Restriction Enforcement Effect - Reset ALL premium settings when plan reverts to free
   useEffect(() => {
     if (userPlan === 'free') {
         setUserSettings(prev => {
@@ -658,13 +658,25 @@ export const App = () => {
                 changed = true;
             }
 
-            // Revert Advanced Model
-            if (prev.preferredModel === 'gemini-3-flash-preview') {
+            // Revert Theme Color to Default Indigo
+            if (prev.themeColor !== '#6366f1') {
+                updates.themeColor = '#6366f1';
+                changed = true;
+            }
+
+            // Revert Font Family to Standard
+            if (prev.fontFamily !== 'inter') {
+                updates.fontFamily = 'inter';
+                changed = true;
+            }
+
+            // Revert Advanced Model to Auto
+            if (prev.preferredModel !== 'auto') {
                 updates.preferredModel = 'auto';
                 changed = true;
             }
 
-            // Revert Voice
+            // Revert Voice to Default
             if (prev.preferredVoice !== DEFAULT_VOICE) {
                 updates.preferredVoice = DEFAULT_VOICE;
                 changed = true;
