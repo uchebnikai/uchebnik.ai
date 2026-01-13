@@ -228,7 +228,17 @@ export const Sidebar = ({
                             </>
                         )}
                     </button>
-                    {sectionsOpen.general && activeSubject?.id === SubjectId.GENERAL && renderSessionList(categorizedSessions.general)}
+                    {sectionsOpen.general && !collapsed && (
+                        <div className="space-y-1">
+                            {renderSessionList(categorizedSessions.general)}
+                            <button 
+                                onClick={() => { handleSubjectChange(SUBJECTS[0]); createNewSession(SubjectId.GENERAL); }}
+                                className="ml-7 flex items-center gap-2 text-[10px] font-bold text-indigo-500 hover:text-indigo-600 transition-colors uppercase tracking-wider py-1"
+                            >
+                                <Plus size={12}/> Нов чат
+                            </button>
+                        </div>
+                    )}
                 </div>
 
                 {/* 2. SCHOOL SPACE */}
@@ -259,7 +269,7 @@ export const Sidebar = ({
                             </>
                         )}
                     </button>
-                    {sectionsOpen.school && (isSchoolActive || categorizedSessions.school.length > 0) && !collapsed && (
+                    {sectionsOpen.school && !collapsed && (
                         <div className="space-y-2">
                              {renderSessionList(categorizedSessions.school)}
                              <button 
@@ -300,7 +310,7 @@ export const Sidebar = ({
                             </>
                         )}
                     </button>
-                    {sectionsOpen.uni && (isUniActive || categorizedSessions.uni.length > 0) && !collapsed && (
+                    {sectionsOpen.uni && !collapsed && (
                         <div className="space-y-2">
                              {renderSessionList(categorizedSessions.uni)}
                              <button 
