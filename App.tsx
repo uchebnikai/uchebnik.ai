@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { GoogleGenAI, LiveServerMessage, Modality } from "@google/genai";
 import { SubjectConfig, SubjectId, AppMode, Message, Slide, UserSettings, Session, UserPlan, UserRole, HomeViewType } from './types';
 import { SUBJECTS, VOICES, DEFAULT_VOICE } from './constants';
@@ -99,6 +99,24 @@ async function decodeAudioData(
   }
   return buffer;
 }
+
+/**
+ * Ensures that if a user is on the free plan, all premium settings are reverted to defaults.
+ */
+const ensurePlanRestrictions = (settings: UserSettings, plan: UserPlan): UserSettings => {
+    if (plan === 'free') {
+        return {
+            ...settings,
+            customBackground: null,
+            themeColor: '#6366f1',
+            fontFamily: 'inter',
+            preferredModel: 'auto',
+            preferredVoice: DEFAULT_VOICE,
+            customPersona: ''
+        };
+    }
+    return settings;
+};
 
 export const App = () => {
   // --- Auth State ---
@@ -499,7 +517,7 @@ export const App = () => {
             const earnedXP = Math.min(XP_PER_VOICE, Math.floor(durationSeconds * 2));
             grantXP(earnedXP);
             
-            // Fix: Missions state update
+            // Missions state update
             setUserSettings(prev => {
                 const questResult = updateQuestProgress(prev.dailyQuests?.quests || [], 'voice', activeSubject?.id || '');
                 if (questResult.xpGained > 0) {
@@ -645,51 +663,10 @@ export const App = () => {
       }
   }, [userSettings.dailyQuests]);
 
-  // Plan Restriction Enforcement Effect - Enhanced to strictly reset ALL premium settings
+  // Plan Restriction Enforcement Effect - Continuously monitor plan state
   useEffect(() => {
     if (userPlan === 'free') {
-        setUserSettings(prev => {
-            let changed = false;
-            const updates: Partial<UserSettings> = {};
-
-            // 1. Reset Background
-            if (prev.customBackground) {
-                updates.customBackground = null;
-                changed = true;
-            }
-
-            // 2. Reset Theme Color to Default Indigo (#6366f1)
-            if (prev.themeColor && prev.themeColor.toLowerCase() !== '#6366f1') {
-                updates.themeColor = '#6366f1';
-                changed = true;
-            }
-
-            // 3. Reset Font Family to Standard (Inter)
-            if (prev.fontFamily && prev.fontFamily !== 'inter') {
-                updates.fontFamily = 'inter';
-                changed = true;
-            }
-
-            // 4. Reset AI Model to Auto
-            if (prev.preferredModel && prev.preferredModel !== 'auto') {
-                updates.preferredModel = 'auto';
-                changed = true;
-            }
-
-            // 5. Reset Voice to Default
-            if (prev.preferredVoice && prev.preferredVoice !== DEFAULT_VOICE) {
-                updates.preferredVoice = DEFAULT_VOICE;
-                changed = true;
-            }
-
-            // 6. Reset Custom Persona
-            if (prev.customPersona && prev.customPersona.trim().length > 0) {
-                updates.customPersona = '';
-                changed = true;
-            }
-
-            return changed ? { ...prev, ...updates } : prev;
-        });
+        setUserSettings(prev => ensurePlanRestrictions(prev, 'free'));
     }
   }, [userPlan]);
 
@@ -702,8 +679,11 @@ export const App = () => {
           
           const loadedSettings = await getSettingsFromStorage(settingsKey);
           if (loadedSettings) {
-              setUserSettings(prev => ({ ...prev, ...loadedSettings }));
-              if ((loadedSettings as any).plan) setUserPlan((loadedSettings as any).plan);
+              const plan = (loadedSettings as any).plan || 'free';
+              // Scrub local settings right after loading
+              const sanitized = ensurePlanRestrictions(loadedSettings, plan);
+              setUserSettings(prev => ({ ...prev, ...sanitized }));
+              setUserPlan(plan);
           }
       } catch (err) { console.error("Init Error", err); }
 
@@ -789,6 +769,7 @@ export const App = () => {
 
                 if (profileData.settings) {
                     const { plan, stats, xp: _jsonXP, level: _jsonLvl, ...restSettings } = (profileData.settings as any);
+                    const currentPlan: UserPlan = plan || 'free';
                     
                     // Prioritize database stored name over OAuth metadata if it's already set properly
                     let currentName = restSettings.userName || '';
@@ -800,6 +781,39 @@ export const App = () => {
                             await supabase.from('profiles').update({
                                 settings: { ...profileData.settings, userName: currentName }
                             }).eq('id', userId);
+                        }
+                    }
+
+                    // SCRUB PREMIUM SETTINGS DURING LOAD if user is on Free Plan
+                    const sanitizedSettings = ensurePlanRestrictions(restSettings as UserSettings, currentPlan);
+
+                    // SELF-HEALING: If DB has premium leftovers for a FREE user, wipe them in the DB too
+                    if (currentPlan === 'free') {
+                        const hasLeftovers = 
+                            (profileData.theme_color && profileData.theme_color !== '#6366f1') ||
+                            profileData.custom_background !== null ||
+                            sanitizedSettings.fontFamily !== 'inter' ||
+                            sanitizedSettings.customPersona !== '' ||
+                            sanitizedSettings.preferredModel !== 'auto';
+                        
+                        if (hasLeftovers) {
+                            console.log("[Plan Enforcement] Scrubbing premium leftovers from Database...");
+                            supabase.from('profiles').update({
+                                theme_color: '#6366f1',
+                                custom_background: null,
+                                settings: {
+                                    ...restSettings,
+                                    plan: 'free',
+                                    themeColor: '#6366f1',
+                                    customBackground: null,
+                                    fontFamily: 'inter',
+                                    customPersona: '',
+                                    preferredModel: 'auto',
+                                    preferredVoice: DEFAULT_VOICE
+                                }
+                            }).eq('id', userId).then(({error}) => {
+                                if (error) console.error("Self-healing failed:", error);
+                            });
                         }
                     }
 
@@ -820,10 +834,10 @@ export const App = () => {
 
                     setUserSettings(prev => ({ 
                         ...prev, 
-                        ...restSettings, 
+                        ...sanitizedSettings, 
                         userName: currentName || prev.userName,
-                        themeColor: profileData.theme_color !== undefined ? profileData.theme_color : prev.themeColor, 
-                        customBackground: profileData.custom_background !== undefined ? profileData.custom_background : prev.customBackground, 
+                        themeColor: currentPlan === 'free' ? '#6366f1' : (profileData.theme_color !== undefined ? profileData.theme_color : sanitizedSettings.themeColor), 
+                        customBackground: currentPlan === 'free' ? null : (profileData.custom_background !== undefined ? profileData.custom_background : sanitizedSettings.customBackground), 
                         referralCode, 
                         proExpiresAt, 
                         xp, 
@@ -831,7 +845,7 @@ export const App = () => {
                         stats: stats || prev.stats
                     }));
 
-                    if (plan) setUserPlan(plan);
+                    setUserPlan(currentPlan);
                 }
             }
             const { data: sessionData } = await supabase.from('user_data').select('data').eq('user_id', userId).single();
@@ -933,8 +947,6 @@ export const App = () => {
         }, (payload) => {
             const newData = payload.new.data;
             if (newData && !isStreamingRef.current) {
-                // Determine if we should apply the incoming update
-                // We compare lengths or logic to decide, but generally "Pull" remote state
                 isIncomingUpdateRef.current = true;
                 setSessions(newData);
                 setSyncStatus('synced');
@@ -1332,7 +1344,7 @@ export const App = () => {
       <Lightbox image={zoomedImage} onClose={() => setZoomedImage(null)} />
       <ConfirmModal isOpen={!!confirmModal} title={confirmModal?.title || ''} message={confirmModal?.message || ''} onConfirm={confirmModal?.onConfirm || (()=>{})} onCancel={() => setConfirmModal(null)} />
       
-      {/* GLOBAL BROADCAST MODAL - Fully Synchronized with Admin Preview */}
+      {/* GLOBAL BROADCAST MODAL */}
       {broadcastModal?.isOpen && (
           <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-in fade-in">
               <div className="bg-[#09090b] border border-white/10 w-full max-w-md p-8 rounded-[40px] shadow-2xl relative animate-in zoom-in-95 backdrop-blur-xl overflow-hidden ring-1 ring-white/5">
