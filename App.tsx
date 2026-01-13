@@ -587,7 +587,7 @@ export const App = () => {
     rec.onresult = (e: any) => {
       let f = '', inter = '';
       for(let i = e.resultIndex; i < e.results.length; ++i) {
-        e.results[i].isFinal ? f += e.results[i][0].transcript : inter += e.results[i][0].transcript;
+        e.results[i].isFinal ? f += e.resultIndex[i][0].transcript : inter += e.results[i][0].transcript;
       }
       setInputValue((startingTextRef.current + ' ' + f + inter).trim());
     };
@@ -1104,6 +1104,24 @@ export const App = () => {
       });
   };
 
+  const handleRate = (messageId: string, rating: 'up' | 'down') => {
+      if (!activeSessionId) return;
+      setSessions(prev => prev.map(s => {
+          if (s.id === activeSessionId) {
+              return {
+                  ...s,
+                  messages: s.messages.map(m => 
+                      m.id === messageId 
+                          ? { ...m, rating: m.rating === rating ? undefined : rating } 
+                          : m
+                  ),
+                  lastModified: Date.now()
+              };
+          }
+          return s;
+      }));
+  };
+
   const handleSend = async (overrideText?: string, overrideImages?: string[]) => {
     const currentSubject = activeSubjectRef.current;
     const currentSessionId = activeSessionIdRef.current;
@@ -1319,7 +1337,7 @@ export const App = () => {
             <div className={`flex-1 flex flex-col relative h-full bg-transparent overflow-hidden w-full`}>
                 <ChatHeader setSidebarOpen={setSidebarOpen} activeSubject={activeSubject} setActiveSubject={setActiveSubject} setUserSettings={setUserSettings} userRole={userRole} activeMode={activeMode} startVoiceCall={startVoiceCall} createNewSession={createNewSession} setHistoryDrawerOpen={setHistoryDrawerOpen} userSettings={userSettings} setFocusMode={setFocusMode} isGuest={!session} userPlan={userPlan} />
                 <AdSenseContainer userPlan={userPlan} />
-                <MessageList currentMessages={currentMessages} userSettings={userSettings} setZoomedImage={setZoomedImage} handleRate={() => {}} handleReply={setReplyingTo} handleCopy={(t,id) => {navigator.clipboard.writeText(t); setCopiedId(id); setTimeout(()=>setCopiedId(null), 2000)}} copiedId={copiedId} handleShare={() => {}} loadingSubject={!!loadingSubjects[activeSubject.id]} activeSubject={activeSubject} messagesEndRef={messagesEndRef} setShowAuthModal={setShowAuthModal} isGuest={!session} />
+                <MessageList currentMessages={currentMessages} userSettings={userSettings} setZoomedImage={setZoomedImage} handleRate={handleRate} handleReply={setReplyingTo} handleCopy={(t,id) => {navigator.clipboard.writeText(t); setCopiedId(id); setTimeout(()=>setCopiedId(null), 2000)}} copiedId={copiedId} handleShare={() => {}} loadingSubject={!!loadingSubjects[activeSubject.id]} activeSubject={activeSubject} messagesEndRef={messagesEndRef} setShowAuthModal={setShowAuthModal} isGuest={!session} />
                 <ActualChatInputArea replyingTo={replyingTo} setReplyingTo={setReplyingTo} userSettings={userSettings} setUserSettings={setUserSettings} activeMode={activeMode} fileInputRef={fileInputRef} loadingSubject={!!loadingSubjects[activeSubject.id]} handleImageUpload={handleImageUpload} toggleListening={toggleListening} isListening={isListening} inputValue={inputValue} setInputValue={setInputValue} handleSend={() => handleSend()} selectedImages={selectedImages} handleRemoveImage={(idx) => setSelectedImages(prev => prev.filter((_,i)=>i!==idx))} onStopGeneration={handleStopGeneration} onImagesAdd={(imgs) => setSelectedImages(prev => [...prev, ...imgs])} />
                 
                 {focusMode && (
