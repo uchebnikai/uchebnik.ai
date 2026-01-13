@@ -140,7 +140,7 @@ export const generateResponse = async (
       const ai = new GoogleGenAI({ apiKey });
       
       const historyContents: any[] = [];
-      history.filter(msg => !msg.isError && msg.text && msg.type !== 'image_generated' && msg.type !== 'slides').forEach(msg => {
+      history.filter(msg => !msg.isError && msg.text && msg.type !== 'image_generated' && msg.type !== 'slides' && msg.type !== 'test_generated').forEach(msg => {
           historyContents.push({
               role: msg.role === 'model' ? 'model' : 'user',
               parts: [{ text: msg.text }]
@@ -164,12 +164,19 @@ export const generateResponse = async (
           tools.push({ googleSearch: {} });
       }
 
+      const config: any = {
+          systemInstruction: systemInstruction,
+          tools: tools.length > 0 ? tools : undefined
+      };
+
+      // Force JSON mode for structured outputs
+      if (mode === AppMode.PRESENTATION || mode === AppMode.TEACHER_TEST) {
+          config.responseMimeType = "application/json";
+      }
+
       const chat = ai.chats.create({
           model: modelName,
-          config: {
-              systemInstruction: systemInstruction,
-              tools: tools.length > 0 ? tools : undefined
-          },
+          config: config,
           history: historyContents
       });
 

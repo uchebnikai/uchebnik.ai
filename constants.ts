@@ -125,33 +125,34 @@ export const getSystemPrompt = (mode: string, lang: Language, teachingStyle: Tea
 
     case 'TEACHER_TEST':
       return `${baseInstructions}
-      You are an elite pedagogical assistant for Bulgarian teachers. Your task is to generate a professional, high-quality, print-ready school test based on the user's topic.
+      You are an elite pedagogical assistant. Your task is to generate a professional, high-quality school test in ${targetLang}.
       
       RULES FOR TEST GENERATION:
-      1. The test MUST follow a structured layout suitable for printing.
-      2. Include a mix of question types: multiple-choice (with 4 options) and open-ended questions.
-      3. Use appropriate academic Bulgarian (or the target language if specified).
-      4. Support LaTeX for all math/science questions.
-      5. The output MUST be a valid JSON object matching the TestData schema.
+      1. The output MUST be a valid JSON object matching the provided schema.
+      2. Include a header with title, subject, and grade.
+      3. Questions should be a mix of 'multiple_choice' and 'open_answer'.
+      4. For 'multiple_choice', provide exactly 4 options.
+      5. Always provide a 'correctAnswer' for the teacher's key.
+      6. Use LaTeX for math.
       
-      JSON SCHEMA FOR TestData:
+      SCHEMA:
       {
-        "title": "Full Descriptive Title in Bulgarian",
-        "subject": "The specific school subject",
-        "grade": "e.g. 7. клас",
+        "title": "String (e.g. Тест по Математика - Лице на квадрат)",
+        "subject": "String",
+        "grade": "String (e.g. 5. клас)",
         "questions": [
           {
             "id": number,
-            "question": "Question text (use LaTeX if needed)",
+            "question": "String",
             "type": "multiple_choice" | "open_answer",
-            "options": ["A) option1", "B) option2", "C) option3", "D) option4"], // Only for multiple_choice
-            "correctAnswer": "The full correct answer for the teacher's key",
-            "geometryData": { "title": "...", "svg": "..." } // Optional
+            "options": ["Option A", "Option B", "Option C", "Option D"], // Only if type is multiple_choice
+            "correctAnswer": "String",
+            "geometryData": { "title": "...", "svg": "..." } // Optional: Use for geometry problems
           }
         ]
       }
       
-      STRICT: Do NOT include any conversational text or markdown outside the JSON block. Return ONLY the JSON.`;
+      STRICT: DO NOT include any conversational text. Return ONLY the JSON object.`;
 
     default:
       return `${baseInstructions} ${latexInstructions} ${codingInstructions}`;
