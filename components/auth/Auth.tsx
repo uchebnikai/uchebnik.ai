@@ -134,26 +134,8 @@ export const Auth = ({ isModal = false, onSuccess, initialMode = 'login', onNavi
     }
   };
 
-  const handleFacebookLogin = async () => {
-    if (!termsAccepted) {
-        setShowTermsError(true);
-        setError('Трябва да приемете Общите условия преди да влезете с Facebook.');
-        return;
-    }
-    setLoading(true);
-    setError(null);
-    try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'facebook',
-        options: {
-          redirectTo: window.location.origin,
-        },
-      });
-      if (error) throw error;
-    } catch (err: any) {
-      setError(err.message || 'Грешка при вход с Facebook.');
-      setLoading(false);
-    }
+  const handleFacebookComingSoon = () => {
+    setError('Входът с Facebook ще бъде наличен скоро. Моля, използвайте Google или имейл за момента.');
   };
 
   React.useEffect(() => {
@@ -265,8 +247,8 @@ export const Auth = ({ isModal = false, onSuccess, initialMode = 'login', onNavi
                     </div>
 
                     {error && (
-                        <div className={`mb-6 p-4 rounded-2xl border text-sm flex gap-3 items-start animate-in slide-in-from-top-2 ${error.includes('приемете Общите условия') ? 'bg-amber-500/10 border-amber-500/20 text-amber-400' : 'bg-red-500/10 border-red-500/20 text-red-400'}`}>
-                            {error.includes('приемете Общите условия') ? <Info size={18} className="shrink-0 mt-0.5" /> : <AlertCircle size={18} className="shrink-0 mt-0.5" />}
+                        <div className={`mb-6 p-4 rounded-2xl border text-sm flex gap-3 items-start animate-in slide-in-from-top-2 ${error.includes('приемете Общите условия') || error.includes('Facebook') ? 'bg-amber-500/10 border-amber-500/20 text-amber-400' : 'bg-red-500/10 border-red-500/20 text-red-400'}`}>
+                            {error.includes('приемете Общите условия') || error.includes('Facebook') ? <Info size={18} className="shrink-0 mt-0.5" /> : <AlertCircle size={18} className="shrink-0 mt-0.5" />}
                             <span>{error}</span>
                         </div>
                     )}
@@ -292,13 +274,12 @@ export const Auth = ({ isModal = false, onSuccess, initialMode = 'login', onNavi
                                 </button>
 
                                 <button
-                                    onClick={handleFacebookLogin}
+                                    onClick={handleFacebookComingSoon}
                                     type="button"
-                                    disabled={loading}
-                                    className={`w-full py-3.5 rounded-xl bg-[#1877F2] hover:bg-[#166fe5] text-white font-bold shadow-xl shadow-[#1877F2]/20 transition-all active:scale-95 disabled:opacity-30 disabled:grayscale flex items-center justify-center gap-3 group ${showTermsError && !termsAccepted ? 'ring-2 ring-amber-500/50' : ''}`}
+                                    className={`w-full py-3.5 rounded-xl bg-zinc-200 dark:bg-white/5 text-zinc-500 dark:text-zinc-400 font-bold flex items-center justify-center gap-3 grayscale opacity-60 cursor-not-allowed transition-all ${showTermsError && !termsAccepted ? 'ring-2 ring-amber-500/50' : ''}`}
                                 >
-                                    <Facebook size={20} className="text-white" fill="currentColor" />
-                                    <span>Продължи с Facebook</span>
+                                    <Facebook size={20} fill="currentColor" />
+                                    <span>Продължи с Facebook <span className="text-[10px] font-black uppercase opacity-60">(Скоро)</span></span>
                                 </button>
                                 
                                 <div className="flex items-center gap-4 py-2">
