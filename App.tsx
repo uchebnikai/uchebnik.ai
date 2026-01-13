@@ -647,8 +647,37 @@ export const App = () => {
 
   // Plan Restriction Enforcement Effect
   useEffect(() => {
-    if (userPlan === 'free' && userSettings.customBackground) {
-        setUserSettings(prev => ({ ...prev, customBackground: null }));
+    if (userPlan === 'free') {
+        setUserSettings(prev => {
+            let changed = false;
+            const updates: Partial<UserSettings> = {};
+
+            // Revert Background
+            if (prev.customBackground) {
+                updates.customBackground = null;
+                changed = true;
+            }
+
+            // Revert Advanced Model
+            if (prev.preferredModel === 'gemini-3-flash-preview') {
+                updates.preferredModel = 'auto';
+                changed = true;
+            }
+
+            // Revert Voice
+            if (prev.preferredVoice !== DEFAULT_VOICE) {
+                updates.preferredVoice = DEFAULT_VOICE;
+                changed = true;
+            }
+
+            // Revert Custom Persona
+            if (prev.customPersona && prev.customPersona.trim().length > 0) {
+                updates.customPersona = '';
+                changed = true;
+            }
+
+            return changed ? { ...prev, ...updates } : prev;
+        });
     }
   }, [userPlan]);
 
