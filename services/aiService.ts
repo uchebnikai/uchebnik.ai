@@ -1,6 +1,6 @@
 
 import { GoogleGenAI, GenerateContentResponse, Tool } from "@google/genai";
-import { AppMode, SubjectId, Slide, ChartData, GeometryData, Message, TestData, TeachingStyle, SearchSource, TokenUsage } from "../types";
+import { AppMode, SubjectId, Slide, ChartData, GeometryData, Message, TestData, TeachingStyle, SearchSource, TokenUsage, TestQuestion } from "../types";
 import { getSystemPrompt, SUBJECTS } from "../constants";
 import { Language } from '../utils/translations';
 
@@ -43,6 +43,45 @@ function extractJson(text: string): string | null {
   }
   
   return null;
+}
+
+/**
+ * Normalizes common AI deviations from the TestData schema.
+ */
+function normalizeTestData(raw: any): TestData | null {
+    if (!raw) return null;
+    
+    // 1. Alias common question keys
+    let questions = raw.questions || raw.items || [];
+    if (!Array.isArray(questions)) questions = [];
+
+    const normalizedQuestions: TestQuestion[] = questions.map((q: any) => {
+        // Handle question body alias
+        const questionBody = q.question || q.text || q.body || "Липсва текст на въпроса";
+        
+        // Handle answer_key mapping if present in a separate array
+        let ans = q.correctAnswer || q.answer || "";
+        if (!ans && raw.answer_key && Array.isArray(raw.answer_key)) {
+            const matched = raw.answer_key.find((a: any) => a.id === q.id || a.question_id === q.id);
+            if (matched) ans = matched.answer || matched.text || "";
+        }
+
+        return {
+            id: Number(q.id) || Math.random(),
+            question: questionBody,
+            type: q.type === 'multiple_choice' || (q.options && q.options.length > 0) ? 'multiple_choice' : 'open_answer',
+            options: q.options || undefined,
+            correctAnswer: ans,
+            geometryData: q.geometryData
+        };
+    });
+
+    return {
+        title: raw.title || "Тест",
+        subject: raw.subject || "Общ",
+        grade: raw.grade || "",
+        questions: normalizedQuestions
+    };
 }
 
 // STRICT MODEL WHITELIST to prevent billing leaks
@@ -277,12 +316,13 @@ export const generateResponse = async (
           try {
              const jsonStr = extractJson(processedText);
              if (jsonStr) {
-                 const testData: TestData = JSON.parse(jsonStr);
-                 if (testData && Array.isArray(testData.questions)) {
+                 const rawData = JSON.parse(jsonStr);
+                 const testData = normalizeTestData(rawData);
+                 if (testData) {
                     return {
                         id: Date.now().toString(),
                         role: 'model',
-                        text: `Готово! Ето твоя професионален тест на тема: "${testData.title || promptText}"`,
+                        text: `Готово! Ето твоя професионален тест на тема: "${testData.title}"`,
                         type: 'test_generated',
                         testData: testData,
                         timestamp: Date.now(),
@@ -291,7 +331,16 @@ export const generateResponse = async (
                     };
                  }
              }
-          } catch (e) { console.error("Test JSON parse error", e); }
+          } catch (e) { 
+              console.error("Test JSON parse error", e);
+              return {
+                  id: Date.now().toString(),
+                  role: 'model',
+                  text: "Грешка при генериране на теста. Моля, опитайте отново с по-кратък промпт.",
+                  isError: true,
+                  timestamp: Date.now()
+              };
+          }
       }
 
       let chartData: ChartData | undefined;

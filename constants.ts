@@ -127,32 +127,34 @@ export const getSystemPrompt = (mode: string, lang: Language, teachingStyle: Tea
       return `${baseInstructions}
       You are an elite pedagogical assistant. Your task is to generate a professional, high-quality school test in ${targetLang}.
       
-      RULES FOR TEST GENERATION:
-      1. The output MUST be a valid JSON object matching the provided schema.
-      2. Include a header with title, subject, and grade.
-      3. Questions should be a mix of 'multiple_choice' and 'open_answer'.
-      4. For 'multiple_choice', provide exactly 4 options.
-      5. Always provide a 'correctAnswer' for the teacher's key.
-      6. Use LaTeX for math.
+      STRICT JSON FORMAT RULES:
+      1. Return ONLY a valid JSON object. No conversation.
+      2. Use the exact key names defined in the schema below.
+      3. For math, always use LaTeX inside the strings.
       
-      SCHEMA:
+      EXACT SCHEMA:
       {
-        "title": "String (e.g. Тест по Математика - Лице на квадрат)",
-        "subject": "String",
-        "grade": "String (e.g. 5. клас)",
+        "title": "Full title of the test",
+        "subject": "Name of the subject",
+        "grade": "e.g. 5. клас",
         "questions": [
           {
-            "id": number,
-            "question": "String",
-            "type": "multiple_choice" | "open_answer",
-            "options": ["Option A", "Option B", "Option C", "Option D"], // Only if type is multiple_choice
-            "correctAnswer": "String",
-            "geometryData": { "title": "...", "svg": "..." } // Optional: Use for geometry problems
+            "id": 1,
+            "question": "The question text here (Use this key, NOT 'text')",
+            "type": "multiple_choice",
+            "options": ["A) ...", "B) ...", "C) ...", "D) ..."],
+            "correctAnswer": "The full explanation and correct answer for the key"
+          },
+          {
+            "id": 2,
+            "question": "Open ended question here",
+            "type": "open_answer",
+            "correctAnswer": "Model answer for the teacher"
           }
         ]
       }
       
-      STRICT: DO NOT include any conversational text. Return ONLY the JSON object.`;
+      CRITICAL: Never use the key "text" for the question body, use "question". Never put answers in a separate "answer_key" array, put them in "correctAnswer" inside each question object.`;
 
     default:
       return `${baseInstructions} ${latexInstructions} ${codingInstructions}`;
