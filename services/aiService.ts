@@ -1,3 +1,4 @@
+
 import { GoogleGenAI, GenerateContentResponse, Tool } from "@google/genai";
 import { AppMode, SubjectId, Slide, ChartData, GeometryData, Message, TestData, TeachingStyle, SearchSource, TokenUsage } from "../types";
 import { getSystemPrompt, SUBJECTS } from "../constants";
@@ -21,14 +22,17 @@ const logStatus = (status: 'operational' | 'degraded' | 'outage', latency: numbe
 
 // Improved JSON Extractor
 function extractJson(text: string): string | null {
+  // Try finding blocks with language hints first
   const match = text.match(/```json\n([\s\S]*?)\n```/) || text.match(/```([\s\S]*?)```/);
   if (match && match[1]) {
-      return match[1];
+      return match[1].trim();
   }
+  
+  // Fallback: search for first { and last }
   const start = text.indexOf('{');
   const end = text.lastIndexOf('}');
   if (start !== -1 && end !== -1 && end > start) {
-      return text.substring(start, end + 1);
+      return text.substring(start, end + 1).trim();
   }
   return null;
 }
@@ -88,7 +92,6 @@ export const generateResponse = async (
     for (let i = 0; i < thinkingSteps; i++) {
         if (signal?.aborted) break;
         // Sending empty strings keeps the UI in "isStreaming but no content" state
-        // which triggers the standard loading spinner and messages
         if (onStreamUpdate) onStreamUpdate("", ""); 
         await wait(1200 + Math.random() * 800);
     }
@@ -127,52 +130,32 @@ export const generateResponse = async (
       modelName = 'gemini-2.5-flash';
   }
   
-  console.log(`[AI Service] Generating response...`);
+  console.log(`[AI Service] Generating response in mode: ${mode}...`);
 
   const hasImages = imagesBase64 && imagesBase64.length > 0;
-  
   let systemInstruction = getSystemPrompt(mode, language, teachingStyle, customPersona);
-
-  systemInstruction = `CURRENT SUBJECT CONTEXT: ${subjectName}. All responses must relate to ${subjectName}.\n\n${systemInstruction}`;
+  systemInstruction = `CURRENT SUBJECT CONTEXT: ${subjectName}.\n\n${systemInstruction}`;
 
   try {
       const ai = new GoogleGenAI({ apiKey });
       
       const historyContents: any[] = [];
       history.filter(msg => !msg.isError && msg.text && msg.type !== 'image_generated' && msg.type !== 'slides').forEach(msg => {
-          let content = msg.text;
-          if (msg.imageAnalysis) {
-              content += `\n\n[CONTEXT FROM PREVIOUS IMAGE: ${msg.imageAnalysis}]`;
-          }
           historyContents.push({
               role: msg.role === 'model' ? 'model' : 'user',
-              parts: [{ text: content }]
+              parts: [{ text: msg.text }]
           });
       });
 
       const currentParts: any[] = [];
-      let finalUserPrompt = promptText;
-      
-      if (mode === AppMode.TEACHER_TEST) {
-          const prevTest = history.find(m => m.type === 'test_generated')?.testData;
-          if (prevTest) {
-              finalUserPrompt = `[PREVIOUS TEST CONTEXT]: ${JSON.stringify(prevTest)}\n\nUSER REQUEST: ${finalUserPrompt}`;
-          }
-      }
-
       if (hasImages) {
           for (const base64 of imagesBase64) {
                 const data = base64.replace(/^data:image\/\w+;base64,/, "");
                 const mimeType = base64.match(/^data:(image\/\w+);base64,/)?.[1] || "image/jpeg";
-                currentParts.push({
-                    inlineData: {
-                        data: data,
-                        mimeType: mimeType
-                    }
-                });
+                currentParts.push({ inlineData: { data: data, mimeType: mimeType } });
           }
       }
-      currentParts.push({ text: finalUserPrompt });
+      currentParts.push({ text: promptText });
 
       const tools: Tool[] = [];
       // Google Search is permitted on Flash 2.0/3.0 models if available
@@ -199,15 +182,13 @@ export const generateResponse = async (
       let reasoningContent = "";
 
       for await (const chunk of result) {
-          if (signal?.aborted) {
-              break;
-          }
+          if (signal?.aborted) break;
 
           const chunkText = chunk.text;
           if (chunkText) {
               fullText += chunkText;
               
-              // Extract reasoning if present (e.g. from Thinking models)
+              // Extract reasoning if present (Thinking models)
               const thinkingMatch = fullText.match(/<think>([\s\S]*?)(?:<\/think>|$)/i);
               if (thinkingMatch) {
                   reasoningContent = thinkingMatch[1].trim();
@@ -243,7 +224,6 @@ export const generateResponse = async (
           }
       }
 
-      // Log success latency
       logStatus('operational', Math.round(performance.now() - startTime));
 
       let processedText = fullText.replace(/<think>[\s\S]*?(?:<\/think>|$)/gi, "").trim();
@@ -275,7 +255,7 @@ export const generateResponse = async (
                  return {
                      id: Date.now().toString(),
                      role: 'model',
-                     text: `Готово! Ето теста на тема: ${testData.title || promptText}`,
+                     text: `Готово! Ето твоя професионален тест на тема: "${testData.title || promptText}"`,
                      type: 'test_generated',
                      testData: testData,
                      timestamp: Date.now(),
@@ -321,12 +301,8 @@ export const generateResponse = async (
   } catch (error: any) {
       logStatus('outage', Math.round(performance.now() - startTime));
       console.error("AI Service Error:", error);
-      let errorMessage = error.message || "Unknown error";
-      let displayMessage = `Възникна грешка при връзката с AI: ${errorMessage}`;
-
-      if (errorMessage.includes("429")) {
-          displayMessage = "⚠️ Достигнат е лимитът на заявките. Моля, опитайте по-късно.";
-      }
+      let displayMessage = `Възникна грешка при връзката с AI: ${error.message || "Unknown error"}`;
+      if (error.message?.includes("429")) displayMessage = "⚠️ Достигнат е лимитът на заявките. Моля, опитайте по-късно.";
 
       return {
           id: Date.now().toString(),

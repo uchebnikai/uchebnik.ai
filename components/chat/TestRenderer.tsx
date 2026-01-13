@@ -1,5 +1,6 @@
+
 import React, { useState } from 'react';
-import { FileText, X, FileType, Loader2, Download, Printer } from 'lucide-react';
+import { FileText, X, FileType, Loader2, Download, Printer, GraduationCap, CheckCircle2 } from 'lucide-react';
 import * as docx from 'docx';
 import { jsPDF } from "jspdf";
 import { TestData } from '../../types';
@@ -272,55 +273,64 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
             <title>${cleanMathText(data.title)}</title>
             <style>
                 @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
-                body { font-family: 'Roboto', sans-serif; padding: 40px; color: #000; }
-                .header-fields { margin-bottom: 40px; font-size: 16px; line-height: 1.8; }
-                .field-row { margin-bottom: 10px; }
-                h1 { text-align: center; margin-bottom: 5px; font-size: 24px; }
-                .meta { text-align: center; color: #666; margin-bottom: 40px; font-size: 14px; }
-                .question { margin-bottom: 25px; page-break-inside: avoid; }
-                .q-text { font-weight: bold; margin-bottom: 10px; font-size: 16px; }
-                .option { margin-left: 20px; margin-bottom: 5px; }
-                .open-lines { margin-top: 15px; border-bottom: 1px solid #000; height: 30px; width: 100%; }
-                .footer-signatures { display: flex; justify-content: space-between; margin-top: 60px; page-break-inside: avoid; }
-                .grade-field { margin-top: 30px; font-weight: bold; font-size: 18px; page-break-inside: avoid; }
+                body { font-family: 'Roboto', sans-serif; padding: 60px; color: #000; line-height: 1.5; }
+                .header-fields { margin-bottom: 40px; font-size: 16px; display: flex; flex-direction: column; gap: 10px; }
+                .field-row { border-bottom: 1px solid #eee; padding-bottom: 5px; }
+                h1 { text-align: center; margin-top: 40px; margin-bottom: 5px; font-size: 28px; text-transform: uppercase; letter-spacing: 1px; }
+                .meta { text-align: center; color: #666; margin-bottom: 60px; font-size: 16px; font-weight: bold; }
+                .question { margin-bottom: 35px; page-break-inside: avoid; }
+                .q-text { font-weight: bold; margin-bottom: 15px; font-size: 18px; display: flex; gap: 10px; }
+                .option { margin-left: 30px; margin-bottom: 8px; font-size: 16px; }
+                .open-lines { margin-top: 20px; border-bottom: 1px solid #000; height: 40px; width: 100%; opacity: 0.3; }
+                .footer-signatures { display: flex; justify-content: space-between; margin-top: 80px; page-break-inside: avoid; font-size: 14px; }
+                .grade-field { margin-top: 40px; font-weight: bold; font-size: 20px; page-break-inside: avoid; border-top: 2px solid #000; pt: 20px; }
                 .key { margin-top: 50px; page-break-before: always; }
-                .chart-placeholder { border: 1px dashed #ccc; padding: 20px; text-align: center; color: #999; font-size: 12px; margin: 10px 0; }
-                .geometry-container { margin: 15px 0; border: 1px solid #eee; padding: 10px; display: flex; justify-content: center; }
-                .geometry-container svg { max-width: 300px; height: auto; }
+                .geometry-container { margin: 25px 0; border: 1px solid #eee; padding: 20px; display: flex; justify-content: center; background: #fafafa; border-radius: 8px; }
+                .geometry-container svg { max-width: 400px; height: auto; }
                 @media print {
-                   @page { margin: 2cm; }
+                   @page { margin: 1.5cm; }
+                   body { padding: 0; }
                 }
             </style>
         </head>
         <body>
             <div class="header-fields">
-                <div class="field-row">Име: _________________________________________________</div>
-                <div class="field-row">Клас: _________ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Номер: _________</div>
+                <div class="field-row">Име: __________________________________________________________________</div>
+                <div style="display: flex; gap: 40px;">
+                    <div class="field-row">Клас: ___________</div>
+                    <div class="field-row">Номер: ___________</div>
+                </div>
             </div>
             <h1>${cleanMathText(data.title)}</h1>
             <div class="meta">${data.subject} ${data.grade ? '| ' + data.grade : ''}</div>
+            
+            <div class="questions-container">
             ${data.questions.map((q, i) => `
                 <div class="question">
-                    <div class="q-text">${i + 1}. ${cleanMathText(q.question)}</div>
+                    <div class="q-text"><span>${i + 1}.</span> <span>${cleanMathText(q.question)}</span></div>
                     
                     ${q.geometryData ? `<div class="geometry-container">${q.geometryData.svg}</div>` : ''}
-                    ${q.chartData ? `<div class="chart-placeholder">[Графика: ${q.chartData.title || 'Данни'}]</div>` : ''}
                     
                     ${q.options 
                         ? q.options.map(o => `<div class="option">${cleanMathText(o)}</div>`).join('') 
-                        : `<div class="open-lines"></div><div class="open-lines"></div>`}
+                        : `<div class="open-lines"></div><div class="open-lines"></div><div class="open-lines"></div>`}
                 </div>
             `).join('')}
+            </div>
+
             <div class="footer-signatures">
-                <div>Подпис на учител: ___________________</div>
-                <div>Подпис на ученик: ___________________</div>
+                <div>Подпис на учител: _______________________</div>
+                <div>Подпис на ученик: _______________________</div>
             </div>
             <div class="grade-field">
                 Оценка: ___________________
             </div>
+
             <div class="key">
-                <h2>Ключ с отговори</h2>
-                ${data.questions.map((q, i) => `<div>${i + 1}. ${cleanMathText(q.correctAnswer || '-')}</div>`).join('')}
+                <h2 style="border-bottom: 2px solid #000; padding-bottom: 10px;">Ключ с отговори (За учителя)</h2>
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 20px;">
+                ${data.questions.map((q, i) => `<div><strong>${i + 1}.</strong> ${cleanMathText(q.correctAnswer || '-')}</div>`).join('')}
+                </div>
             </div>
             <script>
                 document.fonts.ready.then(() => { window.print(); });
@@ -342,56 +352,96 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
   }
 
   return (
-    <div className="mt-4 p-5 glass-card rounded-3xl animate-in fade-in zoom-in-95 duration-300">
-        <div className="flex justify-between items-center mb-6">
-            <div className="flex flex-col">
-                <h4 className="font-bold text-lg leading-tight">{cleanMathText(data.title)}</h4>
-                <span className="text-xs text-gray-500 uppercase tracking-wide mt-1">{data.questions.length} въпроса • {data.subject}</span>
-            </div>
-            <button onClick={() => setVisible(false)} className="p-1.5 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded-full transition-colors text-gray-400"><X size={16} /></button>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
-            <button onClick={handleDownloadWord} className="flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold text-sm shadow-lg shadow-blue-500/20 transition-all active:scale-95">
-                <FileType size={18}/> Word (.docx)
-            </button>
-            <button onClick={handleDownloadPDF} disabled={isGeneratingPdf} className="flex items-center justify-center gap-2 px-4 py-3 bg-red-500 hover:bg-red-400 text-white rounded-xl font-bold text-sm shadow-lg shadow-red-500/20 transition-all active:scale-95 disabled:opacity-70 disabled:cursor-wait">
-                {isGeneratingPdf ? <Loader2 size={18} className="animate-spin"/> : <Download size={18}/>} PDF
-            </button>
-             <button onClick={handlePrint} className="flex items-center justify-center gap-2 px-4 py-3 bg-zinc-700 hover:bg-zinc-600 text-white rounded-xl font-bold text-sm shadow-lg shadow-zinc-500/20 transition-all active:scale-95">
-                <Printer size={18}/> Print
-            </button>
-        </div>
-
-        <div className="space-y-4 max-h-[60vh] overflow-y-auto custom-scrollbar p-2 bg-white/50 dark:bg-black/20 rounded-xl border border-indigo-500/5">
-            {data.questions.map((q, i) => (
-                <div key={i} className="p-4 bg-white dark:bg-zinc-800 rounded-xl shadow-sm border border-gray-100 dark:border-white/5">
-                    <p className="font-bold text-sm mb-3 flex gap-2"><span className="text-indigo-500">{i + 1}.</span> {cleanMathText(q.question)}</p>
-                    
-                    {q.geometryData && (
-                        <div className="mb-4 flex justify-center p-4 bg-white/50 dark:bg-white/5 rounded-xl border border-indigo-500/10">
-                            <div className="w-full max-w-[300px]" dangerouslySetInnerHTML={{__html: q.geometryData.svg}} />
+    <div className="mt-4 p-1 bg-zinc-200 dark:bg-zinc-800 rounded-[32px] shadow-2xl animate-in fade-in zoom-in-95 duration-500 overflow-hidden ring-1 ring-black/5">
+        <div className="p-6 md:p-8 bg-white dark:bg-[#0c0c0e] rounded-[28px] m-1 shadow-inner flex flex-col gap-6">
+            <div className="flex justify-between items-start">
+                <div className="flex items-center gap-4">
+                    <div className="p-3 bg-indigo-600 text-white rounded-2xl shadow-lg shadow-indigo-500/20">
+                        <GraduationCap size={24}/>
+                    </div>
+                    <div className="flex flex-col">
+                        <h4 className="font-black text-xl md:text-2xl leading-tight text-zinc-900 dark:text-white tracking-tight">{cleanMathText(data.title)}</h4>
+                        <div className="flex items-center gap-2 mt-1">
+                            <span className="text-xs font-bold text-indigo-500 uppercase tracking-widest">{data.subject}</span>
+                            <span className="w-1 h-1 rounded-full bg-zinc-300 dark:bg-zinc-700"/>
+                            <span className="text-xs font-bold text-zinc-400 uppercase tracking-widest">{data.grade}</span>
                         </div>
-                    )}
-
-                    {q.chartData && (
-                        <div className="mb-4 h-56 w-full border border-gray-100 dark:border-white/5 rounded-xl overflow-hidden bg-white/50 dark:bg-black/20">
-                            <ChartRenderer data={q.chartData} forceVisible={true} />
-                        </div>
-                    )}
-
-                    {q.options && (
-                        <div className="space-y-2 ml-2">
-                            {q.options.map((opt, idx) => (
-                                <div key={idx} className="flex items-center gap-3">
-                                    <div className="w-4 h-4 rounded-full border border-gray-300 dark:border-white/20"></div>
-                                    <p className="text-sm text-gray-700 dark:text-gray-300">{cleanMathText(opt)}</p>
-                                </div>
-                            ))}
-                        </div>
-                    )}
+                    </div>
                 </div>
-            ))}
+                <button onClick={() => setVisible(false)} className="p-2 hover:bg-zinc-100 dark:hover:bg-white/5 rounded-full transition-colors text-zinc-400"><X size={20} /></button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <button onClick={handleDownloadWord} className="flex items-center justify-center gap-2 px-4 py-3.5 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-blue-500/20 transition-all active:scale-95 group">
+                    <FileType size={18} className="group-hover:scale-110 transition-transform"/> Word (.docx)
+                </button>
+                <button onClick={handleDownloadPDF} disabled={isGeneratingPdf} className="flex items-center justify-center gap-2 px-4 py-3.5 bg-red-500 hover:bg-red-400 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-red-500/20 transition-all active:scale-95 disabled:opacity-70 disabled:cursor-wait group">
+                    {isGeneratingPdf ? <Loader2 size={18} className="animate-spin"/> : <Download size={18} className="group-hover:scale-110 transition-transform"/>} PDF
+                </button>
+                <button onClick={handlePrint} className="flex items-center justify-center gap-2 px-4 py-3.5 bg-zinc-800 hover:bg-zinc-700 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-black/20 transition-all active:scale-95 group">
+                    <Printer size={18} className="group-hover:scale-110 transition-transform"/> Печат
+                </button>
+            </div>
+
+            {/* Test Content Preview - Paper Style */}
+            <div className="space-y-8 max-h-[60vh] overflow-y-auto custom-scrollbar p-6 bg-zinc-50 dark:bg-black/40 rounded-3xl border border-zinc-200 dark:border-white/5 relative">
+                <div className="absolute top-0 left-0 w-full h-1 bg-indigo-500 opacity-20"/>
+                
+                {/* School Paper Header Simulation */}
+                <div className="border-b-2 border-zinc-200 dark:border-white/10 pb-6 space-y-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div className="flex-1 text-sm font-bold text-zinc-400">Име: <span className="border-b border-zinc-300 dark:border-zinc-700 inline-block w-40 sm:w-64 ml-2"/></div>
+                        <div className="flex gap-4">
+                            <div className="text-sm font-bold text-zinc-400">Клас: <span className="border-b border-zinc-300 dark:border-zinc-700 inline-block w-12 ml-1"/></div>
+                            <div className="text-sm font-bold text-zinc-400">№: <span className="border-b border-zinc-300 dark:border-zinc-700 inline-block w-10 ml-1"/></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="space-y-10">
+                    {data.questions.map((q, i) => (
+                        <div key={i} className="relative">
+                            <div className="flex gap-3 mb-4">
+                                <span className="text-indigo-600 dark:text-indigo-400 font-black text-lg">{i + 1}.</span>
+                                <p className="font-bold text-zinc-800 dark:text-zinc-200 text-lg leading-relaxed">{cleanMathText(q.question)}</p>
+                            </div>
+                            
+                            {q.geometryData && (
+                                <div className="mb-6 flex justify-center p-6 bg-white dark:bg-black/20 rounded-3xl border border-zinc-200 dark:border-white/10 shadow-sm">
+                                    <div className="w-full max-w-[300px]" dangerouslySetInnerHTML={{__html: q.geometryData.svg}} />
+                                </div>
+                            )}
+
+                            {q.options ? (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 ml-8">
+                                    {q.options.map((opt, idx) => (
+                                        <div key={idx} className="flex items-center gap-3 p-3 rounded-xl bg-white dark:bg-white/5 border border-zinc-100 dark:border-white/5 shadow-sm group hover:border-indigo-500/50 transition-colors">
+                                            <div className="w-5 h-5 rounded-full border-2 border-zinc-300 dark:border-zinc-700 group-hover:border-indigo-500 transition-colors shrink-0"></div>
+                                            <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">{cleanMathText(opt)}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="ml-8 space-y-4">
+                                    <div className="h-px bg-zinc-200 dark:bg-white/10 w-full"/>
+                                    <div className="h-px bg-zinc-200 dark:bg-white/10 w-full"/>
+                                    <div className="h-px bg-zinc-200 dark:bg-white/10 w-full"/>
+                                </div>
+                            )}
+                        </div>
+                    ))}
+                </div>
+
+                <div className="pt-10 mt-10 border-t-2 border-zinc-200 dark:border-white/10 flex justify-between items-center">
+                    <div className="flex items-center gap-2 text-indigo-600 font-black text-lg">
+                        <CheckCircle2 size={24}/>
+                        Оценка: ______
+                    </div>
+                    <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
+                        Генерирано от Uchebnik AI
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
   );
