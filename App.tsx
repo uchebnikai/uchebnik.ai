@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { GoogleGenAI, LiveServerMessage, Modality } from "@google/genai";
 import { SubjectConfig, SubjectId, AppMode, Message, Slide, UserSettings, Session, UserPlan, UserRole, HomeViewType } from './types';
@@ -68,8 +67,8 @@ const DEMO_RESPONSE = `Анализирах въпроса ти и подгот�
 
 Uchebnik AI винаги предоставя пълно обяснение на логиката за решението, за да можеш не просто да получиш отговора, но и да научиш материала. Влез в профила си, за да отключиш останалата част от това решение и да получиш достъп до всички функции абсолютно безплатно!`;
 
-const CHRISTMAS_BG = "https://i.ibb.co/LGxCVX4/Gemini-Generated-Image-gt5habgt5habgt5h.png";
-const NEW_YEAR_BG = "https://iili.io/fkvjTrX.png";
+const CHRISTMAS_BG = "https://images.unsplash.com/photo-1543589077-47d81606c1ad?auto=format&fit=crop&q=80&w=2000";
+const NEW_YEAR_BG = "https://images.unsplash.com/photo-1533230393619-3f8e6042831b?auto=format&fit=crop&q=80&w=2000";
 const BROADCAST_SOUND = "https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3";
 
 function decode(base64: string) {
