@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { MessageSquare, Trash2, Plus, School, GraduationCap, Briefcase, ChevronDown, User, Settings, CreditCard, HelpCircle, LogOut, ArrowRight, ChevronUp, FileText, CloudOff, RefreshCw, Cloud, PanelLeftClose, PanelLeftOpen, LogIn, Snowflake, Gift, Trophy, Target, AlertTriangle, Sparkles, PartyPopper, Shield, Clock } from 'lucide-react';
 import { DynamicIcon } from '../ui/DynamicIcon';
@@ -129,7 +130,7 @@ export const Sidebar = ({
         if (collapsed) return null;
         return (
             <div className="mt-1 space-y-0.5 border-l-2 border-zinc-200 dark:border-white/5 ml-4 pl-2 animate-in slide-in-from-top-2">
-                {sectionSessions.map(s => (
+                {sectionSessions.slice(0, 5).map(s => (
                     <div key={s.id} className="flex items-center group/session">
                         <button 
                             onClick={() => { 
@@ -150,6 +151,11 @@ export const Sidebar = ({
                         <button onClick={() => deleteSession(s.id)} className="p-1 text-gray-400 hover:text-red-500 opacity-0 group-hover/session:opacity-100 transition-opacity"><Trash2 size={10}/></button>
                     </div>
                 ))}
+                {sectionSessions.length > 5 && (
+                    <div className="px-3 py-1 text-[10px] text-zinc-400 font-medium italic">
+                        + {sectionSessions.length - 5} още в историята
+                    </div>
+                )}
             </div>
         );
     };
@@ -348,13 +354,13 @@ export const Sidebar = ({
 
           <div className={`p-4 border-t border-white/10 bg-white/20 dark:bg-black/20 space-y-2 backdrop-blur-md flex flex-col justify-center shrink-0`}>
              
-             {/* Seasonal Buttons - Elegant styles */}
+             {/* Seasonal Buttons */}
              {!collapsed && (globalConfig?.showChristmasButton || globalConfig?.showNewYearButton) && (
                  <div className="flex gap-2 mb-2">
                     {globalConfig?.showChristmasButton && (
                         <button 
                             onClick={() => setUserSettings((prev: UserSettings) => ({...prev, christmasMode: !prev.christmasMode, newYearMode: false}))}
-                            className={`flex-1 flex items-center justify-center p-2.5 rounded-xl transition-all border ${userSettings.christmasMode ? 'bg-red-500/20 border-red-500 text-red-500 shadow-lg' : 'bg-white/5 dark:bg-white/5 border-white/10 text-red-500 hover:bg-red-500/10'}`}
+                            className={`flex-1 flex items-center justify-center p-2 rounded-xl transition-all border ${userSettings.christmasMode ? 'bg-red-600 border-red-500 text-white shadow-inner' : 'bg-white/40 dark:bg-black/20 border-white/10 text-red-500'}`}
                             title="Коледен режим"
                         >
                             <Snowflake size={18} className={userSettings.christmasMode ? "animate-spin-slow" : ""}/>
@@ -363,7 +369,7 @@ export const Sidebar = ({
                     {globalConfig?.showNewYearButton && (
                         <button 
                             onClick={() => setUserSettings((prev: UserSettings) => ({...prev, newYearMode: !prev.newYearMode, christmasMode: false}))}
-                            className={`flex-1 flex items-center justify-center p-2.5 rounded-xl transition-all border ${userSettings.newYearMode ? 'bg-blue-500/20 border-blue-500 text-blue-500 shadow-lg' : 'bg-white/5 dark:bg-white/5 border-white/10 text-blue-500 hover:bg-blue-500/10'}`}
+                            className={`flex-1 flex items-center justify-center p-2 rounded-xl transition-all border ${userSettings.newYearMode ? 'bg-blue-900 border-blue-800 text-white shadow-inner' : 'bg-white/40 dark:bg-black/20 border-white/10 text-blue-500'}`}
                             title="Новогодишен режим"
                         >
                             <PartyPopper size={18} className={userSettings.newYearMode ? "animate-bounce" : ""}/>
