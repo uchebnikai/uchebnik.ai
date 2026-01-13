@@ -10,7 +10,22 @@ export const cleanMathText = (text: string): string => {
   // 3. Handle Fractions: \frac{num}{den} -> (num/den)
   clean = clean.replace(/\\frac\{([^}]*)\}\{([^}]*)\}/g, "($1/$2)");
 
-  // 4. Common LaTeX/Math to Unicode Mappings
+  // 4. Handle LaTeX text formatting commands: \text{cm}, \mathrm{cm}, etc.
+  // This is a common pattern in the user's example: \text{ cm}
+  clean = clean.replace(/\\text\{([^}]*)\}/g, "$1");
+  clean = clean.replace(/\\mathrm\{([^}]*)\}/g, "$1");
+  clean = clean.replace(/\\mathbf\{([^}]*)\}/g, "$1");
+  clean = clean.replace(/\\textit\{([^}]*)\}/g, "$1");
+
+  // 5. Handle common LaTeX spacing commands
+  clean = clean.replace(/\\quad/g, "  ");
+  clean = clean.replace(/\\qquad/g, "    ");
+  clean = clean.replace(/\\\,/g, " ");
+  clean = clean.replace(/\\:/g, " ");
+  clean = clean.replace(/\\;/g, " ");
+  clean = clean.replace(/\\!/g, "");
+
+  // 6. Common LaTeX/Math to Unicode Mappings
   const replacements: Record<string, string> = {
     '\\times': '×',
     '\\cdot': '·',
@@ -84,5 +99,6 @@ export const cleanMathText = (text: string): string => {
   clean = clean.replace(/√\{([^}]+)\}/g, "√$1");
   clean = clean.replace(/\{([^}]*)\}/g, "$1");
   
-  return clean;
+  // Final trim to remove excess spacing created by stripped commands
+  return clean.replace(/\s+/g, ' ').trim();
 };
