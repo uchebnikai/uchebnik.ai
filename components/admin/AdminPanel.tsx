@@ -15,7 +15,7 @@ import {
   Loader2, ExternalLink, Info, Sparkles, Star, Heart, MapPin, 
   Calendar, Camera, Code, Calculator, Binary, Pill, Layout, 
   FileText, Briefcase, Target, Languages, Globe, HelpCircle, Trophy, ImageIcon, Upload,
-  ArrowDownWideNarrow, SortAsc, UserPlus, History, SortDesc
+  ArrowDownWideNarrow, SortAsc, UserPlus, History, SortDesc, ChevronDown
 } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { Button } from '../ui/Button';
@@ -31,6 +31,8 @@ import { resizeImage } from '../../utils/image';
 // Pricing Constants (Gemini 2.5 Flash)
 const PRICE_INPUT_1M = 0.075;
 const PRICE_OUTPUT_1M = 0.30;
+
+const REPORTS_PER_PAGE = 20;
 
 interface GeneratedKey {
   id?: string;
@@ -133,7 +135,13 @@ export const AdminPanel = ({
     const [activeTab, setActiveTab] = useState<'dashboard' | 'status' | 'finance' | 'users' | 'keys' | 'broadcast' | 'reports'>('dashboard');
     const [dbKeys, setDbKeys] = useState<GeneratedKey[]>([]);
     const [dbUsers, setDbUsers] = useState<AdminUser[]>([]);
+    
+    // Reports Pagination State
     const [dbReports, setDbReports] = useState<Report[]>([]);
+    const [reportsPage, setReportsPage] = useState(0);
+    const [hasMoreReports, setHasMoreReports] = useState(true);
+    const [reportsLoading, setReportsLoading] = useState(false);
+
     const [financials, setFinancials] = useState<FinancialData | null>(null);
     const [loadingData, setLoadingData] = useState(false);
     const [selectedPlan, setSelectedPlan] = useState<'plus' | 'pro'>('pro');
@@ -217,6 +225,13 @@ export const AdminPanel = ({
         }
     }, [showAdminPanel, activeTab]);
 
+    // Initial fetch for reports when tab changes
+    useEffect(() => {
+        if (showAdminPanel && activeTab === 'reports' && dbReports.length === 0) {
+            fetchReports(true);
+        }
+    }, [showAdminPanel, activeTab]);
+
     // Fetch Heatmap Data when range changes
     useEffect(() => {
         if (showAdminPanel && activeTab === 'dashboard') {
@@ -293,6 +308,51 @@ export const AdminPanel = ({
         }
     };
 
+    const fetchReports = async (reset = false) => {
+        if (reportsLoading || (!hasMoreReports && !reset)) return;
+        
+        setReportsLoading(true);
+        const pageToFetch = reset ? 0 : reportsPage;
+        const from = pageToFetch * REPORTS_PER_PAGE;
+        const to = from + REPORTS_PER_PAGE - 1;
+
+        try {
+            const { data: reports, error } = await supabase
+                .from('reports')
+                .select('*')
+                .order('created_at', { ascending: false })
+                .range(from, to);
+
+            if (error) throw error;
+
+            if (reports) {
+                // Enrich reports with user data from the already loaded dbUsers list or fetch specific ones
+                const enrichedReports = reports.map(r => {
+                    const user = dbUsers.find(u => u.id === r.user_id);
+                    return {
+                        ...r,
+                        user_email: user?.email || 'Неизвестен',
+                        user_name: user?.name || 'Анонимен'
+                    };
+                });
+
+                if (reset) {
+                    setDbReports(enrichedReports);
+                } else {
+                    setDbReports(prev => [...prev, ...enrichedReports]);
+                }
+
+                setHasMoreReports(reports.length === REPORTS_PER_PAGE);
+                setReportsPage(pageToFetch + 1);
+            }
+        } catch (e) {
+            console.error("Fetch reports error:", e);
+            addToast("Грешка при зареждане на докладите.", "error");
+        } finally {
+            setReportsLoading(false);
+        }
+    };
+
     const handleSendBroadcast = async () => {
         if (!broadcastMsg.trim()) return;
         setIsBroadcasting(true);
@@ -326,6 +386,7 @@ export const AdminPanel = ({
                 addToast('Грешка при изпращане.', 'error');
             }
         } finally {
+            setBroadcastBgImage('');
             setIsBroadcasting(false);
         }
     };
@@ -341,7 +402,6 @@ export const AdminPanel = ({
             };
             reader.readAsDataURL(file);
         } else {
-            // Use resizeImage for other formats to optimize, but keep high enough for full width
             resizeImage(file, 1280, 0.7).then(setBroadcastBgImage);
         }
     };
@@ -362,14 +422,10 @@ export const AdminPanel = ({
     };
 
     const handleToggleGlobalOption = async (key: string, val: boolean) => {
-        // Construct the new configuration locally first
         const newConfig = { ...globalConfig, [key]: val };
-        
-        // Update local state immediately for snappy UI
         setGlobalConfig(newConfig);
 
         try {
-            // Force an upsert by key. If the record exists, it updates 'value'. If not, it inserts.
             const { error } = await supabase
                 .from('global_settings')
                 .upsert(
@@ -381,7 +437,7 @@ export const AdminPanel = ({
             addToast('Настройките са запазени в облака.', 'success');
         } catch (e) {
             console.error("Failed to save global config", e);
-            addToast('Грешка при запис в базата. Моля, опитайте отново по-късно.', 'error');
+            addToast('Грешка при запис в базата.', 'error');
         }
     };
 
@@ -390,7 +446,6 @@ export const AdminPanel = ({
         try {
             if (['users', 'dashboard', 'finance', 'reports'].includes(activeTab)) {
                 const dbStart = performance.now();
-                // Increased limit to 1000 to catch more users for global stats
                 const { data: users, error } = await supabase
                     .from('profiles')
                     .select('*')
@@ -411,7 +466,6 @@ export const AdminPanel = ({
                             try { settings = JSON.parse(settings); } catch (e) {}
                         }
                         
-                        // Robust token extraction
                         const uIn = Number(settings?.stats?.totalInputTokens || 0);
                         const uOut = Number(settings?.stats?.totalOutputTokens || 0);
                         
@@ -424,7 +478,6 @@ export const AdminPanel = ({
 
                         const avatarUrl = u.avatar_url || settings?.avatar || '';
                         
-                        // Robust naming fallback
                         let displayName = settings?.userName;
                         const isNameGeneric = !displayName || displayName === 'Потребител' || displayName === 'Анонимен' || displayName === 'Anonymous' || displayName === 'Scholar';
                         
@@ -457,28 +510,6 @@ export const AdminPanel = ({
                     setDbUsers(mappedUsers);
                     setTotalInputTokens(tIn);
                     setTotalOutputTokens(tOut);
-                }
-            }
-
-            if (activeTab === 'reports') {
-                const { data: reports, error: reportsError } = await supabase
-                    .from('reports')
-                    .select('*')
-                    .order('created_at', { ascending: false })
-                    .limit(50);
-
-                if (reportsError) {
-                    console.error("Reports error", reportsError);
-                } else if (reports) {
-                    const enrichedReports = reports.map(r => {
-                        const user = dbUsers.find(u => u.id === r.user_id);
-                        return {
-                            ...r,
-                            user_email: user?.email || 'Неизвестен',
-                            user_name: user?.name || 'Анонимен'
-                        };
-                    });
-                    setDbReports(enrichedReports);
                 }
             }
 
@@ -594,7 +625,6 @@ export const AdminPanel = ({
         if (!selectedUser || !editForm) return;
         try {
             const currentSettings = selectedUser.rawSettings || {};
-            
             const updatedSettings = { 
                 ...currentSettings, 
                 userName: editForm.name, 
@@ -805,7 +835,7 @@ export const AdminPanel = ({
                         </div>
                         <div>
                             <h2 className="font-bold text-white text-sm">Админ Панел</h2>
-                            <div className="text-[10px] text-zinc-500 font-mono">v4.4 • Accurate Token Counting</div>
+                            <div className="text-[10px] text-zinc-500 font-mono">v4.5 • Infinite Reports</div>
                         </div>
                     </div>
                     <button onClick={() => setShowAdminPanel(false)} className="md:hidden p-2 text-zinc-400 hover:text-white transition-colors">
@@ -877,7 +907,7 @@ export const AdminPanel = ({
                          </div>
                      </div>
                      <div className="flex items-center gap-3">
-                         <button onClick={() => {fetchData(); if(activeTab==='dashboard') fetchSubjectStats();}} className="p-2 hover:bg-white/10 rounded-lg text-zinc-400 hover:text-white transition-colors" title="Обнови данни">
+                         <button onClick={() => {fetchData(); if(activeTab==='dashboard') fetchSubjectStats(); if(activeTab==='reports') fetchReports(true);}} className="p-2 hover:bg-white/10 rounded-lg text-zinc-400 hover:text-white transition-colors" title="Обнови данни">
                              <RefreshCw size={18} className={loadingData ? 'animate-spin' : ''}/>
                          </button>
                      </div>
@@ -1168,26 +1198,26 @@ export const AdminPanel = ({
 
                              {/* REPORTS TAB */}
                              {activeTab === 'reports' && (
-                                 <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
+                                 <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 pb-12">
                                      <div className="bg-white/5 border border-white/5 rounded-3xl p-6 md:p-8">
                                          <div className="flex justify-between items-center mb-6">
                                              <h3 className="text-xl font-bold text-white flex items-center gap-3">
                                                  <Flag size={20} className="text-amber-500"/> Доклади за проблеми
                                              </h3>
                                              <div className="text-xs text-zinc-500 font-mono">
-                                                 Последни 50 доклада
+                                                 {dbReports.length} докладвани проблеми
                                              </div>
                                          </div>
 
                                          <div className="space-y-4">
-                                             {dbReports.length === 0 ? (
+                                             {dbReports.length === 0 && !reportsLoading ? (
                                                  <div className="text-center py-12 text-zinc-500">
                                                      <CheckCircle size={32} className="mx-auto mb-2 opacity-30"/>
                                                      <p>Няма активни доклади.</p>
                                                  </div>
                                              ) : (
-                                                 dbReports.map(report => (
-                                                     <div key={report.id} className={`p-5 rounded-2xl border transition-all ${report.status === 'resolved' ? 'bg-white/5 border-green-500/20' : 'bg-white/10 border-amber-500/30'}`}>
+                                                 dbReports.map((report, index) => (
+                                                     <div key={report.id} className={`p-5 rounded-2xl border transition-all ${report.status === 'resolved' ? 'bg-white/5 border-green-500/20 opacity-70' : 'bg-white/10 border-amber-500/30'} animate-in fade-in`} style={{ animationDelay: `${Math.min(index * 30, 500)}ms` }}>
                                                          <div className="flex justify-between items-start mb-3">
                                                              <div>
                                                                  <div className="flex items-center gap-2">
@@ -1221,9 +1251,9 @@ export const AdminPanel = ({
                                                          <p className="text-sm text-zinc-300 mb-4 whitespace-pre-wrap">{report.description}</p>
                                                          
                                                          {report.images && Array.isArray(report.images) && report.images.length > 0 && (
-                                                             <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
+                                                             <div className="flex gap-2 mb-4 overflow-x-auto pb-2 custom-scrollbar">
                                                                  {report.images.map((img, i) => (
-                                                                     <img key={i} src={img} onClick={() => setZoomedImage(img)} className="h-20 w-20 object-cover rounded-lg border border-white/10 hover:scale-105 transition-transform cursor-pointer bg-black"/>
+                                                                     <img key={i} src={img} onClick={() => setZoomedImage(img)} className="h-20 w-20 object-cover rounded-lg border border-white/10 hover:scale-105 transition-transform cursor-pointer bg-black" loading="lazy" />
                                                                  ))}
                                                              </div>
                                                          )}
@@ -1231,11 +1261,35 @@ export const AdminPanel = ({
                                                          <div className="flex items-center gap-2 pt-3 border-t border-white/5 text-xs text-zinc-500">
                                                              <Users size={12}/>
                                                              <span className="font-bold text-zinc-400">{report.user_name}</span>
-                                                             <span className="font-mono">({report.user_email})</span>
-                                                             <span className="font-mono ml-auto opacity-50">ID: {report.user_id.substring(0, 8)}</span>
+                                                             <span className="font-mono opacity-60">({report.user_email})</span>
+                                                             <span className="font-mono ml-auto opacity-30">ID: {report.user_id.substring(0, 8)}</span>
                                                          </div>
                                                      </div>
                                                  ))
+                                             )}
+
+                                             {reportsLoading && (
+                                                 <div className="flex justify-center py-6">
+                                                     <div className="w-8 h-8 border-2 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin"/>
+                                                 </div>
+                                             )}
+
+                                             {hasMoreReports && !reportsLoading && (
+                                                 <div className="pt-6 flex justify-center">
+                                                     <button 
+                                                        onClick={() => fetchReports()}
+                                                        className="px-8 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-zinc-300 font-bold text-sm transition-all flex items-center gap-2 group"
+                                                     >
+                                                         Зареди още доклади
+                                                         <ChevronDown size={18} className="group-hover:translate-y-0.5 transition-transform"/>
+                                                     </button>
+                                                 </div>
+                                             )}
+
+                                             {!hasMoreReports && dbReports.length > 0 && (
+                                                 <div className="pt-8 text-center text-zinc-600 text-xs font-medium uppercase tracking-widest">
+                                                     Няма повече доклади за зареждане
+                                                 </div>
                                              )}
                                          </div>
                                      </div>
@@ -1454,7 +1508,6 @@ export const AdminPanel = ({
                                              <h4 className="text-xs font-black text-zinc-500 uppercase tracking-widest ml-1">Преглед на живо</h4>
                                              
                                              {broadcastType === 'modal' ? (
-                                                 /* Modal Preview - Synchronized with App.tsx actual modal */
                                                  <div className="bg-[#09090b] rounded-[40px] p-8 border border-white/10 shadow-2xl relative overflow-hidden flex flex-col items-center text-center gap-6 animate-in zoom-in-95 duration-300 ring-1 ring-white/5">
                                                       {broadcastBgImage ? (
                                                           <>
@@ -1497,7 +1550,6 @@ export const AdminPanel = ({
                                                       </div>
                                                  </div>
                                              ) : (
-                                                 /* Toast Preview - Synchronized with App.tsx actual toast system */
                                                  <div className="flex flex-col gap-4 items-center justify-center py-20">
                                                      <div className="bg-white/60 dark:bg-[#09090b]/80 border border-white/10 rounded-xl px-4 py-3 flex flex-col gap-2 shadow-2xl backdrop-blur-xl animate-in slide-in-from-right duration-300 max-w-sm ring-1 ring-white/5 relative overflow-hidden">
                                                          {broadcastBgImage && (
@@ -1519,7 +1571,6 @@ export const AdminPanel = ({
                                                             </button>
                                                          </div>
                                                          
-                                                         {/* Action buttons in Toast preview */}
                                                          {broadcastButtons.length > 0 && (
                                                              <div className="flex gap-2 relative z-10">
                                                                  {broadcastButtons.map((btn, i) => (
@@ -1631,7 +1682,6 @@ export const AdminPanel = ({
                                          </div>
                                          
                                          <div className="flex gap-2">
-                                             {/* Sort Menu */}
                                              <div className="relative">
                                                  <button 
                                                     onClick={() => { setShowSortMenu(!showSortMenu); setShowFilterMenu(false); }} 
@@ -1668,7 +1718,6 @@ export const AdminPanel = ({
                                                  )}
                                              </div>
 
-                                             {/* Filter Menu */}
                                              <div className="relative">
                                                  <button 
                                                     onClick={() => { setShowFilterMenu(!showFilterMenu); setShowSortMenu(false); }} 
@@ -1704,7 +1753,7 @@ export const AdminPanel = ({
                                          {filteredAndSortedUsers.length === 0 ? (
                                              <div className="col-span-full py-20 text-center text-zinc-500 space-y-4">
                                                  <Search size={48} className="mx-auto opacity-20"/>
-                                                 <p className="font-medium">Няма намерени потребители с тези критерии.</p>
+                                                 <p className="font-medium">Няма намерени потребители.</p>
                                              </div>
                                          ) : (
                                              filteredAndSortedUsers.map((user) => (
@@ -1754,7 +1803,7 @@ export const AdminPanel = ({
                  </div>
              </div>
              
-             {/* Optimized Icon Picker Modal with Infinite Loading */}
+             {/* Optimized Icon Picker Modal */}
              {isIconPickerOpen && (
                  <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in" onClick={() => setIsIconPickerOpen(false)}>
                      <div className="bg-[#0f0f11] border border-white/10 w-full max-w-2xl p-6 rounded-[32px] shadow-2xl animate-in zoom-in-95 flex flex-col max-h-[85vh]" onClick={e => e.stopPropagation()}>
@@ -1773,7 +1822,7 @@ export const AdminPanel = ({
                              <input 
                                 value={iconSearchTerm}
                                 onChange={e => setIconSearchTerm(e.target.value)}
-                                placeholder="Търси икона (на английски)..."
+                                placeholder="Търси икона..."
                                 className="w-full bg-white/5 border border-white/10 rounded-2xl pl-12 pr-4 py-4 text-white outline-none focus:border-indigo-500 transition-all shadow-inner"
                                 autoFocus
                              />
@@ -1800,29 +1849,16 @@ export const AdminPanel = ({
                                         onClick={() => setVisibleIconCount(prev => prev + 150)}
                                         className="px-6 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-zinc-400 font-bold text-xs transition-all flex items-center gap-2"
                                      >
-                                        Зареди още ({filteredIconsList.length - visibleIconCount} оставащи)
+                                        Зареди още
                                         <RefreshCw size={14} />
                                      </button>
                                  </div>
                              )}
-
-                             {filteredIconsList.length === 0 && (
-                                 <div className="py-20 text-center text-zinc-500 space-y-2">
-                                     <HelpCircle size={32} className="mx-auto opacity-30"/>
-                                     <p>Няма икони с такова име.</p>
-                                 </div>
-                             )}
-                         </div>
-                         
-                         <div className="pt-4 border-t border-white/5 mt-auto shrink-0 flex justify-between items-center text-[10px] font-bold text-zinc-600 uppercase tracking-widest px-2">
-                            <span>Общо икони: {filteredIconsList.length}</span>
-                            <span>Показани: {renderedIcons.length}</span>
                          </div>
                      </div>
                  </div>
              )}
 
-             {/* Lightbox for Reports */}
              <Lightbox image={zoomedImage} onClose={() => setZoomedImage(null)} />
            </div>
         </div>
