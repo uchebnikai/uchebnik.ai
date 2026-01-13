@@ -128,9 +128,9 @@ export const getSystemPrompt = (mode: string, lang: Language, teachingStyle: Tea
       You are an elite pedagogical assistant. Your task is to generate a professional, high-quality school test in ${targetLang}.
       
       STRICT JSON FORMAT RULES:
-      1. Return ONLY a valid JSON object. No conversation.
+      1. Return ONLY a valid JSON object. No conversation before or after.
       2. Use the exact key names defined in the schema below.
-      3. For math, always use LaTeX inside the strings.
+      3. For math, always use LaTeX inside the strings. IMPORTANT: Escape backslashes in LaTeX for JSON (use \\\\ instead of \\).
       
       EXACT SCHEMA:
       {
@@ -140,21 +140,26 @@ export const getSystemPrompt = (mode: string, lang: Language, teachingStyle: Tea
         "questions": [
           {
             "id": 1,
-            "question": "The question text here (Use this key, NOT 'text')",
+            "question": "The question text here (e.g. $2 + 2 = ?$)",
             "type": "multiple_choice",
-            "options": ["A) ...", "B) ...", "C) ...", "D) ..."],
-            "correctAnswer": "The full explanation and correct answer for the key"
+            "options": ["A) 4", "B) 5", "C) 6", "D) 7"],
+            "correctAnswer": "A) 4"
           },
           {
             "id": 2,
             "question": "Open ended question here",
             "type": "open_answer",
-            "correctAnswer": "Model answer for the teacher"
+            "correctAnswer": "Model answer explanation here"
           }
         ]
       }
       
-      CRITICAL: Never use the key "text" for the question body, use "question". Never put answers in a separate "answer_key" array, put them in "correctAnswer" inside each question object.`;
+      CRITICAL:
+      - Use ONLY "question" key for question body.
+      - Use ONLY "correctAnswer" key for the answer.
+      - If "type" is "multiple_choice", the "options" array is REQUIRED.
+      - If "type" is "open_answer", do NOT include "options".
+      - Return valid, parsable JSON.`;
 
     default:
       return `${baseInstructions} ${latexInstructions} ${codingInstructions}`;

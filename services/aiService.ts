@@ -24,22 +24,37 @@ const logStatus = (status: 'operational' | 'degraded' | 'outage', latency: numbe
 function extractJson(text: string): string | null {
   if (!text) return null;
   
-  // Try finding blocks with language hints first
-  const match = text.match(/```json\n([\s\S]*?)\n```/) || text.match(/```([\s\S]*?)```/);
-  if (match && match[1]) {
-      return match[1].trim();
+  // Clean potential markdown trash
+  let cleaned = text.trim();
+
+  // 1. Try finding blocks with language hints
+  const markdownMatch = cleaned.match(/```(?:json)?\n?([\s\S]*?)\n?```/);
+  if (markdownMatch && markdownMatch[1]) {
+      cleaned = markdownMatch[1].trim();
   }
   
-  // Fallback: search for first { and last }
-  const start = text.indexOf('{');
-  const end = text.lastIndexOf('}');
+  // 2. Fallback: Search for the first { and last } to isolate JSON
+  const start = cleaned.indexOf('{');
+  const end = cleaned.lastIndexOf('}');
+  
+  // 3. Special case for arrays (Presentation mode often uses arrays)
+  const arrayStart = cleaned.indexOf('[');
+  const arrayEnd = cleaned.lastIndexOf(']');
+
   if (start !== -1 && end !== -1 && end > start) {
-      return text.substring(start, end + 1).trim();
+      // Prioritize object if it starts before array or if no array exists
+      if (arrayStart === -1 || start < arrayStart) {
+          return cleaned.substring(start, end + 1).trim();
+      }
+  }
+
+  if (arrayStart !== -1 && arrayEnd !== -1 && arrayEnd > arrayStart) {
+      return cleaned.substring(arrayStart, arrayEnd + 1).trim();
   }
   
-  // If it's just a raw object string without backticks
-  if (text.trim().startsWith('{') && text.trim().endsWith('}')) {
-      return text.trim();
+  // Final attempt: just return cleaned if it looks remotely like JSON
+  if (cleaned.startsWith('{') || cleaned.startsWith('[')) {
+      return cleaned;
   }
   
   return null;
@@ -50,39 +65,49 @@ function extractJson(text: string): string | null {
  */
 function normalizeTestData(raw: any): TestData | null {
     if (!raw) return null;
-    
-    // 1. Alias common question keys
-    let questions = raw.questions || raw.items || raw.test_questions || [];
-    if (!Array.isArray(questions)) questions = [];
 
-    const normalizedQuestions: TestQuestion[] = questions.map((q: any) => {
-        // Handle question body alias - common for AI to drift between 'text' and 'question'
-        const questionBody = q.question || q.text || q.question_text || q.body || "Липсва текст на въпроса";
+    // Handle case where AI returns an array directly instead of an object
+    let questionsRaw = [];
+    if (Array.isArray(raw)) {
+        questionsRaw = raw;
+    } else {
+        questionsRaw = raw.questions || raw.items || raw.test_questions || raw.list || [];
+    }
+    
+    if (!Array.isArray(questionsRaw)) questionsRaw = [];
+
+    const normalizedQuestions: TestQuestion[] = questionsRaw.map((q: any, idx: number) => {
+        // Broad key aliasing for questions
+        const questionBody = q.question || q.text || q.question_text || q.body || q.q || "Липсва текст на въпроса";
         
-        // Handle answer_key mapping if present in a separate array (common deviation)
-        let ans = q.correctAnswer || q.answer || q.correct_answer || "";
+        // Broad key aliasing for answers
+        let ans = q.correctAnswer || q.answer || q.correct_answer || q.ans || q.a || "";
         
-        // Look in top-level answer_key/keys array if not found in question object
+        // Handle answer key array deviation
         const answerKeyArray = raw.answer_key || raw.answers || raw.keys || [];
         if (!ans && Array.isArray(answerKeyArray)) {
-            const matched = answerKeyArray.find((a: any) => a.id === q.id || a.question_id === q.id);
+            const matched = answerKeyArray.find((a: any) => a.id === q.id || a.question_id === q.id || a.idx === idx);
             if (matched) ans = matched.answer || matched.text || matched.correct_answer || "";
         }
 
+        // Determine type based on properties
+        const options = Array.isArray(q.options) ? q.options : (Array.isArray(q.choices) ? q.choices : undefined);
+        const type = q.type || (options && options.length > 0 ? 'multiple_choice' : 'open_answer');
+
         return {
-            id: Number(q.id) || Math.random(),
+            id: q.id !== undefined ? Number(q.id) : idx + 1,
             question: questionBody,
-            type: q.type === 'multiple_choice' || (q.options && q.options.length > 0) ? 'multiple_choice' : 'open_answer',
-            options: Array.isArray(q.options) ? q.options : undefined,
-            correctAnswer: ans,
-            geometryData: q.geometryData
+            type: type === 'multiple_choice' ? 'multiple_choice' : 'open_answer',
+            options: options,
+            correctAnswer: String(ans),
+            geometryData: q.geometryData || q.geometry
         };
     });
 
     return {
-        title: raw.title || raw.test_title || "Тест",
-        subject: raw.subject || raw.test_subject || "Общ",
-        grade: raw.grade || raw.class || "",
+        title: raw.title || raw.test_title || raw.name || "Тест",
+        subject: raw.subject || raw.test_subject || raw.category || "Общ",
+        grade: String(raw.grade || raw.class || raw.level || ""),
         questions: normalizedQuestions
     };
 }
