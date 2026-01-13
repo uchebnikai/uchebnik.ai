@@ -15,6 +15,18 @@ let cachedFontBuffer: ArrayBuffer | null = null;
 const FONT_URL = "https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.66/fonts/Roboto/Roboto-Regular.ttf";
 const WATERMARK_TEXT = "Генерирано чрез Uchebnik AI - uchebnikai.com";
 
+const BG_LABELS = ['А)', 'Б)', 'В)', 'Г)', 'Д)', 'Е)'];
+
+// Helper to ensure option has a label
+const ensureLabel = (opt: string, index: number): string => {
+    const trimmed = opt.trim();
+    // Check if it already starts with a letter followed by ) or .
+    if (/^[А-ЯA-Z][).]\s*/.test(trimmed)) return trimmed;
+    
+    const label = BG_LABELS[index] || `${String.fromCharCode(65 + index)})`;
+    return `${label} ${trimmed}`;
+};
+
 // Helper to convert SVG String to PNG Base64 for Export
 const svgToPng = (svgString: string): Promise<string> => {
   return new Promise((resolve, reject) => {
@@ -138,9 +150,9 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
                     }
 
                     if (q.options && q.options.length > 0) {
-                        q.options.forEach(opt => {
+                        q.options.forEach((opt, idx) => {
                             elements.push(new docx.Paragraph({
-                                children: [new docx.TextRun({ text: cleanMathText(opt), size: 24 })],
+                                children: [new docx.TextRun({ text: cleanMathText(ensureLabel(opt, idx)), size: 24 })],
                                 spacing: { after: 50 },
                                 indent: { left: 720 }
                             }));
@@ -260,13 +272,13 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
             }
 
             if (q.options && q.options.length > 0) {
-               q.options.forEach(opt => {
+               q.options.forEach((opt, idx) => {
                   if (y > 270) { 
                       addWatermark();
                       doc.addPage(); 
                       y = 20; 
                   }
-                  doc.text(cleanMathText(opt), 25, y);
+                  doc.text(cleanMathText(ensureLabel(opt, idx)), 25, y);
                   y += 7;
                });
                y += 4;
@@ -382,7 +394,7 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
                     ${q.geometryData ? `<div class="geometry-container">${q.geometryData.svg}</div>` : ''}
                     
                     ${q.options && q.options.length > 0
-                        ? q.options.map(o => `<div class="option">${cleanMathText(o)}</div>`).join('') 
+                        ? q.options.map((o, idx) => `<div class="option">${cleanMathText(ensureLabel(o, idx))}</div>`).join('') 
                         : `<div class="open-lines"></div><div class="open-lines"></div><div class="open-lines"></div>`}
                 </div>
             `).join('')}
@@ -492,7 +504,7 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
                                             <div className="w-5 h-5 rounded-full border-2 border-zinc-300 dark:border-zinc-700 group-hover:border-indigo-500 transition-colors shrink-0"></div>
                                             <div className="text-sm font-medium text-zinc-700 dark:text-zinc-300 markdown-content">
                                                 <ReactMarkdown remarkPlugins={[remarkMath, remarkGfm]} rehypePlugins={[rehypeKatex]}>
-                                                    {opt}
+                                                    {ensureLabel(opt, idx)}
                                                 </ReactMarkdown>
                                             </div>
                                         </div>

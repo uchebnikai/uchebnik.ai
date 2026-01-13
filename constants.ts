@@ -1,4 +1,3 @@
-
 import { SubjectId, AppMode, SubjectConfig, TeachingStyle } from './types';
 import { Language } from './utils/translations';
 
@@ -127,10 +126,15 @@ export const getSystemPrompt = (mode: string, lang: Language, teachingStyle: Tea
       return `${baseInstructions}
       You are an elite pedagogical assistant. Your task is to generate a professional, high-quality school test in ${targetLang}.
       
+      ACCURACY IS PARAMOUNT:
+      - You MUST solve every question internally before providing it. 
+      - Double check the math. (Example: If P=24cm for a square, side=6cm, Area=36cm²).
+      - Ensure the correctAnswer is truly correct and matches one of the options.
+      
       STRICT JSON FORMAT RULES:
       1. Return ONLY a valid JSON object. No conversation before or after.
-      2. Use the exact key names defined in the schema below.
-      3. For math, always use LaTeX inside the strings. IMPORTANT: Escape backslashes in LaTeX for JSON (use \\\\ instead of \\).
+      2. For math, always use LaTeX inside strings. Escape backslashes (\\\\ instead of \\).
+      3. Options for multiple choice MUST start with Bulgarian letters: А), Б), В), Г).
       
       EXACT SCHEMA:
       {
@@ -140,25 +144,16 @@ export const getSystemPrompt = (mode: string, lang: Language, teachingStyle: Tea
         "questions": [
           {
             "id": 1,
-            "question": "The question text here (e.g. $2 + 2 = ?$)",
+            "question": "Question text here (e.g. $2 + 2 = ?$)",
             "type": "multiple_choice",
-            "options": ["A) 4", "B) 5", "C) 6", "D) 7"],
-            "correctAnswer": "A) 4"
-          },
-          {
-            "id": 2,
-            "question": "Open ended question here",
-            "type": "open_answer",
-            "correctAnswer": "Model answer explanation here"
+            "options": ["А) 4", "Б) 5", "В) 6", "Г) 7"],
+            "correctAnswer": "А) 4"
           }
         ]
       }
       
       CRITICAL:
-      - Use ONLY "question" key for question body.
-      - Use ONLY "correctAnswer" key for the answer.
-      - If "type" is "multiple_choice", the "options" array is REQUIRED.
-      - If "type" is "open_answer", do NOT include "options".
+      - Use ONLY "А), Б), В), Г)" prefixes for Bulgarian options.
       - Return valid, parsable JSON.`;
 
     default:
