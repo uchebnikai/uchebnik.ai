@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { FileText, X, FileType, Loader2, Download, Printer, GraduationCap, CheckCircle2 } from 'lucide-react';
+import { FileText, X, FileType, Loader2, Download, Printer, GraduationCap, CheckCircle2, AlertCircle } from 'lucide-react';
 import * as docx from 'docx';
 import { jsPDF } from "jspdf";
 import { TestData } from '../../types';
@@ -50,6 +50,19 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
   const [visible, setVisible] = useState(true);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
+  // Safety Check
+  if (!data || !data.questions || !Array.isArray(data.questions)) {
+      return (
+          <div className="mt-4 p-6 bg-red-50 dark:bg-red-900/20 border border-red-500/20 rounded-2xl flex items-center gap-4 text-red-600 dark:text-red-400">
+              <AlertCircle className="shrink-0" size={24} />
+              <div>
+                  <p className="font-bold">Грешка при визуализация на теста</p>
+                  <p className="text-sm opacity-80">Данните от AI са повредени или непълни.</p>
+              </div>
+          </div>
+      );
+  }
+
   const handleDownloadWord = async () => {
     // Pre-process questions to convert geometry SVGs to PNGs
     const processedQuestions = await Promise.all(data.questions.map(async (q) => {
@@ -83,19 +96,19 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
                     spacing: { after: 400 }
                 }),
                 new docx.Paragraph({
-                    children: [new docx.TextRun({ text: cleanMathText(data.title), bold: true, size: 32 })],
+                    children: [new docx.TextRun({ text: cleanMathText(data.title || 'Тест'), bold: true, size: 32 })],
                     alignment: docx.AlignmentType.CENTER,
                     spacing: { after: 200 }
                 }),
                 new docx.Paragraph({
-                    children: [new docx.TextRun({ text: `${data.subject} | ${data.grade || ''}`, size: 24, color: "666666" })],
+                    children: [new docx.TextRun({ text: `${data.subject || ''} | ${data.grade || ''}`, size: 24, color: "666666" })],
                     alignment: docx.AlignmentType.CENTER,
                     spacing: { after: 400 }
                 }),
                 ...processedQuestions.flatMap((q, index) => {
                     const elements = [
                         new docx.Paragraph({
-                            children: [new docx.TextRun({ text: `${index + 1}. ${cleanMathText(q.question)}`, bold: true, size: 24 })],
+                            children: [new docx.TextRun({ text: `${index + 1}. ${cleanMathText(q.question || '')}`, bold: true, size: 24 })],
                             spacing: { before: 200, after: 100 }
                         })
                     ];
@@ -108,7 +121,7 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
                         }));
                     }
 
-                    if (q.options) {
+                    if (q.options && q.options.length > 0) {
                         q.options.forEach(opt => {
                             elements.push(new docx.Paragraph({
                                 children: [new docx.TextRun({ text: cleanMathText(opt), size: 24 })],
@@ -152,7 +165,7 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${data.title.replace(/\s+/g, '_')}.docx`;
+    a.download = `${(data.title || 'test').replace(/\s+/g, '_')}.docx`;
     a.click();
     window.URL.revokeObjectURL(url);
   };
@@ -180,7 +193,6 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
             doc.setFont("Roboto");
         } catch (e) {
             console.error("Failed to load Cyrillic font", e);
-            alert("Warning: Could not load Cyrillic font. Text might look incorrect.");
         }
         
         doc.setFontSize(12);
@@ -188,20 +200,19 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
         doc.text("Клас: _________", 20, 30);
         doc.text("Номер: _________", 80, 30);
         doc.setFontSize(18);
-        doc.text(cleanMathText(data.title), 105, 50, { align: 'center' });
+        doc.text(cleanMathText(data.title || 'Тест'), 105, 50, { align: 'center' });
         doc.setFontSize(12);
         doc.setTextColor(100);
-        doc.text(`${data.subject} | ${data.grade || ''}`, 105, 58, { align: 'center' });
+        doc.text(`${data.subject || ''} | ${data.grade || ''}`, 105, 58, { align: 'center' });
         doc.setTextColor(0);
         
         let y = 70;
         
-        // Loop sequentially to handle async image generation
         for (let i = 0; i < data.questions.length; i++) {
             const q = data.questions[i];
             if (y > 250) { doc.addPage(); y = 20; }
             doc.setFontSize(12);
-            const questionText = `${i + 1}. ${cleanMathText(q.question)}`;
+            const questionText = `${i + 1}. ${cleanMathText(q.question || '')}`;
             const splitQ = doc.splitTextToSize(questionText, 170);
             doc.text(splitQ, 20, y);
             y += splitQ.length * 7;
@@ -213,21 +224,11 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
                     doc.addImage(pngBase64, 'PNG', 25, y, 80, 60);
                     y += 65;
                 } catch(e) {
-                    doc.setTextColor(150);
-                    doc.text("[Чертеж - виж онлайн]", 25, y);
-                    doc.setTextColor(0);
-                    y += 10;
+                    y += 5;
                 }
-            } else if (q.chartData) {
-                doc.setFontSize(10);
-                doc.setTextColor(150);
-                doc.text("[Графика - виж онлайн]", 25, y);
-                doc.setTextColor(0);
-                doc.setFontSize(12);
-                y += 10;
             }
 
-            if (q.options) {
+            if (q.options && q.options.length > 0) {
                q.options.forEach(opt => {
                   if (y > 270) { doc.addPage(); y = 20; }
                   doc.text(cleanMathText(opt), 25, y);
@@ -256,7 +257,7 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
              doc.text(`${i + 1}. ${cleanMathText(q.correctAnswer || '-')}`, 20, ky);
              ky += 8;
         });
-        doc.save(`${data.title.replace(/\s+/g, '_')}.pdf`);
+        doc.save(`${(data.title || 'test').replace(/\s+/g, '_')}.pdf`);
       } catch (e) {
         console.error("PDF Gen Error", e);
       } finally {
@@ -270,7 +271,7 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
      const html = `
         <html>
         <head>
-            <title>${cleanMathText(data.title)}</title>
+            <title>${cleanMathText(data.title || 'Тест')}</title>
             <style>
                 @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
                 body { font-family: 'Roboto', sans-serif; padding: 60px; color: #000; line-height: 1.5; }
@@ -301,17 +302,17 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
                     <div class="field-row">Номер: ___________</div>
                 </div>
             </div>
-            <h1>${cleanMathText(data.title)}</h1>
-            <div class="meta">${data.subject} ${data.grade ? '| ' + data.grade : ''}</div>
+            <h1>${cleanMathText(data.title || 'Тест')}</h1>
+            <div class="meta">${data.subject || ''} ${data.grade ? '| ' + data.grade : ''}</div>
             
             <div class="questions-container">
             ${data.questions.map((q, i) => `
                 <div class="question">
-                    <div class="q-text"><span>${i + 1}.</span> <span>${cleanMathText(q.question)}</span></div>
+                    <div class="q-text"><span>${i + 1}.</span> <span>${cleanMathText(q.question || '')}</span></div>
                     
                     ${q.geometryData ? `<div class="geometry-container">${q.geometryData.svg}</div>` : ''}
                     
-                    ${q.options 
+                    ${q.options && q.options.length > 0
                         ? q.options.map(o => `<div class="option">${cleanMathText(o)}</div>`).join('') 
                         : `<div class="open-lines"></div><div class="open-lines"></div><div class="open-lines"></div>`}
                 </div>
@@ -360,7 +361,7 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
                         <GraduationCap size={24}/>
                     </div>
                     <div className="flex flex-col">
-                        <h4 className="font-black text-xl md:text-2xl leading-tight text-zinc-900 dark:text-white tracking-tight">{cleanMathText(data.title)}</h4>
+                        <h4 className="font-black text-xl md:text-2xl leading-tight text-zinc-900 dark:text-white tracking-tight">{cleanMathText(data.title || 'Тест')}</h4>
                         <div className="flex items-center gap-2 mt-1">
                             <span className="text-xs font-bold text-indigo-500 uppercase tracking-widest">{data.subject}</span>
                             <span className="w-1 h-1 rounded-full bg-zinc-300 dark:bg-zinc-700"/>
@@ -403,7 +404,7 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
                         <div key={i} className="relative">
                             <div className="flex gap-3 mb-4">
                                 <span className="text-indigo-600 dark:text-indigo-400 font-black text-lg">{i + 1}.</span>
-                                <p className="font-bold text-zinc-800 dark:text-zinc-200 text-lg leading-relaxed">{cleanMathText(q.question)}</p>
+                                <p className="font-bold text-zinc-800 dark:text-zinc-200 text-lg leading-relaxed">{cleanMathText(q.question || '')}</p>
                             </div>
                             
                             {q.geometryData && (
@@ -412,7 +413,7 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
                                 </div>
                             )}
 
-                            {q.options ? (
+                            {q.options && q.options.length > 0 ? (
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 ml-8">
                                     {q.options.map((opt, idx) => (
                                         <div key={idx} className="flex items-center gap-3 p-3 rounded-xl bg-white dark:bg-white/5 border border-zinc-100 dark:border-white/5 shadow-sm group hover:border-indigo-500/50 transition-colors">

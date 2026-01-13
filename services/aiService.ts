@@ -22,6 +22,8 @@ const logStatus = (status: 'operational' | 'degraded' | 'outage', latency: numbe
 
 // Improved JSON Extractor
 function extractJson(text: string): string | null {
+  if (!text) return null;
+  
   // Try finding blocks with language hints first
   const match = text.match(/```json\n([\s\S]*?)\n```/) || text.match(/```([\s\S]*?)```/);
   if (match && match[1]) {
@@ -34,6 +36,12 @@ function extractJson(text: string): string | null {
   if (start !== -1 && end !== -1 && end > start) {
       return text.substring(start, end + 1).trim();
   }
+  
+  // If it's just a raw object string without backticks
+  if (text.trim().startsWith('{') && text.trim().endsWith('}')) {
+      return text.trim();
+  }
+  
   return null;
 }
 
@@ -169,8 +177,10 @@ export const generateResponse = async (
           tools: tools.length > 0 ? tools : undefined
       };
 
+      const isStructuredMode = mode === AppMode.PRESENTATION || mode === AppMode.TEACHER_TEST;
+
       // Force JSON mode for structured outputs
-      if (mode === AppMode.PRESENTATION || mode === AppMode.TEACHER_TEST) {
+      if (isStructuredMode) {
           config.responseMimeType = "application/json";
       }
 
@@ -202,8 +212,15 @@ export const generateResponse = async (
               }
 
               finalContent = fullText.replace(/<think>[\s\S]*?(?:<\/think>|$)/gi, "").trim();
+              
               if (onStreamUpdate) {
-                  onStreamUpdate(finalContent, reasoningContent);
+                  // If we're in JSON mode, don't show the raw JSON code string during streaming
+                  // Show a friendly placeholder instead
+                  if (isStructuredMode) {
+                      onStreamUpdate("Генерирам структурирани данни, моля изчакайте...", reasoningContent);
+                  } else {
+                      onStreamUpdate(finalContent, reasoningContent);
+                  }
               }
           }
 
@@ -240,16 +257,18 @@ export const generateResponse = async (
              const jsonStr = extractJson(processedText);
              if (jsonStr) {
                  const slides: Slide[] = JSON.parse(jsonStr);
-                 return {
-                     id: Date.now().toString(),
-                     role: 'model',
-                     text: "Готово! Ето план за твоята презентация:",
-                     type: 'slides',
-                     slidesData: slides,
-                     timestamp: Date.now(),
-                     reasoning: reasoningContent,
-                     usage: tokenUsage
-                 };
+                 if (Array.isArray(slides)) {
+                    return {
+                        id: Date.now().toString(),
+                        role: 'model',
+                        text: "Готово! Ето план за твоята презентация:",
+                        type: 'slides',
+                        slidesData: slides,
+                        timestamp: Date.now(),
+                        reasoning: reasoningContent,
+                        usage: tokenUsage
+                    };
+                 }
              }
          } catch (e) { console.error("Presentation JSON parse error", e); }
       }
@@ -259,16 +278,18 @@ export const generateResponse = async (
              const jsonStr = extractJson(processedText);
              if (jsonStr) {
                  const testData: TestData = JSON.parse(jsonStr);
-                 return {
-                     id: Date.now().toString(),
-                     role: 'model',
-                     text: `Готово! Ето твоя професионален тест на тема: "${testData.title || promptText}"`,
-                     type: 'test_generated',
-                     testData: testData,
-                     timestamp: Date.now(),
-                     reasoning: reasoningContent,
-                     usage: tokenUsage
-                 };
+                 if (testData && Array.isArray(testData.questions)) {
+                    return {
+                        id: Date.now().toString(),
+                        role: 'model',
+                        text: `Готово! Ето твоя професионален тест на тема: "${testData.title || promptText}"`,
+                        type: 'test_generated',
+                        testData: testData,
+                        timestamp: Date.now(),
+                        reasoning: reasoningContent,
+                        usage: tokenUsage
+                    };
+                 }
              }
           } catch (e) { console.error("Test JSON parse error", e); }
       }
