@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { supabase } from '../../supabaseClient';
-import { Loader2, Mail, Lock, User, ArrowRight, Sparkles, CheckCircle, AlertCircle, Calendar, Eye, EyeOff, ArrowLeft, GraduationCap, Brain, Zap, ShieldCheck, X, Check, Shield, Info } from 'lucide-react';
+import { Loader2, Mail, Lock, User, ArrowRight, Sparkles, CheckCircle, AlertCircle, Calendar, Eye, EyeOff, ArrowLeft, GraduationCap, Brain, Zap, ShieldCheck, X, Check, Shield, Info, Facebook } from 'lucide-react';
 import { INPUT_AUTH } from '../../styles/ui';
 import { FADE_IN, SLIDE_UP, ZOOM_IN } from '../../animations/transitions';
 
@@ -134,6 +134,28 @@ export const Auth = ({ isModal = false, onSuccess, initialMode = 'login', onNavi
     }
   };
 
+  const handleFacebookLogin = async () => {
+    if (!termsAccepted) {
+        setShowTermsError(true);
+        setError('Трябва да приемете Общите условия преди да влезете с Facebook.');
+        return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'facebook',
+        options: {
+          redirectTo: window.location.origin,
+        },
+      });
+      if (error) throw error;
+    } catch (err: any) {
+      setError(err.message || 'Грешка при вход с Facebook.');
+      setLoading(false);
+    }
+  };
+
   React.useEffect(() => {
       const hash = window.location.hash;
       if (hash && hash.includes('type=recovery')) {
@@ -258,7 +280,7 @@ export const Auth = ({ isModal = false, onSuccess, initialMode = 'login', onNavi
 
                     <form onSubmit={handleAuth} className="space-y-4">
                         {(mode === 'login' || mode === 'register') && (
-                            <div className="space-y-4">
+                            <div className="space-y-3">
                                 <button
                                     onClick={handleGoogleLogin}
                                     type="button"
@@ -267,6 +289,16 @@ export const Auth = ({ isModal = false, onSuccess, initialMode = 'login', onNavi
                                 >
                                     <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/1200px-Google_%22G%22_logo.svg.png" className="w-5 h-5" alt="Google" />
                                     <span>Продължи с Google</span>
+                                </button>
+
+                                <button
+                                    onClick={handleFacebookLogin}
+                                    type="button"
+                                    disabled={loading}
+                                    className={`w-full py-3.5 rounded-xl bg-[#1877F2] hover:bg-[#166fe5] text-white font-bold shadow-xl shadow-[#1877F2]/20 transition-all active:scale-95 disabled:opacity-30 disabled:grayscale flex items-center justify-center gap-3 group ${showTermsError && !termsAccepted ? 'ring-2 ring-amber-500/50' : ''}`}
+                                >
+                                    <Facebook size={20} className="text-white" fill="currentColor" />
+                                    <span>Продължи с Facebook</span>
                                 </button>
                                 
                                 <div className="flex items-center gap-4 py-2">
