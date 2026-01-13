@@ -46,25 +46,6 @@ function extractJson(text: string): string | null {
 }
 
 /**
- * Helper to wrap LaTeX commands in $ if they aren't already wrapped.
- * Matches things like \text{...}, \frac{...}, \sqrt, ^2, etc.
- */
-function ensureLatexWrapped(text: string): string {
-    if (!text) return "";
-    
-    // If it already has dollar signs, assume it's fine
-    if (text.includes('$')) return text;
-
-    // Pattern for common LaTeX commands that often come unwrapped
-    // This is a heuristic to help the renderer
-    const latexPattern = /(\\[a-z]+({[^{}]*})*|\^[\d{a-z}]|_[\d{a-z}]|[a-z]\s*=\s*[\d\\]+|[\d\\]+\s*=\s*[a-z])/gi;
-    
-    return text.replace(latexPattern, (match) => {
-        return `$${match}$`;
-    });
-}
-
-/**
  * Normalizes common AI deviations from the TestData schema.
  */
 function normalizeTestData(raw: any): TestData | null {
@@ -75,28 +56,24 @@ function normalizeTestData(raw: any): TestData | null {
     if (!Array.isArray(questions)) questions = [];
 
     const normalizedQuestions: TestQuestion[] = questions.map((q: any) => {
-        // Handle question body alias
-        let questionBody = q.question || q.text || q.question_text || q.body || "Липсва текст на въпроса";
-        questionBody = ensureLatexWrapped(questionBody);
+        // Handle question body alias - common for AI to drift between 'text' and 'question'
+        const questionBody = q.question || q.text || q.question_text || q.body || "Липсва текст на въпроса";
         
-        // Handle answer_key mapping if present in a separate array
+        // Handle answer_key mapping if present in a separate array (common deviation)
         let ans = q.correctAnswer || q.answer || q.correct_answer || "";
         
+        // Look in top-level answer_key/keys array if not found in question object
         const answerKeyArray = raw.answer_key || raw.answers || raw.keys || [];
         if (!ans && Array.isArray(answerKeyArray)) {
             const matched = answerKeyArray.find((a: any) => a.id === q.id || a.question_id === q.id);
             if (matched) ans = matched.answer || matched.text || matched.correct_answer || "";
         }
-        ans = ensureLatexWrapped(ans);
-
-        // Options wrapping
-        const opts = Array.isArray(q.options) ? q.options.map((o: any) => ensureLatexWrapped(String(o))) : undefined;
 
         return {
             id: Number(q.id) || Math.random(),
             question: questionBody,
-            type: q.type === 'multiple_choice' || (opts && opts.length > 0) ? 'multiple_choice' : 'open_answer',
-            options: opts,
+            type: q.type === 'multiple_choice' || (q.options && q.options.length > 0) ? 'multiple_choice' : 'open_answer',
+            options: Array.isArray(q.options) ? q.options : undefined,
             correctAnswer: ans,
             geometryData: q.geometryData
         };

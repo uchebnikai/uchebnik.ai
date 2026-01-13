@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { FileText, X, FileType, Loader2, Download, Printer, GraduationCap, CheckCircle2, AlertCircle, Sparkles } from 'lucide-react';
+import { FileText, X, FileType, Loader2, Download, Printer, GraduationCap, CheckCircle2, AlertCircle } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
@@ -151,13 +151,6 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
                     spacing: { after: 200 }
                 }),
                 new docx.Paragraph({
-                    children: [
-                         new docx.TextRun({ text: "Генерирано от Uchebnik AI", size: 16, color: "888888" })
-                    ],
-                    alignment: docx.AlignmentType.CENTER,
-                    spacing: { before: 400 }
-                }),
-                new docx.Paragraph({
                      children: [new docx.TextRun({ text: "Ключ с отговори", bold: true, size: 28 })],
                      spacing: { before: 600, after: 200 },
                      pageBreakBefore: true
@@ -258,15 +251,8 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
         y += 15;
         doc.setFontSize(14);
         doc.text("Оценка: ___________________", 20, y);
-        
-        // Footer branding
-        doc.setFontSize(8);
-        doc.setTextColor(150);
-        doc.text("Генерирано от Uchebnik AI - uchebnikai.com", 105, 285, { align: 'center' });
-
         doc.addPage();
         doc.setFontSize(16);
-        doc.setTextColor(0);
         doc.text("Ключ с отговори", 20, 20);
         doc.setFontSize(12);
         let ky = 35;
@@ -291,8 +277,7 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
             <title>${cleanMathText(data.title || 'Тест')}</title>
             <style>
                 @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
-                body { font-family: 'Roboto', sans-serif; padding: 60px; color: #000; line-height: 1.5; position: relative; }
-                .watermark { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); font-size: 80px; color: rgba(0,0,0,0.03); font-weight: 900; pointer-events: none; z-index: -1; white-space: nowrap; text-transform: uppercase; }
+                body { font-family: 'Roboto', sans-serif; padding: 60px; color: #000; line-height: 1.5; }
                 .header-fields { margin-bottom: 40px; font-size: 16px; display: flex; flex-direction: column; gap: 10px; }
                 .field-row { border-bottom: 1px solid #eee; padding-bottom: 5px; }
                 h1 { text-align: center; margin-top: 40px; margin-bottom: 5px; font-size: 28px; text-transform: uppercase; letter-spacing: 1px; }
@@ -303,19 +288,16 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
                 .open-lines { margin-top: 20px; border-bottom: 1px solid #000; height: 40px; width: 100%; opacity: 0.3; }
                 .footer-signatures { display: flex; justify-content: space-between; margin-top: 80px; page-break-inside: avoid; font-size: 14px; }
                 .grade-field { margin-top: 40px; font-weight: bold; font-size: 20px; page-break-inside: avoid; border-top: 2px solid #000; padding-top: 20px; }
-                .brand-footer { margin-top: 60px; text-align: center; color: #888; font-size: 10px; border-top: 1px solid #eee; padding-top: 10px; }
                 .key { margin-top: 50px; page-break-before: always; }
                 .geometry-container { margin: 25px 0; border: 1px solid #eee; padding: 20px; display: flex; justify-content: center; background: #fafafa; border-radius: 8px; }
                 .geometry-container svg { max-width: 400px; height: auto; }
                 @media print {
                    @page { margin: 1.5cm; }
                    body { padding: 0; }
-                   .watermark { display: block; }
                 }
             </style>
         </head>
         <body>
-            <div class="watermark">Uchebnik AI</div>
             <div class="header-fields">
                 <div class="field-row">Име: __________________________________________________________________</div>
                 <div style="display: flex; gap: 40px;">
@@ -348,10 +330,6 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
                 Оценка: ___________________
             </div>
 
-            <div class="brand-footer">
-                Генерирано чрез Uchebnik AI - uchebnikai.com
-            </div>
-
             <div class="key">
                 <h2 style="border-bottom: 2px solid #000; padding-bottom: 10px;">Ключ с отговори (За учителя)</h2>
                 <div style="display: grid; grid-template-columns: repeat(1, 1fr); gap: 15px; margin-top: 20px;">
@@ -379,14 +357,8 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
 
   return (
     <div className="mt-4 p-1 bg-zinc-200 dark:bg-zinc-800 rounded-[32px] shadow-2xl animate-in fade-in zoom-in-95 duration-500 overflow-hidden ring-1 ring-black/5">
-        <div className="p-6 md:p-8 bg-white dark:bg-[#0c0c0e] rounded-[28px] m-1 shadow-inner flex flex-col gap-6 relative">
-            
-            {/* Brand Watermark for the Preview UI */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[100px] font-black text-zinc-100 dark:text-white/5 -rotate-[35deg] pointer-events-none select-none z-0">
-                UCHEBNIK AI
-            </div>
-
-            <div className="flex justify-between items-start relative z-10">
+        <div className="p-6 md:p-8 bg-white dark:bg-[#0c0c0e] rounded-[28px] m-1 shadow-inner flex flex-col gap-6">
+            <div className="flex justify-between items-start">
                 <div className="flex items-center gap-4">
                     <div className="p-3 bg-indigo-600 text-white rounded-2xl shadow-lg shadow-indigo-500/20">
                         <GraduationCap size={24}/>
@@ -403,7 +375,7 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
                 <button onClick={() => setVisible(false)} className="p-2 hover:bg-zinc-100 dark:hover:bg-white/5 rounded-full transition-colors text-zinc-400"><X size={20} /></button>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 relative z-10">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <button onClick={handleDownloadWord} className="flex items-center justify-center gap-2 px-4 py-3.5 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-blue-500/20 transition-all active:scale-95 group">
                     <FileType size={18} className="group-hover:scale-110 transition-transform"/> Word (.docx)
                 </button>
@@ -416,7 +388,7 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
             </div>
 
             {/* Test Content Preview - Paper Style */}
-            <div className="space-y-8 max-h-[60vh] overflow-y-auto custom-scrollbar p-6 bg-zinc-50/50 dark:bg-black/40 rounded-3xl border border-zinc-200 dark:border-white/5 relative z-10">
+            <div className="space-y-8 max-h-[60vh] overflow-y-auto custom-scrollbar p-6 bg-zinc-50 dark:bg-black/40 rounded-3xl border border-zinc-200 dark:border-white/5 relative">
                 <div className="absolute top-0 left-0 w-full h-1 bg-indigo-500 opacity-20"/>
                 
                 {/* School Paper Header Simulation */}
@@ -436,7 +408,6 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
                             <div className="flex gap-3 mb-4">
                                 <span className="text-indigo-600 dark:text-indigo-400 font-black text-lg">{i + 1}.</span>
                                 <div className="font-bold text-zinc-800 dark:text-zinc-200 text-lg leading-relaxed markdown-content">
-                                    {/* Use raw content for web preview so KaTeX can handle it */}
                                     <ReactMarkdown remarkPlugins={[remarkMath, remarkGfm]} rehypePlugins={[rehypeKatex]} components={{code: CodeBlock}}>
                                         {q.question || ''}
                                     </ReactMarkdown>
@@ -473,35 +444,30 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
                     ))}
                 </div>
 
-                <div className="pt-10 mt-10 border-t-2 border-zinc-200 dark:border-white/10">
-                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                <div className="pt-10 mt-10 border-t-2 border-zinc-200 dark:border-white/10 flex flex-col gap-6">
+                    <div className="flex justify-between items-center">
                         <div className="flex items-center gap-2 text-indigo-600 font-black text-lg">
                             <CheckCircle2 size={24}/>
                             Оценка: ______
                         </div>
-                        <div className="flex gap-4 text-xs font-bold text-zinc-400">
-                             <span>Подпис (учител): ________</span>
-                             <span>Подпис (родител): ________</span>
+                        <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
+                            Генерирано от Uchebnik AI
                         </div>
                     </div>
                     
-                    <div className="flex justify-center items-center gap-2 text-[10px] font-black text-zinc-300 dark:text-zinc-600 uppercase tracking-[0.2em] pt-4">
-                        <Sparkles size={10} />
-                        Генерирано от Uchebnik AI
-                    </div>
-                </div>
-
-                <div className="mt-12 p-6 bg-indigo-50/50 dark:bg-indigo-900/10 rounded-2xl border border-dashed border-indigo-200 dark:border-indigo-500/20">
-                    <h5 className="text-[10px] font-black text-indigo-500 uppercase tracking-widest mb-4">Ключ с отговори (За учителя)</h5>
-                    <div className="space-y-3">
-                        {data.questions.map((q, i) => (
-                            <div key={i} className="text-xs text-zinc-600 dark:text-zinc-400 flex gap-2">
-                                <span className="font-black text-indigo-600">{i+1}.</span>
-                                <ReactMarkdown remarkPlugins={[remarkMath, remarkGfm]} rehypePlugins={[rehypeKatex]}>
-                                    {q.correctAnswer || '---'}
-                                </ReactMarkdown>
-                            </div>
-                        ))}
+                    {/* Visual Answer Key Section for Teacher Preview */}
+                    <div className="p-6 bg-indigo-50/30 dark:bg-indigo-900/10 rounded-2xl border border-dashed border-indigo-200 dark:border-indigo-500/20">
+                        <h5 className="text-xs font-black text-indigo-500 uppercase tracking-widest mb-4">Ключ с отговори (Видим само тук)</h5>
+                        <div className="space-y-3">
+                            {data.questions.map((q, i) => (
+                                <div key={i} className="text-sm text-zinc-600 dark:text-zinc-400 flex gap-2">
+                                    <span className="font-bold text-indigo-600">{i+1}.</span>
+                                    <ReactMarkdown remarkPlugins={[remarkMath, remarkGfm]} rehypePlugins={[rehypeKatex]}>
+                                        {q.correctAnswer || '---'}
+                                    </ReactMarkdown>
+                                </div>
+                            ))}
+                        </div>
                     </div>
                 </div>
             </div>
