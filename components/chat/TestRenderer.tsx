@@ -288,7 +288,10 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
      const html = `
         <html>
         <head>
-            <title>${cleanMathText(data.title || 'Тест')}</title>
+            <title>${data.title || 'Тест'}</title>
+            <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+            <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+            <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
             <style>
                 @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
                 body { font-family: 'Roboto', sans-serif; padding: 60px; color: #000; line-height: 1.5; position: relative; }
@@ -302,7 +305,7 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
                 .option { margin-left: 30px; margin-bottom: 8px; font-size: 16px; }
                 .open-lines { margin-top: 20px; border-bottom: 1px solid #000; height: 40px; width: 100%; opacity: 0.3; }
                 .footer-signatures { display: flex; justify-content: space-between; margin-top: 80px; page-break-inside: avoid; font-size: 14px; }
-                .grade-field { margin-top: 40px; font-weight: bold; font-size: 20px; page-break-inside: avoid; border-top: 2px solid #000; padding-top: 20px; }
+                .grade-field { margin-top: 60px; font-weight: bold; font-size: 20px; page-break-inside: avoid; border-top: 2px solid #000; padding-top: 20px; }
                 .brand-footer { margin-top: 60px; text-align: center; color: #888; font-size: 10px; border-top: 1px solid #eee; padding-top: 10px; }
                 .key { margin-top: 50px; page-break-before: always; }
                 .geometry-container { margin: 25px 0; border: 1px solid #eee; padding: 20px; display: flex; justify-content: center; background: #fafafa; border-radius: 8px; }
@@ -323,18 +326,18 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
                     <div class="field-row">Номер: ___________</div>
                 </div>
             </div>
-            <h1>${cleanMathText(data.title || 'Тест')}</h1>
+            <h1>${data.title || 'Тест'}</h1>
             <div class="meta">${data.subject || ''} ${data.grade ? '| ' + data.grade : ''}</div>
             
             <div class="questions-container">
             ${data.questions.map((q, i) => `
                 <div class="question">
-                    <div class="q-text"><span>${i + 1}.</span> <span>${cleanMathText(q.question || '')}</span></div>
+                    <div class="q-text"><span>${i + 1}.</span> <span>${q.question || ''}</span></div>
                     
                     ${q.geometryData ? `<div class="geometry-container">${q.geometryData.svg}</div>` : ''}
                     
                     ${q.options && q.options.length > 0
-                        ? q.options.map(o => `<div class="option">${cleanMathText(o)}</div>`).join('') 
+                        ? q.options.map(o => `<div class="option">${o}</div>`).join('') 
                         : `<div class="open-lines"></div><div class="open-lines"></div><div class="open-lines"></div>`}
                 </div>
             `).join('')}
@@ -355,11 +358,22 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
             <div class="key">
                 <h2 style="border-bottom: 2px solid #000; padding-bottom: 10px;">Ключ с отговори (За учителя)</h2>
                 <div style="display: grid; grid-template-columns: repeat(1, 1fr); gap: 15px; margin-top: 20px;">
-                ${data.questions.map((q, i) => `<div><strong>${i + 1}.</strong> ${cleanMathText(q.correctAnswer || '-')}</div>`).join('')}
+                ${data.questions.map((q, i) => `<div><strong>${i + 1}.</strong> ${q.correctAnswer || '-'}</div>`).join('')}
                 </div>
             </div>
             <script>
-                document.fonts.ready.then(() => { window.print(); });
+                window.onload = () => {
+                   renderMathInElement(document.body, {
+                      delimiters: [
+                        {left: '$$', right: '$$', display: true},
+                        {left: '$', right: '$', display: false},
+                        {left: '\\(', right: '\\)', display: false},
+                        {left: '\\[', right: '\\]', display: true}
+                      ],
+                      throwOnError : false
+                   });
+                   setTimeout(() => { window.print(); }, 500);
+                };
             </script>
         </body>
         </html>
