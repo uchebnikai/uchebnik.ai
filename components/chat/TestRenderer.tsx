@@ -1,12 +1,15 @@
 
 import React, { useState } from 'react';
 import { FileText, X, FileType, Loader2, Download, Printer, GraduationCap, CheckCircle2, AlertCircle } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
+import remarkGfm from 'remark-gfm';
 import * as docx from 'docx';
 import { jsPDF } from "jspdf";
 import { TestData } from '../../types';
 import { cleanMathText } from '../../utils/text';
-import { ChartRenderer } from './ChartRenderer';
-import { GeometryRenderer } from './GeometryRenderer';
+import { CodeBlock } from '../ui/CodeBlock';
 
 // Cache font buffer at module level to avoid re-fetching
 let cachedFontBuffer: ArrayBuffer | null = null;
@@ -284,7 +287,7 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
                 .option { margin-left: 30px; margin-bottom: 8px; font-size: 16px; }
                 .open-lines { margin-top: 20px; border-bottom: 1px solid #000; height: 40px; width: 100%; opacity: 0.3; }
                 .footer-signatures { display: flex; justify-content: space-between; margin-top: 80px; page-break-inside: avoid; font-size: 14px; }
-                .grade-field { margin-top: 40px; font-weight: bold; font-size: 20px; page-break-inside: avoid; border-top: 2px solid #000; pt: 20px; }
+                .grade-field { margin-top: 40px; font-weight: bold; font-size: 20px; page-break-inside: avoid; border-top: 2px solid #000; padding-top: 20px; }
                 .key { margin-top: 50px; page-break-before: always; }
                 .geometry-container { margin: 25px 0; border: 1px solid #eee; padding: 20px; display: flex; justify-content: center; background: #fafafa; border-radius: 8px; }
                 .geometry-container svg { max-width: 400px; height: auto; }
@@ -329,7 +332,7 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
 
             <div class="key">
                 <h2 style="border-bottom: 2px solid #000; padding-bottom: 10px;">Ключ с отговори (За учителя)</h2>
-                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 20px;">
+                <div style="display: grid; grid-template-columns: repeat(1, 1fr); gap: 15px; margin-top: 20px;">
                 ${data.questions.map((q, i) => `<div><strong>${i + 1}.</strong> ${cleanMathText(q.correctAnswer || '-')}</div>`).join('')}
                 </div>
             </div>
@@ -361,7 +364,7 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
                         <GraduationCap size={24}/>
                     </div>
                     <div className="flex flex-col">
-                        <h4 className="font-black text-xl md:text-2xl leading-tight text-zinc-900 dark:text-white tracking-tight">{cleanMathText(data.title || 'Тест')}</h4>
+                        <h4 className="font-black text-xl md:text-2xl leading-tight text-zinc-900 dark:text-white tracking-tight">{data.title || 'Тест'}</h4>
                         <div className="flex items-center gap-2 mt-1">
                             <span className="text-xs font-bold text-indigo-500 uppercase tracking-widest">{data.subject}</span>
                             <span className="w-1 h-1 rounded-full bg-zinc-300 dark:bg-zinc-700"/>
@@ -404,7 +407,11 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
                         <div key={i} className="relative">
                             <div className="flex gap-3 mb-4">
                                 <span className="text-indigo-600 dark:text-indigo-400 font-black text-lg">{i + 1}.</span>
-                                <p className="font-bold text-zinc-800 dark:text-zinc-200 text-lg leading-relaxed">{cleanMathText(q.question || '')}</p>
+                                <div className="font-bold text-zinc-800 dark:text-zinc-200 text-lg leading-relaxed markdown-content">
+                                    <ReactMarkdown remarkPlugins={[remarkMath, remarkGfm]} rehypePlugins={[rehypeKatex]} components={{code: CodeBlock}}>
+                                        {q.question || ''}
+                                    </ReactMarkdown>
+                                </div>
                             </div>
                             
                             {q.geometryData && (
@@ -418,7 +425,11 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
                                     {q.options.map((opt, idx) => (
                                         <div key={idx} className="flex items-center gap-3 p-3 rounded-xl bg-white dark:bg-white/5 border border-zinc-100 dark:border-white/5 shadow-sm group hover:border-indigo-500/50 transition-colors">
                                             <div className="w-5 h-5 rounded-full border-2 border-zinc-300 dark:border-zinc-700 group-hover:border-indigo-500 transition-colors shrink-0"></div>
-                                            <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">{cleanMathText(opt)}</p>
+                                            <div className="text-sm font-medium text-zinc-700 dark:text-zinc-300 markdown-content">
+                                                <ReactMarkdown remarkPlugins={[remarkMath, remarkGfm]} rehypePlugins={[rehypeKatex]}>
+                                                    {opt}
+                                                </ReactMarkdown>
+                                            </div>
                                         </div>
                                     ))}
                                 </div>
@@ -433,13 +444,30 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
                     ))}
                 </div>
 
-                <div className="pt-10 mt-10 border-t-2 border-zinc-200 dark:border-white/10 flex justify-between items-center">
-                    <div className="flex items-center gap-2 text-indigo-600 font-black text-lg">
-                        <CheckCircle2 size={24}/>
-                        Оценка: ______
+                <div className="pt-10 mt-10 border-t-2 border-zinc-200 dark:border-white/10 flex flex-col gap-6">
+                    <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-2 text-indigo-600 font-black text-lg">
+                            <CheckCircle2 size={24}/>
+                            Оценка: ______
+                        </div>
+                        <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
+                            Генерирано от Uchebnik AI
+                        </div>
                     </div>
-                    <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
-                        Генерирано от Uchebnik AI
+                    
+                    {/* Visual Answer Key Section for Teacher Preview */}
+                    <div className="p-6 bg-indigo-50/30 dark:bg-indigo-900/10 rounded-2xl border border-dashed border-indigo-200 dark:border-indigo-500/20">
+                        <h5 className="text-xs font-black text-indigo-500 uppercase tracking-widest mb-4">Ключ с отговори (Видим само тук)</h5>
+                        <div className="space-y-3">
+                            {data.questions.map((q, i) => (
+                                <div key={i} className="text-sm text-zinc-600 dark:text-zinc-400 flex gap-2">
+                                    <span className="font-bold text-indigo-600">{i+1}.</span>
+                                    <ReactMarkdown remarkPlugins={[remarkMath, remarkGfm]} rehypePlugins={[rehypeKatex]}>
+                                        {q.correctAnswer || '---'}
+                                    </ReactMarkdown>
+                                </div>
+                            ))}
+                        </div>
                     </div>
                 </div>
             </div>

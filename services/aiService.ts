@@ -52,34 +52,37 @@ function normalizeTestData(raw: any): TestData | null {
     if (!raw) return null;
     
     // 1. Alias common question keys
-    let questions = raw.questions || raw.items || [];
+    let questions = raw.questions || raw.items || raw.test_questions || [];
     if (!Array.isArray(questions)) questions = [];
 
     const normalizedQuestions: TestQuestion[] = questions.map((q: any) => {
-        // Handle question body alias
-        const questionBody = q.question || q.text || q.body || "Липсва текст на въпроса";
+        // Handle question body alias - common for AI to drift between 'text' and 'question'
+        const questionBody = q.question || q.text || q.question_text || q.body || "Липсва текст на въпроса";
         
-        // Handle answer_key mapping if present in a separate array
-        let ans = q.correctAnswer || q.answer || "";
-        if (!ans && raw.answer_key && Array.isArray(raw.answer_key)) {
-            const matched = raw.answer_key.find((a: any) => a.id === q.id || a.question_id === q.id);
-            if (matched) ans = matched.answer || matched.text || "";
+        // Handle answer_key mapping if present in a separate array (common deviation)
+        let ans = q.correctAnswer || q.answer || q.correct_answer || "";
+        
+        // Look in top-level answer_key/keys array if not found in question object
+        const answerKeyArray = raw.answer_key || raw.answers || raw.keys || [];
+        if (!ans && Array.isArray(answerKeyArray)) {
+            const matched = answerKeyArray.find((a: any) => a.id === q.id || a.question_id === q.id);
+            if (matched) ans = matched.answer || matched.text || matched.correct_answer || "";
         }
 
         return {
             id: Number(q.id) || Math.random(),
             question: questionBody,
             type: q.type === 'multiple_choice' || (q.options && q.options.length > 0) ? 'multiple_choice' : 'open_answer',
-            options: q.options || undefined,
+            options: Array.isArray(q.options) ? q.options : undefined,
             correctAnswer: ans,
             geometryData: q.geometryData
         };
     });
 
     return {
-        title: raw.title || "Тест",
-        subject: raw.subject || "Общ",
-        grade: raw.grade || "",
+        title: raw.title || raw.test_title || "Тест",
+        subject: raw.subject || raw.test_subject || "Общ",
+        grade: raw.grade || raw.class || "",
         questions: normalizedQuestions
     };
 }
