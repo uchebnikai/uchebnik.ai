@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { FileText, X, FileType, Loader2, Download, Printer, GraduationCap, CheckCircle2, AlertCircle } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
@@ -14,12 +13,12 @@ import { CodeBlock } from '../ui/CodeBlock';
 // Cache font buffer at module level to avoid re-fetching
 let cachedFontBuffer: ArrayBuffer | null = null;
 const FONT_URL = "https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.66/fonts/Roboto/Roboto-Regular.ttf";
+const WATERMARK_TEXT = "Генерирано чрез Uchebnik AI - uchebnikai.com";
 
 // Helper to convert SVG String to PNG Base64 for Export
 const svgToPng = (svgString: string): Promise<string> => {
   return new Promise((resolve, reject) => {
     const img = new Image();
-    // basic cleanup for safety and size definition
     const svgBlob = new Blob([svgString], {type: 'image/svg+xml;charset=utf-8'});
     const url = URL.createObjectURL(svgBlob);
     
@@ -31,7 +30,6 @@ const svgToPng = (svgString: string): Promise<string> => {
       if(ctx) {
           ctx.fillStyle = 'white';
           ctx.fillRect(0, 0, canvas.width, canvas.height);
-          // Scale to fit
           const scale = Math.min(600 / img.width, 400 / img.height);
           const w = img.width * scale || 600;
           const h = img.height * scale || 400;
@@ -53,7 +51,6 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
   const [visible, setVisible] = useState(true);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
-  // Safety Check
   if (!data || !data.questions || !Array.isArray(data.questions)) {
       return (
           <div className="mt-4 p-6 bg-red-50 dark:bg-red-900/20 border border-red-500/20 rounded-2xl flex items-center gap-4 text-red-600 dark:text-red-400">
@@ -67,7 +64,6 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
   }
 
   const handleDownloadWord = async () => {
-    // Pre-process questions to convert geometry SVGs to PNGs
     const processedQuestions = await Promise.all(data.questions.map(async (q) => {
         let imageRun = null;
         if (q.geometryData?.svg) {
@@ -89,6 +85,23 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
     const doc = new docx.Document({
         sections: [{
             properties: {},
+            footers: {
+                default: new docx.Footer({
+                    children: [
+                        new docx.Paragraph({
+                            children: [
+                                new docx.TextRun({
+                                    text: WATERMARK_TEXT,
+                                    size: 16,
+                                    color: "999999",
+                                    italics: true
+                                })
+                            ],
+                            alignment: docx.AlignmentType.LEFT
+                        })
+                    ]
+                })
+            },
             children: [
                 new docx.Paragraph({
                     children: [new docx.TextRun({ text: "Име: __________________________________________", size: 24 })],
@@ -182,7 +195,6 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
                 const fontBytes = await fetch(FONT_URL).then(res => res.arrayBuffer());
                 cachedFontBuffer = fontBytes;
             }
-            
             const filename = "Roboto-Regular.ttf";
             let binary = '';
             const bytes = new Uint8Array(cachedFontBuffer as ArrayBuffer);
@@ -198,6 +210,14 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
             console.error("Failed to load Cyrillic font", e);
         }
         
+        const addWatermark = () => {
+            const pageHeight = doc.internal.pageSize.height;
+            doc.setFontSize(8);
+            doc.setTextColor(180);
+            doc.text(WATERMARK_TEXT, 10, pageHeight - 10);
+            doc.setTextColor(0);
+        };
+
         doc.setFontSize(12);
         doc.text("Име: __________________________________________", 20, 20);
         doc.text("Клас: _________", 20, 30);
@@ -213,7 +233,11 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
         
         for (let i = 0; i < data.questions.length; i++) {
             const q = data.questions[i];
-            if (y > 250) { doc.addPage(); y = 20; }
+            if (y > 250) { 
+                addWatermark();
+                doc.addPage(); 
+                y = 20; 
+            }
             doc.setFontSize(12);
             const questionText = `${i + 1}. ${cleanMathText(q.question || '')}`;
             const splitQ = doc.splitTextToSize(questionText, 170);
@@ -223,7 +247,11 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
             if (q.geometryData?.svg) {
                 try {
                     const pngBase64 = await svgToPng(q.geometryData.svg);
-                    if (y > 200) { doc.addPage(); y = 20; }
+                    if (y > 200) { 
+                        addWatermark();
+                        doc.addPage(); 
+                        y = 20; 
+                    }
                     doc.addImage(pngBase64, 'PNG', 25, y, 80, 60);
                     y += 65;
                 } catch(e) {
@@ -233,7 +261,11 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
 
             if (q.options && q.options.length > 0) {
                q.options.forEach(opt => {
-                  if (y > 270) { doc.addPage(); y = 20; }
+                  if (y > 270) { 
+                      addWatermark();
+                      doc.addPage(); 
+                      y = 20; 
+                  }
                   doc.text(cleanMathText(opt), 25, y);
                   y += 7;
                });
@@ -245,21 +277,35 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
             }
         }
 
-        if (y > 230) { doc.addPage(); y = 40; } else { y += 20; }
+        if (y > 230) { 
+            addWatermark();
+            doc.addPage(); 
+            y = 40; 
+        } else { 
+            y += 20; 
+        }
         doc.text("Подпис на учител: ___________________", 20, y);
         doc.text("Подпис на ученик: ___________________", 100, y);
         y += 15;
         doc.setFontSize(14);
         doc.text("Оценка: ___________________", 20, y);
+        
+        addWatermark();
         doc.addPage();
         doc.setFontSize(16);
         doc.text("Ключ с отговори", 20, 20);
         doc.setFontSize(12);
         let ky = 35;
         data.questions.forEach((q, i) => {
+             if (ky > 270) {
+                addWatermark();
+                doc.addPage();
+                ky = 20;
+             }
              doc.text(`${i + 1}. ${cleanMathText(q.correctAnswer || '-')}`, 20, ky);
              ky += 8;
         });
+        addWatermark();
         doc.save(`${(data.title || 'test').replace(/\s+/g, '_')}.pdf`);
       } catch (e) {
         console.error("PDF Gen Error", e);
@@ -277,7 +323,14 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
             <title>${cleanMathText(data.title || 'Тест')}</title>
             <style>
                 @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
-                body { font-family: 'Roboto', sans-serif; padding: 60px; color: #000; line-height: 1.5; }
+                body { 
+                    font-family: 'Roboto', sans-serif; 
+                    padding: 60px; 
+                    color: #000; 
+                    line-height: 1.5; 
+                    position: relative;
+                    min-height: 100vh;
+                }
                 .header-fields { margin-bottom: 40px; font-size: 16px; display: flex; flex-direction: column; gap: 10px; }
                 .field-row { border-bottom: 1px solid #eee; padding-bottom: 5px; }
                 h1 { text-align: center; margin-top: 40px; margin-bottom: 5px; font-size: 28px; text-transform: uppercase; letter-spacing: 1px; }
@@ -291,13 +344,26 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
                 .key { margin-top: 50px; page-break-before: always; }
                 .geometry-container { margin: 25px 0; border: 1px solid #eee; padding: 20px; display: flex; justify-content: center; background: #fafafa; border-radius: 8px; }
                 .geometry-container svg { max-width: 400px; height: auto; }
+                
+                .print-watermark {
+                    position: fixed;
+                    bottom: 20px;
+                    left: 20px;
+                    font-size: 10px;
+                    color: #999;
+                    font-style: italic;
+                    pointer-events: none;
+                }
+
                 @media print {
-                   @page { margin: 1.5cm; }
+                   @page { margin: 2cm; }
                    body { padding: 0; }
+                   .print-watermark { display: block; }
                 }
             </style>
         </head>
         <body>
+            <div class="print-watermark">${WATERMARK_TEXT}</div>
             <div class="header-fields">
                 <div class="field-row">Име: __________________________________________________________________</div>
                 <div style="display: flex; gap: 40px;">
@@ -335,6 +401,7 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
                 <div style="display: grid; grid-template-columns: repeat(1, 1fr); gap: 15px; margin-top: 20px;">
                 ${data.questions.map((q, i) => `<div><strong>${i + 1}.</strong> ${cleanMathText(q.correctAnswer || '-')}</div>`).join('')}
                 </div>
+                <div style="margin-top: 50px; font-size: 10px; color: #999;">${WATERMARK_TEXT}</div>
             </div>
             <script>
                 document.fonts.ready.then(() => { window.print(); });
@@ -387,11 +454,9 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
                 </button>
             </div>
 
-            {/* Test Content Preview - Paper Style */}
             <div className="space-y-8 max-h-[60vh] overflow-y-auto custom-scrollbar p-6 bg-zinc-50 dark:bg-black/40 rounded-3xl border border-zinc-200 dark:border-white/5 relative">
                 <div className="absolute top-0 left-0 w-full h-1 bg-indigo-500 opacity-20"/>
                 
-                {/* School Paper Header Simulation */}
                 <div className="border-b-2 border-zinc-200 dark:border-white/10 pb-6 space-y-3">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                         <div className="flex-1 text-sm font-bold text-zinc-400">Име: <span className="border-b border-zinc-300 dark:border-zinc-700 inline-block w-40 sm:w-64 ml-2"/></div>
@@ -450,21 +515,22 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
                             <CheckCircle2 size={24}/>
                             Оценка: ______
                         </div>
-                        <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
-                            Генерирано от Uchebnik AI
+                        <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest italic">
+                            {WATERMARK_TEXT}
                         </div>
                     </div>
                     
-                    {/* Visual Answer Key Section for Teacher Preview */}
                     <div className="p-6 bg-indigo-50/30 dark:bg-indigo-900/10 rounded-2xl border border-dashed border-indigo-200 dark:border-indigo-500/20">
                         <h5 className="text-xs font-black text-indigo-500 uppercase tracking-widest mb-4">Ключ с отговори (Видим само тук)</h5>
                         <div className="space-y-3">
                             {data.questions.map((q, i) => (
                                 <div key={i} className="text-sm text-zinc-600 dark:text-zinc-400 flex gap-2">
                                     <span className="font-bold text-indigo-600">{i+1}.</span>
-                                    <ReactMarkdown remarkPlugins={[remarkMath, remarkGfm]} rehypePlugins={[rehypeKatex]}>
-                                        {q.correctAnswer || '---'}
-                                    </ReactMarkdown>
+                                    <div className="markdown-content">
+                                        <ReactMarkdown remarkPlugins={[remarkMath, remarkGfm]} rehypePlugins={[rehypeKatex]}>
+                                            {q.correctAnswer || '---'}
+                                        </ReactMarkdown>
+                                    </div>
                                 </div>
                             ))}
                         </div>
