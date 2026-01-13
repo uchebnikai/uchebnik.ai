@@ -49,6 +49,7 @@ import { Fireworks } from './components/ui/Fireworks';
 import { ReportModal } from './components/support/ReportModal';
 import { AdSenseContainer } from './components/ads/AdSenseContainer';
 import { IosInstallPrompt } from './components/ui/IosInstallPrompt';
+import { UpdateNotification } from './components/ui/UpdateNotification';
 import { Button } from './components/ui/Button';
 
 interface GeneratedKey {
@@ -1290,6 +1291,7 @@ export const App = () => {
       {!effectiveBg && <div className={`fixed inset-0 z-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-indigo-200/20 via-background to-background dark:from-indigo-900/20 dark:via-background dark:to-background pointer-events-none transition-all duration-1000 ${focusMode ? 'brightness-[0.4]' : ''}`} />}
       {effectiveBg && <div className={`fixed inset-0 z-0 bg-cover bg-center pointer-events-none transition-all duration-1000 ${focusMode ? 'brightness-[0.2] grayscale' : ''}`} style={getBackgroundImageStyle(effectiveBg)} />}
       
+      <UpdateNotification />
       {showAuthModal && <Auth isModal={false} onSuccess={closeAuthModal} initialMode={initialAuthMode} onNavigate={setHomeView} />}
 
       {!focusMode && session && (
