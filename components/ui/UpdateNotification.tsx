@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useRef } from 'react';
 import { RefreshCw, Sparkles } from 'lucide-react';
 
@@ -8,37 +7,42 @@ export const UpdateNotification = () => {
 
   const getFingerprint = async (): Promise<string | null> => {
     try {
-      // Fetch index.html with cache-busting
-      const response = await fetch(`/?t=${Date.now()}`, { 
+      // Fetch the deployment artifact with a unique query string to bypass cache
+      const response = await fetch(`/version.json?t=${Date.now()}`, { 
         cache: 'no-store',
-        headers: { 'Pragma': 'no-cache', 'Cache-Control': 'no-cache' }
+        headers: { 
+          'Pragma': 'no-cache', 
+          'Cache-Control': 'no-cache' 
+        }
       });
-      if (!response.ok) return null;
-      const text = await response.text();
       
-      // We look for script/link hashes which change on every build.
-      // Taking a slice of the first 10k chars is enough to see asset hash changes.
-      return text.substring(0, 10000);
+      if (!response.ok) return null;
+      
+      const data = await response.json();
+      // Return the buildId as the unique identifier for this deployment
+      return data.buildId ? String(data.buildId) : null;
     } catch (e) {
-      console.error("[Update Check] Failed to fetch root:", e);
+      console.error("[Update Check] Failed to fetch deployment artifact:", e);
       return null;
     }
   };
 
   useEffect(() => {
-    // 1. Capture initial state
+    // 1. Capture initial state on component mount
     getFingerprint().then(fp => {
-      initialFingerprint.current = fp;
+      if (fp) {
+        initialFingerprint.current = fp;
+      }
     });
 
-    // 2. Set up interval (60 seconds)
+    // 2. Set up interval (60 seconds) to check for changes
     const interval = setInterval(async () => {
-      if (updateAvailable) return; // Don't keep checking if we already know
+      if (updateAvailable) return; // Stop checking once an update is detected
 
       const currentFingerprint = await getFingerprint();
       
       if (currentFingerprint && initialFingerprint.current && currentFingerprint !== initialFingerprint.current) {
-        console.log("[Update Check] New deployment detected!");
+        console.log("[Update Check] New deployment detected via artifact change!");
         setUpdateAvailable(true);
       }
     }, 60000);
