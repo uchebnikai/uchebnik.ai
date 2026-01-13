@@ -645,44 +645,44 @@ export const App = () => {
       }
   }, [userSettings.dailyQuests]);
 
-  // Plan Restriction Enforcement Effect - Reset ALL premium settings when plan reverts to free
+  // Plan Restriction Enforcement Effect - Enhanced to strictly reset ALL premium settings
   useEffect(() => {
     if (userPlan === 'free') {
         setUserSettings(prev => {
             let changed = false;
             const updates: Partial<UserSettings> = {};
 
-            // Revert Background
+            // 1. Reset Background
             if (prev.customBackground) {
                 updates.customBackground = null;
                 changed = true;
             }
 
-            // Revert Theme Color to Default Indigo
-            if (prev.themeColor !== '#6366f1') {
+            // 2. Reset Theme Color to Default Indigo (#6366f1)
+            if (prev.themeColor && prev.themeColor.toLowerCase() !== '#6366f1') {
                 updates.themeColor = '#6366f1';
                 changed = true;
             }
 
-            // Revert Font Family to Standard
-            if (prev.fontFamily !== 'inter') {
+            // 3. Reset Font Family to Standard (Inter)
+            if (prev.fontFamily && prev.fontFamily !== 'inter') {
                 updates.fontFamily = 'inter';
                 changed = true;
             }
 
-            // Revert Advanced Model to Auto
-            if (prev.preferredModel !== 'auto') {
+            // 4. Reset AI Model to Auto
+            if (prev.preferredModel && prev.preferredModel !== 'auto') {
                 updates.preferredModel = 'auto';
                 changed = true;
             }
 
-            // Revert Voice to Default
-            if (prev.preferredVoice !== DEFAULT_VOICE) {
+            // 5. Reset Voice to Default
+            if (prev.preferredVoice && prev.preferredVoice !== DEFAULT_VOICE) {
                 updates.preferredVoice = DEFAULT_VOICE;
                 changed = true;
             }
 
-            // Revert Custom Persona
+            // 6. Reset Custom Persona
             if (prev.customPersona && prev.customPersona.trim().length > 0) {
                 updates.customPersona = '';
                 changed = true;
