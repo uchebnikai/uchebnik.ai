@@ -262,7 +262,6 @@ export interface UserSettings {
   haptics: boolean;
   notifications: boolean; 
   sound: boolean; 
-  responseLength: 'concise' | 'detailed';
   creativity: 'strict' | 'balanced' | 'creative';
   languageLevel: 'simple' | 'standard' | 'advanced';
   preferredModel: string;

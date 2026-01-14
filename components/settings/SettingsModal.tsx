@@ -633,25 +633,6 @@ export const SettingsModal = ({
                       <div className="grid grid-cols-1 gap-6">
                           <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl p-6 space-y-4">
                               <label className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                                  <Cpu size={18} className="text-emerald-500"/> {t('response_length', userSettings.language)}
-                              </label>
-                              <div className="flex bg-gray-100 dark:bg-black/30 p-1 rounded-xl">
-                                  {['concise', 'detailed'].map((len) => (
-                                      <button
-                                          key={len}
-                                          onClick={() => setUserSettings({...userSettings, responseLength: len})}
-                                          className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all ${userSettings.responseLength === len 
-                                              ? 'bg-white dark:bg-zinc-800 text-indigo-600 dark:text-white shadow-sm' 
-                                              : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
-                                      >
-                                          {len === 'concise' ? 'Кратък' : 'Подробен'}
-                                      </button>
-                                  ))}
-                              </div>
-                          </div>
-
-                          <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl p-6 space-y-4">
-                              <label className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
                                   <Layout size={18} className="text-amber-500"/> {t('text_size', userSettings.language)}
                               </label>
                               <div className="flex gap-4 items-end px-4 py-4 bg-gray-50 dark:bg-black/20 rounded-xl">
@@ -744,7 +725,7 @@ export const SettingsModal = ({
                                  <div className="p-3 bg-blue-100 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-xl shadow-sm"><Download size={20}/></div>
                                  <div>
                                      <div className="font-bold text-gray-900 dark:text-white">Експорт на данни</div>
-                                     <div className="text-xs text-gray-500">Изтегли историята като JSON.</div>
+                                     <div className="text-xs text-gray-500">Изтегли историята као JSON.</div>
                                  </div>
                              </div>
                              <ArrowRight size={18} className="text-gray-300 group-hover:text-blue-500 transition-colors"/>

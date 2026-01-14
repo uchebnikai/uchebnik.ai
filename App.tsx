@@ -197,7 +197,6 @@ export const App = () => {
     haptics: true, 
     notifications: true, 
     sound: true, 
-    responseLength: 'concise', 
     creativity: 'balanced', 
     languageLevel: 'standard', 
     preferredModel: 'auto',
