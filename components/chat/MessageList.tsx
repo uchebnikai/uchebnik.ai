@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
@@ -117,7 +118,7 @@ export const MessageList = ({
   }, [currentMessages, messagesEndRef]);
 
   return (
-      <div ref={scrollContainerRef} className={`flex-1 overflow-y-auto px-2 lg:px-8 py-4 lg:py-8 custom-scrollbar scroll-smooth ${userSettings.textSize === 'large' ? 'text-lg' : userSettings.textSize === 'small' ? 'text-sm' : 'text-base'}`}>
+      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto px-2 lg:px-8 py-4 lg:py-8 custom-scrollbar scroll-smooth">
          <div className="max-w-4xl mx-auto space-y-8 lg:space-y-12 pb-40 pt-2 lg:pt-4">
             {currentMessages.map((msg, index) => {
                const isStreaming = msg.isStreaming;
@@ -214,7 +215,7 @@ export const MessageList = ({
                              <div className="flex flex-col gap-4 w-full">
                                  <button 
                                     onClick={() => setShowAuthModal?.(true)}
-                                    className="w-full px-8 py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-black text-base shadow-2xl shadow-indigo-600/30 transition-all active:scale-95 flex items-center justify-center gap-3 group"
+                                    className="w-full px-8 py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-black text-base shadow-2xl shadow-indigo-500/20 transition-all active:scale-95 flex items-center justify-center gap-3 group"
                                  >
                                     <UserPlus size={20} />
                                     Влез Безплатно

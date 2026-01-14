@@ -83,5 +83,8 @@ export const useTheme = (userSettings: UserSettings) => {
         document.body.classList.remove('christmas-mode', 'new-year-mode');
     }
 
-  }, [userSettings.themeColor, userSettings.customBackground, userSettings.christmasMode, userSettings.newYearMode, userSettings.isDarkMode]);
+    // 6. Manage Global Text Size
+    document.documentElement.setAttribute('data-text-size', userSettings.textSize || 'normal');
+
+  }, [userSettings.themeColor, userSettings.customBackground, userSettings.christmasMode, userSettings.newYearMode, userSettings.isDarkMode, userSettings.textSize]);
 };

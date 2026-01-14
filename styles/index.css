@@ -30,6 +30,18 @@
   --accent-900: 76 29 149;
   --accent-950: 46 16 101;
 }
+
+/* Global Text Size Scaling */
+html[data-text-size="small"] {
+  font-size: 14px;
+}
+html[data-text-size="normal"] {
+  font-size: 16px;
+}
+html[data-text-size="large"] {
+  font-size: 19px;
+}
+
 .dark {
   --background: 240 10% 3.9%;
   --foreground: 0 0% 98%;
