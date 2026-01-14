@@ -144,11 +144,6 @@ export const Sidebar = ({
             </button>
             
             <div className="flex items-center gap-2">
-                {isAdmin && (
-                    <button onClick={() => setShowSettings(true)} className="flex p-2 text-zinc-400 hover:text-indigo-500 hover:bg-gray-100 dark:hover:bg-white/5 rounded-lg transition-colors">
-                        <Shield size={20} />
-                    </button>
-                )}
                 <button onClick={toggleCollapse} className="hidden lg:flex p-2 text-gray-400 hover:text-indigo-500 hover:bg-gray-100 dark:hover:bg-white/5 rounded-lg transition-colors">
                     {collapsed ? <PanelLeftOpen size={20}/> : <PanelLeftClose size={20}/>}
                 </button>
