@@ -9,8 +9,6 @@ import { jsPDF } from "jspdf";
 import { TestData, TestQuestion } from '../../types';
 import { cleanMathText } from '../../utils/text';
 import { CodeBlock } from '../ui/CodeBlock';
-import { ChartRenderer } from './ChartRenderer';
-import { GeometryRenderer } from './GeometryRenderer';
 
 // Cache font buffer at module level to avoid re-fetching
 let cachedFontBuffer: ArrayBuffer | null = null;
@@ -372,7 +370,7 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
                 h1 { text-align: center; margin-top: 40px; margin-bottom: 5px; font-size: 28px; text-transform: uppercase; letter-spacing: 1px; }
                 .meta { text-align: center; color: #666; margin-bottom: 60px; font-size: 16px; font-weight: bold; }
                 .question { margin-bottom: 35px; page-break-inside: avoid; }
-                .q-text { font-weight: bold; margin-bottom: 15px; font-size: 18px; display: flex; gap: 10px; flex-direction: column; }
+                .q-text { font-weight: bold; margin-bottom: 15px; font-size: 18px; display: flex; gap: 10px; }
                 .option { margin-left: 30px; margin-bottom: 8px; font-size: 16px; }
                 .open-lines { margin-top: 20px; border-bottom: 1px solid #000; height: 40px; width: 100%; opacity: 0.3; }
                 .footer-signatures { display: flex; justify-content: space-between; margin-top: 80px; page-break-inside: avoid; font-size: 14px; }
@@ -381,11 +379,6 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
                 .geometry-container { margin: 25px 0; border: 1px solid #eee; padding: 20px; display: flex; justify-content: center; background: #fafafa; border-radius: 8px; }
                 .geometry-container svg { max-width: 400px; height: auto; }
                 
-                /* Table styling for print */
-                table { border-collapse: collapse; width: 100%; margin: 15px 0; }
-                th, td { border: 1px solid #000; padding: 8px; text-align: left; }
-                th { background: #f0f0f0; }
-
                 .print-watermark {
                     position: fixed;
                     bottom: 20px;
@@ -418,14 +411,12 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
             <div class="questions-container">
             ${data.questions.map((q, i) => `
                 <div class="question">
-                    <div class="q-text">
-                        <span>${i + 1}. ${q.question || ''}</span>
-                    </div>
+                    <div class="q-text"><span>${i + 1}.</span> <span>${cleanMathText(q.question || '')}</span></div>
                     
                     ${q.geometryData ? `<div class="geometry-container">${q.geometryData.svg}</div>` : ''}
                     
                     ${q.options && q.options.length > 0
-                        ? q.options.map((o, idx) => `<div class="option">${ensureLabel(o, idx)}</div>`).join('') 
+                        ? q.options.map((o, idx) => `<div class="option">${cleanMathText(ensureLabel(o, idx))}</div>`).join('') 
                         : `<div class="open-lines"></div><div class="open-lines"></div><div class="open-lines"></div>`}
                 </div>
             `).join('')}
@@ -442,7 +433,7 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
             <div class="key">
                 <h2 style="border-bottom: 2px solid #000; padding-bottom: 10px;">Ключ с отговори (За учителя)</h2>
                 <div style="display: grid; grid-template-columns: repeat(1, 1fr); gap: 15px; margin-top: 20px;">
-                ${data.questions.map((q, i) => `<div><strong>${i + 1}.</strong> ${getFormattedCorrectAnswer(q)}</div>`).join('')}
+                ${data.questions.map((q, i) => `<div><strong>${i + 1}.</strong> ${cleanMathText(getFormattedCorrectAnswer(q))}</div>`).join('')}
                 </div>
                 <div style="margin-top: 50px; font-size: 10px; color: #999;">${WATERMARK_TEXT}</div>
             </div>
@@ -525,12 +516,6 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
                             {q.geometryData && (
                                 <div className="mb-6 flex justify-center p-6 bg-white dark:bg-black/20 rounded-3xl border border-zinc-200 dark:border-white/10 shadow-sm">
                                     <div className="w-full max-w-[300px]" dangerouslySetInnerHTML={{__html: q.geometryData.svg}} />
-                                </div>
-                            )}
-
-                            {q.chartData && (
-                                <div className="mb-6">
-                                    <ChartRenderer data={q.chartData} forceVisible />
                                 </div>
                             )}
 
