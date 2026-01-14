@@ -1,4 +1,3 @@
-
 import { SubjectId, AppMode, SubjectConfig, TeachingStyle } from './types';
 import { Language } from './utils/translations';
 
@@ -130,8 +129,13 @@ export const getSystemPrompt = (mode: string, lang: Language, teachingStyle: Tea
       
       ACCURACY IS PARAMOUNT:
       - You MUST solve every question internally before providing it. 
-      - Double check the math. (Example: If P=24cm for a square, side=6cm, Area=36cm²).
+      - Double check the math.
       - Ensure the correctAnswer is truly correct and matches one of the options.
+      
+      RICH CONTENT SUPPORT:
+      - TABLES: If a question requires comparing data or listing values, use Markdown tables inside the "question" string.
+      - GEOMETRY: For geometry questions, you MUST include a "geometryData" object with an SVG string.
+      - CHARTS: For data interpretation, you can include a "chartData" object.
       
       STRICT JSON FORMAT RULES:
       1. Return ONLY a valid JSON object. No conversation before or after.
@@ -146,10 +150,19 @@ export const getSystemPrompt = (mode: string, lang: Language, teachingStyle: Tea
         "questions": [
           {
             "id": 1,
-            "question": "Question text here (e.g. $2 + 2 = ?$)",
+            "question": "Question text here. Use Markdown tables if needed.",
             "type": "multiple_choice",
             "options": ["А) 4", "Б) 5", "В) 6", "Г) 7"],
-            "correctAnswer": "А) 4"
+            "correctAnswer": "А) 4",
+            "geometryData": {
+              "title": "Чертеж към задача 1",
+              "svg": "<svg ...></svg>"
+            },
+            "chartData": {
+              "type": "bar",
+              "title": "Статистика",
+              "data": [{"name": "A", "value": 10}, {"name": "B", "value": 20}]
+            }
           }
         ]
       }

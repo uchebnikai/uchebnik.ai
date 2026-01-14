@@ -1,4 +1,3 @@
-
 import { GoogleGenAI, GenerateContentResponse, Tool } from "@google/genai";
 import { AppMode, SubjectId, Slide, ChartData, GeometryData, Message, TestData, TeachingStyle, SearchSource, TokenUsage, TestQuestion } from "../types";
 import { getSystemPrompt, SUBJECTS } from "../constants";
@@ -100,7 +99,8 @@ function normalizeTestData(raw: any): TestData | null {
             type: type === 'multiple_choice' ? 'multiple_choice' : 'open_answer',
             options: options,
             correctAnswer: String(ans),
-            geometryData: q.geometryData || q.geometry
+            geometryData: q.geometryData || q.geometry,
+            chartData: q.chartData || q.chart
         };
     });
 
