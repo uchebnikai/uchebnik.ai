@@ -182,7 +182,7 @@ export const WelcomeScreen = ({
         rec.onresult = (e: any) => {
             let f = '', inter = '';
             for(let i = e.resultIndex; i < e.results.length; ++i) {
-                e.results[i].isFinal ? f += e.results[i][0].transcript : inter += e.results[i][0].transcript;
+                e.results[i].isFinal ? f += e.resultIndex[i][0].transcript : inter += e.results[i][0].transcript;
             }
             setInputValue((startingTextRef.current + ' ' + f + inter).trim());
         };
