@@ -6,7 +6,7 @@ import rehypeKatex from 'rehype-katex';
 import remarkGfm from 'remark-gfm';
 import * as docx from 'docx';
 import { jsPDF } from "jspdf";
-import { TestData } from '../../types';
+import { TestData, TestQuestion } from '../../types';
 import { cleanMathText } from '../../utils/text';
 import { CodeBlock } from '../ui/CodeBlock';
 
@@ -22,13 +22,31 @@ const ensureLabel = (opt: string, index: number): string => {
     if (!opt) return "";
     
     // 1. Strip any existing prefixes that look like labels
-    // Matches patterns like "A)", "a)", "1.", "А)", "а)", "Б." etc.
-    // Handles multiple prefixes like "А) а)" by using + quantifier
     const cleanOpt = opt.replace(/^([а-яА-Яa-zA-Z0-9][).]\s*)+/, '').trim();
     
     // 2. Prepend the consistent standard label
     const label = BG_LABELS[index] || `${String.fromCharCode(65 + index)})`;
     return `${label} ${cleanOpt}`;
+};
+
+// Helper to ensure the correct answer in the key has a label for multiple choice questions
+const getFormattedCorrectAnswer = (q: TestQuestion): string => {
+    if (!q.correctAnswer) return "-";
+    if (q.type !== 'multiple_choice' || !q.options) return q.correctAnswer;
+
+    // Strip labels from current correct answer and all options for comparison
+    const cleanCorrect = q.correctAnswer.replace(/^([а-яА-Яa-zA-Z0-9][).]\s*)+/, '').trim().toLowerCase();
+    
+    const index = q.options.findIndex(opt => {
+        const cleanOpt = opt.replace(/^([а-яА-Яa-zA-Z0-9][).]\s*)+/, '').trim().toLowerCase();
+        return cleanOpt === cleanCorrect;
+    });
+
+    if (index !== -1) {
+        return ensureLabel(q.correctAnswer, index);
+    }
+
+    return q.correctAnswer;
 };
 
 // Helper to convert SVG String to PNG Base64 for Export
@@ -186,7 +204,7 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
                 }),
                 ...data.questions.map((q, index) => 
                      new docx.Paragraph({
-                         children: [new docx.TextRun({ text: `${index + 1}. ${cleanMathText(q.correctAnswer || '-')}`, size: 24 })]
+                         children: [new docx.TextRun({ text: `${index + 1}. ${cleanMathText(getFormattedCorrectAnswer(q))}`, size: 24 })]
                      })
                 )
             ]
@@ -318,7 +336,7 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
                 doc.addPage();
                 ky = 20;
              }
-             doc.text(`${i + 1}. ${cleanMathText(q.correctAnswer || '-')}`, 20, ky);
+             doc.text(`${i + 1}. ${cleanMathText(getFormattedCorrectAnswer(q))}`, 20, ky);
              ky += 8;
         });
         addWatermark();
@@ -415,7 +433,7 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
             <div class="key">
                 <h2 style="border-bottom: 2px solid #000; padding-bottom: 10px;">Ключ с отговори (За учителя)</h2>
                 <div style="display: grid; grid-template-columns: repeat(1, 1fr); gap: 15px; margin-top: 20px;">
-                ${data.questions.map((q, i) => `<div><strong>${i + 1}.</strong> ${cleanMathText(q.correctAnswer || '-')}</div>`).join('')}
+                ${data.questions.map((q, i) => `<div><strong>${i + 1}.</strong> ${cleanMathText(getFormattedCorrectAnswer(q))}</div>`).join('')}
                 </div>
                 <div style="margin-top: 50px; font-size: 10px; color: #999;">${WATERMARK_TEXT}</div>
             </div>
@@ -544,7 +562,7 @@ export const TestRenderer = ({ data }: { data: TestData }) => {
                                     <span className="font-bold text-indigo-600">{i+1}.</span>
                                     <div className="markdown-content">
                                         <ReactMarkdown remarkPlugins={[remarkMath, remarkGfm]} rehypePlugins={[rehypeKatex]}>
-                                            {q.correctAnswer || '---'}
+                                            {getFormattedCorrectAnswer(q)}
                                         </ReactMarkdown>
                                     </div>
                                 </div>
