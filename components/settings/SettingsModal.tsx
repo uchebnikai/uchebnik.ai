@@ -6,12 +6,12 @@ import {
   ArrowRight, Settings, CreditCard, Loader2, Globe, 
   Layout, Smartphone, Monitor, Sparkles, LogOut, Volume2, 
   Keyboard, Type, Download, Zap, Brain, MessageCircle, Gift, Copy,
-  Eye, EyeOff, Shield, Activity, HelpCircle, BookOpen, AlertTriangle
+  Eye, EyeOff
 } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { UserSettings, UserPlan } from '../../types';
 import { getDynamicColorStyle } from '../../styles/theme';
-import { MODAL_ENTER, FADE_IN, SLIDE_UP } from '../../animations/transitions';
+import { MODAL_ENTER, FADE_IN } from '../../animations/transitions';
 import { supabase } from '../../supabaseClient';
 import { LANGUAGES, t } from '../../utils/translations';
 import { VOICES } from '../../constants';
@@ -49,8 +49,8 @@ const PRESET_BACKGROUNDS = [
 const CUSTOM_PERSONAS = [
     { label: "🤓 Albert Einstein", prompt: "Act like Albert Einstein. Be eccentric, brilliant, and use physics analogies." },
     { label: "🏴‍☠️ Pirate", prompt: "Talk like a pirate! Use words like 'matey', 'ahoy', and 'treasure'. Be adventurous." },
-    { label: " Rapper", prompt: "Speak in rhymes and flow like a rapper. Keep it cool and rhythmic." },
-    { label: " Grandma", prompt: "Act like a sweet, caring grandmother. Call the user 'dear' and offer cookies (virtually)." },
+    { label: "🎤 Rapper", prompt: "Speak in rhymes and flow like a rapper. Keep it cool and rhythmic." },
+    { label: "👵 Grandma", prompt: "Act like a sweet, caring grandmother. Call the user 'dear' and offer cookies (virtually)." },
     { label: "💻 Senior Dev", prompt: "Act like a grumpy but helpful Senior Developer. Be concise, technical, and slightly sarcastic." }
 ];
 
@@ -99,7 +99,7 @@ export const SettingsModal = ({
     { id: 'account', label: t('profile', userSettings.language), icon: User },
     { id: 'appearance', label: t('personalization', userSettings.language), icon: Palette },
     { id: 'ai', label: t('ai_settings', userSettings.language), icon: Sparkles },
-    { id: 'system', label: 'Система', icon: Smartphone },
+    { id: 'system', label: 'Система', icon: Settings },
     { id: 'data', label: t('data', userSettings.language), icon: Database },
   ];
 
@@ -107,583 +107,655 @@ export const SettingsModal = ({
   const currentLang = LANGUAGES.find(l => l.code === userSettings.language) || LANGUAGES[0];
   const isDarkMode = userSettings.isDarkMode;
 
-  const SettingGroup = ({ title, icon: Icon, children, premiumOnly = false }: any) => (
-      <div className={`space-y-4 ${premiumOnly && !isPremium ? 'opacity-60' : ''}`}>
-          <div className="flex items-center justify-between px-1">
-              <div className="flex items-center gap-2.5">
-                  {Icon && <Icon size={16} className="text-indigo-500" />}
-                  <h4 className="text-sm font-black text-zinc-800 dark:text-zinc-200 uppercase tracking-widest">{title}</h4>
-              </div>
-              {premiumOnly && !isPremium && (
-                  <span className="bg-amber-500/10 text-amber-500 text-[9px] font-black uppercase px-2 py-0.5 rounded-full border border-amber-500/20">Pro Only</span>
-              )}
-          </div>
-          <div className="bg-white/50 dark:bg-black/30 border border-zinc-200 dark:border-white/10 rounded-3xl p-6 shadow-sm backdrop-blur-sm">
-              {children}
-          </div>
-      </div>
-  );
-
   return (
-  <div className="fixed inset-0 z-[120] bg-black/60 backdrop-blur-xl flex items-center justify-center p-0 md:p-4 animate-in fade-in duration-300">
-    <div className={`bg-[#f8fafc] dark:bg-[#09090b] w-full max-w-6xl h-full md:h-[85vh] rounded-none md:rounded-[40px] border-none md:border border-white/10 shadow-2xl overflow-hidden flex flex-col md:flex-row ${MODAL_ENTER}`}>
+  <div className="fixed inset-0 z-[90] bg-black/60 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-300">
+    <div className={`bg-white/80 dark:bg-[#121212]/90 backdrop-blur-3xl w-full max-w-5xl h-[85vh] rounded-[32px] border border-white/20 dark:border-white/10 shadow-2xl overflow-hidden flex flex-col md:flex-row ${MODAL_ENTER}`}>
       
       {/* Sidebar Navigation */}
-      <div className="w-full md:w-80 bg-white/40 dark:bg-black/40 border-b md:border-b-0 md:border-r border-zinc-200 dark:border-white/5 flex flex-col backdrop-blur-3xl shrink-0">
-         <div className="p-8 pb-4 md:pb-8 flex justify-between items-center">
-            <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-indigo-500/20">
-                    <Settings size={22} strokeWidth={2.5} />
+      <div className="w-full md:w-72 bg-gray-50/50 dark:bg-black/20 border-b md:border-b-0 md:border-r border-gray-200/50 dark:border-white/5 flex flex-col">
+         <div className="p-6 pb-2 md:pb-6 flex justify-between items-center">
+            <h2 className="text-2xl font-bold flex items-center gap-3 text-zinc-800 dark:text-white font-display">
+                <div className="w-8 h-8 bg-indigo-500 rounded-lg flex items-center justify-center text-white shadow-lg shadow-indigo-500/30">
+                    <Settings size={18} />
                 </div>
-                <h2 className="text-2xl font-black text-zinc-900 dark:text-white tracking-tight font-display">
-                    {t('settings', userSettings.language)}
-                </h2>
-            </div>
-            <button onClick={() => setShowSettings(false)} className="md:hidden p-2.5 bg-black/5 dark:bg-white/5 rounded-full text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors"><X size={24}/></button>
+                <span>{t('settings', userSettings.language)}</span>
+            </h2>
+            <button onClick={() => setShowSettings(false)} className="md:hidden p-2 text-gray-500 hover:bg-gray-200 dark:hover:bg-white/10 rounded-full transition-colors"><X size={20}/></button>
          </div>
 
-         <div className="flex md:flex-col overflow-x-auto md:overflow-visible px-4 md:px-4 gap-2 md:gap-1.5 pb-6 md:pb-0 no-scrollbar">
+         <div className="flex md:flex-col overflow-x-auto md:overflow-visible px-4 md:px-3 gap-2 md:gap-1 pb-4 md:pb-0 scrollbar-hide">
             {tabs.map(tab => (
                 <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id as SettingsTab)}
-                    className={`flex items-center gap-3.5 px-5 py-4 rounded-2xl text-sm font-bold transition-all whitespace-nowrap md:whitespace-normal group relative overflow-hidden ${
+                    className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all whitespace-nowrap md:whitespace-normal ${
                         activeTab === tab.id 
-                        ? 'bg-indigo-600 text-white shadow-2xl shadow-indigo-500/30' 
-                        : 'text-zinc-500 hover:bg-zinc-100 dark:hover:bg-white/5 hover:text-zinc-900 dark:hover:text-white'
+                        ? 'bg-white dark:bg-white/10 text-indigo-600 dark:text-white shadow-sm' 
+                        : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-gray-300'
                     }`}
                 >
-                    <tab.icon size={20} className={`shrink-0 transition-transform group-hover:scale-110 ${activeTab === tab.id ? 'text-white' : 'text-zinc-400 group-hover:text-indigo-500'}`} />
-                    <span className="relative z-10">{tab.label}</span>
-                    {activeTab === tab.id && <div className="absolute right-0 top-1/2 -translate-y-1/2 w-1.5 h-6 bg-white/20 rounded-l-full" />}
+                    <tab.icon size={18} className={activeTab === tab.id ? 'text-indigo-500 dark:text-indigo-400' : 'opacity-70'} />
+                    {tab.label}
                 </button>
             ))}
          </div>
 
-         <div className="mt-auto p-8 hidden md:block border-t border-zinc-200 dark:border-white/5">
-             <div className="flex items-center gap-3 p-4 bg-black/5 dark:bg-white/5 rounded-2xl border border-white/5">
-                <div className="w-10 h-10 rounded-xl bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center text-zinc-500 font-black text-xs">AI</div>
-                <div>
-                    <div className="text-[10px] font-black text-zinc-500 uppercase tracking-widest leading-none mb-1">Software</div>
-                    <div className="text-xs font-bold text-zinc-800 dark:text-zinc-200">v1.9 Stable</div>
-                </div>
-             </div>
+         <div className="mt-auto p-4 hidden md:block">
+             <div className="text-xs text-gray-400 text-center font-medium">Uchebnik AI v1.9</div>
          </div>
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col h-full overflow-hidden relative bg-transparent">
+      <div className="flex-1 flex flex-col h-full overflow-hidden bg-transparent relative">
           
-          <button onClick={() => setShowSettings(false)} className="hidden md:block absolute top-8 right-8 p-3 bg-zinc-100 dark:bg-white/5 hover:bg-zinc-200 dark:hover:bg-white/10 rounded-2xl text-zinc-500 dark:text-zinc-400 transition-all hover:scale-110 active:scale-95 z-50 shadow-sm border border-white/5">
-              <X size={24} strokeWidth={2.5}/>
+          <button onClick={() => setShowSettings(false)} className="hidden md:block absolute top-6 right-6 p-2.5 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 rounded-full text-gray-500 dark:text-gray-400 transition-colors z-50">
+              <X size={20}/>
           </button>
 
-          <div className="flex-1 overflow-y-auto custom-scrollbar p-6 md:p-12 pb-32">
+          <div className="flex-1 overflow-y-auto custom-scrollbar p-6 md:p-10 pb-24">
               
               {/* ACCOUNT TAB */}
               {activeTab === 'account' && (
-                  <div className={`space-y-10 max-w-3xl mx-auto ${FADE_IN}`}>
-                      <div className="flex flex-col md:flex-row items-center md:items-end gap-8 pb-4 border-b border-zinc-200 dark:border-white/10">
+                  <div className={`space-y-8 max-w-2xl mx-auto ${FADE_IN}`}>
+                      <div className="text-center md:text-left">
+                          <h3 className="text-3xl font-black text-zinc-900 dark:text-white mb-2">{t('profile', userSettings.language)}</h3>
+                          <p className="text-gray-500">Управлявайте вашата лична информация и абонамент.</p>
+                      </div>
+
+                      <div className="flex flex-col items-center md:items-start gap-6">
                           <div className="relative group cursor-pointer" onClick={() => avatarInputRef.current?.click()}>
-                              <div className="w-32 h-32 rounded-[2.5rem] p-1.5 border-4 border-white dark:border-zinc-800 shadow-2xl relative bg-zinc-100 dark:bg-zinc-800 overflow-hidden group-hover:scale-105 transition-transform duration-500">
-                                  <img src={editProfile.avatar || "https://cdn-icons-png.freepik.com/256/3276/3276580.png"} className="w-full h-full rounded-[2rem] object-cover"/>
-                                  <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300">
-                                      <Upload size={24} className="text-white mb-1"/>
-                                      <span className="text-[10px] font-black text-white uppercase tracking-widest">Промени</span>
-                                  </div>
+                              <div className="w-28 h-28 rounded-[2rem] p-1 border-2 border-dashed border-gray-300 dark:border-white/20 hover:border-indigo-500 transition-colors">
+                                  <img src={editProfile.avatar || "https://cdn-icons-png.freepik.com/256/3276/3276580.png"} className="w-full h-full rounded-[1.8rem] object-cover bg-gray-50 dark:bg-zinc-800"/>
                               </div>
-                              <div className="absolute -bottom-2 -right-2 bg-indigo-600 text-white p-2.5 rounded-2xl shadow-xl border-4 border-[#f8fafc] dark:border-[#09090b] z-20">
-                                <Edit2 size={16} />
+                              <div className="absolute inset-0 bg-black/40 rounded-[2rem] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <Edit2 size={24} className="text-white"/>
                               </div>
                               <input type="file" ref={avatarInputRef} onChange={handleAvatarUpload} className="hidden" accept="image/*" />
                           </div>
-                          <div className="flex-1 text-center md:text-left space-y-1">
-                              <h3 className="text-4xl font-black text-zinc-900 dark:text-white tracking-tight">{t('profile', userSettings.language)}</h3>
-                              <p className="text-zinc-500 font-medium">{t('email', userSettings.language)}: {editProfile.email}</p>
-                              <div className="flex flex-wrap justify-center md:justify-start gap-2 pt-2">
-                                  <span className="px-3 py-1 bg-indigo-500/10 text-indigo-500 text-[10px] font-black uppercase rounded-lg border border-indigo-500/20">{userPlan} Plan</span>
-                                  <span className="px-3 py-1 bg-amber-500/10 text-amber-500 text-[10px] font-black uppercase rounded-lg border border-amber-500/20">Level {userSettings.level}</span>
-                              </div>
-                          </div>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                          <SettingGroup title="Лична информация" icon={User}>
-                              <div className="space-y-6">
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-2">
-                                        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">{t('first_name', userSettings.language)}</label>
-                                        <input value={editProfile.firstName} onChange={e => setEditProfile({...editProfile, firstName: e.target.value})} className="w-full bg-zinc-50 dark:bg-black/30 border border-zinc-200 dark:border-white/10 rounded-2xl px-4 py-3.5 outline-none focus:border-indigo-500 transition-all font-bold text-zinc-800 dark:text-zinc-100 shadow-inner"/>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">{t('last_name', userSettings.language)}</label>
-                                        <input value={editProfile.lastName} onChange={e => setEditProfile({...editProfile, lastName: e.target.value})} className="w-full bg-zinc-50 dark:bg-black/30 border border-zinc-200 dark:border-white/10 rounded-2xl px-4 py-3.5 outline-none focus:border-indigo-500 transition-all font-bold text-zinc-800 dark:text-zinc-100 shadow-inner"/>
-                                    </div>
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">{t('email', userSettings.language)}</label>
-                                    <input value={editProfile.email} onChange={e => setEditProfile({...editProfile, email: e.target.value})} className="w-full bg-zinc-50 dark:bg-black/30 border border-zinc-200 dark:border-white/10 rounded-2xl px-4 py-3.5 outline-none focus:border-indigo-500 transition-all font-bold text-zinc-800 dark:text-zinc-100 shadow-inner"/>
-                                </div>
-                              </div>
-                          </SettingGroup>
-
-                          <SettingGroup title="Сигурност" icon={Lock}>
-                              <div className="space-y-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                          <div className="space-y-2">
+                              <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">{t('first_name', userSettings.language)}</label>
+                              <input value={editProfile.firstName} onChange={e => setEditProfile({...editProfile, firstName: e.target.value})} className="w-full bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 outline-none focus:border-indigo-500 transition-all font-medium"/>
+                          </div>
+                          <div className="space-y-2">
+                              <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">{t('last_name', userSettings.language)}</label>
+                              <input value={editProfile.lastName} onChange={e => setEditProfile({...editProfile, lastName: e.target.value})} className="w-full bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 outline-none focus:border-indigo-500 transition-all font-medium"/>
+                          </div>
+                          <div className="col-span-1 md:col-span-2 space-y-2">
+                              <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">{t('email', userSettings.language)}</label>
+                              <input value={editProfile.email} onChange={e => setEditProfile({...editProfile, email: e.target.value})} className="w-full bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 outline-none focus:border-indigo-500 transition-all font-medium"/>
+                          </div>
+                          
+                          <div className="col-span-1 md:col-span-2 pt-2 border-t border-gray-100 dark:border-white/5 mt-2">
+                              <h4 className="text-sm font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2"><Lock size={16} className="text-indigo-500"/> Смяна на парола</h4>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                                   <div className="space-y-2">
-                                      <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">{t('current_password', userSettings.language)}</label>
+                                      <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">{t('current_password', userSettings.language)}</label>
                                       <div className="relative">
                                           <input 
                                             type={showCurrentPassword ? "text" : "password"} 
                                             value={editProfile.currentPassword} 
                                             onChange={e => setEditProfile({...editProfile, currentPassword: e.target.value})} 
-                                            className="w-full bg-zinc-50 dark:bg-black/30 border border-zinc-200 dark:border-white/10 rounded-2xl px-4 py-3.5 pr-12 outline-none focus:border-indigo-500 transition-all font-bold text-zinc-800 dark:text-zinc-100 shadow-inner" 
+                                            className="w-full bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 pr-10 outline-none focus:border-indigo-500 transition-all font-medium" 
                                             placeholder="••••••••"
                                           />
-                                          <button type="button" onClick={() => setShowCurrentPassword(!showCurrentPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 focus:outline-none">
-                                            {showCurrentPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                          <button
+                                            type="button"
+                                            onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 focus:outline-none"
+                                          >
+                                            {showCurrentPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                                           </button>
                                       </div>
                                   </div>
                                   <div className="space-y-2">
-                                      <label className="text-[10px] font-black text-zinc-400 uppercase tracking-widest ml-1">{t('new_password', userSettings.language)}</label>
+                                      <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">{t('new_password', userSettings.language)}</label>
                                       <div className="relative">
                                           <input 
                                             type={showNewPassword ? "text" : "password"} 
                                             value={editProfile.password} 
                                             onChange={e => setEditProfile({...editProfile, password: e.target.value})} 
-                                            className="w-full bg-zinc-50 dark:bg-black/30 border border-zinc-200 dark:border-white/10 rounded-2xl px-4 py-3.5 pr-12 outline-none focus:border-indigo-500 transition-all font-bold text-zinc-800 dark:text-zinc-100 shadow-inner" 
+                                            className="w-full bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 pr-10 outline-none focus:border-indigo-500 transition-all font-medium" 
                                             placeholder="••••••••"
                                           />
-                                          <button type="button" onClick={() => setShowNewPassword(!showNewPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 focus:outline-none">
-                                            {showNewPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                          <button
+                                            type="button"
+                                            onClick={() => setShowNewPassword(!showNewPassword)}
+                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 focus:outline-none"
+                                          >
+                                            {showNewPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                                           </button>
                                       </div>
                                   </div>
                               </div>
-                          </SettingGroup>
+                          </div>
                       </div>
 
-                      <div className="flex items-center justify-between p-8 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-[32px] text-white shadow-2xl shadow-indigo-500/20 relative overflow-hidden group">
-                           <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20" />
-                           <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between w-full gap-6">
-                               <div className="space-y-2">
-                                   <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-[10px] font-black uppercase tracking-wider">Вашият Абонамент</div>
-                                   <h4 className="text-3xl font-black">{userPlan.toUpperCase()} Plan</h4>
-                                   {userSettings.proExpiresAt && (
-                                       <div className="flex items-center gap-2 text-indigo-100 text-sm font-bold">
-                                           <Activity size={14} /> Изтича на {new Date(userSettings.proExpiresAt).toLocaleDateString()}
-                                       </div>
-                                   )}
-                               </div>
-                               <button disabled className="px-8 py-4 bg-white text-indigo-600 rounded-2xl font-black text-sm uppercase tracking-widest shadow-xl transition-all opacity-80 cursor-not-allowed">
-                                   Управление
-                               </button>
-                           </div>
-                           <div className="absolute -top-12 -right-12 w-64 h-64 bg-white/10 rounded-full blur-3xl group-hover:scale-125 transition-transform duration-1000"/>
-                      </div>
+                      {isPremium && (
+                        <div className="p-5 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-2xl text-white shadow-xl shadow-indigo-500/20 relative overflow-hidden">
+                             <div className="relative z-10 flex justify-between items-center">
+                                 <div>
+                                     <div className="text-indigo-200 text-xs font-bold uppercase tracking-wider mb-1">Вашият план</div>
+                                     <h4 className="text-2xl font-black">{userPlan === 'pro' ? 'Pro Plan' : 'Plus Plan'}</h4>
+                                     {userSettings.proExpiresAt && (
+                                         <p className="text-xs text-indigo-100 mt-1 font-medium bg-white/20 px-2 py-0.5 rounded w-fit">
+                                             Expires: {new Date(userSettings.proExpiresAt).toLocaleDateString()}
+                                         </p>
+                                     )}
+                                 </div>
+                                 <Button 
+                                    disabled={true} 
+                                    className="bg-white text-indigo-600 hover:bg-indigo-50 border-none shadow-none opacity-80"
+                                >
+                                    Очаквайте скоро
+                                 </Button>
+                             </div>
+                             <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-16 -mt-16 blur-3xl"/>
+                        </div>
+                      )}
 
-                      <div className="flex justify-end gap-4 pt-4">
-                          <button onClick={() => setShowSettings(false)} className="px-8 py-4 rounded-2xl font-bold text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors">Отказ</button>
-                          <Button onClick={handleUpdateAccount} className="px-10 py-4 rounded-2xl shadow-2xl shadow-indigo-500/20 text-base" icon={Check}>{t('save_changes', userSettings.language)}</Button>
+                      <div className="flex justify-end pt-4">
+                          <Button onClick={handleUpdateAccount} className="px-8 py-3 rounded-xl shadow-lg shadow-indigo-500/20" icon={Check}>{t('save_changes', userSettings.language)}</Button>
                       </div>
                   </div>
               )}
 
               {/* APPEARANCE TAB */}
               {activeTab === 'appearance' && (
-                  <div className={`space-y-10 max-w-3xl mx-auto ${FADE_IN}`}>
-                      <div className="pb-4 border-b border-zinc-200 dark:border-white/10">
-                          <h3 className="text-4xl font-black text-zinc-900 dark:text-white tracking-tight mb-2">{t('personalization', userSettings.language)}</h3>
-                          <p className="text-zinc-500 font-medium">Персонализирайте визуалното усещане на Uchebnik AI.</p>
+                  <div className={`space-y-8 max-w-2xl mx-auto ${FADE_IN}`}>
+                      <div>
+                          <h3 className="text-3xl font-black text-zinc-900 dark:text-white mb-2">{t('personalization', userSettings.language)}</h3>
+                          <p className="text-gray-500">Направете приложението свое.</p>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                          <SettingGroup title="Локализация" icon={Globe}>
-                              <div className="space-y-4">
-                                  <p className="text-xs text-zinc-500 font-medium px-1">Изберете език за интерфейса и AI отговорите.</p>
-                                  <div className="relative">
-                                      <button 
-                                        onClick={() => setIsLangOpen(!isLangOpen)}
-                                        className="w-full flex items-center justify-between bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-white/10 rounded-2xl px-5 py-4 outline-none transition-all shadow-inner group"
-                                      >
-                                          <div className="flex items-center gap-4">
-                                              <div className="p-1 bg-white dark:bg-zinc-800 rounded-lg shadow-sm overflow-hidden border border-black/5 dark:border-white/5">
-                                                <img src={`https://flagcdn.com/w40/${currentLang.countryCode}.png`} className="w-8 h-6 object-cover rounded-sm"/>
-                                              </div>
-                                              <span className="font-bold text-zinc-800 dark:text-zinc-100">{currentLang.label}</span>
-                                          </div>
-                                          <ChevronDown size={20} className={`text-zinc-400 transition-transform duration-300 ${isLangOpen ? 'rotate-180' : ''}`}/>
-                                      </button>
-                                      
-                                      {isLangOpen && (
-                                        <div className="absolute top-full left-0 right-0 mt-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 rounded-[28px] shadow-2xl max-h-80 overflow-y-auto custom-scrollbar z-[100] animate-in slide-in-from-top-4 p-3 grid grid-cols-1 gap-1">
-                                            {LANGUAGES.map(lang => (
-                                                <button 
-                                                    key={lang.code}
-                                                    onClick={() => { setUserSettings((prev: any) => ({...prev, language: lang.code})); setIsLangOpen(false); }}
-                                                    className={`flex items-center gap-4 px-4 py-3.5 rounded-xl text-sm transition-all ${userSettings.language === lang.code ? 'bg-indigo-600 text-white font-black shadow-lg shadow-indigo-500/20' : 'hover:bg-zinc-50 dark:hover:bg-white/5 text-zinc-600 dark:text-zinc-300 font-bold'}`}
-                                                >
-                                                    <img src={`https://flagcdn.com/w40/${lang.countryCode}.png`} className="w-6 h-4 object-cover rounded shadow-sm" />
-                                                    <span className="flex-1 text-left">{lang.label}</span>
-                                                    {userSettings.language === lang.code && <Check size={18} strokeWidth={3}/>}
-                                                </button>
-                                            ))}
-                                        </div>
+                      {/* Language */}
+                      <section className="space-y-4">
+                          <label className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                              <Globe size={18} className="text-indigo-500"/> {t('language', userSettings.language)}
+                          </label>
+                          <div className="relative">
+                              <button 
+                                onClick={() => setIsLangOpen(!isLangOpen)}
+                                className="w-full flex items-center justify-between bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium text-left"
+                              >
+                                  <div className="flex items-center gap-3">
+                                      <img 
+                                        src={`https://flagcdn.com/w40/${currentLang.countryCode}.png`} 
+                                        srcSet={`https://flagcdn.com/w80/${currentLang.countryCode}.png 2x`}
+                                        width="24" 
+                                        alt={currentLang.countryCode} 
+                                        className="rounded-md object-cover shadow-sm"
+                                      />
+                                      <span>{currentLang.label}</span>
+                                  </div>
+                                  <ChevronDown size={20} className={`text-gray-400 transition-transform ${isLangOpen ? 'rotate-180' : ''}`}/>
+                              </button>
+                              
+                              {isLangOpen && (
+                                <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-white/10 rounded-xl shadow-2xl max-h-64 overflow-y-auto custom-scrollbar z-50 animate-in slide-in-from-top-2">
+                                    <div className="p-2 grid grid-cols-1 gap-1">
+                                        {LANGUAGES.map(lang => (
+                                            <button 
+                                                key={lang.code}
+                                                onClick={() => {
+                                                    setUserSettings((prev: any) => ({...prev, language: lang.code}));
+                                                    setIsLangOpen(false);
+                                                }}
+                                                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${userSettings.language === lang.code ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 font-bold' : 'hover:bg-gray-50 dark:hover:bg-white/5 text-gray-700 dark:text-gray-300'}`}
+                                            >
+                                                <img 
+                                                    src={`https://flagcdn.com/w40/${lang.countryCode}.png`} 
+                                                    width="20" 
+                                                    alt={lang.countryCode} 
+                                                    className="rounded shadow-sm"
+                                                />
+                                                {lang.label}
+                                                {userSettings.language === lang.code && <Check size={16} className="ml-auto"/>}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                              )}
+                              
+                              {isLangOpen && <div className="fixed inset-0 z-40" onClick={() => setIsLangOpen(false)} />}
+                          </div>
+                      </section>
+
+                      {/* Theme Colors */}
+                      <section className={`space-y-4 p-6 bg-gray-50/50 dark:bg-white/5 rounded-2xl border border-gray-200 dark:border-white/10 ${!isPremium ? 'opacity-70' : ''}`}>
+                          <div className="flex justify-between items-center mb-2">
+                              <label className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                                  <Palette size={18} className="text-pink-500"/> {t('theme_color', userSettings.language)}
+                              </label>
+                              {!isPremium && <span className="px-2 py-1 bg-gray-200 dark:bg-white/10 rounded text-[10px] font-bold text-gray-500 uppercase">Plus / Pro required</span>}
+                          </div>
+                          <div className={`flex flex-wrap gap-4 ${!isPremium ? 'pointer-events-none' : ''}`}>
+                              {PRESET_COLORS.map(c => (
+                                  <button 
+                                    key={c} 
+                                    onClick={() => setUserSettings((prev: any) => ({...prev, themeColor: c}))} 
+                                    className={`w-12 h-12 rounded-full transition-all shadow-sm flex items-center justify-center relative ${userSettings.themeColor === c ? 'ring-2 ring-offset-2 ring-indigo-500 scale-110 dark:ring-offset-zinc-900' : 'hover:scale-105'}`} 
+                                    style={getDynamicColorStyle(c)}
+                                  >
+                                      {userSettings.themeColor === c && <Check size={20} className="text-white drop-shadow-md"/>}
+                                  </button>
+                              ))}
+
+                              <div className="relative group">
+                                  <input
+                                      type="color"
+                                      value={userSettings.themeColor}
+                                      onChange={(e) => setUserSettings((prev: any) => ({...prev, themeColor: e.target.value}))}
+                                      className="absolute inset-0 opacity-0 w-full h-full cursor-pointer z-10"
+                                      title="Choose custom color"
+                                  />
+                                  <div 
+                                      className={`w-12 h-12 rounded-full transition-all shadow-sm flex items-center justify-center relative overflow-hidden ${
+                                          isCustomColor 
+                                          ? 'ring-2 ring-offset-2 ring-indigo-500 scale-110 dark:ring-offset-zinc-900' 
+                                          : 'border-2 border-dashed border-gray-300 dark:border-white/20 hover:border-indigo-500 hover:scale-105'
+                                      }`}
+                                      style={isCustomColor ? { backgroundColor: userSettings.themeColor } : {}}
+                                  >
+                                      {isCustomColor ? (
+                                          <Check size={20} className="text-white drop-shadow-md"/>
+                                      ) : (
+                                          <Plus size={20} className="text-gray-400 group-hover:text-indigo-500 transition-colors" />
                                       )}
-                                      {isLangOpen && <div className="fixed inset-0 z-[90]" onClick={() => setIsLangOpen(false)} />}
-                                  </div>
-                              </div>
-                          </SettingGroup>
-
-                          <SettingGroup title="Режим на екрана" icon={isDarkMode ? Moon : Sun}>
-                               <div className="space-y-4">
-                                   <p className="text-xs text-zinc-500 font-medium px-1">Изберете между светла и тъмна тема.</p>
-                                   <div className="grid grid-cols-2 gap-3 p-1.5 bg-zinc-50 dark:bg-black/40 rounded-2xl border border-zinc-200 dark:border-white/10 shadow-inner">
-                                       <button onClick={() => setUserSettings({...userSettings, isDarkMode: false})} className={`flex flex-col items-center gap-2 py-4 rounded-xl transition-all ${!isDarkMode ? 'bg-white dark:bg-zinc-800 text-amber-500 shadow-md font-black' : 'text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 font-bold'}`}>
-                                           <Sun size={24} strokeWidth={!isDarkMode ? 2.5 : 2} />
-                                           <span className="text-[10px] uppercase tracking-widest">Светъл</span>
-                                       </button>
-                                       <button onClick={() => setUserSettings({...userSettings, isDarkMode: true})} className={`flex flex-col items-center gap-2 py-4 rounded-xl transition-all ${isDarkMode ? 'bg-white dark:bg-zinc-800 text-indigo-500 shadow-md font-black' : 'text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 font-bold'}`}>
-                                           <Moon size={24} strokeWidth={isDarkMode ? 2.5 : 2} />
-                                           <span className="text-[10px] uppercase tracking-widest">Тъмен</span>
-                                       </button>
-                                   </div>
-                               </div>
-                          </SettingGroup>
-                      </div>
-
-                      <SettingGroup title="Цветови акценти" icon={Palette} premiumOnly>
-                          <div className="space-y-6">
-                              <p className="text-xs text-zinc-500 font-medium px-1">Променете основния цвят на интерфейса.</p>
-                              <div className="flex flex-wrap gap-4">
-                                  {PRESET_COLORS.map(c => (
-                                      <button 
-                                        key={c} 
-                                        onClick={() => setUserSettings((prev: any) => ({...prev, themeColor: c}))} 
-                                        className={`w-14 h-14 rounded-2xl transition-all shadow-lg flex items-center justify-center relative overflow-hidden group ${userSettings.themeColor === c ? 'ring-4 ring-offset-4 ring-indigo-600 dark:ring-offset-zinc-900 scale-110' : 'hover:scale-105 active:scale-95'}`} 
-                                        style={getDynamicColorStyle(c)}
-                                      >
-                                          <div className="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity" />
-                                          {userSettings.themeColor === c && (
-                                              <div className="bg-white text-zinc-900 rounded-full p-1 shadow-2xl animate-in zoom-in duration-300">
-                                                  <Check size={18} strokeWidth={3}/>
-                                              </div>
-                                          )}
-                                      </button>
-                                  ))}
-
-                                  <div className="relative group">
-                                      <input type="color" value={userSettings.themeColor} onChange={(e) => setUserSettings((prev: any) => ({...prev, themeColor: e.target.value}))} className="absolute inset-0 opacity-0 w-full h-full cursor-pointer z-20" />
-                                      <div className={`w-14 h-14 rounded-2xl transition-all shadow-lg flex items-center justify-center relative overflow-hidden border-4 border-dashed ${isCustomColor ? 'ring-4 ring-offset-4 ring-indigo-600 dark:ring-offset-zinc-900 scale-110' : 'border-zinc-300 dark:border-white/20 hover:border-indigo-600'}`} style={isCustomColor ? { backgroundColor: userSettings.themeColor } : {}}>
-                                          {isCustomColor ? (
-                                              <div className="bg-white text-zinc-900 rounded-full p-1 shadow-2xl"><Check size={18} strokeWidth={3}/></div>
-                                          ) : (
-                                              <Plus size={24} className="text-zinc-400 group-hover:text-indigo-600 transition-colors" />
-                                          )}
-                                      </div>
                                   </div>
                               </div>
                           </div>
-                      </SettingGroup>
+                      </section>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                          <SettingGroup title="Шрифтове" icon={Type} premiumOnly>
-                              <div className="grid grid-cols-1 gap-2.5">
-                                  {[
-                                      { id: 'inter', label: 'Inter (Default)', font: 'font-sans' },
-                                      { id: 'dyslexic', label: 'OpenDyslexic', font: 'font-serif', custom: {fontFamily: '"Comic Sans MS", cursive'} },
-                                      { id: 'mono', label: 'JetBrains Mono', font: 'font-mono' }
-                                  ].map((font) => (
-                                      <button 
-                                        key={font.id} 
-                                        onClick={() => setUserSettings({...userSettings, fontFamily: font.id})} 
-                                        className={`w-full p-4 rounded-2xl border text-left transition-all flex items-center justify-between group ${userSettings.fontFamily === font.id ? 'bg-indigo-600 border-indigo-500 text-white shadow-xl shadow-indigo-500/20' : 'bg-zinc-50 dark:bg-black/30 border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-300 hover:border-indigo-500/50'}`}
-                                      >
-                                          <span className={`text-base font-bold ${font.font}`} style={font.custom}>{font.label}</span>
-                                          {userSettings.fontFamily === font.id && <Check size={18} strokeWidth={3}/>}
-                                      </button>
-                                  ))}
+                      {/* Fonts */}
+                      <section className={`space-y-4 p-6 bg-gray-50/50 dark:bg-white/5 rounded-2xl border border-gray-200 dark:border-white/10 ${!isPremium ? 'opacity-70' : ''}`}>
+                          <div className="flex justify-between items-center mb-2">
+                              <label className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                                  <Type size={18} className="text-blue-500"/> Шрифт
+                              </label>
+                              {!isPremium && <span className="px-2 py-1 bg-gray-200 dark:bg-white/10 rounded text-[10px] font-bold text-gray-500 uppercase">Plus / Pro required</span>}
+                          </div>
+                          <div className={`grid grid-cols-1 md:grid-cols-3 gap-3 ${!isPremium ? 'pointer-events-none' : ''}`}>
+                              <button onClick={() => setUserSettings({...userSettings, fontFamily: 'inter'})} className={`py-3 px-4 rounded-xl border font-sans font-medium transition-all ${userSettings.fontFamily === 'inter' ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400' : 'border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/5'}`}>
+                                  Standard (Inter)
+                              </button>
+                              <button onClick={() => setUserSettings({...userSettings, fontFamily: 'dyslexic'})} className={`py-3 px-4 rounded-xl border font-medium transition-all ${userSettings.fontFamily === 'dyslexic' ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400' : 'border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/5'}`} style={{fontFamily: '"Comic Sans MS", cursive'}}>
+                                  Dyslexia Friendly
+                              </button>
+                              <button onClick={() => setUserSettings({...userSettings, fontFamily: 'mono'})} className={`py-3 px-4 rounded-xl border font-mono font-medium transition-all ${userSettings.fontFamily === 'mono' ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400' : 'border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/5'}`}>
+                                  Monospace / Code
+                              </button>
+                          </div>
+                      </section>
+
+                      {/* Text Size (Moved from AI tab) */}
+                      <section className="space-y-4">
+                          <div className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl p-6 space-y-4 shadow-sm">
+                              <label className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                                  <Layout size={18} className="text-amber-500"/> {t('text_size', userSettings.language)}
+                              </label>
+                              <div className="flex gap-4 items-end px-4 py-4 bg-gray-50 dark:bg-black/20 rounded-xl">
+                                  <button onClick={() => setUserSettings({...userSettings, textSize: 'small'})} className={`flex-1 text-xs font-bold transition-colors ${userSettings.textSize === 'small' ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-400'}`}>Aa Small</button>
+                                  <button onClick={() => setUserSettings({...userSettings, textSize: 'normal'})} className={`flex-1 text-base font-bold transition-colors ${userSettings.textSize === 'normal' ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-400'}`}>Aa Normal</button>
+                                  <button onClick={() => setUserSettings({...userSettings, textSize: 'large'})} className={`flex-1 text-xl font-bold transition-colors ${userSettings.textSize === 'large' ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-400'}`}>Aa Large</button>
                               </div>
-                          </SettingGroup>
+                          </div>
+                      </section>
 
-                          <SettingGroup title="Размер на текста" icon={Layout}>
-                               <div className="flex gap-2 items-end px-3 py-6 bg-zinc-50 dark:bg-black/40 rounded-2xl border border-zinc-200 dark:border-white/10 shadow-inner">
-                                  <button onClick={() => setUserSettings({...userSettings, textSize: 'small'})} className={`flex-1 flex flex-col items-center gap-1 transition-all ${userSettings.textSize === 'small' ? 'text-indigo-600 scale-110' : 'text-zinc-400 hover:text-zinc-600'}`}>
-                                      <div className="text-sm font-black uppercase tracking-widest">Aa</div>
-                                      <span className="text-[10px] font-bold">Small</span>
-                                  </button>
-                                  <div className="w-px h-8 bg-zinc-300 dark:bg-white/10" />
-                                  <button onClick={() => setUserSettings({...userSettings, textSize: 'normal'})} className={`flex-1 flex flex-col items-center gap-1 transition-all ${userSettings.textSize === 'normal' ? 'text-indigo-600 scale-110' : 'text-zinc-400 hover:text-zinc-600'}`}>
-                                      <div className="text-xl font-black uppercase tracking-widest">Aa</div>
-                                      <span className="text-[10px] font-bold">Normal</span>
-                                  </button>
-                                  <div className="w-px h-8 bg-zinc-300 dark:bg-white/10" />
-                                  <button onClick={() => setUserSettings({...userSettings, textSize: 'large'})} className={`flex-1 flex flex-col items-center gap-1 transition-all ${userSettings.textSize === 'large' ? 'text-indigo-600 scale-110' : 'text-zinc-400 hover:text-zinc-600'}`}>
-                                      <div className="text-3xl font-black uppercase tracking-widest">Aa</div>
-                                      <span className="text-[10px] font-bold">Large</span>
-                                  </button>
+                      {/* Mode Toggle */}
+                      <section className="flex items-center justify-between p-5 bg-white dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-2xl shadow-sm">
+                          <div className="flex items-center gap-3">
+                              <div className={`p-2.5 rounded-xl ${isDarkMode ? 'bg-indigo-500/10 text-indigo-400' : 'bg-amber-500/10 text-amber-500'}`}>
+                                  {isDarkMode ? <Moon size={20}/> : <Sun size={20}/>}
                               </div>
-                          </SettingGroup>
-                      </div>
+                              <div>
+                                  <div className="font-bold text-sm text-gray-900 dark:text-white">Тема на интерфейса</div>
+                                  <div className="text-xs text-gray-500">{isDarkMode ? t('dark_mode', userSettings.language) : t('light_mode', userSettings.language)}</div>
+                              </div>
+                          </div>
+                          <button 
+                            onClick={() => setUserSettings((prev: any) => ({...prev, isDarkMode: !prev.isDarkMode}))} 
+                            className={`w-14 h-8 rounded-full transition-colors flex items-center px-1 ${isDarkMode ? 'bg-indigo-600' : 'bg-gray-300'}`}
+                          >
+                              <div className={`w-6 h-6 rounded-full bg-white shadow-md transition-transform duration-300 ${isDarkMode ? 'translate-x-6' : 'translate-x-0'}`} />
+                          </button>
+                      </section>
 
-                      <SettingGroup title="Фон на чата" icon={ImageIcon} premiumOnly>
-                          <div className="space-y-6">
-                               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                   <div onClick={() => isPremium && backgroundInputRef.current?.click()} className={`aspect-video rounded-2xl border-4 transition-all cursor-pointer flex flex-col items-center justify-center gap-2 group relative overflow-hidden shadow-md ${isCustomBackground ? 'border-indigo-600 shadow-xl shadow-indigo-500/20' : 'border-dashed border-zinc-300 dark:border-white/10 hover:border-indigo-500 bg-zinc-50 dark:bg-black/40'}`}>
-                                       {isCustomBackground ? (
-                                           <>
-                                               <img src={userSettings.customBackground!} className="absolute inset-0 w-full h-full object-cover"/>
-                                               <div className="absolute inset-0 bg-black/40 group-hover:bg-black/60 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300">
-                                                    <Upload size={24} className="text-white mb-1"/>
-                                                    <span className="text-[10px] font-black text-white uppercase tracking-widest">Качи нов</span>
-                                               </div>
-                                           </>
-                                       ) : (
-                                           <>
-                                               <div className="p-3 bg-white dark:bg-zinc-800 rounded-xl shadow-sm group-hover:scale-110 transition-transform"><Upload size={22} className="text-indigo-500"/></div>
-                                               <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Custom</span>
-                                           </>
+                      {/* Chat Backgrounds */}
+                      <section className={`space-y-4 ${!isPremium ? 'opacity-70' : ''}`}>
+                           <div className="flex justify-between items-center">
+                              <label className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                                  <ImageIcon size={18} className="text-emerald-500"/> {t('chat_bg', userSettings.language)}
+                              </label>
+                              {!isPremium && <span className="px-2 py-1 bg-gray-200 dark:bg-white/10 rounded text-[10px] font-bold text-gray-500 uppercase">Plus / Pro required</span>}
+                           </div>
+                           
+                           <div className={`grid grid-cols-2 md:grid-cols-4 gap-3 ${!isPremium ? 'pointer-events-none' : ''}`}>
+                               <div 
+                                   onClick={() => isPremium && backgroundInputRef.current?.click()}
+                                   className={`aspect-video rounded-xl border-2 transition-all cursor-pointer flex flex-col items-center justify-center gap-2 group relative overflow-hidden ${
+                                        isCustomBackground
+                                        ? 'border-indigo-500 ring-2 ring-indigo-500/30' 
+                                        : 'border-dashed border-gray-300 dark:border-white/10 hover:border-indigo-500 dark:hover:border-indigo-500 bg-gray-50 dark:bg-black/20'
+                                   }`}
+                               >
+                                   {isCustomBackground ? (
+                                       <>
+                                           <img src={userSettings.customBackground!} className="absolute inset-0 w-full h-full object-cover" alt="Custom Background" />
+                                           <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors z-10" />
+                                           
+                                           <div className="absolute inset-0 flex items-center justify-center z-20">
+                                                <div className="bg-indigo-500 text-white rounded-full p-1 shadow-lg transform group-hover:scale-0 transition-transform duration-200">
+                                                    <Check size={16} />
+                                                </div>
+                                           </div>
+
+                                           <div className="absolute inset-0 flex flex-col items-center justify-center z-20 opacity-0 group-hover:opacity-100 transition-all duration-200 transform scale-95 group-hover:scale-100">
+                                                <div className="p-2 bg-white/20 backdrop-blur-md rounded-full shadow-sm mb-2"><Upload size={20} className="text-white"/></div>
+                                                <span className="text-xs font-bold text-white shadow-sm">Промени</span>
+                                           </div>
+                                       </>
+                                   ) : (
+                                       <>
+                                           <div className="p-2 bg-white dark:bg-white/5 rounded-full shadow-sm group-hover:scale-110 transition-transform"><Upload size={18}/></div>
+                                           <span className="text-xs font-bold text-gray-500 group-hover:text-indigo-500">Upload</span>
+                                       </>
+                                   )}
+                                   <input type="file" ref={backgroundInputRef} onChange={handleBackgroundUpload} className="hidden" accept="image/*"/>
+                               </div>
+
+                               {PRESET_BACKGROUNDS.map((bg, idx) => (
+                                   <button 
+                                       key={idx}
+                                       onClick={() => setUserSettings((prev: any) => ({...prev, customBackground: bg}))}
+                                       className={`relative aspect-video rounded-xl overflow-hidden border-2 transition-all group ${userSettings.customBackground === bg ? 'border-indigo-500 ring-2 ring-indigo-500/30' : 'border-transparent hover:border-indigo-500/50'}`}
+                                   >
+                                       <img src={bg} className="w-full h-full object-cover" loading="lazy" />
+                                       {userSettings.customBackground === bg && (
+                                           <div className="absolute inset-0 bg-indigo-500/20 flex items-center justify-center">
+                                               <div className="bg-indigo-500 text-white rounded-full p-1"><Check size={14}/></div>
+                                           </div>
                                        )}
-                                       <input type="file" ref={backgroundInputRef} onChange={handleBackgroundUpload} className="hidden" accept="image/*"/>
-                                   </div>
-
-                                   {PRESET_BACKGROUNDS.map((bg, idx) => (
-                                       <button 
-                                           key={idx}
-                                           onClick={() => setUserSettings((prev: any) => ({...prev, customBackground: bg}))}
-                                           className={`relative aspect-video rounded-2xl overflow-hidden border-4 transition-all group shadow-md hover:scale-105 active:scale-95 ${userSettings.customBackground === bg ? 'border-indigo-600 shadow-xl shadow-indigo-500/20 scale-105' : 'border-transparent hover:border-indigo-500/50'}`}
-                                       >
-                                           <img src={bg} className="w-full h-full object-cover" loading="lazy" />
-                                           {userSettings.customBackground === bg && (
-                                               <div className="absolute inset-0 bg-indigo-600/20 flex items-center justify-center backdrop-blur-[2px]">
-                                                   <div className="bg-white text-zinc-900 rounded-full p-1 shadow-2xl animate-in zoom-in duration-300"><Check size={18} strokeWidth={3}/></div>
-                                               </div>
-                                           )}
-                                       </button>
-                                   ))}
+                                   </button>
+                               ))}
+                           </div>
+                           
+                           {userSettings.customBackground && (
+                               <div className="flex justify-end">
+                                    <button 
+                                       onClick={() => setUserSettings((prev: any) => ({...prev, customBackground: null}))} 
+                                       className="text-xs font-bold text-red-500 hover:text-red-600 flex items-center gap-1"
+                                   >
+                                       <Trash2 size={14}/> {t('remove', userSettings.language)} Background
+                                   </button>
                                </div>
-                               
-                               {userSettings.customBackground && (
-                                   <div className="flex justify-end">
-                                        <button onClick={() => setUserSettings((prev: any) => ({...prev, customBackground: null}))} className="text-[10px] font-black uppercase tracking-widest text-red-500 hover:text-red-400 flex items-center gap-2 px-4 py-2 bg-red-500/5 hover:bg-red-500/10 rounded-xl border border-red-500/10 transition-colors">
-                                           <Trash2 size={14}/> Премахни фон
-                                       </button>
-                                   </div>
-                               )}
-                          </div>
-                      </SettingGroup>
+                           )}
+                      </section>
                   </div>
               )}
 
-              {/* AI INTELLIGENCE TAB */}
+              {/* INTELLIGENCE TAB */}
               {activeTab === 'ai' && (
-                  <div className={`space-y-10 max-w-3xl mx-auto ${FADE_IN}`}>
-                      <div className="pb-4 border-b border-zinc-200 dark:border-white/10">
-                          <h3 className="text-4xl font-black text-zinc-900 dark:text-white tracking-tight mb-2">{t('ai_settings', userSettings.language)}</h3>
-                          <p className="text-zinc-500 font-medium">Конфигурирайте мозъка на вашия асистент.</p>
+                  <div className={`space-y-8 max-w-2xl mx-auto ${FADE_IN}`}>
+                      <div>
+                          <h3 className="text-3xl font-black text-zinc-900 dark:text-white mb-2">{t('ai_settings', userSettings.language)}</h3>
+                          <p className="text-gray-500">Настройте поведението на вашия асистент.</p>
                       </div>
 
-                      <SettingGroup title="Изкуствен Интелект" icon={Cpu}>
-                          <div className="grid grid-cols-1 gap-4">
+                      <section className="space-y-4">
+                          <label className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                              <Cpu size={18} className="text-blue-500"/> AI Модел
+                          </label>
+                          <div className="grid grid-cols-1 gap-3">
+                              <button
+                                  onClick={() => setUserSettings({...userSettings, preferredModel: 'auto'})}
+                                  className={`p-4 rounded-xl text-left border transition-all flex items-center gap-4 ${userSettings.preferredModel === 'auto'
+                                      ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-500 text-blue-700 dark:text-blue-300 shadow-md'
+                                      : 'bg-white dark:bg-white/5 border-gray-200 dark:border-white/10 hover:border-blue-300'}`}
+                              >
+                                  <div className={`p-2 rounded-full ${userSettings.preferredModel === 'auto' ? 'bg-blue-200 dark:bg-blue-500/30' : 'bg-gray-100 dark:bg-white/10'}`}>
+                                      <Sparkles size={20} />
+                                  </div>
+                                  <div>
+                                      <div className="font-bold text-sm">Автоматично (Препоръчително)</div>
+                                      <div className="text-xs opacity-70">Избира най-добрия модел според плана ви.</div>
+                                  </div>
+                              </button>
+
+                              <button
+                                  onClick={() => setUserSettings({...userSettings, preferredModel: 'gemini-2.5-flash'})}
+                                  className={`p-4 rounded-xl text-left border transition-all flex items-center gap-4 ${userSettings.preferredModel === 'gemini-2.5-flash'
+                                      ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-500 text-indigo-700 dark:text-indigo-300 shadow-md'
+                                      : 'bg-white dark:bg-white/5 border-gray-200 dark:border-white/10 hover:border-indigo-300'}`}
+                              >
+                                  <div className={`p-2 rounded-full ${userSettings.preferredModel === 'gemini-2.5-flash' ? 'bg-indigo-200 dark:bg-indigo-500/30' : 'bg-gray-100 dark:bg-white/10'}`}>
+                                      <Zap size={20} />
+                                  </div>
+                                  <div>
+                                      <div className="font-bold text-sm">Standard Model</div>
+                                      <div className="text-xs opacity-70">Бърз и лек. Идеален за прости задачи.</div>
+                                  </div>
+                              </button>
+
+                              <button
+                                  onClick={() => isPremium ? setUserSettings({...userSettings, preferredModel: 'gemini-3-flash-preview'}) : addToast('Този модел изисква Plus или Pro план.', 'info')}
+                                  className={`p-4 rounded-xl text-left border transition-all flex items-center gap-4 relative overflow-hidden ${userSettings.preferredModel === 'gemini-3-flash-preview'
+                                      ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-500 text-amber-700 dark:text-amber-300 shadow-md'
+                                      : `bg-white dark:bg-white/5 border-gray-200 dark:border-white/10 ${isPremium ? 'hover:border-amber-300' : 'opacity-60 cursor-not-allowed'}`}`}
+                              >
+                                  <div className={`p-2 rounded-full ${userSettings.preferredModel === 'gemini-3-flash-preview' ? 'bg-amber-200 dark:bg-amber-500/30' : 'bg-gray-100 dark:bg-white/10'}`}>
+                                      <Brain size={20} />
+                                  </div>
+                                  <div>
+                                      <div className="font-bold text-sm flex items-center gap-2">
+                                          Advanced Reasoning
+                                          {!isPremium && <span className="text-[10px] bg-amber-500 text-white px-2 py-0.5 rounded-full uppercase tracking-wider">Plus / Pro</span>}
+                                      </div>
+                                      <div className="text-xs opacity-70">Висок интелект и логика (High Intelligence).</div>
+                                  </div>
+                              </button>
+                          </div>
+                      </section>
+
+                      <section className={`space-y-4 p-6 bg-gray-50/50 dark:bg-white/5 rounded-2xl border border-gray-200 dark:border-white/10 ${!isPremium ? 'opacity-80' : ''}`}>
+                          <div className="flex justify-between items-center mb-2">
+                              <label className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                                  <Volume2 size={18} className="text-indigo-500"/> Избор на Глас
+                              </label>
+                              {!isPremium && <span className="px-2 py-1 bg-gray-200 dark:bg-white/10 rounded text-[10px] font-bold text-gray-500 uppercase">Plus / Pro required</span>}
+                          </div>
+                          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                              {VOICES.map(voice => (
+                                  <div key={voice.id} className="relative group">
+                                      <button
+                                          onClick={() => isPremium ? setUserSettings({...userSettings, preferredVoice: voice.id}) : addToast('Тази функция изисква Plus или Pro план.', 'info')}
+                                          className={`w-full p-3 rounded-xl text-center text-sm font-bold border transition-all ${
+                                              userSettings.preferredVoice === voice.id
+                                              ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-500 text-indigo-700 dark:text-indigo-300 shadow-sm'
+                                              : 'bg-white dark:bg-white/5 border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/10'
+                                          } ${!isPremium ? 'cursor-not-allowed' : ''}`}
+                                      >
+                                          {voice.name}
+                                      </button>
+                                  </div>
+                              ))}
+                          </div>
+                      </section>
+
+                      <section className="space-y-4">
+                          <label className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                              <Brain size={18} className="text-purple-500"/> Стил на преподаване
+                          </label>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                               {[
-                                  { id: 'auto', label: 'Автоматичен (Auto)', desc: 'Интелигентен избор на модел според сложността на задачата.', icon: Sparkles, color: 'text-indigo-500', bg: 'bg-indigo-500/10' },
-                                  { id: 'gemini-2.5-flash', label: 'Standard AI (Fast)', desc: 'Бърз, лек и икономичен. Идеален за ежедневни въпроси.', icon: Zap, color: 'text-blue-500', bg: 'bg-blue-500/10' },
-                                  { id: 'gemini-3-flash-preview', label: 'Advanced AI (Gen 3)', desc: 'Висок интелект и разширена логика. За най-трудните задачи.', icon: Brain, color: 'text-amber-500', bg: 'bg-amber-500/10', premium: true }
-                              ].map((model) => (
+                                  { id: 'normal', label: 'Балансиран (Default)', desc: 'Стандартни и точни отговори.' },
+                                  { id: 'socratic', label: 'Сократов (Guide)', desc: 'Не дава отговори, а задава въпроси.' },
+                                  { id: 'eli5', label: 'ELI5 (Simple)', desc: 'Обясни като на 5-годишно дете.' },
+                                  { id: 'academic', label: 'Академичен', desc: 'Строг и научен език.' },
+                                  { id: 'motivational', label: 'Мотивиращ (Coach)', desc: 'Позитивен и насърчаващ.' },
+                              ].map((style) => (
                                   <button
-                                      key={model.id}
-                                      onClick={() => (!model.premium || isPremium) ? setUserSettings({...userSettings, preferredModel: model.id}) : addToast('Изисква Plus или Pro план.', 'info')}
-                                      className={`p-6 rounded-[28px] text-left border-2 transition-all flex items-center gap-6 relative overflow-hidden group ${userSettings.preferredModel === model.id
-                                          ? 'bg-white dark:bg-zinc-800 border-indigo-600 shadow-2xl shadow-indigo-500/10'
-                                          : `bg-zinc-50 dark:bg-black/30 border-transparent hover:border-zinc-200 dark:hover:border-white/10 ${model.premium && !isPremium ? 'opacity-50 grayscale' : ''}`}`}
+                                      key={style.id}
+                                      onClick={() => setUserSettings({...userSettings, teachingStyle: style.id})}
+                                      className={`p-4 rounded-xl text-left border transition-all ${userSettings.teachingStyle === style.id 
+                                          ? 'bg-purple-50 dark:bg-purple-900/20 border-purple-500 text-purple-700 dark:text-purple-300 shadow-md' 
+                                          : 'bg-white dark:bg-white/5 border-gray-200 dark:border-white/10 hover:border-purple-300 dark:hover:border-purple-500/50'}`}
                                   >
-                                      <div className={`shrink-0 w-16 h-16 rounded-2xl ${model.bg} ${model.color} flex items-center justify-center transition-transform group-hover:scale-110 shadow-inner`}>
-                                          <model.icon size={32} strokeWidth={2.5}/>
-                                      </div>
-                                      <div className="flex-1">
-                                          <div className="flex items-center gap-3 mb-1">
-                                              <h5 className={`font-black text-lg ${userSettings.preferredModel === model.id ? 'text-zinc-900 dark:text-white' : 'text-zinc-700 dark:text-zinc-300'}`}>{model.label}</h5>
-                                              {model.premium && !isPremium && <span className="bg-amber-500 text-black text-[9px] font-black uppercase px-2 py-0.5 rounded shadow-sm">Pro Only</span>}
-                                          </div>
-                                          <p className="text-sm text-zinc-500 font-medium leading-relaxed">{model.desc}</p>
-                                      </div>
-                                      {userSettings.preferredModel === model.id && (
-                                          <div className="shrink-0 text-indigo-600 bg-indigo-50 dark:bg-indigo-900/20 p-2 rounded-full border border-indigo-100 dark:border-indigo-500/20">
-                                              <Check size={20} strokeWidth={3}/>
-                                          </div>
-                                      )}
+                                      <div className="font-bold text-sm mb-1">{style.label}</div>
+                                      <div className="text-xs opacity-70">{style.desc}</div>
                                   </button>
                               ))}
                           </div>
-                      </SettingGroup>
+                      </section>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                          <SettingGroup title="Избор на Глас" icon={Volume2} premiumOnly>
-                              <div className="grid grid-cols-2 gap-3">
-                                  {VOICES.map(voice => (
-                                      <button
-                                          key={voice.id}
-                                          onClick={() => isPremium ? setUserSettings({...userSettings, preferredVoice: voice.id}) : addToast('Изисква Pro план.', 'info')}
-                                          className={`p-4 rounded-2xl text-sm font-black border-2 transition-all flex items-center justify-center gap-2 ${
-                                              userSettings.preferredVoice === voice.id
-                                              ? 'bg-indigo-600 border-indigo-500 text-white shadow-xl shadow-indigo-500/20'
-                                              : 'bg-zinc-50 dark:bg-black/30 border-transparent text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200'
-                                          }`}
-                                      >
-                                          {userSettings.preferredVoice === voice.id && <Volume2 size={16}/>}
-                                          {voice.name.split(' ')[0]}
-                                      </button>
-                                  ))}
-                              </div>
-                          </SettingGroup>
-
-                          <SettingGroup title="Стил на отговор" icon={HelpCircle}>
-                               <div className="space-y-4">
-                                   <div className="flex bg-zinc-50 dark:bg-black/40 p-1.5 rounded-2xl border border-zinc-200 dark:border-white/10 shadow-inner overflow-x-auto no-scrollbar">
-                                       {[
-                                           { id: 'normal', icon: Brain },
-                                           { id: 'socratic', icon: HelpCircle },
-                                           { id: 'eli5', icon: Gift },
-                                           { id: 'academic', icon: BookOpen },
-                                           { id: 'motivational', icon: Sparkles },
-                                       ].map((style) => (
-                                           <button
-                                               key={style.id}
-                                               onClick={() => setUserSettings({...userSettings, teachingStyle: style.id})}
-                                               title={style.id}
-                                               className={`flex-1 min-w-[50px] aspect-square flex items-center justify-center rounded-xl transition-all ${userSettings.teachingStyle === style.id 
-                                                   ? 'bg-indigo-600 text-white shadow-xl scale-110 rotate-3' 
-                                                   : 'text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200'}`}
-                                           >
-                                               <style.icon size={20} />
-                                           </button>
-                                       ))}
-                                   </div>
-                                   <div className="px-2">
-                                       <div className="text-sm font-black text-zinc-800 dark:text-zinc-200 capitalize">{userSettings.teachingStyle}</div>
-                                       <p className="text-[10px] text-zinc-500 font-medium">Контролира начина, по който AI обяснява концепциите.</p>
-                                   </div>
-                               </div>
-                          </SettingGroup>
-                      </div>
-
-                      <SettingGroup title="Персонализирана Роля (Persona)" icon={User} premiumOnly={!isPro}>
-                          <div className="space-y-5">
-                              <p className="text-xs text-zinc-500 font-medium leading-relaxed">Дефинирайте специфично поведение на AI. Това ще замени стандартния стил.</p>
-                              <div className="relative group">
-                                  <textarea 
-                                      value={userSettings.customPersona || ''}
-                                      onChange={(e) => setUserSettings({...userSettings, customPersona: e.target.value})}
-                                      placeholder='Пример: "Ти си Шерлок Холмс. Използвай дедукция и говори загадъчно."'
-                                      className={`w-full bg-zinc-50 dark:bg-black/50 border-2 rounded-[28px] p-6 text-sm lg:text-base font-bold text-zinc-800 dark:text-zinc-100 min-h-[160px] outline-none transition-all shadow-inner resize-none ${!isPro ? 'cursor-not-allowed opacity-50' : 'focus:border-indigo-600 border-transparent'}`}
-                                      disabled={!isPro}
-                                  />
-                                  {!isPro && (
-                                      <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
-                                          <div className="px-4 py-2 bg-black/60 backdrop-blur-md rounded-full text-white text-[10px] font-black uppercase tracking-widest flex items-center gap-2 border border-white/10"><Lock size={12}/> Pro Only Feature</div>
-                                      </div>
-                                  )}
-                              </div>
-                              <div className="flex flex-wrap gap-2.5">
+                      <section className={`space-y-4 p-6 bg-gradient-to-br from-indigo-50/50 to-purple-50/50 dark:from-indigo-900/10 dark:to-purple-900/10 rounded-2xl border border-indigo-200 dark:border-indigo-500/20 ${!isPro ? 'opacity-70' : ''}`}>
+                          <div className="flex justify-between items-center mb-2">
+                              <label className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                                  <Zap size={18} className="text-amber-500"/> Персонализирана Роля (Persona)
+                              </label>
+                              {!isPro && <span className="px-2 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded text-[10px] font-bold uppercase">Pro Only</span>}
+                          </div>
+                          <div className={`space-y-3 ${!isPro ? 'pointer-events-none grayscale' : ''}`}>
+                              <p className="text-xs text-gray-500">Напишете как точно искате AI да се държи. Това ще замени стандартния стил на преподаване.</p>
+                              <textarea 
+                                  value={userSettings.customPersona || ''}
+                                  onChange={(e) => setUserSettings({...userSettings, customPersona: e.target.value})}
+                                  placeholder='Пример: "Ти си Шерлок Холмс. Използвай дедукция и говори загадъчно."'
+                                  className="w-full bg-white dark:bg-black/30 border border-gray-200 dark:border-white/10 rounded-xl p-4 text-sm min-h-[100px] outline-none focus:border-indigo-500 transition-all resize-none"
+                              />
+                              <div className="flex flex-wrap gap-2">
                                   {CUSTOM_PERSONAS.map((p, i) => (
                                       <button 
                                           key={i} 
-                                          onClick={() => isPro && setUserSettings({...userSettings, customPersona: p.prompt})}
-                                          className={`px-5 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider transition-all border shadow-sm ${!isPro ? 'opacity-40 grayscale cursor-not-allowed' : 'bg-white dark:bg-zinc-800 border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-300 hover:border-indigo-500 hover:text-indigo-600'}`}
+                                          onClick={() => setUserSettings({...userSettings, customPersona: p.prompt})}
+                                          className="px-3 py-1.5 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg text-xs font-medium hover:bg-indigo-50 dark:hover:bg-white/10 hover:text-indigo-600 dark:hover:text-white transition-colors"
                                       >
                                           {p.label}
                                       </button>
                                   ))}
                                   {userSettings.customPersona && (
-                                      <button onClick={() => setUserSettings({...userSettings, customPersona: ''})} className="px-5 py-2.5 bg-red-500 text-white rounded-2xl text-xs font-black uppercase tracking-wider hover:bg-red-600 shadow-lg shadow-red-500/20 transition-all active:scale-95">
+                                      <button onClick={() => setUserSettings({...userSettings, customPersona: ''})} className="px-3 py-1.5 bg-red-50 dark:bg-red-900/20 text-red-500 rounded-lg text-xs font-bold hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors">
                                           Изчисти
                                       </button>
                                   )}
                               </div>
                           </div>
-                      </SettingGroup>
+                      </section>
                   </div>
               )}
 
               {/* SYSTEM TAB */}
               {activeTab === 'system' && (
-                  <div className={`space-y-10 max-w-3xl mx-auto ${FADE_IN}`}>
-                      <div className="pb-4 border-b border-zinc-200 dark:border-white/10">
-                          <h3 className="text-4xl font-black text-zinc-900 dark:text-white tracking-tight mb-2">Настройки на системата</h3>
-                          <p className="text-zinc-500 font-medium">Контролирайте взаимодействието и обратната връзка.</p>
+                  <div className={`space-y-8 max-w-2xl mx-auto ${FADE_IN}`}>
+                      <div>
+                          <h3 className="text-3xl font-black text-zinc-900 dark:text-white mb-2">Системни</h3>
+                          <p className="text-gray-500">Настройки за въвеждане и интерфейс.</p>
                       </div>
 
-                      <div className="grid grid-cols-1 gap-4">
-                          {[
-                              { id: 'enterToSend', title: 'Enter за изпращане', desc: 'Бързо изпращане на съобщения. Изключете, ако предпочитате нов ред.', icon: Keyboard, color: 'text-blue-500', bg: 'bg-blue-500/10' },
-                              { id: 'haptics', title: 'Haptic Feedback', desc: 'Вибрация при натискане на бутони (за мобилни устройства).', icon: Smartphone, color: 'text-pink-500', bg: 'bg-pink-500/10' },
-                              { id: 'sound', title: 'Звукови Ефекти', desc: 'Звук при получаване на съобщение или приключване на задача.', icon: MessageCircle, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
-                          ].map((item) => (
-                              <div key={item.id} className="group flex items-center justify-between p-6 bg-white/50 dark:bg-black/40 border border-zinc-200 dark:border-white/10 rounded-[32px] shadow-sm backdrop-blur-md transition-all hover:border-zinc-300 dark:hover:border-white/20">
-                                  <div className="flex items-center gap-6">
-                                      <div className={`p-4 rounded-2xl ${item.bg} ${item.color} shadow-inner shrink-0 group-hover:scale-110 transition-transform`}>
-                                          <item.icon size={24} strokeWidth={2.5}/>
-                                      </div>
-                                      <div className="space-y-1">
-                                          <div className="font-black text-lg text-zinc-900 dark:text-white leading-tight">{item.title}</div>
-                                          <div className="text-sm text-zinc-500 font-medium">{item.desc}</div>
-                                      </div>
+                      <section className="space-y-4">
+                          <div className="flex items-center justify-between p-5 bg-white dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-2xl">
+                              <div className="flex items-center gap-3">
+                                  <div className="p-2.5 rounded-xl bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400">
+                                      <Keyboard size={20}/>
                                   </div>
-                                  <button 
-                                    onClick={() => setUserSettings({...userSettings, [item.id]: !userSettings[item.id as keyof UserSettings]})} 
-                                    className={`w-16 h-9 rounded-full transition-all flex items-center px-1 shadow-inner ${userSettings[item.id as keyof UserSettings] ? 'bg-indigo-600' : 'bg-zinc-300 dark:bg-zinc-700'}`}
-                                  >
-                                      <div className={`w-7 h-7 rounded-full bg-white shadow-xl transition-transform duration-300 ${userSettings[item.id as keyof UserSettings] ? 'translate-x-7' : 'translate-x-0'}`} />
-                                  </button>
+                                  <div>
+                                      <div className="font-bold text-sm text-gray-900 dark:text-white">Enter за изпращане</div>
+                                      <div className="text-xs text-gray-500">Изключи за нов ред с Enter.</div>
+                                  </div>
                               </div>
-                          ))}
-                      </div>
+                              <button 
+                                onClick={() => setUserSettings({...userSettings, enterToSend: !userSettings.enterToSend})} 
+                                className={`w-14 h-8 rounded-full transition-colors flex items-center px-1 ${userSettings.enterToSend ? 'bg-indigo-600' : 'bg-gray-300'}`}
+                              >
+                                  <div className={`w-6 h-6 rounded-full bg-white shadow-md transition-transform duration-300 ${userSettings.enterToSend ? 'translate-x-6' : 'translate-x-0'}`} />
+                              </button>
+                          </div>
+
+                          <div className="flex items-center justify-between p-5 bg-white dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-2xl">
+                              <div className="flex items-center gap-3">
+                                  <div className="p-2.5 rounded-xl bg-pink-100 dark:bg-pink-500/20 text-pink-600 dark:text-pink-400">
+                                      <Smartphone size={20}/>
+                                  </div>
+                                  <div>
+                                      <div className="font-bold text-sm text-gray-900 dark:text-white">Haptic Feedback</div>
+                                      <div className="text-xs text-gray-500">Вибрация при взаимодействие.</div>
+                                  </div>
+                              </div>
+                              <button 
+                                onClick={() => setUserSettings({...userSettings, haptics: !userSettings.haptics})} 
+                                className={`w-14 h-8 rounded-full transition-colors flex items-center px-1 ${userSettings.haptics ? 'bg-indigo-600' : 'bg-gray-300'}`}
+                              >
+                                  <div className={`w-6 h-6 rounded-full bg-white shadow-md transition-transform duration-300 ${userSettings.haptics ? 'translate-x-6' : 'translate-x-0'}`} />
+                              </button>
+                          </div>
+
+                          <div className="flex items-center justify-between p-5 bg-white dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-2xl">
+                              <div className="flex items-center gap-3">
+                                  <div className="p-2.5 rounded-xl bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400">
+                                      <MessageCircle size={20}/>
+                                  </div>
+                                  <div>
+                                      <div className="font-bold text-sm text-gray-900 dark:text-white">Звукови Ефекти</div>
+                                      <div className="text-xs text-gray-500">Звук при нови съобщения.</div>
+                                  </div>
+                              </div>
+                              <button 
+                                onClick={() => setUserSettings({...userSettings, sound: !userSettings.sound})} 
+                                className={`w-14 h-8 rounded-full transition-colors flex items-center px-1 ${userSettings.sound ? 'bg-indigo-600' : 'bg-gray-300'}`}
+                              >
+                                  <div className={`w-6 h-6 rounded-full bg-white shadow-md transition-transform duration-300 ${userSettings.sound ? 'translate-x-6' : 'translate-x-0'}`} />
+                              </button>
+                          </div>
+                      </section>
                   </div>
               )}
 
               {/* DATA TAB */}
               {activeTab === 'data' && (
-                  <div className={`space-y-10 max-w-3xl mx-auto ${FADE_IN}`}>
-                      <div className="pb-4 border-b border-zinc-200 dark:border-white/10">
-                          <h3 className="text-4xl font-black text-zinc-900 dark:text-white tracking-tight mb-2">{t('data', userSettings.language)}</h3>
-                          <p className="text-zinc-500 font-medium">Контролирайте вашите разговори и данни.</p>
+                  <div className={`space-y-8 max-w-2xl mx-auto ${FADE_IN}`}>
+                      <div>
+                          <h3 className="text-3xl font-black text-zinc-900 dark:text-white mb-2">{t('data', userSettings.language)}</h3>
+                          <p className="text-gray-500">Контролирайте вашата история и данни.</p>
                       </div>
 
-                      <div className="space-y-8">
-                          <button onClick={handleExportData} className="w-full flex items-center justify-between p-8 bg-indigo-600 rounded-[32px] text-white shadow-2xl shadow-indigo-500/20 group relative overflow-hidden">
-                             <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
-                             <div className="flex items-center gap-6 relative z-10 text-left">
-                                 <div className="p-4 bg-white/20 rounded-2xl shadow-inner group-hover:scale-110 transition-transform"><Download size={28} strokeWidth={2.5}/></div>
-                                 <div className="space-y-1">
-                                     <div className="font-black text-xl leading-tight">Експорт на данни</div>
-                                     <div className="text-sm text-indigo-100 font-medium">Изтегли цялата си история и настройки като JSON файл.</div>
+                      <div className="grid grid-cols-1 gap-4">
+                          <button onClick={handleExportData} className="w-full flex items-center justify-between p-6 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl hover:bg-gray-50 dark:hover:bg-white/10 transition-colors group text-left">
+                             <div className="flex items-center gap-4">
+                                 <div className="p-3 bg-blue-100 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-xl shadow-sm"><Download size={20}/></div>
+                                 <div>
+                                     <div className="font-bold text-gray-900 dark:text-white">Експорт на данни</div>
+                                     <div className="text-xs text-gray-500">Изтегли историята као JSON.</div>
                                  </div>
                              </div>
-                             <ArrowRight size={24} className="text-indigo-200 group-hover:translate-x-2 transition-transform relative z-10 shrink-0"/>
+                             <ArrowRight size={18} className="text-gray-300 group-hover:text-blue-500 transition-colors"/>
                           </button>
 
-                          <div className="rounded-[40px] border border-red-500/20 overflow-hidden shadow-2xl shadow-red-500/5 bg-red-500/5">
-                              <div className="p-10 border-b border-red-500/10 space-y-2">
-                                  <div className="inline-flex items-center gap-2 px-3 py-1 bg-red-500/10 rounded-full text-red-500 text-[10px] font-black uppercase tracking-widest mb-2"><AlertTriangle size={12}/> Зона на опасност</div>
-                                  <h4 className="text-3xl font-black text-red-600 dark:text-red-400 tracking-tight">Изтриване на данни</h4>
-                                  <p className="text-red-500/60 font-medium leading-relaxed">Следните действия са необратими и ще премахнат информацията завинаги от нашите сървъри.</p>
+                          <div className="bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-500/10 rounded-2xl overflow-hidden mt-4">
+                              <div className="p-6 border-b border-red-100 dark:border-red-500/10">
+                                  <h4 className="font-bold text-red-700 dark:text-red-400 mb-1 flex items-center gap-2"><Database size={18}/> Зона на опасност</h4>
+                                  <p className="text-xs text-red-600/70 dark:text-red-400/70">Действията тук са необратими.</p>
                               </div>
-                              <button onClick={handleDeleteAllChats} className="w-full flex items-center justify-between p-10 hover:bg-red-500/10 transition-all group text-left">
-                                 <div className="flex items-center gap-6">
-                                     <div className="p-4 bg-white dark:bg-black/20 text-red-600 rounded-2xl shadow-xl group-hover:scale-110 transition-transform"><Trash2 size={28} strokeWidth={2.5}/></div>
-                                     <div className="space-y-1">
-                                         <div className="font-black text-xl text-zinc-900 dark:text-white leading-tight">{t('delete_all_chats', userSettings.language)}</div>
-                                         <div className="text-sm text-zinc-500 font-medium">{t('delete_history_desc', userSettings.language)}</div>
+                              <button 
+                                onClick={handleDeleteAllChats} 
+                                className="w-full flex items-center justify-between p-6 hover:bg-red-100 dark:hover:bg-red-900/20 transition-colors group text-left"
+                              >
+                                 <div className="flex items-center gap-4">
+                                     <div className="p-3 bg-white dark:bg-red-500/20 text-red-600 dark:text-red-400 rounded-xl shadow-sm"><Trash2 size={20}/></div>
+                                     <div>
+                                         <div className="font-bold text-gray-900 dark:text-white">{t('delete_all_chats', userSettings.language)}</div>
+                                         <div className="text-xs text-gray-500">{t('delete_history_desc', userSettings.language)}</div>
                                      </div>
                                  </div>
-                                 <div className="px-6 py-2.5 bg-red-500 text-white rounded-xl font-black text-xs uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-all translate-x-4 group-hover:translate-x-0">Изтрий</div>
+                                 <ArrowRight size={18} className="text-gray-300 group-hover:text-red-500 transition-colors"/>
                             </button>
                           </div>
                       </div>
                       
-                      <div className="p-8 rounded-[32px] bg-zinc-50 dark:bg-black/30 border border-zinc-200 dark:border-white/10 text-center">
-                          <p className="text-sm text-zinc-500 font-medium max-w-lg mx-auto leading-relaxed">
-                              Вашите данни са криптирани и се съхраняват съгласно GDPR регламента. Ние уважаваме вашето право на "забравяне".
+                      <div className="p-6 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-center">
+                          <p className="text-sm text-gray-500">
+                              Всички данни се съхраняват криптирани. За пълно изтриване на акаунта, моля свържете се с нас.
                           </p>
                       </div>
                   </div>

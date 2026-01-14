@@ -19,12 +19,16 @@ const BG_LABELS = ['А)', 'Б)', 'В)', 'Г)', 'Д)', 'Е)'];
 
 // Helper to ensure option has a label
 const ensureLabel = (opt: string, index: number): string => {
-    const trimmed = opt.trim();
-    // Check if it already starts with a letter followed by ) or .
-    if (/^[А-ЯA-Z][).]\s*/.test(trimmed)) return trimmed;
+    if (!opt) return "";
     
+    // 1. Strip any existing prefixes that look like labels
+    // Matches patterns like "A)", "a)", "1.", "А)", "а)", "Б." etc.
+    // Handles multiple prefixes like "А) а)" by using + quantifier
+    const cleanOpt = opt.replace(/^([а-яА-Яa-zA-Z0-9][).]\s*)+/, '').trim();
+    
+    // 2. Prepend the consistent standard label
     const label = BG_LABELS[index] || `${String.fromCharCode(65 + index)})`;
-    return `${label} ${trimmed}`;
+    return `${label} ${cleanOpt}`;
 };
 
 // Helper to convert SVG String to PNG Base64 for Export
