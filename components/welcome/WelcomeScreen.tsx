@@ -1,6 +1,5 @@
-
 import React, { useState, useRef, useEffect } from 'react';
-import { Shield, MessageSquare, ArrowRight, School, GraduationCap, Briefcase, ArrowLeft, ArrowUpRight, Search, ImageIcon, Mic, MicOff, X, Menu, Landmark, Sparkles, BookOpen, Brain, Zap, CheckCircle2, Users, LayoutDashboard, Settings, MapPin, Mail, Globe, MoreVertical, Paperclip, Send, Lock, Star, Trophy, Target, AlertTriangle } from 'lucide-react';
+import { Shield, MessageSquare, School, GraduationCap, Briefcase, ArrowLeft, ArrowUpRight, ImageIcon, Mic, MicOff, X, Menu, Landmark, Sparkles, Zap, Lock, Star, Trophy, Target, MoreVertical, Paperclip, Send, Settings } from 'lucide-react';
 import { SubjectConfig, UserRole, UserSettings, HomeViewType, SubjectId } from '../../types';
 import { SUBJECTS } from '../../constants';
 import { DynamicIcon } from '../ui/DynamicIcon';
@@ -84,7 +83,6 @@ export const WelcomeScreen = ({
     useEffect(() => {
         const fetchRecentAvatars = async () => {
             try {
-                // Fetch users with existing PFPs, ordered by recent activity for dynamic but consistent look
                 const { data, error } = await supabase
                     .from('profiles')
                     .select('avatar_url')
@@ -191,9 +189,6 @@ export const WelcomeScreen = ({
         rec.onend = () => setIsListening(false);
         rec.onerror = (e: any) => {
             console.error("Mic error:", e.error);
-            if(e.error === 'not-allowed' || e.error === 'service-not-allowed') {
-                alert('Не мога да започна запис. Моля, уверете се, че сте позволили достъп до микрофона в настройките.');
-            }
             setIsListening(false);
         };
         
@@ -211,8 +206,6 @@ export const WelcomeScreen = ({
 
         return (
             <div className="w-full h-full overflow-y-auto overflow-x-hidden custom-scrollbar flex flex-col relative pb-safe">
-                
-                {/* Mobile Menu & Admin Access */}
                 <div className="absolute top-6 left-6 z-30 flex items-center gap-2">
                     <button 
                         onClick={() => setSidebarOpen(true)} 
@@ -233,8 +226,6 @@ export const WelcomeScreen = ({
                 </div>
 
                 <div className="flex-1 flex flex-col items-center justify-center p-4 lg:p-8 w-full max-w-7xl mx-auto min-h-fit mt-12 mb-12">
-                    
-                    {/* Greeting */}
                     <div className="text-center mb-10 lg:mb-14 animate-in slide-in-from-bottom-4 duration-700 w-full px-2">
                         <h1 className="text-4xl md:text-5xl lg:text-7xl font-black text-zinc-900 dark:text-white tracking-tight mb-4 font-display drop-shadow-xl break-words">
                             {t('hello', userSettings.language)}, <span className="text-transparent bg-clip-text bg-gradient-to-r from-zinc-400 to-white">{greetingName}</span>.
@@ -244,7 +235,6 @@ export const WelcomeScreen = ({
                         </p>
                     </div>
 
-                    {/* Navigation Cards */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-6 w-full max-w-5xl mb-14 px-2">
                         <button 
                             onClick={() => handleSubjectChange(SUBJECTS[0])}
@@ -255,7 +245,7 @@ export const WelcomeScreen = ({
                                 <MessageSquare size={24} className="lg:w-7 lg:h-7" />
                             </div>
                             <h3 className="text-xl lg:text-2xl font-bold text-white mb-2">{t('chat_general', userSettings.language)}</h3>
-                            <p className="text-zinc-500 text-sm font-medium mb-6 flex-1">Попитай me каквото и да е за училище или университет.</p>
+                            <p className="text-zinc-500 text-sm font-medium mb-6 flex-1">Попитай ме каквото и да е за училище или университет.</p>
                             <div className="px-6 py-2.5 bg-white/5 hover:bg-indigo-500 text-zinc-300 hover:text-white rounded-full font-bold text-xs flex items-center gap-2 transition-all group-hover:pl-8 border border-white/5 self-start">
                                 {t('start', userSettings.language)} <ArrowRight size={14} />
                             </div>
@@ -292,7 +282,6 @@ export const WelcomeScreen = ({
                         </button>
                     </div>
 
-                    {/* Quick Input Bar */}
                     <div className="w-full max-w-2xl relative z-20 px-2">
                         {selectedImages.length > 0 && (
                             <div className="flex gap-2 mb-3 overflow-x-auto pb-1 px-2 justify-center no-scrollbar">
@@ -355,13 +344,12 @@ export const WelcomeScreen = ({
     }
 
     const isUniView = homeView.includes('uni');
-    const delayStep = 50; // Equalized staggering delay for consistency
+    const delayStep = 50;
 
     return (
     <div className={`flex flex-col h-full w-full items-center bg-transparent relative selection:bg-indigo-500/30 overflow-hidden`}>
       {homeView === 'landing' && (
         <div className="w-full h-full overflow-y-auto overflow-x-hidden custom-scrollbar flex flex-col items-center pb-safe">
-            
             <nav className="w-full flex items-center justify-between p-6 px-8 md:px-12 shrink-0 relative z-50">
                 <div className="flex items-center gap-3">
                     <div className="flex items-center gap-2">
