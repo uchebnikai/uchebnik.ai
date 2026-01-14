@@ -1,3 +1,4 @@
+
 export interface ChangelogEntry {
   version: string;
   date: string;
@@ -6,6 +7,12 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: "1.9.9",
+    date: "2025-03-01",
+    title: "✨ Пречистени анимации",
+    description: "Направихме прехода между ролите и предметите по-лесен за очите с нежен fade-in ефект."
+  },
   {
     version: "1.9.8",
     date: "2025-03-01",
