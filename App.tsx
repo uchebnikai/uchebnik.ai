@@ -49,6 +49,7 @@ import { Fireworks } from './components/ui/Fireworks';
 import { ReportModal } from './components/support/ReportModal';
 import { AdSenseContainer } from './components/ads/AdSenseContainer';
 import { IosInstallPrompt } from './components/ui/IosInstallPrompt';
+import { Analytics } from '@vercel/analytics/react';
 import { UpdateNotification } from './components/ui/UpdateNotification';
 import { Button } from './components/ui/Button';
 
@@ -1309,6 +1310,7 @@ export const App = () => {
       {effectiveBg && <div className={`fixed inset-0 z-0 bg-cover bg-center pointer-events-none transition-all duration-1000 ${focusMode ? 'brightness-[0.2] grayscale' : ''}`} style={getBackgroundImageStyle(effectiveBg)} />}
       
       <UpdateNotification />
+      <Analytics />
       {showAuthModal && <Auth isModal={false} onSuccess={closeAuthModal} initialMode={initialAuthMode} onNavigate={setHomeView} />}
 
       {!focusMode && session && (
