@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { X, Sparkles, Check } from 'lucide-react';
 import { CHANGELOG } from '../../constants/changelog';
@@ -34,7 +35,7 @@ export const WhatsNewModal = ({ isOpen, onClose }: WhatsNewModalProps) => {
                 Последни промени
             </h2>
             <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em]">
-                v{latestChange.version} • {latestChange.date}
+                v{latestChange.version}
             </p>
             
             <button 
@@ -66,7 +67,7 @@ export const WhatsNewModal = ({ isOpen, onClose }: WhatsNewModalProps) => {
         <div className="p-8 pt-0">
             <Button 
                 onClick={onClose} 
-                className="w-full py-4 text-sm bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-black shadow-xl shadow-indigo-500/20 active:scale-95 transition-all"
+                className="w-full py-4 text-sm bg-indigo-600 hover:bg-indigo-50 text-white rounded-2xl font-black shadow-xl shadow-indigo-500/20 active:scale-95 transition-all"
             >
                 Разбрах
             </Button>
