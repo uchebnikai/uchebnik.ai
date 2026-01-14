@@ -280,6 +280,10 @@ export interface UserSettings {
   proExpiresAt?: string; 
   isDarkMode: boolean;
   
+  // Data Preferences
+  allowDataCollection?: boolean;
+  autoSync?: boolean;
+
   // Gamification
   xp: number;
   level: number;

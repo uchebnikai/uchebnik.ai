@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { GoogleGenAI, LiveServerMessage, Modality } from "@google/genai";
 import { SubjectConfig, SubjectId, AppMode, Message, Slide, UserSettings, Session, UserPlan, UserRole, HomeViewType } from './types';
@@ -217,6 +218,8 @@ export const App = () => {
     isDarkMode: true,
     xp: 0,
     level: 1,
+    allowDataCollection: true,
+    autoSync: true,
     dailyQuests: {
         date: new Date().toDateString(),
         quests: generateDailyQuests()
@@ -409,6 +412,46 @@ export const App = () => {
             setShowSettings(false);
         }
     });
+  };
+
+  const handleForceSync = async () => {
+      if (!session?.user?.id) {
+          addToast('Влезте в профила си за синхронизация.', 'error');
+          return;
+      }
+      setSyncStatus('syncing');
+      try {
+          const { error: sessErr } = await supabase.from('user_data').upsert({ 
+              user_id: session.user.id, 
+              data: sessions, 
+              updated_at: new Date().toISOString() 
+          });
+          const { error: profErr } = await supabase.from('profiles').update({ 
+              settings: { ...userSettings, plan: userPlan } as any, 
+              updated_at: new Date().toISOString() 
+          }).eq('id', session.user.id);
+          
+          if (sessErr || profErr) throw new Error('Sync failed');
+          setSyncStatus('synced');
+          addToast('Синхронизирано с облака!', 'success');
+      } catch (e) {
+          setSyncStatus('error');
+          addToast('Грешка при принудителна синхронизация.', 'error');
+      }
+  };
+
+  const handleResetLocalCache = () => {
+      setConfirmModal({
+          isOpen: true,
+          title: 'Нулиране на локалния кеш',
+          message: 'Това ще изтрие локалните копия на вашите данни и ще ги изтегли отново от облака. Сигурни ли сте?',
+          onConfirm: () => {
+              localStorage.clear();
+              // Keep critical flags
+              localStorage.setItem('uchebnik_ios_prompt_dismissed', 'true');
+              window.location.reload();
+          }
+      });
   };
 
   const startVoiceCall = async () => {
@@ -1362,7 +1405,25 @@ export const App = () => {
       </main>
 
       <UpgradeModal showUnlockModal={showUnlockModal} setShowUnlockModal={setShowUnlockModal} targetPlan={targetPlan} setTargetPlan={setTargetPlan} unlockKeyInput={unlockKeyInput} setUnlockKeyInput={setUnlockKeyInput} handleUnlockSubmit={handleUnlockSubmit} userPlan={userPlan} userSettings={userSettings} addToast={addToast} unlockLoading={unlockLoading} />
-      <SettingsModal showSettings={showSettings} setShowSettings={setShowSettings} userMeta={userMeta} editProfile={editProfile} setEditProfile={setEditProfile} handleUpdateAccount={handleUpdateAccount} handleAvatarUpload={handleAvatarUploadSettings} userSettings={userSettings} setUserSettings={setUserSettings} isPremium={userPlan!=='free'} handleBackgroundUpload={handleBackgroundUpload} handleDeleteAllChats={handleDeleteAllChats} addToast={addToast} userPlan={userPlan} />
+      <SettingsModal 
+        showSettings={showSettings} 
+        setShowSettings={setShowSettings} 
+        userMeta={userMeta} 
+        editProfile={editProfile} 
+        setEditProfile={setEditProfile} 
+        handleUpdateAccount={handleUpdateAccount} 
+        handleAvatarUpload={handleAvatarUploadSettings} 
+        userSettings={userSettings} 
+        setUserSettings={setUserSettings} 
+        isPremium={userPlan!=='free'} 
+        handleBackgroundUpload={handleBackgroundUpload} 
+        handleDeleteAllChats={handleDeleteAllChats} 
+        handleResetLocalCache={handleResetLocalCache}
+        handleForceSync={handleForceSync}
+        addToast={addToast} 
+        userPlan={userPlan} 
+        syncStatus={syncStatus}
+      />
       <ReferralModal isOpen={showReferralModal} onClose={() => setShowReferralModal(false)} userSettings={userSettings} addToast={addToast} />
       <LeaderboardModal isOpen={showLeaderboard} onClose={() => setShowLeaderboard(false)} currentUserId={session?.user?.id} />
       <DailyQuestsModal isOpen={showQuests} onClose={() => setShowQuests(false)} quests={userSettings.dailyQuests?.quests || []} />

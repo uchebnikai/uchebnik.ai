@@ -1,12 +1,13 @@
 
 import React, { useRef, useState } from 'react';
+// Added RotateCcw to lucide-react imports
 import { 
   X, User, Upload, Lock, Check, Palette, Plus, Moon, Sun, 
   ImageIcon, Edit2, Cpu, ChevronDown, Database, Trash2, 
   ArrowRight, Settings, CreditCard, Loader2, Globe, 
   Layout, Smartphone, Monitor, Sparkles, LogOut, Volume2, 
   Keyboard, Type, Download, Zap, Brain, MessageCircle, Gift, Copy,
-  Eye, EyeOff
+  Eye, EyeOff, RefreshCw, AlertTriangle, ShieldCheck, PieChart, Info, RotateCcw
 } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { UserSettings, UserPlan } from '../../types';
@@ -29,8 +30,11 @@ interface SettingsModalProps {
   isPremium: boolean;
   handleBackgroundUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleDeleteAllChats: () => void;
+  handleResetLocalCache: () => void;
+  handleForceSync: () => void;
   addToast: (msg: string, type: 'success' | 'error' | 'info') => void;
   userPlan: UserPlan;
+  syncStatus?: 'synced' | 'syncing' | 'error' | 'offline';
 }
 
 type SettingsTab = 'account' | 'appearance' | 'ai' | 'system' | 'data';
@@ -67,8 +71,11 @@ export const SettingsModal = ({
   isPremium,
   handleBackgroundUpload,
   handleDeleteAllChats,
+  handleResetLocalCache,
+  handleForceSync,
   addToast,
-  userPlan
+  userPlan,
+  syncStatus
 }: SettingsModalProps) => {
     
   const avatarInputRef = useRef<HTMLInputElement>(null);
@@ -108,7 +115,7 @@ export const SettingsModal = ({
   const isDarkMode = userSettings.isDarkMode;
 
   return (
-  <div className="fixed inset-0 z-[90] bg-black/60 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-300">
+  <div className="fixed inset-0 z-90 bg-black/60 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-300">
     <div className={`bg-white/80 dark:bg-[#121212]/90 backdrop-blur-3xl w-full max-w-5xl h-[85vh] rounded-[32px] border border-white/20 dark:border-white/10 shadow-2xl overflow-hidden flex flex-col md:flex-row ${MODAL_ENTER}`}>
       
       {/* Sidebar Navigation */}
@@ -717,45 +724,163 @@ export const SettingsModal = ({
                   <div className={`space-y-8 max-w-2xl mx-auto ${FADE_IN}`}>
                       <div>
                           <h3 className="text-3xl font-black text-zinc-900 dark:text-white mb-2">{t('data', userSettings.language)}</h3>
-                          <p className="text-gray-500">Контролирайте вашата история и данни.</p>
+                          <p className="text-gray-500">Управлявайте статистиките, поверителността и синхронизацията си.</p>
                       </div>
 
-                      <div className="grid grid-cols-1 gap-4">
-                          <button onClick={handleExportData} className="w-full flex items-center justify-between p-6 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl hover:bg-gray-50 dark:hover:bg-white/10 transition-colors group text-left">
-                             <div className="flex items-center gap-4">
-                                 <div className="p-3 bg-blue-100 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-xl shadow-sm"><Download size={20}/></div>
-                                 <div>
-                                     <div className="font-bold text-gray-900 dark:text-white">Експорт на данни</div>
-                                     <div className="text-xs text-gray-500">Изтегли историята као JSON.</div>
-                                 </div>
-                             </div>
-                             <ArrowRight size={18} className="text-gray-300 group-hover:text-blue-500 transition-colors"/>
+                      {/* Usage Stats Summary */}
+                      <section className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="p-6 bg-indigo-500/5 border border-indigo-500/20 rounded-2xl">
+                              <div className="flex items-center gap-3 text-indigo-600 dark:text-indigo-400 mb-3">
+                                  <PieChart size={20} />
+                                  <span className="font-bold text-xs uppercase tracking-widest">Обща употреба</span>
+                              </div>
+                              <div className="space-y-3">
+                                  <div className="flex justify-between items-end">
+                                      <span className="text-xs text-zinc-500 font-medium">Input Tokens</span>
+                                      <span className="text-sm font-black text-zinc-900 dark:text-white font-mono">{(userSettings.stats?.totalInputTokens || 0).toLocaleString()}</span>
+                                  </div>
+                                  <div className="flex justify-between items-end">
+                                      <span className="text-xs text-zinc-500 font-medium">Output Tokens</span>
+                                      <span className="text-sm font-black text-zinc-900 dark:text-white font-mono">{(userSettings.stats?.totalOutputTokens || 0).toLocaleString()}</span>
+                                  </div>
+                                  <div className="pt-2 border-t border-indigo-500/10 flex justify-between items-end">
+                                      <span className="text-xs text-zinc-500 font-bold uppercase">Общо</span>
+                                      <span className="text-lg font-black text-indigo-600 dark:text-indigo-400 font-mono">
+                                          {((userSettings.stats?.totalInputTokens || 0) + (userSettings.stats?.totalOutputTokens || 0)).toLocaleString()}
+                                      </span>
+                                  </div>
+                              </div>
+                          </div>
+
+                          <div className="p-6 bg-amber-500/5 border border-amber-500/20 rounded-2xl flex flex-col justify-between">
+                              <div className="flex items-center gap-3 text-amber-600 dark:text-amber-400 mb-3">
+                                  <ShieldCheck size={20} />
+                                  <span className="font-bold text-xs uppercase tracking-widest">Статус на данните</span>
+                              </div>
+                              <div className="space-y-4">
+                                  <div className="flex items-center gap-3">
+                                      <div className={`p-2 rounded-lg ${syncStatus === 'synced' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-amber-500/10 text-amber-500'}`}>
+                                          {syncStatus === 'synced' ? <Check size={16}/> : <RefreshCw size={16} className="animate-spin"/>}
+                                      </div>
+                                      <div>
+                                          <div className="text-sm font-bold text-zinc-900 dark:text-white">
+                                              {syncStatus === 'synced' ? 'Синхронизирано' : 'В процес...'}
+                                          </div>
+                                          <div className="text-[10px] text-zinc-500 uppercase tracking-tight">Последно: {new Date().toLocaleTimeString()}</div>
+                                      </div>
+                                  </div>
+                                  <Button onClick={handleForceSync} variant="secondary" className="w-full py-2 text-xs !bg-white dark:!bg-white/5 shadow-sm" icon={RefreshCw}>
+                                      Синхронизирай сега
+                                  </Button>
+                              </div>
+                          </div>
+                      </section>
+
+                      {/* Data Preferences */}
+                      <section className="space-y-4">
+                          <h4 className="text-sm font-bold text-zinc-400 uppercase tracking-widest ml-1">Поверителност</h4>
+                          <div className="space-y-2">
+                              <div className="flex items-center justify-between p-5 bg-white dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-2xl shadow-sm">
+                                  <div className="flex items-center gap-3">
+                                      <div className="p-2.5 rounded-xl bg-purple-100 dark:bg-purple-500/20 text-purple-600 dark:text-purple-400">
+                                          <Brain size={20}/>
+                                      </div>
+                                      <div>
+                                          <div className="font-bold text-sm text-gray-900 dark:text-white">Подобряване на AI</div>
+                                          <div className="text-xs text-gray-500 max-w-[200px] sm:max-w-xs">Използвай анонимни данни за обучение на моделите.</div>
+                                      </div>
+                                  </div>
+                                  <button 
+                                    onClick={() => setUserSettings({...userSettings, allowDataCollection: !userSettings.allowDataCollection})} 
+                                    className={`w-14 h-8 rounded-full transition-colors flex items-center px-1 ${userSettings.allowDataCollection ? 'bg-indigo-600' : 'bg-gray-300 dark:bg-zinc-700'}`}
+                                  >
+                                      <div className={`w-6 h-6 rounded-full bg-white shadow-md transition-transform duration-300 ${userSettings.allowDataCollection ? 'translate-x-6' : 'translate-x-0'}`} />
+                                  </button>
+                              </div>
+
+                              <div className="flex items-center justify-between p-5 bg-white dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-2xl shadow-sm">
+                                  <div className="flex items-center gap-3">
+                                      <div className="p-2.5 rounded-xl bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400">
+                                          <RefreshCw size={20}/>
+                                      </div>
+                                      <div>
+                                          <div className="font-bold text-sm text-gray-900 dark:text-white">Автоматично синхронизиране</div>
+                                          <div className="text-xs text-gray-500">Запазвай промените в реално време.</div>
+                                      </div>
+                                  </div>
+                                  <button 
+                                    onClick={() => setUserSettings({...userSettings, autoSync: !userSettings.autoSync})} 
+                                    className={`w-14 h-8 rounded-full transition-colors flex items-center px-1 ${userSettings.autoSync ? 'bg-indigo-600' : 'bg-gray-300 dark:bg-zinc-700'}`}
+                                  >
+                                      <div className={`w-6 h-6 rounded-full bg-white shadow-md transition-transform duration-300 ${userSettings.autoSync ? 'translate-x-6' : 'translate-x-0'}`} />
+                                  </button>
+                              </div>
+                          </div>
+                      </section>
+
+                      {/* Management Actions */}
+                      <section className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <button onClick={handleExportData} className="flex items-center gap-3 p-4 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl hover:bg-gray-50 dark:hover:bg-white/10 transition-colors group">
+                               <div className="p-2 bg-blue-100 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-lg"><Download size={18}/></div>
+                               <div className="text-left">
+                                   <div className="font-bold text-sm text-gray-900 dark:text-white">Експорт на данни</div>
+                                   <div className="text-[10px] text-gray-400 uppercase tracking-tighter">JSON Backup</div>
+                               </div>
                           </button>
 
-                          <div className="bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-500/10 rounded-2xl overflow-hidden mt-4">
-                              <div className="p-6 border-b border-red-100 dark:border-red-500/10">
-                                  <h4 className="font-bold text-red-700 dark:text-red-400 mb-1 flex items-center gap-2"><Database size={18}/> Зона на опасност</h4>
-                                  <p className="text-xs text-red-600/70 dark:text-red-400/70">Действията тук са необратими.</p>
+                          <button onClick={handleResetLocalCache} className="flex items-center gap-3 p-4 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl hover:bg-gray-50 dark:hover:bg-white/10 transition-colors group">
+                               <div className="p-2 bg-amber-100 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 rounded-lg"><RotateCcw size={18}/></div>
+                               <div className="text-left">
+                                   <div className="font-bold text-sm text-gray-900 dark:text-white">Нулиране на кеша</div>
+                                   <div className="text-[10px] text-gray-400 uppercase tracking-tighter">Refresh local state</div>
+                               </div>
+                          </button>
+                      </section>
+
+                      {/* Danger Zone */}
+                      <section className="bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-500/10 rounded-2xl overflow-hidden mt-4">
+                          <div className="p-5 border-b border-red-100 dark:border-red-500/10 flex items-center justify-between">
+                              <div>
+                                  <h4 className="font-bold text-red-700 dark:text-red-400 flex items-center gap-2"><Database size={16}/> Зона на опасност</h4>
+                                  <p className="text-[10px] text-red-600/70 dark:text-red-400/70 font-bold uppercase tracking-widest mt-0.5">Внимание: Необратими действия</p>
                               </div>
+                              <div className="p-2 bg-red-500/10 rounded-full text-red-500"><AlertTriangle size={18} /></div>
+                          </div>
+                          <div className="divide-y divide-red-100 dark:divide-red-500/10">
                               <button 
                                 onClick={handleDeleteAllChats} 
-                                className="w-full flex items-center justify-between p-6 hover:bg-red-100 dark:hover:bg-red-900/20 transition-colors group text-left"
+                                className="w-full flex items-center justify-between p-6 hover:bg-red-100/50 dark:hover:bg-red-900/20 transition-colors group text-left"
                               >
                                  <div className="flex items-center gap-4">
-                                     <div className="p-3 bg-white dark:bg-red-500/20 text-red-600 dark:text-red-400 rounded-xl shadow-sm"><Trash2 size={20}/></div>
+                                     <div className="p-3 bg-white dark:bg-red-500/20 text-red-600 dark:text-red-400 rounded-xl shadow-sm group-hover:scale-110 transition-transform"><Trash2 size={20}/></div>
                                      <div>
                                          <div className="font-bold text-gray-900 dark:text-white">{t('delete_all_chats', userSettings.language)}</div>
                                          <div className="text-xs text-gray-500">{t('delete_history_desc', userSettings.language)}</div>
                                      </div>
                                  </div>
                                  <ArrowRight size={18} className="text-gray-300 group-hover:text-red-500 transition-colors"/>
-                            </button>
+                              </button>
+
+                              <a 
+                                href="mailto:support@uchebnikai.com?subject=Account Deletion Request&body=I would like to request the permanent deletion of my Uchebnik AI account and all associated data."
+                                className="w-full flex items-center justify-between p-6 hover:bg-red-100/50 dark:hover:bg-red-900/20 transition-colors group text-left"
+                              >
+                                 <div className="flex items-center gap-4">
+                                     <div className="p-3 bg-white dark:bg-red-500/20 text-red-600 dark:text-red-400 rounded-xl shadow-sm group-hover:scale-110 transition-transform"><X size={20}/></div>
+                                     <div>
+                                         <div className="font-bold text-gray-900 dark:text-white">Изтриване на акаунт</div>
+                                         <div className="text-xs text-gray-500">Заявете пълно изтриване на профила.</div>
+                                     </div>
+                                 </div>
+                                 <ArrowRight size={18} className="text-gray-300 group-hover:text-red-500 transition-colors"/>
+                              </a>
                           </div>
-                      </div>
+                      </section>
                       
-                      <div className="p-6 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-center">
-                          <p className="text-sm text-gray-500">
-                              Всички данни се съхраняват криптирани. За пълно изтриване на акаунта, моля свържете се с нас.
+                      <div className="p-6 rounded-2xl bg-indigo-500/5 border border-indigo-500/10 text-center flex flex-col items-center gap-3">
+                          <Info size={24} className="text-indigo-400" />
+                          <p className="text-sm text-gray-500 max-w-sm">
+                              Uchebnik AI спазва стриктно GDPR. Вашите съобщения са криптирани и достъпни само за вас през вашия акаунт.
                           </p>
                       </div>
                   </div>
