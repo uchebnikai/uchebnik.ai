@@ -1,4 +1,3 @@
-
 export interface ChangelogEntry {
   version: string;
   date: string;
@@ -7,6 +6,12 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    version: "2.0.1",
+    date: "2025-03-01",
+    title: "✨ Синхронизирани преходи",
+    description: "Унифицирахме анимациите при избор на роля, за да гарантираме перфектна визуална идентичност във всички режими."
+  },
   {
     version: "2.0.0",
     date: "2025-03-01",
@@ -18,11 +23,5 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2025-03-01",
     title: "✨ Пречистени анимации",
     description: "Направихме прехода между ролите и предметите по-лесен за очите с нежен fade-in ефект."
-  },
-  {
-    version: "1.9.8",
-    date: "2025-03-01",
-    title: "✨ Пречистен изглед",
-    description: "Оптимизирахме прозореца за новости, за да виждате най-важното бързо и без излишен шум."
   }
 ];

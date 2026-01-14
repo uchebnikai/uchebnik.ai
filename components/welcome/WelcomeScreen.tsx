@@ -287,7 +287,7 @@ export const WelcomeScreen = ({
                             <div className="flex gap-2 mb-3 overflow-x-auto pb-1 px-2 justify-center no-scrollbar">
                                 {selectedImages.map((img, i) => ( 
                                     <div key={i} className={`relative group shrink-0 ${ZOOM_IN}`}>
-                                        <img src={img} className="h-16 w-16 rounded-xl object-cover border-2 border-white/10 shadow-lg"/>
+                                        <img src={img} className="h-16 w-16 rounded-xl object-cover border-2 border-white dark:border-zinc-700 shadow-lg"/>
                                         <button onClick={() => handleRemoveImage(i)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-md hover:scale-110 transition-transform"><X size={10}/></button>
                                     </div>
                                 ))}
