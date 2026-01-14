@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useRef } from 'react';
 import { RefreshCw, Sparkles, X, ArrowRight } from 'lucide-react';
 
@@ -49,6 +48,12 @@ export const UpdateNotification = () => {
     return () => clearInterval(interval);
   }, [updateAvailable]);
 
+  const handleUpdate = () => {
+    // Set flag to show changelog after reload
+    localStorage.setItem('uchebnik_show_changelog_after_reload', 'true');
+    window.location.reload();
+  };
+
   if (!updateAvailable || !visible) return null;
 
   return (
@@ -89,7 +94,7 @@ export const UpdateNotification = () => {
 
         <div className="mt-4 pt-4 border-t border-zinc-100 dark:border-white/5 flex gap-2 relative z-10">
           <button 
-            onClick={() => window.location.reload()}
+            onClick={handleUpdate}
             className="flex-1 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-black uppercase tracking-wider shadow-lg shadow-indigo-600/20 transition-all active:scale-95 flex items-center justify-center gap-2 group/btn"
           >
             Обнови сега

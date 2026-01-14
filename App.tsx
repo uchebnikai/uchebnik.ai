@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { GoogleGenAI, LiveServerMessage, Modality } from "@google/genai";
 import { SubjectConfig, SubjectId, AppMode, Message, Slide, UserSettings, Session, UserPlan, UserRole, HomeViewType } from './types';
@@ -50,6 +49,7 @@ import { ReportModal } from './components/support/ReportModal';
 import { AdSenseContainer } from './components/ads/AdSenseContainer';
 import { IosInstallPrompt } from './components/ui/IosInstallPrompt';
 import { UpdateNotification } from './components/ui/UpdateNotification';
+import { WhatsNewModal } from './components/ui/WhatsNewModal';
 import { Button } from './components/ui/Button';
 
 interface GeneratedKey {
@@ -62,9 +62,9 @@ const LIVE_MODEL = 'gemini-2.5-flash-native-audio-preview-12-2025';
 
 const DEMO_RESPONSE = `Анализирах въпроса ти и подготвих детайлно решение. За да разбереш материята в дълбочина, разгледах логическата структура на проблема. Ето първите стъпки от моя анализ:
 
-1. **Дефиниране на основните параметри**: Първата стъпка е да изолираме ключових данни и да разберем контекста на твоето запитване.
+1. **Дефиниране на основнините параметри**: Първата стъпка е да изолираме ключовите данни и да разберем контекста на твоето запитване.
 2. **Избор на методология**: Въз основа на темата, най-подходящият подход е прилагането на логически изводи и доказани научни принципи.
-3. **Дефинирано разписване**: Тут започваме със самото решаване, като преминаваме през всеки междинен етап за максимална яснота...
+3. **Дефинирано разписване**: Тук започваме със самото решаване, като преминаваме през всеки междинен етап за максимална яснота...
 
 Uchebnik AI винаги предоставя пълно обяснение на логиката за решението, за да можеш не просто да получиш отговора, но и да научиш материала. Влез в профила си, за да отключиш останалата част от това решение и да получиш достъп до всички функции абсолютно безплатно!`;
 
@@ -154,6 +154,7 @@ export const App = () => {
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [showQuests, setShowQuests] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
+  const [showWhatsNew, setShowWhatsNew] = useState(false);
   
   const [homeView, setHomeView] = useState<HomeViewType>('landing');
 
@@ -625,6 +626,12 @@ export const App = () => {
     };
     fetchGlobalConfig();
     loadLocalStorageData(); 
+
+    // Handle What's New visibility after reload
+    if (localStorage.getItem('uchebnik_show_changelog_after_reload') === 'true') {
+      setShowWhatsNew(true);
+      localStorage.removeItem('uchebnik_show_changelog_after_reload');
+    }
   }, []);
 
   useEffect(() => {
@@ -1309,6 +1316,8 @@ export const App = () => {
       {effectiveBg && <div className={`fixed inset-0 z-0 bg-cover bg-center pointer-events-none transition-all duration-1000 ${focusMode ? 'brightness-[0.2] grayscale' : ''}`} style={getBackgroundImageStyle(effectiveBg)} />}
       
       <UpdateNotification />
+      <WhatsNewModal isOpen={showWhatsNew} onClose={() => setShowWhatsNew(false)} />
+      
       {showAuthModal && <Auth isModal={false} onSuccess={closeAuthModal} initialMode={initialAuthMode} onNavigate={setHomeView} />}
 
       {!focusMode && session && (
@@ -1356,7 +1365,6 @@ export const App = () => {
       <SettingsModal showSettings={showSettings} setShowSettings={setShowSettings} userMeta={userMeta} editProfile={editProfile} setEditProfile={setEditProfile} handleUpdateAccount={handleUpdateAccount} handleAvatarUpload={handleAvatarUploadSettings} userSettings={userSettings} setUserSettings={setUserSettings} isPremium={userPlan!=='free'} handleBackgroundUpload={handleBackgroundUpload} handleDeleteAllChats={handleDeleteAllChats} addToast={addToast} userPlan={userPlan} />
       <ReferralModal isOpen={showReferralModal} onClose={() => setShowReferralModal(false)} userSettings={userSettings} addToast={addToast} />
       <LeaderboardModal isOpen={showLeaderboard} onClose={() => setShowLeaderboard(false)} currentUserId={session?.user?.id} />
-      <DailyQuestsModal isOpen={showQuests} onClose={() => setShowQuests(false)} quests={userSettings.dailyQuests?.quests || []} />
       <DailyQuestsModal isOpen={showQuests} onClose={() => setShowQuests(false)} quests={userSettings.dailyQuests?.quests || []} />
       <ReportModal isOpen={showReportModal} onClose={() => setShowReportModal(false)} userSettings={userSettings} addToast={addToast} userId={session?.user?.id} />
       <AdminPanel showAdminAuth={showAdminAuth} setShowAdminAuth={setShowAdminAuth} showAdminPanel={showAdminPanel} setShowAdminPanel={setShowAdminPanel} adminPasswordInput={adminPasswordInput} setAdminPasswordInput={setAdminPasswordInput} handleAdminLogin={handleAdminLogin} generateKey={handleGenerateKey} generatedKeys={generatedKeys as any} addToast={addToast} globalConfig={globalConfig} setGlobalConfig={setGlobalConfig} />
